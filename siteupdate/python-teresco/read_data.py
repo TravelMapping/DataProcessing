@@ -73,11 +73,11 @@ class Route:
     City: (optional) the full name to be displayed for the Abbrev
     above.
 
-    Route: the name of the .wpt file that lists the waypoints of the
+    Root: the name of the .wpt file that lists the waypoints of the
     route, without the .wpt extension.
 
     AltRouteNames: (optional) comma-separated list former or other
-    altername route names that might appear in user list files.
+    alternate route names that might appear in user list files.
     """
     def __init__(self,line):
         """initialize object from a .csv file line, but do not
@@ -90,8 +90,8 @@ class Route:
         self.banner = fields[3]
         self.abbrev = fields[4]
         self.city = fields[5]
-        self.route = fields[6]
-        self.alt_route_names = fields[7].split(",")
+        self.root = fields[6]
+        self.alt_route_names = fields[7] #.split(",")
         self.point_list = []
 
     def __str__(self):
@@ -101,7 +101,7 @@ class Route:
     def read_wpt(self,path="/Users/terescoj/travelmapping/work/old_chm_data"):
         """read data into the Route's waypoint list from a .wpt file"""
         self.point_list = []
-        with open(path+"/"+self.system+"/"+self.route+".wpt", "rt") as file:
+        with open(path+"/"+self.system+"/"+self.root+".wpt", "rt") as file:
             lines = file.readlines()
         for line in lines:
             if len(line.rstrip('\n')) > 0:
@@ -110,6 +110,10 @@ class Route:
     def print_route(self):
         for point in self.point_list:
             print(str(point))
+
+    def sql_insert_command(self,tablename):
+        """return sql command to insert into a table"""
+        return "INSERT INTO " + tablename + " VALUES ('" + self.system + "','" + self.region + "','" + self.route + "','" + self.banner + "','" + self.abbrev + "','" + self.city + "','" + self.root + "','" + self.alt_route_names + "');";
 
 class HighwaySystem:
     """This class encapsulates the contents of one .csv file
@@ -122,9 +126,11 @@ class HighwaySystem:
     """
     def __init__(self,systemname,path="/Users/terescoj/travelmapping/work/old_chm_data",active=True):
         self.route_list = []
+        self.systemname = systemname
         self.active = active
         with open(path+"/"+systemname+".csv","rt") as file:
             lines = file.readlines()
+        # ignore the first line of field names
         lines.pop(0)
         for line in lines:
             self.route_list.append(Route(line.rstrip('\n')))
@@ -156,3 +162,28 @@ for h in highway_systems:
         #print(str(r))
         #r.print_route()
 
+# Once all data is read in and processed, create a .sql file that will 
+# create all of the DB tables to be used by other parts of the project
+sqlfile = open('siteupdate.sql','w')
+sqlfile.write('USE TravelMapping\n')
+
+# first, a table of the systems, consisting of just the system name in
+# the field 'name', and a boolean indicating if the system is active for
+# mapping in the project in the field 'active'
+sqlfile.write('DROP TABLE IF EXISTS systems;\n')
+sqlfile.write('CREATE TABLE systems (system VARCHAR(10), active BOOLEAN);\n')
+for h in highway_systems:
+    active = 0;
+    if h.active:
+        active = 1;
+    sqlfile.write("INSERT INTO systems VALUES ('" + h.systemname + "','" + str(active) + "');\n")
+
+# next, a table of highways, with the same fields as in the first line
+sqlfile.write('DROP TABLE IF EXISTS routes;\n')
+# should the system field be a foreign key or something like that?
+sqlfile.write('CREATE TABLE routes (system VARCHAR(10), region VARCHAR(3), route VARCHAR(16), banner VARCHAR(3), abbrev VARCHAR(3), city VARCHAR(32), root VARCHAR(16), altroutenames VARCHAR(32));\n')
+for h in highway_systems:
+    for r in h.route_list:
+        sqlfile.write(r.sql_insert_command('routes') + "\n")
+
+sqlfile.close()
