@@ -42,9 +42,9 @@ class Waypoint:
         ans = ans + " (" + str(self.lat) + "," + str(self.lng) + ")"
         return ans
 
-    def sql_insert_command(self,tablename,root):
+    def sql_insert_command(self,tablename,root,id):
         """return sql command to insert into a table"""
-        return "INSERT INTO " + tablename + " VALUES ('" + self.label + "','" + str(self.lat) + "','" + str(self.lng) + "','" + root + "');";
+        return "INSERT INTO " + tablename + " VALUES ('" + str(id) + "','" + self.label + "','" + str(self.lat) + "','" + str(self.lng) + "','" + root + "');";
 
 class Route:
     """This class encapsulates the contents of one .csv file line
@@ -133,9 +133,12 @@ class HighwaySystem:
     the parameter active, defaulting to true
     """
     #def __init__(self,systemname,path="/Users/terescoj/travelmapping/work/old_chm_data",active=True):
-    def __init__(self,systemname,path="/Users/terescoj/travelmapping/HighwayData/chm_final/_systems",active=True):
+    def __init__(self,systemname,country,fullname,color,active,path="/Users/terescoj/travelmapping/HighwayData/chm_final/_systems"):
         self.route_list = []
         self.systemname = systemname
+        self.country = country
+        self.fullname = fullname
+        self.color = color
         self.active = active
         with open(path+"/"+systemname+".csv","rt") as file:
             lines = file.readlines()
@@ -245,23 +248,33 @@ class ClinchedSegment:
 #
 # First, give lists of active and development systems to be included.
 # Might want these to be read from a config file in the future.
-active_systems = [ 'cannb', 'cannsc', 'cannsf', 'cannst', 'cannt', 'canon', 'canonf', 'canpe',
-                   'canqca', 'cantch', 'canyt', 'usaaz', 'usact', 'usadc', 'usade', 'usahi',
-                   'usai', 'usaia', 'usaib', 'usaid', 'usaif', 'usail', 'usaks', 'usaky3',
-                   'usaky', 'usama', 'usamd', 'usame', 'usami', 'usamn', 'usamo', 'usanc',
-                   'usand', 'usane', 'usanh', 'usanj', 'usansf', 'usanv', 'usany', 'usaoh',
-                   'usaok', 'usaor', 'usapa', 'usari', 'usasd', 'usasf', 'usaus', 'usawa',
-                   'usawi', 'usawv' ] #, 'usausb' ]
-devel_systems = [ 'usaak', 'usamt', 'usanm', 'usaut', 'usavt' ]
+#active_systems = [ 'cannb', 'cannsc', 'cannsf', 'cannst', 'cannt', 'canon', 'canonf', 'canpe',
+#                   'canqca', 'cantch', 'canyt', 'usaaz', 'usact', 'usadc', 'usade', 'usahi',
+#                   'usai', 'usaia', 'usaib', 'usaid', 'usaif', 'usail', 'usaks', 'usaky3',
+#                   'usaky', 'usama', 'usamd', 'usame', 'usami', 'usamn', 'usamo', 'usanc',
+#                   'usand', 'usane', 'usanh', 'usanj', 'usansf', 'usanv', 'usany', 'usaoh',
+#                   'usaok', 'usaor', 'usapa', 'usari', 'usasd', 'usasf', 'usaus', 'usausb', 'usawa',
+#                   'usawi', 'usawv' ]
+#devel_systems = [ 'usaak', 'usamt', 'usanm', 'usaut', 'usavt' ]
 # Also list of travelers in the system
 traveler_ids = [ 'terescoj', 'little' ]
 
-# Create a list of HighwaySystem objects, one per system above
+# Create a list of HighwaySystem objects, one per system in systems.csv file
 highway_systems = []
-for h in active_systems:
-    highway_systems.append(HighwaySystem(h))
-for h in devel_systems:
-    highway_systems.append(HighwaySystem(h,active=False))
+with open("/Users/terescoj/travelmapping/HighwayData/systems.csv", "rt") as file:
+    lines = file.readlines()
+
+lines.pop(0)  # ignore header line for now
+for line in lines:
+    fields = line.rstrip('\n').split(";")
+    if len(fields) != 5:
+        print("Could not parse csv line: " + line)
+    highway_systems.append(HighwaySystem(fields[0], fields[1], fields[2].replace("'","''"), fields[3], fields[4] != 'yes'))
+
+#for h in active_systems:
+#    highway_systems.append(HighwaySystem(h))
+#for h in devel_systems:
+#    highway_systems.append(HighwaySystem(h,active=False))
 
 # Next, read all of the .wpt files for each HighwaySystem
 for h in highway_systems:
@@ -282,36 +295,39 @@ sqlfile = open('siteupdate.sql','w')
 sqlfile.write('USE TravelMapping\n')
 
 # we have to drop tables in the right order to avoid foreign key errors
-sqlfile.write('DROP TABLE IF EXISTS waypoints;\n')
 sqlfile.write('DROP TABLE IF EXISTS wpAltNames;\n')
+sqlfile.write('DROP TABLE IF EXISTS waypoints;\n')
 sqlfile.write('DROP TABLE IF EXISTS routes;\n')
 sqlfile.write('DROP TABLE IF EXISTS systems;\n')
 
-# first, a table of the systems, consisting of just the system name in
-# the field 'name', and a boolean indicating if the system is active for
-# mapping in the project in the field 'active'
-sqlfile.write('CREATE TABLE systems (systemName VARCHAR(10), active BOOLEAN, PRIMARY KEY(systemName));\n')
+# first, a table of the systems, consisting of the system name in the
+# field 'name', the system's country code, its full name, the default
+# color for its mapping, and a boolean indicating if the system is
+# active for mapping in the project in the field 'active'
+sqlfile.write('CREATE TABLE systems (systemName VARCHAR(10), countryCode CHAR(3), fullName VARCHAR(50), color VARCHAR(10), active BOOLEAN, PRIMARY KEY(systemName));\n')
 for h in highway_systems:
     active = 0;
     if h.active:
         active = 1;
-    sqlfile.write("INSERT INTO systems VALUES ('" + h.systemname + "','" + str(active) + "');\n")
+    sqlfile.write("INSERT INTO systems VALUES ('" + h.systemname + "','" +  h.country + "','" +  h.fullname + "','" +  h.color + "','" + str(active) + "');\n")
 
 # next, a table of highways, with the same fields as in the first line
-sqlfile.write('CREATE TABLE routes (systemName VARCHAR(10), region VARCHAR(3), route VARCHAR(16), banner VARCHAR(3), abbrev VARCHAR(3), city VARCHAR(32), root VARCHAR(16), altroutenames VARCHAR(32), PRIMARY KEY(root), FOREIGN KEY (systemName) REFERENCES systems(systemName));\n')
+sqlfile.write('CREATE TABLE routes (systemName VARCHAR(10), region VARCHAR(3), route VARCHAR(16), banner VARCHAR(3), abbrev VARCHAR(3), city VARCHAR(32), root VARCHAR(32), altroutenames VARCHAR(32), PRIMARY KEY(root), FOREIGN KEY (systemName) REFERENCES systems(systemName));\n')
 for h in highway_systems:
     for r in h.route_list:
         sqlfile.write(r.sql_insert_command('routes') + "\n")
 
 # Now, a table with raw highway route data, also table for alternate names
 
-sqlfile.write('CREATE TABLE waypoints (pointName VARCHAR(20), latitude DOUBLE, longitude DOUBLE, root VARCHAR(16), FOREIGN KEY (root) REFERENCES routes(root));\n')
-sqlfile.write('CREATE TABLE wpAltNames (altPointName VARCHAR(20), root VARCHAR(16), pointName VARCHAR(20), FOREIGN KEY (root) REFERENCES routes(root), FOREIGN KEY (pointName) REFERENCES waypoints(pointName));\n')
+sqlfile.write('CREATE TABLE waypoints (pointId INTEGER, pointName VARCHAR(20), latitude DOUBLE, longitude DOUBLE, root VARCHAR(32), PRIMARY KEY(pointId), FOREIGN KEY (root) REFERENCES routes(root));\n')
+sqlfile.write('CREATE TABLE wpAltNames (pointId INTEGER, altPointName VARCHAR(20), FOREIGN KEY (pointId) REFERENCES waypoints(pointId));\n')
+point_num = 0
 for h in highway_systems:
     for r in h.route_list:
         for w in r.point_list:
-            sqlfile.write(w.sql_insert_command('waypoints', r.root) + "\n")
+            sqlfile.write(w.sql_insert_command('waypoints', r.root, point_num) + "\n")
             for a in w.alt_labels:
-                sqlfile.write("INSERT INTO wpAltNames VALUES ('" + a + "', '" + r.root + "', '" + w.label + "');\n");
+                sqlfile.write("INSERT INTO wpAltNames VALUES ('" + str(point_num) + "', '" + a + "');\n");
+            point_num+=1
 
 sqlfile.close()
