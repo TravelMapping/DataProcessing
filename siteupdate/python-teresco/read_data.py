@@ -10,6 +10,9 @@ This module defines classes to represent the contents of a
 .wpt file that lists the waypoints for a given highway.
 """
 
+import datetime
+import re
+
 class Waypoint:
     """This class encapsulates the information about a single waypoint
     from a .wpt file.
@@ -97,8 +100,9 @@ class Route:
         self.abbrev = fields[4]
         self.city = fields[5].replace("'","''")
         self.root = fields[6]
-        self.alt_route_names = fields[7] #.split(",")
+        self.alt_route_names = fields[7].split(",")
         self.point_list = []
+        self.labels_in_use = set()
 
     def __str__(self):
         """printable version of the object"""
@@ -121,7 +125,9 @@ class Route:
 
     def sql_insert_command(self,tablename):
         """return sql command to insert into a table"""
-        return "INSERT INTO " + tablename + " VALUES ('" + self.system + "','" + self.region + "','" + self.route + "','" + self.banner + "','" + self.abbrev + "','" + self.city + "','" + self.root + "','" + self.alt_route_names + "');";
+        # note: alt_route_names does not need to be in the db since
+        # list preprocessing uses alt or canonical and no longer cares
+        return "INSERT INTO " + tablename + " VALUES ('" + self.system + "','" + self.region + "','" + self.route + "','" + self.banner + "','" + self.abbrev + "','" + self.city + "','" + self.root + "');";
 
 class HighwaySystem:
     """This class encapsulates the contents of one .csv file
@@ -170,56 +176,68 @@ class TravelerList:
 
         print("Processing " + travelername)
 
-        # not happy with this design, but...
-        # open a log file for this user's error messages
-        logfile = open(travelername+".log", "w")
+        self.log_entries = []
 
         for line in lines:
             line = line.strip()
-            print("Line: [" + line + "]")
-            fields = line.split(' ')
+            if len(line) == 0:
+                continue
+            fields = re.split(' +',line)
             if len(fields) != 4:
-                logfile.write("Incorrect format line: " + line + "\n")
+                self.log_entries.append("Incorrect format line: " + line)
                 continue
 
             # find the root that matches in some system and when we do, match labels
             lineDone = False
             for h in systems:
                 for r in h.route_list:
-                    if r.region.lower() == fields[0].lower() and (r.route + r.banner + r.abbrev).lower() == fields[1].lower():
+                    if r.region.lower() != fields[0].lower():
+                        continue
+                    route_entry = fields[1].lower()
+                    route_match = False
+                    for a in r.alt_route_names:
+                        if route_entry == a.lower():
+                            self.log_entries.append("Note: replacing deprecated route name " + fields[1] + " with canonical name " + r.route + r.banner + r.abbrev + " in line " + line)
+                            route_match = True
+                            break
+                    if route_match or (r.route + r.banner + r.abbrev).lower() == route_entry:
                         lineDone = True  # we'll either have success or failure here
                         if not h.active:
-                            logfile.write("Line matches highway in inactive system: " + line + "\n")
+                            self.log_entries.append("Ignoring line matching highway in inactive system: " + line)
                             break
                         print("Route match with " + str(r))
                         # r is a route match, r.root is our root, and we need to find
                         # canonical labels, ignoring case and leading "+" or "*" when matching
                         canonical_labels = []
                         for w in r.point_list:
-                            print("Considering waypoint: " + str(w))
                             lower_label = w.label.lower().strip("+*")
-                            print("lower_label: " + lower_label + " compared with " + fields[2] + " and " + fields[3])
                             if fields[2].lower() == lower_label or fields[3].lower() == lower_label:
-                                print("Match!  Appending " + w.label)
                                 canonical_labels.append(w.label)
+                                r.labels_in_use.add(lower_label.upper())
                             else:
-                                print("Considering alt labels.")
                                 for alt in w.alt_labels:
                                     lower_label = alt.lower().strip("+")
                                     if fields[2].lower() == lower_label or fields[3].lower() == lower_label:
                                         canonical_labels.append(w.label)
+                                        r.labels_in_use.add(lower_label.upper())
                         if len(canonical_labels) != 2:
-                            logfile.write("Waypoint label(s) not found in line: " + line + "\n")
+                            self.log_entries.append("Waypoint label(s) not found in line: " + line)
                         else:
                             self.list_entries.append(ClinchedSegment(line, r.root, canonical_labels[0], canonical_labels[1]))
                     
                 if lineDone:
                     break
             if not lineDone:
-                logfile.write("Unknown region/highway combo in line: " + line + "\n")
-        logfile.write("Processed " + str(len(self.list_entries)) + " good lines.\n")
-        logfile.close()
+                self.log_entries.append("Unknown region/highway combo in line: " + line)
+        self.log_entries.append("Processed " + str(len(self.list_entries)) + " good lines.")
        
+    def write_log(self,path="."):
+        logfile = open(path+"/"+self.traveler_name+".log","wt")
+        logfile.write("Log file created at: " + str(datetime.datetime.now()) + "\n")
+        for line in self.log_entries:
+            logfile.write(line + "\n")
+        logfile.close()
+
 class ClinchedSegment:
     """This class encapsulates one line of a traveler's list file
 
@@ -257,7 +275,10 @@ class ClinchedSegment:
 #                   'usawi', 'usawv' ]
 #devel_systems = [ 'usaak', 'usamt', 'usanm', 'usaut', 'usavt' ]
 # Also list of travelers in the system
-traveler_ids = [ 'terescoj', 'little' ]
+traveler_ids = [ 'terescoj', 'Bickendan', 'drfrankenstein', 'imgoph', 'master_son',
+                 'mojavenc', 'oscar_voss', 'rickmastfan67', 'sammi', 'si404',
+                 'sipes23' ]
+#traveler_ids = [ 'little' ]
 
 # Create a list of HighwaySystem objects, one per system in systems.csv file
 highway_systems = []
@@ -289,6 +310,10 @@ traveler_lists = []
 for t in traveler_ids:
     traveler_lists.append(TravelerList(t,highway_systems))
 
+# write log files for traveler lists
+for t in traveler_lists:
+    t.write_log()
+
 # Once all data is read in and processed, create a .sql file that will 
 # create all of the DB tables to be used by other parts of the project
 sqlfile = open('siteupdate.sql','w')
@@ -312,10 +337,14 @@ for h in highway_systems:
     sqlfile.write("INSERT INTO systems VALUES ('" + h.systemname + "','" +  h.country + "','" +  h.fullname + "','" +  h.color + "','" + str(active) + "');\n")
 
 # next, a table of highways, with the same fields as in the first line
-sqlfile.write('CREATE TABLE routes (systemName VARCHAR(10), region VARCHAR(3), route VARCHAR(16), banner VARCHAR(3), abbrev VARCHAR(3), city VARCHAR(32), root VARCHAR(32), altroutenames VARCHAR(32), PRIMARY KEY(root), FOREIGN KEY (systemName) REFERENCES systems(systemName));\n')
+sqlfile.write('CREATE TABLE routes (systemName VARCHAR(10), region VARCHAR(3), route VARCHAR(16), banner VARCHAR(3), abbrev VARCHAR(3), city VARCHAR(32), root VARCHAR(32), PRIMARY KEY(root), FOREIGN KEY (systemName) REFERENCES systems(systemName));\n')
 for h in highway_systems:
     for r in h.route_list:
         sqlfile.write(r.sql_insert_command('routes') + "\n")
+        # this info could go into the DB, but maybe it's better to put it right
+        # into some other file to be made available to developers
+        if len(r.labels_in_use) > 0:
+            print("Labels in use for " + str(r) + ":\n" + str(r.labels_in_use))
 
 # Now, a table with raw highway route data, also table for alternate names
 
