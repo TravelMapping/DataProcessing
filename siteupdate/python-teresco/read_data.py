@@ -180,7 +180,8 @@ class TravelerList:
 
         for line in lines:
             line = line.strip()
-            if len(line) == 0:
+            # ignore empty or "comment" lines
+            if len(line) == 0 or line.startswith("#"):
                 continue
             fields = re.split(' +',line)
             if len(fields) != 4:
