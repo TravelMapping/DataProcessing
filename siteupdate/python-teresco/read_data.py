@@ -13,6 +13,92 @@ This module defines classes to represent the contents of a
 import datetime
 import re
 
+class WaypointQuadtree:
+    """This class defines a recursive quadtree structure to store
+    Waypoint objects for efficient geometric searching.
+    """
+    def __init__(self,min_lat,min_lng,max_lat,max_lng):
+        """initialize an empty quadtree node on a given space"""
+        self.min_lat = min_lat
+        self.min_lng = min_lng
+        self.max_lat = max_lat
+        self.max_lng = max_lng
+        self.mid_lat = (self.min_lat + self.max_lat) / 2
+        self.mid_lng = (self.min_lng + self.max_lng) / 2
+        self.nw_child = None
+        self.ne_child = None
+        self.sw_child = None
+        self.se_child = None
+        self.points = []
+
+    def refine(self):
+        """refine a quadtree into 4 sub-quadrants"""
+        #print(str(self) + " being refined")
+        self.nw_child = WaypointQuadtree(self.min_lat,self.mid_lng,self.mid_lat,self.max_lng)
+        self.ne_child = WaypointQuadtree(self.mid_lat,self.mid_lng,self.max_lat,self.max_lng)
+        self.sw_child = WaypointQuadtree(self.min_lat,self.min_lng,self.mid_lat,self.mid_lng)
+        self.se_child = WaypointQuadtree(self.mid_lat,self.min_lng,self.max_lat,self.mid_lng)
+        points = self.points
+        self.points = None
+        for p in points:
+            self.insert(p)
+        
+
+    def insert(self,w):
+        """insert Waypoint w into this quadtree node"""
+        #print(str(self) + " insert " + str(w))
+        if self.points is not None:
+            self.points.append(w)
+            if len(self.points) > 50:  # 50 points max per quadtree node
+                self.refine()
+        else:
+            if w.lat < self.mid_lat:
+                if w.lng < self.mid_lng:
+                    self.sw_child.insert(w)
+                else:
+                    self.nw_child.insert(w)
+            else:
+                if w.lng < self.mid_lng:
+                    self.se_child.insert(w)
+                else:
+                    self.ne_child.insert(w)
+
+    def waypoint_at_same_point(self,w):
+        """find an existing waypoint at the same coordinates as w"""
+        if self.points is not None:
+            for p in self.points:
+                if p.same_coords(w):
+                    return p
+            return None
+        else:
+            if w.lat < self.mid_lat:
+                if w.lng < self.mid_lng:
+                    return self.sw_child.waypoint_at_same_point(w)
+                else:
+                    return self.nw_child.waypoint_at_same_point(w)
+            else:
+                if w.lng < self.mid_lng:
+                    return self.se_child.waypoint_at_same_point(w)
+                else:
+                    return self.ne_child.waypoint_at_same_point(w)
+            
+
+    def __str__(self):
+        s = "WaypointQuadtree at (" + str(self.min_lat) + "," + \
+            str(self.min_lng) + ") to (" + str(self.max_lat) + "," + \
+            str(self.max_lng) + ")"
+        if self.points is None:
+            return s + " REFINED"
+        else:
+            return s + " contains " + str(len(self.points)) + " waypoints"
+
+    def size(self):
+        """return the number of Waypoints in the tree"""
+        if self.points is None:
+            return self.nw_child.size() + self.ne_child.size() + self.sw_child.size() + self.se_child.size()
+        else:
+            return len(self.points)
+
 class Waypoint:
     """This class encapsulates the information about a single waypoint
     from a .wpt file.
@@ -20,9 +106,13 @@ class Waypoint:
     The line consists of one or more labels, at most one of which can
     be a "regular" label.  Others are "hidden" labels and must begin with
     a '+'.  Then an OSM URL which encodes the latitude and longitude.
+
+    root is the unique identifier for the route in which this waypoint
+    is defined
     """
-    def __init__(self,line):
+    def __init__(self,line,root):
         """initialize object from a .wpt file line"""
+        self.root = root
         parts = line.split()
         self.label = parts[0]
         self.is_hidden = self.label.startswith('+')
@@ -37,17 +127,22 @@ class Waypoint:
         lng_string = url_parts[2].split("&")[0] # chop off possible "&zoom"
         self.lat = float(lat_string)
         self.lng = float(lng_string)
+        # also keep track of a list of colocated waypoints, if any
+        self.colocated = None
 
     def __str__(self):
-        ans = self.label
+        ans = self.root + " " + self.label
         if len(self.alt_labels) > 0:
             ans = ans + " [alt: " + str(self.alt_labels) + "]"
         ans = ans + " (" + str(self.lat) + "," + str(self.lng) + ")"
         return ans
 
-    def sql_insert_command(self,tablename,root,id):
+    def sql_insert_command(self,tablename,id):
         """return sql command to insert into a table"""
-        return "INSERT INTO " + tablename + " VALUES ('" + str(id) + "','" + self.label + "','" + str(self.lat) + "','" + str(self.lng) + "','" + root + "');";
+        return "INSERT INTO " + tablename + " VALUES ('" + str(id) + "','" + self.label + "','" + str(self.lat) + "','" + str(self.lng) + "','" + self.root + "');";
+
+    def same_coords(self,other):
+        return self.lat == other.lat and self.lng == other.lng
 
 class Route:
     """This class encapsulates the contents of one .csv file line
@@ -109,15 +204,26 @@ class Route:
         return self.line + " with " + str(len(self.point_list)) + " points"
 
     #def read_wpt(self,path="/Users/terescoj/travelmapping/work/old_chm_data"):
-    def read_wpt(self,path="/Users/terescoj/travelmapping/HighwayData/chm_final"):
+    def read_wpt(self,all_waypoints,path="/Users/terescoj/travelmapping/HighwayData/chm_final"):
         """read data into the Route's waypoint list from a .wpt file"""
-        print("read_wpt on " + str(self))
+        #print("read_wpt on " + str(self))
         self.point_list = []
         with open(path+"/"+self.system+"/"+self.root+".wpt", "rt") as file:
             lines = file.readlines()
         for line in lines:
             if len(line.rstrip('\n')) > 0:
-                self.point_list.append(Waypoint(line.rstrip('\n')))
+                w = Waypoint(line.rstrip('\n'),self.root)
+                self.point_list.append(w)
+                # look for colocated points
+                other_w = all_waypoints.waypoint_at_same_point(w)
+                if other_w is not None:
+                    # see if this is the first point colocated with other_w
+                    if other_w.colocated is None:
+                        other_w.colocated = [ other_w ]
+                    other_w.colocated.append(w)
+                    w.colocated = other_w.colocated
+                    #print("New colocation found: " + str(w) + " with " + str(other_w))
+                all_waypoints.insert(w)
 
     def print_route(self):
         for point in self.point_list:
@@ -151,7 +257,6 @@ class HighwaySystem:
         # ignore the first line of field names
         lines.pop(0)
         for line in lines:
-            print(systemname)
             self.route_list.append(Route(line.rstrip('\n')))
         file.close()
 
@@ -206,7 +311,7 @@ class TravelerList:
                         if not h.active:
                             self.log_entries.append("Ignoring line matching highway in inactive system: " + line)
                             break
-                        print("Route match with " + str(r))
+                        #print("Route match with " + str(r))
                         # r is a route match, r.root is our root, and we need to find
                         # canonical labels, ignoring case and leading "+" or "*" when matching
                         canonical_labels = []
@@ -283,6 +388,7 @@ traveler_ids = [ 'terescoj', 'Bickendan', 'drfrankenstein', 'imgoph', 'master_so
 
 # Create a list of HighwaySystem objects, one per system in systems.csv file
 highway_systems = []
+print("Reading systems list.")
 with open("/Users/terescoj/travelmapping/HighwayData/systems.csv", "rt") as file:
     lines = file.readlines()
 
@@ -291,6 +397,7 @@ for line in lines:
     fields = line.rstrip('\n').split(";")
     if len(fields) != 5:
         print("Could not parse csv line: " + line)
+    print("Reading system " + fields[0] + ".")
     highway_systems.append(HighwaySystem(fields[0], fields[1], fields[2].replace("'","''"), fields[3], fields[4] != 'yes'))
 
 #for h in active_systems:
@@ -298,16 +405,24 @@ for line in lines:
 #for h in devel_systems:
 #    highway_systems.append(HighwaySystem(h,active=False))
 
+# For finding colocated Waypoints and concurrent segments, we have a list
+# of all Waypoints in existence
+# This is a definite candidate for a more efficient data structure -- 
+# a quadtree might make a lot of sense
+all_waypoints = WaypointQuadtree(-180,-90,180,90)
+
+print("Reading waypoints for all routes.")
 # Next, read all of the .wpt files for each HighwaySystem
 for h in highway_systems:
     for r in h.route_list:
-        r.read_wpt()
+        r.read_wpt(all_waypoints)
         #print(str(r))
         #r.print_route()
 
 # Create a list of TravelerList objects, one per person
 traveler_lists = []
 
+print("Processing traveler list files.")
 for t in traveler_ids:
     traveler_lists.append(TravelerList(t,highway_systems))
 
@@ -315,6 +430,17 @@ for t in traveler_ids:
 for t in traveler_lists:
     t.write_log()
 
+# write log file for points in use -- might be more useful in the DB later,
+# or maybe in another format
+print("Writing points in use log.")
+inusefile = open('pointsinuse.log','w')
+for h in highway_systems:
+    for r in h.route_list:
+        if len(r.labels_in_use) > 0:
+            inusefile.write("Labels in use for " + str(r) + ": " + str(r.labels_in_use) + "\n")
+inusefile.close()
+
+print("Writing database file.")
 # Once all data is read in and processed, create a .sql file that will 
 # create all of the DB tables to be used by other parts of the project
 sqlfile = open('siteupdate.sql','w')
@@ -342,10 +468,6 @@ sqlfile.write('CREATE TABLE routes (systemName VARCHAR(10), region VARCHAR(3), r
 for h in highway_systems:
     for r in h.route_list:
         sqlfile.write(r.sql_insert_command('routes') + "\n")
-        # this info could go into the DB, but maybe it's better to put it right
-        # into some other file to be made available to developers
-        if len(r.labels_in_use) > 0:
-            print("Labels in use for " + str(r) + ":\n" + str(r.labels_in_use))
 
 # Now, a table with raw highway route data, also table for alternate names
 
@@ -355,9 +477,20 @@ point_num = 0
 for h in highway_systems:
     for r in h.route_list:
         for w in r.point_list:
-            sqlfile.write(w.sql_insert_command('waypoints', r.root, point_num) + "\n")
+            sqlfile.write(w.sql_insert_command('waypoints', point_num) + "\n")
             for a in w.alt_labels:
                 sqlfile.write("INSERT INTO wpAltNames VALUES ('" + str(point_num) + "', '" + a + "');\n");
             point_num+=1
 
 sqlfile.close()
+
+# print some statistics
+print("Processed " + str(len(highway_systems)) + " highway systems.")
+routes = 0
+points = 0
+for h in highway_systems:
+    routes += len(h.route_list)
+    for r in h.route_list:
+        points += len(r.point_list)
+print("Processed " + str(routes) + " routes with a total of " + str(points) + " points.")
+print("all_waypoints contains " + str(all_waypoints.size()) + " waypoints.")
