@@ -12,6 +12,16 @@ This module defines classes to represent the contents of a
 
 import datetime
 import re
+import time
+
+class ElapsedTime:
+    """To get a nicely-formatted elapsed time string for printing"""
+
+    def __init__(self):
+        self.start_time = time.time()
+
+    def et(self):
+        return "[{0:.1f}] ".format(time.time()-self.start_time)
 
 class WaypointQuadtree:
     """This class defines a recursive quadtree structure to store
@@ -99,6 +109,18 @@ class WaypointQuadtree:
         else:
             return len(self.points)
 
+    def point_list(self):
+        """return a list of all points in the quadtree"""
+        if self.points is None:
+            all_points = []
+            all_points.extend(self.ne_child.point_list())
+            all_points.extend(self.nw_child.point_list())
+            all_points.extend(self.se_child.point_list())
+            all_points.extend(self.sw_child.point_list())
+            return all_points
+        else:
+            return self.points
+
 class Waypoint:
     """This class encapsulates the information about a single waypoint
     from a .wpt file.
@@ -110,9 +132,9 @@ class Waypoint:
     root is the unique identifier for the route in which this waypoint
     is defined
     """
-    def __init__(self,line,root):
+    def __init__(self,line,route):
         """initialize object from a .wpt file line"""
-        self.root = root
+        self.route = route
         parts = line.split()
         self.label = parts[0]
         self.is_hidden = self.label.startswith('+')
@@ -131,7 +153,7 @@ class Waypoint:
         self.colocated = None
 
     def __str__(self):
-        ans = self.root + " " + self.label
+        ans = self.route.root + " " + self.label
         if len(self.alt_labels) > 0:
             ans = ans + " [alt: " + str(self.alt_labels) + "]"
         ans = ans + " (" + str(self.lat) + "," + str(self.lng) + ")"
@@ -139,10 +161,41 @@ class Waypoint:
 
     def sql_insert_command(self,tablename,id):
         """return sql command to insert into a table"""
-        return "INSERT INTO " + tablename + " VALUES ('" + str(id) + "','" + self.label + "','" + str(self.lat) + "','" + str(self.lng) + "','" + self.root + "');";
+        return "INSERT INTO " + tablename + " VALUES ('" + str(id) + "','" + self.label + "','" + str(self.lat) + "','" + str(self.lng) + "','" + self.route.root + "');"
 
     def same_coords(self,other):
+        """return if this waypoint is colocated with the other,
+        using exact lat,lng match"""
         return self.lat == other.lat and self.lng == other.lng
+
+    def num_colocated(self):
+        """return the number of points colocated with this one (including itself)"""
+        if self.colocated is None:
+            return 1
+        else:
+            return len(self.colocated)
+
+class HighwaySegment:
+    """This class represents one highway segment: the connection between two
+    Waypoints connected by one or more routes"""
+
+    def __init__(self,w1,w2,route):
+        self.waypoint1 = w1
+        self.waypoint2 = w2
+        self.route = route
+        self.clinched_by = []
+
+    def __str__(self):
+        return self.waypoint1.label + " to " + self.waypoint2.label + \
+            " via " + self.route.root
+
+    def add_clinched_by(self,traveler):
+        if traveler not in self.clinched_by:
+            self.clinched_by.append(traveler)
+
+    def sql_insert_command(self,tablename,id):
+        """return sql command to insert into a table"""
+        return "INSERT INTO " + tablename + " VALUES ('" + str(id) + "','" + str(self.waypoint1.point_num) + "','" + str(self.waypoint2.point_num) + "','" + self.route.root + "');"
 
 class Route:
     """This class encapsulates the contents of one .csv file line
@@ -198,10 +251,11 @@ class Route:
         self.alt_route_names = fields[7].split(",")
         self.point_list = []
         self.labels_in_use = set()
+        self.segment_list = []
 
     def __str__(self):
         """printable version of the object"""
-        return self.line + " with " + str(len(self.point_list)) + " points"
+        return self.root + " (" + str(len(self.point_list)) + " total points)"
 
     #def read_wpt(self,path="/Users/terescoj/travelmapping/work/old_chm_data"):
     def read_wpt(self,all_waypoints,path="/Users/terescoj/travelmapping/HighwayData/chm_final"):
@@ -210,9 +264,11 @@ class Route:
         self.point_list = []
         with open(path+"/"+self.system+"/"+self.root+".wpt", "rt") as file:
             lines = file.readlines()
+        w = None
         for line in lines:
             if len(line.rstrip('\n')) > 0:
-                w = Waypoint(line.rstrip('\n'),self.root)
+                previous_point = w
+                w = Waypoint(line.rstrip('\n'),self)
                 self.point_list.append(w)
                 # look for colocated points
                 other_w = all_waypoints.waypoint_at_same_point(w)
@@ -224,6 +280,9 @@ class Route:
                     w.colocated = other_w.colocated
                     #print("New colocation found: " + str(w) + " with " + str(other_w))
                 all_waypoints.insert(w)
+                # add HighwaySegment, if not first point
+                if previous_point is not None:
+                    self.segment_list.append(HighwaySegment(previous_point, w, self))
 
     def print_route(self):
         for point in self.point_list:
@@ -274,6 +333,7 @@ class TravelerList:
 
     def __init__(self,travelername,systems,path="/Users/terescoj/travelmapping/work/list_files"):
         self.list_entries = []
+        self.clinched_segments = []
         self.traveler_name = travelername
         with open(path+"/"+travelername+".list","rt") as file:
             lines = file.readlines()
@@ -313,29 +373,43 @@ class TravelerList:
                             break
                         #print("Route match with " + str(r))
                         # r is a route match, r.root is our root, and we need to find
-                        # canonical labels, ignoring case and leading "+" or "*" when matching
-                        canonical_labels = []
+                        # canonical waypoint labels, ignoring case and leading "+" or "*" when matching
+                        canonical_waypoints = []
                         for w in r.point_list:
                             lower_label = w.label.lower().strip("+*")
                             if fields[2].lower() == lower_label or fields[3].lower() == lower_label:
-                                canonical_labels.append(w.label)
+                                canonical_waypoints.append(w)
                                 r.labels_in_use.add(lower_label.upper())
                             else:
                                 for alt in w.alt_labels:
                                     lower_label = alt.lower().strip("+")
                                     if fields[2].lower() == lower_label or fields[3].lower() == lower_label:
-                                        canonical_labels.append(w.label)
+                                        canonical_waypoints.append(w)
                                         r.labels_in_use.add(lower_label.upper())
-                        if len(canonical_labels) != 2:
+                        if len(canonical_waypoints) != 2:
                             self.log_entries.append("Waypoint label(s) not found in line: " + line)
                         else:
-                            self.list_entries.append(ClinchedSegment(line, r.root, canonical_labels[0], canonical_labels[1]))
+                            self.list_entries.append(ClinchedSegmentEntry(line, r.root, \
+                                                                          canonical_waypoints[0].label, \
+                                                                          canonical_waypoints[1].label))
+                            # find the segments we just matched and store this traveler with the
+                            # segments and the segments with the traveler (might not need both
+                            # ultimately)
+                            start = r.point_list.index(canonical_waypoints[0])
+                            end = r.point_list.index(canonical_waypoints[1])
+                            for wp_pos in range(start,end):
+                                hs = r.segment_list[wp_pos] #r.get_segment(r.point_list[wp_pos], r.point_list[wp_pos+1])
+                                hs.add_clinched_by(self)
+                                if hs not in self.clinched_segments:
+                                    self.clinched_segments.append(hs)
                     
                 if lineDone:
                     break
             if not lineDone:
                 self.log_entries.append("Unknown region/highway combo in line: " + line)
-        self.log_entries.append("Processed " + str(len(self.list_entries)) + " good lines.")
+        self.log_entries.append("Processed " + str(len(self.list_entries)) + \
+                                    " good lines marking " +str(len(self.clinched_segments)) + \
+                                    " segments traveled.")
        
     def write_log(self,path="."):
         logfile = open(path+"/"+self.traveler_name+".log","wt")
@@ -344,7 +418,7 @@ class TravelerList:
             logfile.write(line + "\n")
         logfile.close()
 
-class ClinchedSegment:
+class ClinchedSegmentEntry:
     """This class encapsulates one line of a traveler's list file
 
     raw_line is the actual line from the list file for error reporting
@@ -370,6 +444,9 @@ class ClinchedSegment:
 
 # Execution code starts here
 #
+# start a timer for including elapsed time reports in messages
+et = ElapsedTime()
+#
 # First, give lists of active and development systems to be included.
 # Might want these to be read from a config file in the future.
 #active_systems = [ 'cannb', 'cannsc', 'cannsf', 'cannst', 'cannt', 'canon', 'canonf', 'canpe',
@@ -381,14 +458,14 @@ class ClinchedSegment:
 #                   'usawi', 'usawv' ]
 #devel_systems = [ 'usaak', 'usamt', 'usanm', 'usaut', 'usavt' ]
 # Also list of travelers in the system
-traveler_ids = [ 'terescoj', 'Bickendan', 'drfrankenstein', 'imgoph', 'master_son',
-                 'mojavenc', 'oscar_voss', 'rickmastfan67', 'sammi', 'si404',
-                 'sipes23' ]
-#traveler_ids = [ 'little' ]
+#traveler_ids = [ 'terescoj', 'Bickendan', 'drfrankenstein', 'imgoph', 'master_son',
+#                 'mojavenc', 'oscar_voss', 'rickmastfan67', 'sammi', 'si404',
+#                 'sipes23' ]
+traveler_ids = [ 'little' ]
 
 # Create a list of HighwaySystem objects, one per system in systems.csv file
 highway_systems = []
-print("Reading systems list.")
+print(et.et() + "Reading systems list.  ",end="",flush=True)
 with open("/Users/terescoj/travelmapping/HighwayData/systems.csv", "rt") as file:
     lines = file.readlines()
 
@@ -397,8 +474,9 @@ for line in lines:
     fields = line.rstrip('\n').split(";")
     if len(fields) != 5:
         print("Could not parse csv line: " + line)
-    print("Reading system " + fields[0] + ".")
+    print(fields[0] + ".",end="",flush=True)
     highway_systems.append(HighwaySystem(fields[0], fields[1], fields[2].replace("'","''"), fields[3], fields[4] != 'yes'))
+print("")
 
 #for h in active_systems:
 #    highway_systems.append(HighwaySystem(h))
@@ -411,18 +489,21 @@ for line in lines:
 # a quadtree might make a lot of sense
 all_waypoints = WaypointQuadtree(-180,-90,180,90)
 
-print("Reading waypoints for all routes.")
+print(et.et() + "Reading waypoints for all routes.")
 # Next, read all of the .wpt files for each HighwaySystem
 for h in highway_systems:
+    print(h.systemname,end="",flush=True)
     for r in h.route_list:
         r.read_wpt(all_waypoints)
+        print(".", end="",flush=True)
         #print(str(r))
         #r.print_route()
+    print("!")
 
 # Create a list of TravelerList objects, one per person
 traveler_lists = []
 
-print("Processing traveler list files.")
+print(et.et() + "Processing traveler list files.")
 for t in traveler_ids:
     traveler_lists.append(TravelerList(t,highway_systems))
 
@@ -432,7 +513,7 @@ for t in traveler_lists:
 
 # write log file for points in use -- might be more useful in the DB later,
 # or maybe in another format
-print("Writing points in use log.")
+print(et.et() + "Writing points in use log.")
 inusefile = open('pointsinuse.log','w')
 for h in highway_systems:
     for r in h.route_list:
@@ -440,13 +521,14 @@ for h in highway_systems:
             inusefile.write("Labels in use for " + str(r) + ": " + str(r.labels_in_use) + "\n")
 inusefile.close()
 
-print("Writing database file.")
+print(et.et() + "Writing database file.")
 # Once all data is read in and processed, create a .sql file that will 
 # create all of the DB tables to be used by other parts of the project
 sqlfile = open('siteupdate.sql','w')
 sqlfile.write('USE TravelMapping\n')
 
 # we have to drop tables in the right order to avoid foreign key errors
+sqlfile.write('DROP TABLE IF EXISTS segments;\n')
 sqlfile.write('DROP TABLE IF EXISTS wpAltNames;\n')
 sqlfile.write('DROP TABLE IF EXISTS waypoints;\n')
 sqlfile.write('DROP TABLE IF EXISTS routes;\n')
@@ -472,25 +554,58 @@ for h in highway_systems:
 # Now, a table with raw highway route data, also table for alternate names
 
 sqlfile.write('CREATE TABLE waypoints (pointId INTEGER, pointName VARCHAR(20), latitude DOUBLE, longitude DOUBLE, root VARCHAR(32), PRIMARY KEY(pointId), FOREIGN KEY (root) REFERENCES routes(root));\n')
-sqlfile.write('CREATE TABLE wpAltNames (pointId INTEGER, altPointName VARCHAR(20), FOREIGN KEY (pointId) REFERENCES waypoints(pointId));\n')
+#sqlfile.write('CREATE TABLE wpAltNames (pointId INTEGER, altPointName VARCHAR(20), FOREIGN KEY (pointId) REFERENCES waypoints(pointId));\n')
 point_num = 0
 for h in highway_systems:
     for r in h.route_list:
         for w in r.point_list:
+            w.point_num = point_num
             sqlfile.write(w.sql_insert_command('waypoints', point_num) + "\n")
-            for a in w.alt_labels:
-                sqlfile.write("INSERT INTO wpAltNames VALUES ('" + str(point_num) + "', '" + a + "');\n");
+            #for a in w.alt_labels:
+            #    sqlfile.write("INSERT INTO wpAltNames VALUES ('" + str(point_num) + "', '" + a + "');\n");
             point_num+=1
+
+# TODO: Table of all HighwaySegments?
+sqlfile.write('CREATE TABLE segments (segmentId INTEGER, waypoint1 INTEGER, waypoint2 INTEGER, root VARCHAR(32), PRIMARY KEY (segmentId), FOREIGN KEY (waypoint1) REFERENCES waypoints(pointId), FOREIGN KEY (waypoint2) REFERENCES waypoints(pointId), FOREIGN KEY (root) REFERENCES routes(root));\n')
+segment_num = 0
+for h in highway_systems:
+    for r in h.route_list:
+        for s in r.segment_list:
+            sqlfile.write(s.sql_insert_command('segments', segment_num) + "\n")
+            segment_num += 1
+
+# TODO: Table of clinched segments?  One for each clinched segment by each traveler?  Seems huge.
 
 sqlfile.close()
 
 # print some statistics
-print("Processed " + str(len(highway_systems)) + " highway systems.")
+print(et.et() + "Processed " + str(len(highway_systems)) + " highway systems.")
 routes = 0
 points = 0
+segments = 0
 for h in highway_systems:
     routes += len(h.route_list)
     for r in h.route_list:
         points += len(r.point_list)
-print("Processed " + str(routes) + " routes with a total of " + str(points) + " points.")
-print("all_waypoints contains " + str(all_waypoints.size()) + " waypoints.")
+        segments += len(r.segment_list)
+print("Processed " + str(routes) + " routes with a total of " + \
+          str(points) + " points and " + str(segments) + " segments.")
+if points != all_waypoints.size():
+    print("MISMATCH: all_waypoints contains " + str(all_waypoints.size()) + " waypoints!")
+# compute colocation of waypoints stats
+colocate_counts = [0]*50
+largest_colocate_count = 1
+for w in all_waypoints.point_list():
+    c = w.num_colocated()
+    #if c == 10:
+    #    print(str(w))
+    colocate_counts[c] += 1
+    if c > largest_colocate_count:
+        largest_colocate_count = c
+print("Waypoint colocation counts:")
+unique_locations = 0
+for c in range(1,largest_colocate_count+1):
+    unique_locations += colocate_counts[c]//c
+    print(str(colocate_counts[c]//c) + " are each occupied by " + str(c) + " waypoints.")
+print("Unique locations: " + str(unique_locations))
+
