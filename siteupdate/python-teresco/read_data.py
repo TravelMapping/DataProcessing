@@ -458,10 +458,10 @@ et = ElapsedTime()
 #                   'usawi', 'usawv' ]
 #devel_systems = [ 'usaak', 'usamt', 'usanm', 'usaut', 'usavt' ]
 # Also list of travelers in the system
-#traveler_ids = [ 'terescoj', 'Bickendan', 'drfrankenstein', 'imgoph', 'master_son',
-#                 'mojavenc', 'oscar_voss', 'rickmastfan67', 'sammi', 'si404',
-#                 'sipes23' ]
-traveler_ids = [ 'little' ]
+traveler_ids = [ 'terescoj', 'Bickendan', 'drfrankenstein', 'imgoph', 'master_son',
+                 'mojavenc', 'oscar_voss', 'rickmastfan67', 'sammi', 'si404',
+                 'sipes23' ]
+#traveler_ids = [ 'terescoj', 'si404' ]
 
 # Create a list of HighwaySystem objects, one per system in systems.csv file
 highway_systems = []
@@ -528,6 +528,7 @@ sqlfile = open('siteupdate.sql','w')
 sqlfile.write('USE TravelMapping\n')
 
 # we have to drop tables in the right order to avoid foreign key errors
+sqlfile.write('DROP TABLE IF EXISTS clinched;\n')
 sqlfile.write('DROP TABLE IF EXISTS segments;\n')
 sqlfile.write('DROP TABLE IF EXISTS wpAltNames;\n')
 sqlfile.write('DROP TABLE IF EXISTS waypoints;\n')
@@ -565,13 +566,19 @@ for h in highway_systems:
             #    sqlfile.write("INSERT INTO wpAltNames VALUES ('" + str(point_num) + "', '" + a + "');\n");
             point_num+=1
 
-# TODO: Table of all HighwaySegments?
+# Table of all HighwaySegments.  Good?  TBD.  Put in traveler clinches too.
 sqlfile.write('CREATE TABLE segments (segmentId INTEGER, waypoint1 INTEGER, waypoint2 INTEGER, root VARCHAR(32), PRIMARY KEY (segmentId), FOREIGN KEY (waypoint1) REFERENCES waypoints(pointId), FOREIGN KEY (waypoint2) REFERENCES waypoints(pointId), FOREIGN KEY (root) REFERENCES routes(root));\n')
+# maybe a separate traveler table will make sense but for now, I'll just use
+# the name from the .list name
+sqlfile.write('CREATE TABLE clinched (segmentId INTEGER, traveler VARCHAR(48), FOREIGN KEY (segmentId) REFERENCES segments(segmentId));\n')
 segment_num = 0
 for h in highway_systems:
     for r in h.route_list:
         for s in r.segment_list:
             sqlfile.write(s.sql_insert_command('segments', segment_num) + "\n")
+            for t in s.clinched_by:
+                sqlfile.write("INSERT INTO clinched VALUES ('" + str(segment_num) + \
+                                  "','" + t.traveler_name + "');\n")
             segment_num += 1
 
 # TODO: Table of clinched segments?  One for each clinched segment by each traveler?  Seems huge.
