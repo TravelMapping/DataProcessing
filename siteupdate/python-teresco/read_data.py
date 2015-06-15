@@ -183,6 +183,7 @@ class HighwaySegment:
         self.waypoint1 = w1
         self.waypoint2 = w2
         self.route = route
+        self.concurrent = None
         self.clinched_by = []
 
     def __str__(self):
@@ -192,6 +193,9 @@ class HighwaySegment:
     def add_clinched_by(self,traveler):
         if traveler not in self.clinched_by:
             self.clinched_by.append(traveler)
+            return True
+        else:
+            return False
 
     def sql_insert_command(self,tablename,id):
         """return sql command to insert into a table"""
@@ -234,14 +238,16 @@ class Route:
     AltRouteNames: (optional) comma-separated list former or other
     alternate route names that might appear in user list files.
     """
-    def __init__(self,line):
+    def __init__(self,line,system):
         """initialize object from a .csv file line, but do not
         yet read in waypoint file"""
         self.line = line
         fields = line.split(";")
         if len(fields) != 8:
             print("Could not parse csv line: " + line)
-        self.system = fields[0]
+        self.system = system
+        if system.systemname != fields[0]:
+            print("System mismatch parsing line [" + "], expected " + system.systemname)
         self.region = fields[1]
         self.route = fields[2]
         self.banner = fields[3]
@@ -262,7 +268,7 @@ class Route:
         """read data into the Route's waypoint list from a .wpt file"""
         #print("read_wpt on " + str(self))
         self.point_list = []
-        with open(path+"/"+self.system+"/"+self.root+".wpt", "rt") as file:
+        with open(path+"/"+self.system.systemname+"/"+self.root+".wpt", "rt") as file:
             lines = file.readlines()
         w = None
         for line in lines:
@@ -288,11 +294,17 @@ class Route:
         for point in self.point_list:
             print(str(point))
 
+    def find_segment_by_waypoints(self,w1,w2):
+        for s in self.segment_list:
+            if s.waypoint1 is w1 and s.waypoint2 is w2 or s.waypoint1 is w2 and s.waypoint2 is w1:
+                return s
+        return None
+
     def sql_insert_command(self,tablename):
         """return sql command to insert into a table"""
         # note: alt_route_names does not need to be in the db since
         # list preprocessing uses alt or canonical and no longer cares
-        return "INSERT INTO " + tablename + " VALUES ('" + self.system + "','" + self.region + "','" + self.route + "','" + self.banner + "','" + self.abbrev + "','" + self.city + "','" + self.root + "');";
+        return "INSERT INTO " + tablename + " VALUES ('" + self.system.systemname + "','" + self.region + "','" + self.route + "','" + self.banner + "','" + self.abbrev + "','" + self.city + "','" + self.root + "');";
 
 class HighwaySystem:
     """This class encapsulates the contents of one .csv file
@@ -316,7 +328,7 @@ class HighwaySystem:
         # ignore the first line of field names
         lines.pop(0)
         for line in lines:
-            self.route_list.append(Route(line.rstrip('\n')))
+            self.route_list.append(Route(line.rstrip('\n'),self))
         file.close()
 
 class TravelerList:
@@ -375,17 +387,22 @@ class TravelerList:
                         # r is a route match, r.root is our root, and we need to find
                         # canonical waypoint labels, ignoring case and leading "+" or "*" when matching
                         canonical_waypoints = []
+                        canonical_waypoint_indices = []
+                        checking_index = 0;
                         for w in r.point_list:
                             lower_label = w.label.lower().strip("+*")
                             if fields[2].lower() == lower_label or fields[3].lower() == lower_label:
                                 canonical_waypoints.append(w)
+                                canonical_waypoint_indices.append(checking_index)
                                 r.labels_in_use.add(lower_label.upper())
                             else:
                                 for alt in w.alt_labels:
                                     lower_label = alt.lower().strip("+")
                                     if fields[2].lower() == lower_label or fields[3].lower() == lower_label:
                                         canonical_waypoints.append(w)
+                                        canonical_waypoint_indices.append(checking_index)
                                         r.labels_in_use.add(lower_label.upper())
+                            checking_index += 1
                         if len(canonical_waypoints) != 2:
                             self.log_entries.append("Waypoint label(s) not found in line: " + line)
                         else:
@@ -395,8 +412,10 @@ class TravelerList:
                             # find the segments we just matched and store this traveler with the
                             # segments and the segments with the traveler (might not need both
                             # ultimately)
-                            start = r.point_list.index(canonical_waypoints[0])
-                            end = r.point_list.index(canonical_waypoints[1])
+                            #start = r.point_list.index(canonical_waypoints[0])
+                            #end = r.point_list.index(canonical_waypoints[1])
+                            start = canonical_waypoint_indices[0]
+                            end = canonical_waypoint_indices[1]
                             for wp_pos in range(start,end):
                                 hs = r.segment_list[wp_pos] #r.get_segment(r.point_list[wp_pos], r.point_list[wp_pos+1])
                                 hs.add_clinched_by(self)
@@ -460,7 +479,7 @@ et = ElapsedTime()
 # Also list of travelers in the system
 traveler_ids = [ 'terescoj', 'Bickendan', 'drfrankenstein', 'imgoph', 'master_son',
                  'mojavenc', 'oscar_voss', 'rickmastfan67', 'sammi', 'si404',
-                 'sipes23' ]
+                 'sipes23', 'froggie', 'mapcat', 'duke87', 'vdeane' ]
 #traveler_ids = [ 'terescoj', 'si404' ]
 
 # Create a list of HighwaySystem objects, one per system in systems.csv file
@@ -507,10 +526,6 @@ print(et.et() + "Processing traveler list files.")
 for t in traveler_ids:
     traveler_lists.append(TravelerList(t,highway_systems))
 
-# write log files for traveler lists
-for t in traveler_lists:
-    t.write_log()
-
 # write log file for points in use -- might be more useful in the DB later,
 # or maybe in another format
 print(et.et() + "Writing points in use log.")
@@ -520,6 +535,55 @@ for h in highway_systems:
         if len(r.labels_in_use) > 0:
             inusefile.write("Labels in use for " + str(r) + ": " + str(r.labels_in_use) + "\n")
 inusefile.close()
+
+# concurrency detection -- will augment our structure with list of concurrent
+# segments with each segment (that has a concurrency)
+print(et.et() + "Concurrent segment detection.",end="",flush=True)
+concurrencyfile = open('concurrencies.log','w')
+for h in highway_systems:
+    print(".",end="",flush=True)
+    for r in h.route_list:
+        for s in r.segment_list:
+            if s.waypoint1.colocated is not None and s.waypoint2.colocated is not None:
+                for w1 in s.waypoint1.colocated:
+                    if w1.route is not r:
+                        for w2 in s.waypoint2.colocated:
+                            if w1.route is w2.route:
+                                other = w1.route.find_segment_by_waypoints(w1,w2)
+                                if other is not None:
+                                    if s.concurrent is None:
+                                        s.concurrent = []
+                                        other.concurrent = s.concurrent
+                                        s.concurrent.append(s)
+                                        s.concurrent.append(other)
+                                        concurrencyfile.write("New concurrency [" + str(s) + "][" + str(other) + "] (" + str(len(s.concurrent)) + ")\n")
+                                    else:
+                                        if other not in s.concurrent:
+                                            s.concurrent.append(other)
+                                            #concurrencyfile.write("Added concurrency [" + str(s) + "]-[" + str(other) + "] ("+ str(len(s.concurrent)) + ")\n")
+                                            concurrencyfile.write("Extended concurrency ")
+                                            for x in s.concurrent:
+                                                concurrencyfile.write("[" + str(x) + "]")
+                                            concurrencyfile.write(" (" + str(len(s.concurrent)) + ")\n")
+print("!")
+
+# now augment any traveler clinched segments for concurrencies
+
+print(et.et() + "Augmenting travelers for detected concurrent segments.",end="",flush=True)
+for t in traveler_lists:
+    print(".",end="",flush=True)
+    for s in t.clinched_segments:
+        if s.concurrent is not None:
+            for hs in s.concurrent:
+                if hs.route.system.active and hs.add_clinched_by(t):
+                    concurrencyfile.write("Concurrency augment for traveler " + t.traveler_name + ": [" + str(hs) + "] based on [" + str(s) + "]\n")
+print("!")
+concurrencyfile.close()
+
+# write log files for traveler lists
+print(et.et() + "Writing traveler list logs.")
+for t in traveler_lists:
+    t.write_log()
 
 print(et.et() + "Writing database file.")
 # Once all data is read in and processed, create a .sql file that will 
