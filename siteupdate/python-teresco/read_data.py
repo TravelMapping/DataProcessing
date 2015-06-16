@@ -163,6 +163,10 @@ class Waypoint:
         """return sql command to insert into a table"""
         return "INSERT INTO " + tablename + " VALUES ('" + str(id) + "','" + self.label + "','" + str(self.lat) + "','" + str(self.lng) + "','" + self.route.root + "');"
 
+    def csv_line(self,id):
+        """return csv line to insert into a table"""
+        return "'" + str(id) + "','" + self.label + "','" + str(self.lat) + "','" + str(self.lng) + "','" + self.route.root + "'"
+
     def same_coords(self,other):
         """return if this waypoint is colocated with the other,
         using exact lat,lng match"""
@@ -200,6 +204,10 @@ class HighwaySegment:
     def sql_insert_command(self,tablename,id):
         """return sql command to insert into a table"""
         return "INSERT INTO " + tablename + " VALUES ('" + str(id) + "','" + str(self.waypoint1.point_num) + "','" + str(self.waypoint2.point_num) + "','" + self.route.root + "');"
+
+    def csv_line(self,id):
+        """return csv line to insert into a table"""
+        return "'" + str(id) + "','" + str(self.waypoint1.point_num) + "','" + str(self.waypoint2.point_num) + "','" + self.route.root + "'"
 
 class Route:
     """This class encapsulates the contents of one .csv file line
@@ -306,6 +314,12 @@ class Route:
         # list preprocessing uses alt or canonical and no longer cares
         return "INSERT INTO " + tablename + " VALUES ('" + self.system.systemname + "','" + self.region + "','" + self.route + "','" + self.banner + "','" + self.abbrev + "','" + self.city + "','" + self.root + "');";
 
+    def csv_line(self):
+        """return csv line to insert into a table"""
+        # note: alt_route_names does not need to be in the db since
+        # list preprocessing uses alt or canonical and no longer cares
+        return "'" + self.system.systemname + "','" + self.region + "','" + self.route + "','" + self.banner + "','" + self.abbrev + "','" + self.city + "','" + self.root + "'";
+
 class HighwaySystem:
     """This class encapsulates the contents of one .csv file
     that represents the collection of highways within a system.
@@ -345,7 +359,7 @@ class TravelerList:
 
     def __init__(self,travelername,systems,path="/Users/terescoj/travelmapping/work/list_files"):
         self.list_entries = []
-        self.clinched_segments = []
+        self.clinched_segments = set()
         self.traveler_name = travelername
         with open(path+"/"+travelername+".list","rt") as file:
             lines = file.readlines()
@@ -420,7 +434,7 @@ class TravelerList:
                                 hs = r.segment_list[wp_pos] #r.get_segment(r.point_list[wp_pos], r.point_list[wp_pos+1])
                                 hs.add_clinched_by(self)
                                 if hs not in self.clinched_segments:
-                                    self.clinched_segments.append(hs)
+                                    self.clinched_segments.add(hs)
                     
                 if lineDone:
                     break
@@ -604,48 +618,78 @@ sqlfile.write('DROP TABLE IF EXISTS systems;\n')
 # color for its mapping, and a boolean indicating if the system is
 # active for mapping in the project in the field 'active'
 sqlfile.write('CREATE TABLE systems (systemName VARCHAR(10), countryCode CHAR(3), fullName VARCHAR(50), color VARCHAR(10), active BOOLEAN, PRIMARY KEY(systemName));\n')
+sqlfile.write('INSERT INTO systems VALUES\n')
+first = True
 for h in highway_systems:
     active = 0;
     if h.active:
         active = 1;
-    sqlfile.write("INSERT INTO systems VALUES ('" + h.systemname + "','" +  h.country + "','" +  h.fullname + "','" +  h.color + "','" + str(active) + "');\n")
+    if not first:
+        sqlfile.write(",")
+    first = False
+    sqlfile.write("('" + h.systemname + "','" +  h.country + "','" +  h.fullname + "','" +  h.color + "','" + str(active) + "')\n")
+sqlfile.write(";\n")
 
 # next, a table of highways, with the same fields as in the first line
 sqlfile.write('CREATE TABLE routes (systemName VARCHAR(10), region VARCHAR(3), route VARCHAR(16), banner VARCHAR(3), abbrev VARCHAR(3), city VARCHAR(32), root VARCHAR(32), PRIMARY KEY(root), FOREIGN KEY (systemName) REFERENCES systems(systemName));\n')
+sqlfile.write('INSERT INTO routes VALUES\n')
+first = True
 for h in highway_systems:
     for r in h.route_list:
-        sqlfile.write(r.sql_insert_command('routes') + "\n")
+        if not first:
+            sqlfile.write(",")
+        first = False
+        sqlfile.write("(" + r.csv_line() + ")\n")
+sqlfile.write(";\n")
 
-# Now, a table with raw highway route data, also table for alternate names
+# Now, a table with raw highway route data
 
 sqlfile.write('CREATE TABLE waypoints (pointId INTEGER, pointName VARCHAR(20), latitude DOUBLE, longitude DOUBLE, root VARCHAR(32), PRIMARY KEY(pointId), FOREIGN KEY (root) REFERENCES routes(root));\n')
-#sqlfile.write('CREATE TABLE wpAltNames (pointId INTEGER, altPointName VARCHAR(20), FOREIGN KEY (pointId) REFERENCES waypoints(pointId));\n')
 point_num = 0
 for h in highway_systems:
     for r in h.route_list:
+        sqlfile.write('INSERT INTO waypoints VALUES\n')
+        first = True
         for w in r.point_list:
+            if not first:
+                sqlfile.write(",")
+            first = False
             w.point_num = point_num
-            sqlfile.write(w.sql_insert_command('waypoints', point_num) + "\n")
-            #for a in w.alt_labels:
-            #    sqlfile.write("INSERT INTO wpAltNames VALUES ('" + str(point_num) + "', '" + a + "');\n");
+            sqlfile.write("(" + w.csv_line(point_num) + ")\n")
             point_num+=1
+        sqlfile.write(";\n")
 
-# Table of all HighwaySegments.  Good?  TBD.  Put in traveler clinches too.
+# Table of all HighwaySegments.  Good?  TBD.  Put in traveler clinches too, but need to keep in a
+# list to make these one large query each
 sqlfile.write('CREATE TABLE segments (segmentId INTEGER, waypoint1 INTEGER, waypoint2 INTEGER, root VARCHAR(32), PRIMARY KEY (segmentId), FOREIGN KEY (waypoint1) REFERENCES waypoints(pointId), FOREIGN KEY (waypoint2) REFERENCES waypoints(pointId), FOREIGN KEY (root) REFERENCES routes(root));\n')
+segment_num = 0
+clinched_list = []
+for h in highway_systems:
+    for r in h.route_list:
+        sqlfile.write('INSERT INTO segments VALUES\n')
+        first = True
+        for s in r.segment_list:
+            if not first:
+                sqlfile.write(",")
+            first = False
+            sqlfile.write("(" + s.csv_line(segment_num) + ")\n")
+            for t in s.clinched_by:
+                clinched_list.append("'" + str(segment_num) + "','" + t.traveler_name + "'")
+            segment_num += 1
+        sqlfile.write(";\n")
+
 # maybe a separate traveler table will make sense but for now, I'll just use
 # the name from the .list name
 sqlfile.write('CREATE TABLE clinched (segmentId INTEGER, traveler VARCHAR(48), FOREIGN KEY (segmentId) REFERENCES segments(segmentId));\n')
-segment_num = 0
-for h in highway_systems:
-    for r in h.route_list:
-        for s in r.segment_list:
-            sqlfile.write(s.sql_insert_command('segments', segment_num) + "\n")
-            for t in s.clinched_by:
-                sqlfile.write("INSERT INTO clinched VALUES ('" + str(segment_num) + \
-                                  "','" + t.traveler_name + "');\n")
-            segment_num += 1
-
-# TODO: Table of clinched segments?  One for each clinched segment by each traveler?  Seems huge.
+for start in range(0, len(clinched_list), 10000):
+    sqlfile.write('INSERT INTO clinched VALUES\n')
+    first = True
+    for c in clinched_list[start:start+10000]:
+        if not first:
+            sqlfile.write(",")
+        first = False
+        sqlfile.write("(" + c + ")\n")
+    sqlfile.write(";\n")
 
 sqlfile.close()
 
