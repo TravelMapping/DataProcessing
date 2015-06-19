@@ -330,12 +330,13 @@ class HighwaySystem:
     the parameter active, defaulting to true
     """
     #def __init__(self,systemname,path="/Users/terescoj/travelmapping/work/old_chm_data",active=True):
-    def __init__(self,systemname,country,fullname,color,active,path="/Users/terescoj/travelmapping/HighwayData/chm_final/_systems"):
+    def __init__(self,systemname,country,fullname,color,tier,active,path="/Users/terescoj/travelmapping/HighwayData/chm_final/_systems"):
         self.route_list = []
         self.systemname = systemname
         self.country = country
         self.fullname = fullname
         self.color = color
+        self.tier = tier
         self.active = active
         with open(path+"/"+systemname+".csv","rt") as file:
             lines = file.readlines()
@@ -405,14 +406,16 @@ class TravelerList:
                         checking_index = 0;
                         for w in r.point_list:
                             lower_label = w.label.lower().strip("+*")
-                            if fields[2].lower() == lower_label or fields[3].lower() == lower_label:
+                            list_label_1 = fields[2].lower().strip("*")
+                            list_label_2 = fields[3].lower().strip("*")
+                            if list_label_1 == lower_label or list_label_2 == lower_label:
                                 canonical_waypoints.append(w)
                                 canonical_waypoint_indices.append(checking_index)
                                 r.labels_in_use.add(lower_label.upper())
                             else:
                                 for alt in w.alt_labels:
                                     lower_label = alt.lower().strip("+")
-                                    if fields[2].lower() == lower_label or fields[3].lower() == lower_label:
+                                    if list_label_1 == lower_label or list_label_2 == lower_label:
                                         canonical_waypoints.append(w)
                                         canonical_waypoint_indices.append(checking_index)
                                         r.labels_in_use.add(lower_label.upper())
@@ -493,7 +496,7 @@ et = ElapsedTime()
 # Also list of travelers in the system
 traveler_ids = [ 'terescoj', 'Bickendan', 'drfrankenstein', 'imgoph', 'master_son',
                  'mojavenc', 'oscar_voss', 'rickmastfan67', 'sammi', 'si404',
-                 'sipes23', 'froggie', 'mapcat', 'duke87', 'vdeane' ]
+                 'sipes23', 'froggie', 'mapcat', 'duke87', 'vdeane', 'johninkingwood' ]
 #traveler_ids = [ 'terescoj', 'si404' ]
 
 # Create a list of HighwaySystem objects, one per system in systems.csv file
@@ -505,10 +508,11 @@ with open("/Users/terescoj/travelmapping/HighwayData/systems.csv", "rt") as file
 lines.pop(0)  # ignore header line for now
 for line in lines:
     fields = line.rstrip('\n').split(";")
-    if len(fields) != 5:
+    if len(fields) != 6:
         print("Could not parse csv line: " + line)
     print(fields[0] + ".",end="",flush=True)
-    highway_systems.append(HighwaySystem(fields[0], fields[1], fields[2].replace("'","''"), fields[3], fields[4] != 'yes'))
+    highway_systems.append(HighwaySystem(fields[0], fields[1], fields[2].replace("'","''"),\
+                                         fields[3], fields[4], fields[5] != 'yes'))
 print("")
 
 #for h in active_systems:
@@ -617,7 +621,7 @@ sqlfile.write('DROP TABLE IF EXISTS systems;\n')
 # field 'name', the system's country code, its full name, the default
 # color for its mapping, and a boolean indicating if the system is
 # active for mapping in the project in the field 'active'
-sqlfile.write('CREATE TABLE systems (systemName VARCHAR(10), countryCode CHAR(3), fullName VARCHAR(50), color VARCHAR(10), active BOOLEAN, PRIMARY KEY(systemName));\n')
+sqlfile.write('CREATE TABLE systems (systemName VARCHAR(10), countryCode CHAR(3), fullName VARCHAR(50), color VARCHAR(10), tier INTEGER, active BOOLEAN, PRIMARY KEY(systemName));\n')
 sqlfile.write('INSERT INTO systems VALUES\n')
 first = True
 for h in highway_systems:
@@ -627,7 +631,8 @@ for h in highway_systems:
     if not first:
         sqlfile.write(",")
     first = False
-    sqlfile.write("('" + h.systemname + "','" +  h.country + "','" +  h.fullname + "','" +  h.color + "','" + str(active) + "')\n")
+    sqlfile.write("('" + h.systemname + "','" +  h.country + "','" +  h.fullname + "','" + \
+                      h.color + "','" + str(h.tier) + "','" + str(active) + "')\n")
 sqlfile.write(";\n")
 
 # next, a table of highways, with the same fields as in the first line
