@@ -182,16 +182,19 @@ class Waypoint:
             return len(self.colocated)
 
     def distance_to(self,other):
-        """return the distance in miles between this waypoint and another"""
+        """return the distance in miles between this waypoint and another
+        including the factor defined by the CHM project to adjust for
+        unplotted curves in routes"""
         # convert to radians
         rlat1 = math.radians(self.lat)
         rlng1 = math.radians(self.lng)
         rlat2 = math.radians(other.lat)
         rlng2 = math.radians(other.lng)
         
-        return math.acos(math.cos(rlat1)*math.cos(rlng1)*math.cos(rlat2)*math.cos(rlng2) +\
-                         math.cos(rlat1)*math.sin(rlng1)*math.cos(rlat2)*math.sin(rlng2) +\
-                         math.sin(rlat1)*math.sin(rlat2)) * 3963.1 # EARTH_RADIUS;
+        ans = math.acos(math.cos(rlat1)*math.cos(rlng1)*math.cos(rlat2)*math.cos(rlng2) +\
+                        math.cos(rlat1)*math.sin(rlng1)*math.cos(rlat2)*math.sin(rlng2) +\
+                        math.sin(rlat1)*math.sin(rlat2)) * 3963.1 # EARTH_RADIUS;
+        return ans * 1.02112
 
     def angle(self,pred,succ):
         """return the angle in degrees formed by the waypoints between the
@@ -248,6 +251,10 @@ class HighwaySegment:
     def csv_line(self,id):
         """return csv line to insert into a table"""
         return "'" + str(id) + "','" + str(self.waypoint1.point_num) + "','" + str(self.waypoint2.point_num) + "','" + self.route.root + "'"
+
+    def length(self):
+        """return segment length in miles"""
+        return self.waypoint1.distance_to(self.waypoint2)
 
 class Route:
     """This class encapsulates the contents of one .csv file line
@@ -306,6 +313,7 @@ class Route:
         self.point_list = []
         self.labels_in_use = set()
         self.segment_list = []
+        self.mileage = 0.0
 
     def __str__(self):
         """printable version of the object"""
@@ -380,6 +388,7 @@ class HighwaySystem:
         self.color = color
         self.tier = tier
         self.active = active
+        self.mileage = 0.0
         with open(path+"/"+systemname+".csv","rt") as file:
             lines = file.readlines()
         # ignore the first line of field names
@@ -772,7 +781,14 @@ for t in traveler_lists:
 print("!")
 concurrencyfile.close()
 
-# compute lots of stats
+# compute lots of stats, first total mileage by route, system
+print(et.et() + "Computing stats.")
+for h in highway_systems:
+    for r in h.route_list:
+        for s in r.segment_list:
+            segment_length = s.length()
+            r.mileage += segment_length
+        #print(r.root + " {0:.2f} mi".format(r.mileage))
 
 # write log files for traveler lists
 print(et.et() + "Writing traveler list logs.")
