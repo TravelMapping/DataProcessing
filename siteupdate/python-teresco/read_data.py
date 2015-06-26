@@ -11,6 +11,8 @@ This module defines classes to represent the contents of a
 """
 
 import datetime
+import math
+import os
 import re
 import time
 
@@ -179,6 +181,44 @@ class Waypoint:
         else:
             return len(self.colocated)
 
+    def distance_to(self,other):
+        """return the distance in miles between this waypoint and another"""
+        # convert to radians
+        rlat1 = math.radians(self.lat)
+        rlng1 = math.radians(self.lng)
+        rlat2 = math.radians(other.lat)
+        rlng2 = math.radians(other.lng)
+        
+        return math.acos(math.cos(rlat1)*math.cos(rlng1)*math.cos(rlat2)*math.cos(rlng2) +\
+                         math.cos(rlat1)*math.sin(rlng1)*math.cos(rlat2)*math.sin(rlng2) +\
+                         math.sin(rlat1)*math.sin(rlat2)) * 3963.1 # EARTH_RADIUS;
+
+    def angle(self,pred,succ):
+        """return the angle in degrees formed by the waypoints between the
+        line from pred to self and self to succ"""
+        # convert to radians
+        rlatself = math.radians(self.lat)
+        rlngself = math.radians(self.lng)
+        rlatpred = math.radians(pred.lat)
+        rlngpred = math.radians(pred.lng)
+        rlatsucc = math.radians(succ.lat)
+        rlngsucc = math.radians(succ.lng)
+
+        x0 = math.cos(rlngpred)*math.cos(rlatpred)
+        x1 = math.cos(rlngself)*math.cos(rlatself)
+        x2 = math.cos(rlngsucc)*math.cos(rlatsucc)
+
+        y0 = math.sin(rlngpred)*math.cos(rlatpred)
+        y1 = math.sin(rlngself)*math.cos(rlatself)
+        y2 = math.sin(rlngsucc)*math.cos(rlatsucc)
+
+        z0 = math.sin(rlatpred)
+        z1 = math.sin(rlatself)
+        z2 = math.sin(rlatsucc)
+
+        return math.degrees(math.acos(((x2 - x1)*(x1 - x0) + (y2 - y1)*(y1 - y0) + (z2 - z1)*(z1 - z0)) / math.sqrt(((x2 - x1)*(x2 - x1) + (y2 - y1)*(y2 - y1) + (z2 - z1)*(z2 - z1)) * ((x1 - x0)*(x1 - x0) + (y1 - y0)*(y1 - y0) + (z1 - z0)*(z1 - z0)))))                              
+        
+
 class HighwaySegment:
     """This class represents one highway segment: the connection between two
     Waypoints connected by one or more routes"""
@@ -271,8 +311,7 @@ class Route:
         """printable version of the object"""
         return self.root + " (" + str(len(self.point_list)) + " total points)"
 
-    #def read_wpt(self,path="/Users/terescoj/travelmapping/work/old_chm_data"):
-    def read_wpt(self,all_waypoints,path="/Users/terescoj/travelmapping/HighwayData/chm_final"):
+    def read_wpt(self,all_waypoints,path="../../../HighwayData/chm_final"):
         """read data into the Route's waypoint list from a .wpt file"""
         #print("read_wpt on " + str(self))
         self.point_list = []
@@ -320,6 +359,10 @@ class Route:
         # list preprocessing uses alt or canonical and no longer cares
         return "'" + self.system.systemname + "','" + self.region + "','" + self.route + "','" + self.banner + "','" + self.abbrev + "','" + self.city + "','" + self.root + "'";
 
+    def readable_name(self):
+        """return a string for a human-readable route name"""
+        return self.region+ " " + self.route + self.banner + self.abbrev
+
 class HighwaySystem:
     """This class encapsulates the contents of one .csv file
     that represents the collection of highways within a system.
@@ -329,8 +372,7 @@ class HighwaySystem:
     Each HighwaySystem is also designated as active or inactive via
     the parameter active, defaulting to true
     """
-    #def __init__(self,systemname,path="/Users/terescoj/travelmapping/work/old_chm_data",active=True):
-    def __init__(self,systemname,country,fullname,color,tier,active,path="/Users/terescoj/travelmapping/HighwayData/chm_final/_systems"):
+    def __init__(self,systemname,country,fullname,color,tier,active,path="../../../HighwayData/chm_final/_systems"):
         self.route_list = []
         self.systemname = systemname
         self.country = country
@@ -358,11 +400,11 @@ class TravelerList:
     start_waypoint end_waypoint
     """
 
-    def __init__(self,travelername,systems,path="/Users/terescoj/travelmapping/work/list_files"):
+    def __init__(self,travelername,systems,path="../../../UserData/list_files"):
         self.list_entries = []
         self.clinched_segments = set()
-        self.traveler_name = travelername
-        with open(path+"/"+travelername+".list","rt") as file:
+        self.traveler_name = travelername[:-5]
+        with open(path+"/"+travelername,"rt") as file:
             lines = file.readlines()
         file.close()
 
@@ -483,26 +525,18 @@ class ClinchedSegmentEntry:
 # start a timer for including elapsed time reports in messages
 et = ElapsedTime()
 #
-# First, give lists of active and development systems to be included.
-# Might want these to be read from a config file in the future.
-#active_systems = [ 'cannb', 'cannsc', 'cannsf', 'cannst', 'cannt', 'canon', 'canonf', 'canpe',
-#                   'canqca', 'cantch', 'canyt', 'usaaz', 'usact', 'usadc', 'usade', 'usahi',
-#                   'usai', 'usaia', 'usaib', 'usaid', 'usaif', 'usail', 'usaks', 'usaky3',
-#                   'usaky', 'usama', 'usamd', 'usame', 'usami', 'usamn', 'usamo', 'usanc',
-#                   'usand', 'usane', 'usanh', 'usanj', 'usansf', 'usanv', 'usany', 'usaoh',
-#                   'usaok', 'usaor', 'usapa', 'usari', 'usasd', 'usasf', 'usaus', 'usausb', 'usawa',
-#                   'usawi', 'usawv' ]
-#devel_systems = [ 'usaak', 'usamt', 'usanm', 'usaut', 'usavt' ]
 # Also list of travelers in the system
-traveler_ids = [ 'terescoj', 'Bickendan', 'drfrankenstein', 'imgoph', 'master_son',
-                 'mojavenc', 'oscar_voss', 'rickmastfan67', 'sammi', 'si404',
-                 'sipes23', 'froggie', 'mapcat', 'duke87', 'vdeane', 'johninkingwood' ]
+#traveler_ids = [ 'terescoj', 'Bickendan', 'drfrankenstein', 'imgoph', 'master_son',
+#                 'mojavenc', 'oscar', 'rickmastfan67', 'sammi', 'si404',
+#                 'sipes23', 'froggie', 'mapcat', 'duke87', 'vdeane', 
+#                 'johninkingwood', 'yakra', 'michih' ]
 #traveler_ids = [ 'terescoj', 'si404' ]
+traveler_ids = os.listdir('../../../UserData/list_files')
 
 # Create a list of HighwaySystem objects, one per system in systems.csv file
 highway_systems = []
 print(et.et() + "Reading systems list.  ",end="",flush=True)
-with open("/Users/terescoj/travelmapping/HighwayData/systems.csv", "rt") as file:
+with open("../../../HighwayData/systems.csv", "rt") as file:
     lines = file.readlines()
 
 lines.pop(0)  # ignore header line for now
@@ -537,12 +571,152 @@ for h in highway_systems:
         #r.print_route()
     print("!")
 
+# data check: visit each system and route and check for various problems
+# write to log file for now, maybe should be in DB later
+print(et.et() + "Performing data checks.")
+datacheckfile = open('datacheck.log','w')
+for h in highway_systems:
+    for r in h.route_list:
+        # set to be used per-route to find label duplicates
+        all_route_labels = set()
+        # set of tuples to be used for finding duplicate coordinates
+        coords_used = set()
+        
+        visible_distance = 0.0
+        # note that we assume the first point will be visible in each route
+        # so the following is simply a placeholder
+        last_visible = None
+        prev_w = None
+        for w in r.point_list:
+            # duplicate labels
+            label_list = w.alt_labels.copy()
+            label_list.append(w.label)
+            for label in label_list:
+                lower_label = label.lower().strip("+*")
+                if lower_label in all_route_labels:
+                    datacheckfile.write(r.readable_name() + \
+                                        " duplicate label " + lower_label + '\n')
+                else:
+                    all_route_labels.add(lower_label)
+            # duplicate coordinates
+            latlng = w.lat, w.lng 
+            if latlng in coords_used:
+                datacheckfile.write(r.readable_name() + " duplicate coordinates (" + \
+                                    str(latlng[0]) + "," + str(latlng[1]) + \
+                                    ")\n")
+            else:
+                coords_used.add(latlng)
+
+            # visible distance update, and last segment length check
+            if prev_w is not None:
+                last_distance = w.distance_to(prev_w)
+                visible_distance += last_distance
+                if last_distance > 20.0:
+                    datacheckfile.write(r.readable_name() + " " + prev_w.label + \
+                                        ' ' + w.label + " long segment " + \
+                                        "({0:.2f} mi)".format(last_distance) + "\n")
+
+            if not w.is_hidden:
+                # complete visible distance check
+                if visible_distance > 10.0:
+                    datacheckfile.write(r.readable_name() + " " + last_visible.label + \
+                                        ' ' + w.label + " distance between visible " + \
+                                        "waypoints too long " + \
+                                        "({0:.2f} mi)".format(visible_distance) + "\n")
+                last_visible = w
+                visible_distance = 0.0
+
+                # looking for the route within the label
+                #match_start = w.label.find(r.route)
+                #if match_start >= 0:
+                    # we have a potential match, just need to make sure if the route
+                    # name ends with a number that the matched substring isn't followed
+                    # by more numbers (e.g., NY50 is an OK label in NY5)
+                #    if len(r.route) + match_start == len(w.label) or \
+                #            not w.label[len(r.route) + match_start].isdigit():
+                #        datacheckfile.write(r.readable_name() + " " + w.label + \
+                #                                " label references own route\n")
+                # partially complete "references own route" -- too many FPs
+                if r.route+r.banner == w.label:
+                    datacheckfile.write(r.readable_name() + " " + w.label + \
+                                        " label references own route\n")
+                # look for old "0" or "999" labels
+                for num in ['0','999']:
+                    if w.label.startswith(num) or '('+num+')' in w.label:
+                        datacheckfile.write(r.readable_name() + " " + w.label + \
+                                            " might not refer to an exit " + num + '\n')
+
+                # look for too many underscores in label
+                if w.label.count('_') > 1:
+                    datacheckfile.write(r.readable_name() + " " + w.label + \
+                                        ' has too many underscored suffixes\n')
+
+                # look for too many characters after underscore in label
+                if '_' in w.label:
+                    if w.label.index('_') < len(w.label) - 5:
+                        datacheckfile.write(r.readable_name() + " " + w.label + \
+                                            ' has long underscore suffix\n')
+
+                # look for too many slashes in label
+                if w.label.count('/') > 1:
+                    datacheckfile.write(r.readable_name() + " " + w.label + \
+                                        ' has too many slashes\n')
+
+                # look for parenthesis balance in label
+                if w.label.count('(') != w.label.count(')'):
+                    datacheckfile.write(r.readable_name() + " " + w.label + \
+                                        ' had parenthesis imbalance\n')
+
+                # look for labels with invalid characters
+                if not re.fullmatch('[a-zA-Z0-9()/\+\*_\-\.]+', w.label):
+                    datacheckfile.write(r.readable_name() + " " + w.label + \
+                                        ' includes invalid characters\n')
+
+                # look for labels with a slash after an underscore
+                if '_' in w.label and '/' in w.label and \
+                        w.label.index('/') > w.label.index('_'):
+                    datacheckfile.write(r.readable_name() + " " + w.label + \
+                                        ' label has nonterminal underscore suffix\n')
+
+                # look for I-xx with Bus instead of BL or BS
+                if re.fullmatch('I\-[0-9]*Bus', w.label):
+                    datacheckfile.write(r.readable_name() + " " + w.label + \
+                                        ' label uses Bus with I- (Interstate)\n')
+
+                # look for USxxxA but not USxxxAlt, B/Bus (others?)
+                if re.fullmatch('US[0-9]+A.*', w.label) and not re.fullmatch('US[0-9]+Alt.*', w.label) or \
+                   re.fullmatch('US[0-9]+B.*', w.label) and \
+                   not (re.fullmatch('US[0-9]+Bus.*', w.label) or re.fullmatch('US[0-9]+Byp.*', w.label)):
+                    datacheckfile.write(r.readable_name() + " " + w.label + \
+                                        ' uses an incorrect banner with US\n')
+
+            prev_w = w
+
+        # angle check is easier with a traditional for loop and array indices
+        for i in range(1, len(r.point_list)-1):
+            #print("computing angle for " + str(r.point_list[i-1]) + ' ' + str(r.point_list[i]) + ' ' + str(r.point_list[i+1]))
+            if r.point_list[i-1].same_coords(r.point_list[i]) or \
+               r.point_list[i+1].same_coords(r.point_list[i]):
+                datacheckfile.write(r.readable_name() + ' ' + r.point_list[i-1].label + \
+                                    ' ' + r.point_list[i].label + ' ' + \
+                                    r.point_list[i+1].label + ' angle not computable\n')
+            else:
+                angle = r.point_list[i].angle(r.point_list[i-1],r.point_list[i+1])
+                if angle > 135:
+                    datacheckfile.write(r.readable_name() + ' ' + r.point_list[i-1].label + \
+                                        ' ' + r.point_list[i].label + ' ' + \
+                                        r.point_list[i+1].label + ' sharp angle ' + \
+                                        "{0:.2f} deg.".format(angle) + "\n")
+
+datacheckfile.close()
+
 # Create a list of TravelerList objects, one per person
 traveler_lists = []
 
 print(et.et() + "Processing traveler list files.")
 for t in traveler_ids:
-    traveler_lists.append(TravelerList(t,highway_systems))
+    if t.endswith('.list'):
+        traveler_lists.append(TravelerList(t,highway_systems))
 
 # write log file for points in use -- might be more useful in the DB later,
 # or maybe in another format
@@ -597,6 +771,8 @@ for t in traveler_lists:
                     concurrencyfile.write("Concurrency augment for traveler " + t.traveler_name + ": [" + str(hs) + "] based on [" + str(s) + "]\n")
 print("!")
 concurrencyfile.close()
+
+# compute lots of stats
 
 # write log files for traveler lists
 print(et.et() + "Writing traveler list logs.")
@@ -728,4 +904,3 @@ for c in range(1,largest_colocate_count+1):
     unique_locations += colocate_counts[c]//c
     print(str(colocate_counts[c]//c) + " are each occupied by " + str(c) + " waypoints.")
 print("Unique locations: " + str(unique_locations))
-
