@@ -323,7 +323,7 @@ class Route:
         """read data into the Route's waypoint list from a .wpt file"""
         #print("read_wpt on " + str(self))
         self.point_list = []
-        with open(path+"/"+self.system.systemname+"/"+self.root+".wpt", "rt") as file:
+        with open(path+"/"+self.system.systemname+"/"+self.root+".wpt", "rt",encoding='utf-8') as file:
             lines = file.readlines()
         w = None
         for line in lines:
@@ -389,7 +389,7 @@ class HighwaySystem:
         self.tier = tier
         self.active = active
         self.mileage = 0.0
-        with open(path+"/"+systemname+".csv","rt") as file:
+        with open(path+"/"+systemname+".csv","rt",encoding='utf-8') as file:
             lines = file.readlines()
         # ignore the first line of field names
         lines.pop(0)
@@ -413,7 +413,7 @@ class TravelerList:
         self.list_entries = []
         self.clinched_segments = set()
         self.traveler_name = travelername[:-5]
-        with open(path+"/"+travelername,"rt") as file:
+        with open(path+"/"+travelername,"rt", encoding='UTF-8') as file:
             lines = file.readlines()
         file.close()
 
@@ -499,7 +499,7 @@ class TravelerList:
                                     " segments traveled.")
        
     def write_log(self,path="."):
-        logfile = open(path+"/"+self.traveler_name+".log","wt")
+        logfile = open(path+"/"+self.traveler_name+".log","wt",encoding='UTF-8')
         logfile.write("Log file created at: " + str(datetime.datetime.now()) + "\n")
         for line in self.log_entries:
             logfile.write(line + "\n")
@@ -583,7 +583,7 @@ for h in highway_systems:
 # data check: visit each system and route and check for various problems
 # write to log file for now, maybe should be in DB later
 print(et.et() + "Performing data checks.")
-datacheckfile = open('datacheck.log','w')
+datacheckfile = open('datacheck.log','w',encoding='utf-8')
 for h in highway_systems:
     for r in h.route_list:
         # set to be used per-route to find label duplicates
@@ -730,7 +730,7 @@ for t in traveler_ids:
 # write log file for points in use -- might be more useful in the DB later,
 # or maybe in another format
 print(et.et() + "Writing points in use log.")
-inusefile = open('pointsinuse.log','w')
+inusefile = open('pointsinuse.log','w',encoding='UTF-8')
 for h in highway_systems:
     for r in h.route_list:
         if len(r.labels_in_use) > 0:
@@ -740,7 +740,7 @@ inusefile.close()
 # concurrency detection -- will augment our structure with list of concurrent
 # segments with each segment (that has a concurrency)
 print(et.et() + "Concurrent segment detection.",end="",flush=True)
-concurrencyfile = open('concurrencies.log','w')
+concurrencyfile = open('concurrencies.log','w',encoding='UTF-8')
 for h in highway_systems:
     print(".",end="",flush=True)
     for r in h.route_list:
@@ -798,7 +798,7 @@ for t in traveler_lists:
 print(et.et() + "Writing database file.")
 # Once all data is read in and processed, create a .sql file that will 
 # create all of the DB tables to be used by other parts of the project
-sqlfile = open('siteupdate.sql','w')
+sqlfile = open('siteupdate.sql','w',encoding='UTF-8')
 sqlfile.write('USE TravelMapping\n')
 
 # we have to drop tables in the right order to avoid foreign key errors
