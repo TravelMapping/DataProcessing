@@ -10,6 +10,7 @@ This module defines classes to represent the contents of a
 .wpt file that lists the waypoints for a given highway.
 """
 
+import argparse
 import datetime
 import math
 import os
@@ -388,7 +389,7 @@ class HighwaySystem:
         self.color = color
         self.tier = tier
         self.active = active
-        self.mileage = 0.0
+        self.mileage_by_region = dict()
         with open(path+"/"+systemname+".csv","rt",encoding='utf-8') as file:
             lines = file.readlines()
         # ignore the first line of field names
@@ -533,6 +534,18 @@ class ClinchedSegmentEntry:
 #
 # start a timer for including elapsed time reports in messages
 et = ElapsedTime()
+# argument parsing
+#
+parser = argparse.ArgumentParser(description="Create SQL input and log files from highway and user data for the Travel Mapping project.")
+parser.add_argument("-w", "--highwaydatapath", default="../../../HighwayData", \
+                        help="path to the root of the highway data directory structure")
+parser.add_argument("-u", "--userlistfilepath", default="../../../UserData/list_files",\
+                        help="path to the user list file data")
+parser.add_argument("-d", "--databasename", default="TravelMapping", \
+                        help="Database name for mysql 'USE' statement")
+parser.add_argument("-l", "--logfilepath", default=".", help="Path to write log files")
+args = parser.parse_args()
+
 #
 # Also list of travelers in the system
 #traveler_ids = [ 'terescoj', 'Bickendan', 'drfrankenstein', 'imgoph', 'master_son',
@@ -540,12 +553,12 @@ et = ElapsedTime()
 #                 'sipes23', 'froggie', 'mapcat', 'duke87', 'vdeane', 
 #                 'johninkingwood', 'yakra', 'michih' ]
 #traveler_ids = [ 'terescoj', 'si404' ]
-traveler_ids = os.listdir('../../../UserData/list_files')
+traveler_ids = os.listdir(args.userlistfilepath)
 
 # Create a list of HighwaySystem objects, one per system in systems.csv file
 highway_systems = []
 print(et.et() + "Reading systems list.  ",end="",flush=True)
-with open("../../../HighwayData/systems.csv", "rt") as file:
+with open(args.highwaydatapath+"/systems.csv", "rt") as file:
     lines = file.readlines()
 
 lines.pop(0)  # ignore header line for now
@@ -555,18 +568,12 @@ for line in lines:
         print("Could not parse csv line: " + line)
     print(fields[0] + ".",end="",flush=True)
     highway_systems.append(HighwaySystem(fields[0], fields[1], fields[2].replace("'","''"),\
-                                         fields[3], fields[4], fields[5] != 'yes'))
+                                         fields[3], fields[4], fields[5] != 'yes',\
+                                         args.highwaydatapath+"/chm_final/_systems"))
 print("")
 
-#for h in active_systems:
-#    highway_systems.append(HighwaySystem(h))
-#for h in devel_systems:
-#    highway_systems.append(HighwaySystem(h,active=False))
-
-# For finding colocated Waypoints and concurrent segments, we have a list
-# of all Waypoints in existence
-# This is a definite candidate for a more efficient data structure -- 
-# a quadtree might make a lot of sense
+# For finding colocated Waypoints and concurrent segments, we have 
+# quadtree of all Waypoints in existence to find them efficiently
 all_waypoints = WaypointQuadtree(-180,-90,180,90)
 
 print(et.et() + "Reading waypoints for all routes.")
@@ -574,7 +581,7 @@ print(et.et() + "Reading waypoints for all routes.")
 for h in highway_systems:
     print(h.systemname,end="",flush=True)
     for r in h.route_list:
-        r.read_wpt(all_waypoints)
+        r.read_wpt(all_waypoints,args.highwaydatapath+"/chm_final")
         print(".", end="",flush=True)
         #print(str(r))
         #r.print_route()
@@ -583,7 +590,7 @@ for h in highway_systems:
 # data check: visit each system and route and check for various problems
 # write to log file for now, maybe should be in DB later
 print(et.et() + "Performing data checks.")
-datacheckfile = open('datacheck.log','w',encoding='utf-8')
+datacheckfile = open(args.logfilepath+'datacheck.log','w',encoding='utf-8')
 for h in highway_systems:
     for r in h.route_list:
         # set to be used per-route to find label duplicates
@@ -725,12 +732,12 @@ traveler_lists = []
 print(et.et() + "Processing traveler list files.")
 for t in traveler_ids:
     if t.endswith('.list'):
-        traveler_lists.append(TravelerList(t,highway_systems))
+        traveler_lists.append(TravelerList(t,highway_systems,args.userlistfilepath))
 
 # write log file for points in use -- might be more useful in the DB later,
 # or maybe in another format
 print(et.et() + "Writing points in use log.")
-inusefile = open('pointsinuse.log','w',encoding='UTF-8')
+inusefile = open(args.logfilepath+'pointsinuse.log','w',encoding='UTF-8')
 for h in highway_systems:
     for r in h.route_list:
         if len(r.labels_in_use) > 0:
@@ -740,7 +747,7 @@ inusefile.close()
 # concurrency detection -- will augment our structure with list of concurrent
 # segments with each segment (that has a concurrency)
 print(et.et() + "Concurrent segment detection.",end="",flush=True)
-concurrencyfile = open('concurrencies.log','w',encoding='UTF-8')
+concurrencyfile = open(args.logfilepath+'concurrencies.log','w',encoding='UTF-8')
 for h in highway_systems:
     print(".",end="",flush=True)
     for r in h.route_list:
@@ -781,25 +788,72 @@ for t in traveler_lists:
 print("!")
 concurrencyfile.close()
 
-# compute lots of stats, first total mileage by route, system
+# compute lots of stats, first total mileage by route, system, overall, where
+# system and overall are stored in dictionaries by region
 print(et.et() + "Computing stats.")
+overall_mileage_by_region = dict()
 for h in highway_systems:
-    for r in h.route_list:
-        for s in r.segment_list:
-            segment_length = s.length()
-            r.mileage += segment_length
-        #print(r.root + " {0:.2f} mi".format(r.mileage))
+    if h.active:
+        for r in h.route_list:
+            for s in r.segment_list:
+                segment_length = s.length()
+                # always add the segment mileage to the route
+                r.mileage += segment_length
+                # but we do need to check for concurrencies for others
+                system_concurrency_count = 1
+                overall_concurrency_count = 1
+                if s.concurrent is not None:
+                    for other in s.concurrent:
+                        if other.route.system.active and other != s:
+                            overall_concurrency_count += 1
+                            if other.route.system == r.system:
+                                system_concurrency_count += 1
+                # so we know how many times this segment will be encountered
+                # in both the system and overall in active routes, so let's
+                # add in the appropriate (possibly fractional) mileage to the overall
+                # and system categorized by its region
+                if r.region in overall_mileage_by_region:
+                    overall_mileage_by_region[r.region] = overall_mileage_by_region[r.region] + \
+                        segment_length/overall_concurrency_count
+                else:
+                    overall_mileage_by_region[r.region] = segment_length/overall_concurrency_count
+                if r.region in h.mileage_by_region:
+                    h.mileage_by_region[r.region] = h.mileage_by_region[r.region] + \
+                        segment_length/system_concurrency_count
+                else:
+                    h.mileage_by_region[r.region] = segment_length/system_concurrency_count
+print(et.et() + "Writing clinchable stats log file.")
+clinchablefile = open(args.logfilepath+"/clinchableroutes.log","wt",encoding='UTF-8')
+clinchablefile.write("Clinchable mileage as of " + str(datetime.datetime.now()) + '\n')
+overall_miles = math.fsum(list(overall_mileage_by_region.values()))
+clinchablefile.write("Overall: " + "{0:.2f}".format(overall_miles) + " mi\n")
+clinchablefile.write("Overall by region:\n")
+for region in list(overall_mileage_by_region.keys()):
+    clinchablefile.write(region + ": " + "{0:.2f}".format(overall_mileage_by_region[region]) + "\n")
+for h in highway_systems:
+    if h.active:
+        clinchablefile.write("System " + h.systemname + " overall: " + \
+                             "{0:.2f}".format(math.fsum(list(h.mileage_by_region.values()))) \
+                             + ' mi\n')
+        if len(h.mileage_by_region) > 1:
+            clinchablefile.write("System " + h.systemname + " by region:\n")
+            for region in list(h.mileage_by_region.keys()):
+                clinchablefile.write(region + ": " + "{0:.2f}".format(h.mileage_by_region[region]) + " mi\n")
+        clinchablefile.write("System " + h.systemname + " by route:\n")
+        for r in h.route_list:
+            clinchablefile.write(r.readable_name() + ": " + "{0:.2f}".format(r.mileage) + " mi\n")
+clinchablefile.close()
 
 # write log files for traveler lists
 print(et.et() + "Writing traveler list logs.")
 for t in traveler_lists:
-    t.write_log()
+    t.write_log(args.logfilepath)
 
 print(et.et() + "Writing database file.")
 # Once all data is read in and processed, create a .sql file that will 
 # create all of the DB tables to be used by other parts of the project
 sqlfile = open('siteupdate.sql','w',encoding='UTF-8')
-sqlfile.write('USE TravelMapping\n')
+sqlfile.write('USE '+args.databasename+'\n')
 
 # we have to drop tables in the right order to avoid foreign key errors
 sqlfile.write('DROP TABLE IF EXISTS clinched;\n')
