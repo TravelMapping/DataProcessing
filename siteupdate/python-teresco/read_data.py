@@ -372,6 +372,46 @@ class Route:
         """return a string for a human-readable route name"""
         return self.region+ " " + self.route + self.banner + self.abbrev
 
+class ConnectedRoute:
+    """This class encapsulates a single 'connected route' as given
+    by a single line of a _con.csv file
+    """
+
+    def __init__(self,line,system):
+        """initialize the object from the _con.csv line given"""
+        self.line = line
+        fields = line.split(";")
+        if len(fields) != 5:
+            print("Could not parse _con.csv line: " + line)
+        self.system = system
+        if system.systemname != fields[0]:
+            print("System mismatch parsing line [" + "], expected " + system.systemname)
+        self.route = fields[1]
+        self.banner = fields[2]
+        self.groupname = fields[3]
+        # fields[4] is the list of roots, which will become a python list
+        # of Route objects already in the system
+        self.roots = []
+        roots = fields[4].split(",")
+        for root in roots:
+            route = None
+            for check_route in system.route_list:
+                if check_route.root == root:
+                    route = check_route
+                    break
+            if route is None:
+                print("Could not find Route matching root " + root + \
+                          " in system " + system.systemname + '.')
+            else:
+                self.roots.append(route)
+
+    def readable_name(self):
+        """return a string for a human-readable connected route name"""
+        ans = self.route + self.banner
+        if self.groupname != "":
+            ans += " (" +  self.groupname + ")"
+        return ans
+
 class HighwaySystem:
     """This class encapsulates the contents of one .csv file
     that represents the collection of highways within a system.
@@ -380,9 +420,16 @@ class HighwaySystem:
 
     Each HighwaySystem is also designated as active or inactive via
     the parameter active, defaulting to true
+
+    After construction and when all Route entries are made, a _con.csv
+    file is read that defines the connected routes in the system.
+    In most cases, the connected route is just a single Route, but when
+    a designation within the same system crosses region boundaries,
+    a connected route defines the entirety of the route.
     """
     def __init__(self,systemname,country,fullname,color,tier,active,path="../../../HighwayData/chm_final/_systems"):
         self.route_list = []
+        self.con_route_list = []
         self.systemname = systemname
         self.country = country
         self.fullname = fullname
@@ -392,11 +439,23 @@ class HighwaySystem:
         self.mileage_by_region = dict()
         with open(path+"/"+systemname+".csv","rt",encoding='utf-8') as file:
             lines = file.readlines()
+        file.close()
         # ignore the first line of field names
         lines.pop(0)
         for line in lines:
             self.route_list.append(Route(line.rstrip('\n'),self))
-        file.close()
+        try:
+            file = open(path+"/"+systemname+"_con.csv","rt",encoding='utf-8')
+            lines = file.readlines()
+            file.close()
+            # again, ignore first line with field names
+            lines.pop(0)
+            for line in lines:
+                self.con_route_list.append(ConnectedRoute(line.rstrip('\n'),self))
+        except IOError:
+            print("Could not open " + path+"/"+systemname+"_con.csv," \
+                      " assuming no connected routes")
+
 
 class TravelerList:
     """This class encapsulates the contents of one .list file
@@ -563,6 +622,9 @@ with open(args.highwaydatapath+"/systems.csv", "rt") as file:
 
 lines.pop(0)  # ignore header line for now
 for line in lines:
+    if line.startswith('#'):
+        print("Ignoring comment in systems.csv: " + line.rstrip('\n'))
+        continue
     fields = line.rstrip('\n').split(";")
     if len(fields) != 6:
         print("Could not parse csv line: " + line)
@@ -840,8 +902,18 @@ for h in highway_systems:
             for region in list(h.mileage_by_region.keys()):
                 clinchablefile.write(region + ": " + "{0:.2f}".format(h.mileage_by_region[region]) + " mi\n")
         clinchablefile.write("System " + h.systemname + " by route:\n")
-        for r in h.route_list:
-            clinchablefile.write(r.readable_name() + ": " + "{0:.2f}".format(r.mileage) + " mi\n")
+        for cr in h.con_route_list:
+            con_total_miles = 0.0
+            to_write = ""
+            for r in cr.roots:
+                to_write += "  " + r.readable_name() + ": " + "{0:.2f}".format(r.mileage) + " mi\n"
+                con_total_miles += r.mileage
+            clinchablefile.write(cr.readable_name() + ": " + "{0:.2f}".format(con_total_miles) + " mi")
+            if len(cr.roots) == 1:
+                clinchablefile.write(" (" + cr.roots[0].readable_name() + " only)\n")
+            else:
+                clinchablefile.write("\n" + to_write)
+
 clinchablefile.close()
 
 # write log files for traveler lists
