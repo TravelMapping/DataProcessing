@@ -470,14 +470,13 @@ class TravelerList:
     """
 
     def __init__(self,travelername,systems,path="../../../UserData/list_files"):
+        print("Processing " + travelername)
         self.list_entries = []
         self.clinched_segments = set()
         self.traveler_name = travelername[:-5]
         with open(path+"/"+travelername,"rt", encoding='UTF-8') as file:
             lines = file.readlines()
         file.close()
-
-        print("Processing " + travelername)
 
         self.log_entries = []
 
@@ -557,6 +556,15 @@ class TravelerList:
         self.log_entries.append("Processed " + str(len(self.list_entries)) + \
                                     " good lines marking " +str(len(self.clinched_segments)) + \
                                     " segments traveled.")
+        # additional setup for later stats processing
+        # a place to track this user's total mileage per region
+        self.overall_mileage_by_region = dict()
+        # a place where this user's total mileage per system, again by region
+        # this will be a dictionary of dictionaries, keys of the top level
+        # are system names (e.g., 'usai') and values are dictionaries whose
+        # keys are region names and values are total mileage in that
+        # system in that region
+        self.system_region_mileages = dict()
        
     def write_log(self,path="."):
         logfile = open(path+"/"+self.traveler_name+".log","wt",encoding='UTF-8')
@@ -588,6 +596,9 @@ class ClinchedSegmentEntry:
 #print(route_example)
 #hs_example = HighwaySystem("usade")
 #print(*hs_example.route_list)
+
+def format_clinched_mi(clinched,total):
+    return "{0:.2f}".format(clinched) + " of {0:.2f}".format(total) + " mi ({0:.1f}%)".format(100*clinched/total)
 
 # Execution code starts here
 #
@@ -884,6 +895,25 @@ for h in highway_systems:
                         segment_length/system_concurrency_count
                 else:
                     h.mileage_by_region[r.region] = segment_length/system_concurrency_count
+                # now credit all travelers who have clinched this segment in their stats
+                for t in s.clinched_by:
+                    # credit overall for this region
+                    if r.region in t.overall_mileage_by_region:
+                        t.overall_mileage_by_region[r.region] = t.overall_mileage_by_region[r.region] + \
+                            segment_length/overall_concurrency_count
+                    else:
+                        t.overall_mileage_by_region[r.region] = segment_length/overall_concurrency_count
+                    # credit this system in this region in the messy dictionary
+                    # of dictionaries
+                    if h.systemname not in t.system_region_mileages:
+                        t.system_region_mileages[h.systemname] = dict()
+                    t_system_dict = t.system_region_mileages[h.systemname]
+                    if r.region in t_system_dict:
+                        t_system_dict[r.region] = t_system_dict[r.region] + \
+                        segment_length/system_concurrency_count
+                    else:
+                        t_system_dict[r.region] = segment_length/system_concurrency_count
+
 print(et.et() + "Writing clinchable stats log file.")
 clinchablefile = open(args.logfilepath+"/clinchableroutes.log","wt",encoding='UTF-8')
 clinchablefile.write("Clinchable mileage as of " + str(datetime.datetime.now()) + '\n')
@@ -915,6 +945,62 @@ for h in highway_systems:
                 clinchablefile.write("\n" + to_write)
 
 clinchablefile.close()
+# now add user clinched stats to their log entries
+print(et.et() + "Creating per-traveler stats log entries and augmenting data structure.")
+for t in traveler_lists:
+    t.log_entries.append("Clinched Highway Statistics")
+    t.overall_miles = math.fsum(list(t.overall_mileage_by_region.values()))
+    t.log_entries.append("Overall: " + format_clinched_mi(t.overall_miles,overall_miles))
+#{0:.2f}".format(t_overall_miles) + " of {0:.2f}".format(overall_miles) + " mi ({0:.1f}%)".format(100*t_overall_miles/overall_miles))
+
+    t.log_entries.append("Overall by region:")
+    for region in list(t.overall_mileage_by_region.keys()):
+        t.log_entries.append(region + ": " + \
+                             format_clinched_mi(t.overall_mileage_by_region[region], \
+                                             overall_mileage_by_region[region]))
+
+    t.systems_traveled = 0
+    t.systems_clinched = 0
+    active_systems = 0
+    for h in highway_systems:
+        if h.active:
+            active_systems += 1
+            t_system_overall = 0.0
+            if h.systemname in t.system_region_mileages:
+                t_system_overall = math.fsum(list(t.system_region_mileages[h.systemname].values()))
+            t.log_entries.append("System " + h.systemname + " overall: " + \
+                                     format_clinched_mi(t_system_overall, math.fsum(list(h.mileage_by_region.values()))))
+            if t_system_overall > 0.0:
+                t.systems_traveled += 1
+            if t_system_overall == math.fsum(list(h.mileage_by_region.values())):
+                t.systems_clinched += 1
+
+            if len(h.mileage_by_region) > 1:
+                t.log_entries.append("System " + h.systemname + " by region:")
+                for region in list(h.mileage_by_region.keys()):
+                    system_region_mileage = 0.0
+                    if h.systemname in t.system_region_mileages and region in t.system_region_mileages[h.systemname]:
+                        system_region_mileage = t.system_region_mileages[h.systemname][region]
+                    t.log_entries.append("  " + region + ": " + \
+                                         format_clinched_mi(system_region_mileage, h.mileage_by_region[region]))
+
+#        t.log_entries.append("System " + h.systemname + " by route:\n")
+#        for cr in h.con_route_list:
+#            con_total_miles = 0.0
+#            to_write = ""
+#            for r in cr.roots:
+#                to_write += "  " + r.readable_name() + ": " + "{0:.2f}".format(r.mileage) + " mi\n"
+#                con_total_miles += r.mileage
+#            t.log_entries.append(cr.readable_name() + ": " + "{0:.2f}".format(con_total_miles) + " mi")
+#            if len(cr.roots) == 1:
+#                t.log_entries.append(" (" + cr.roots[0].readable_name() + " only)\n")
+#            else:
+#                t.log_entries.append("\n" + to_write)
+    t.log_entries.append("Traveled " + str(t.systems_traveled) + "/" + str(active_systems) + \
+                             " ({0:.1f}%)".format(100*t.systems_traveled/active_systems) + \
+                             ", Clinched " + str(t.systems_clinched) + "/" + str(active_systems) + \
+                             " ({0:.1f}%)".format(100*t.systems_clinched/active_systems) + \
+                             " active systems")
 
 # write log files for traveler lists
 print(et.et() + "Writing traveler list logs.")
@@ -1046,3 +1132,5 @@ for c in range(1,largest_colocate_count+1):
     unique_locations += colocate_counts[c]//c
     print(str(colocate_counts[c]//c) + " are each occupied by " + str(c) + " waypoints.")
 print("Unique locations: " + str(unique_locations))
+
+print("Total run time: " + et.et())
