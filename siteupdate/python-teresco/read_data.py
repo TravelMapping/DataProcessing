@@ -366,7 +366,7 @@ class Route:
         """return csv line to insert into a table"""
         # note: alt_route_names does not need to be in the db since
         # list preprocessing uses alt or canonical and no longer cares
-        return "'" + self.system.systemname + "','" + self.region + "','" + self.route + "','" + self.banner + "','" + self.abbrev + "','" + self.city + "','" + self.root + "'";
+        return "'" + self.system.systemname + "','" + self.region + "','" + self.route + "','" + self.banner + "','" + self.abbrev + "','" + self.city + "','" + self.root + "','" + str(self.mileage) + "'";
 
     def readable_name(self):
         """return a string for a human-readable route name"""
@@ -392,10 +392,10 @@ class ConnectedRoute:
             print("Could not parse _con.csv line: " + line)
         self.system = system
         if system.systemname != fields[0]:
-            print("System mismatch parsing line [" + "], expected " + system.systemname)
+            print("System mismatch parsing line [" + line + "], expected " + system.systemname)
         self.route = fields[1]
         self.banner = fields[2]
-        self.groupname = fields[3]
+        self.groupname = fields[3].replace("'","''")
         # fields[4] is the list of roots, which will become a python list
         # of Route objects already in the system
         self.roots = []
@@ -411,6 +411,14 @@ class ConnectedRoute:
                           " in system " + system.systemname + '.')
             else:
                 self.roots.append(route)
+        if len(self.roots) < 1:
+            print("No roots in _con.csv line [" + line + "]")
+        # will be computed for routes in active systems later
+        self.mileage = 0.0
+
+    def csv_line(self):
+        """return csv line to insert into a table"""
+        return "'" + self.system.systemname + "','" + self.route + "','" + self.banner + "','" + self.groupname + "','" + self.roots[0].root + "','" + str(self.mileage) + "'";
 
     def readable_name(self):
         """return a string for a human-readable connected route name"""
@@ -945,6 +953,7 @@ for h in highway_systems:
             for r in cr.roots:
                 to_write += "  " + r.readable_name() + ": " + "{0:.2f}".format(r.mileage) + " mi\n"
                 con_total_miles += r.mileage
+            cr.mileage = con_total_miles
             clinchablefile.write(cr.readable_name() + ": " + "{0:.2f}".format(con_total_miles) + " mi")
             if len(cr.roots) == 1:
                 clinchablefile.write(" (" + cr.roots[0].readable_name() + " only)\n")
@@ -1062,10 +1071,15 @@ sqlfile = open('siteupdate.sql','w',encoding='UTF-8')
 sqlfile.write('USE '+args.databasename+'\n')
 
 # we have to drop tables in the right order to avoid foreign key errors
+sqlfile.write('DROP TABLE IF EXISTS clinchedOverallMileageByRegion;\n')
+sqlfile.write('DROP TABLE IF EXISTS clinchedSystemMileageByRegion;\n')
+sqlfile.write('DROP TABLE IF EXISTS overallMileageByRegion;\n')
+sqlfile.write('DROP TABLE IF EXISTS systemMileageByRegion;\n')
 sqlfile.write('DROP TABLE IF EXISTS clinched;\n')
 sqlfile.write('DROP TABLE IF EXISTS segments;\n')
-sqlfile.write('DROP TABLE IF EXISTS wpAltNames;\n')
 sqlfile.write('DROP TABLE IF EXISTS waypoints;\n')
+sqlfile.write('DROP TABLE IF EXISTS connectedRouteRoots;\n')
+sqlfile.write('DROP TABLE IF EXISTS connectedRoutes;\n')
 sqlfile.write('DROP TABLE IF EXISTS routes;\n')
 sqlfile.write('DROP TABLE IF EXISTS systems;\n')
 
@@ -1088,7 +1102,7 @@ for h in highway_systems:
 sqlfile.write(";\n")
 
 # next, a table of highways, with the same fields as in the first line
-sqlfile.write('CREATE TABLE routes (systemName VARCHAR(10), region VARCHAR(3), route VARCHAR(16), banner VARCHAR(3), abbrev VARCHAR(3), city VARCHAR(32), root VARCHAR(32), PRIMARY KEY(root), FOREIGN KEY (systemName) REFERENCES systems(systemName));\n')
+sqlfile.write('CREATE TABLE routes (systemName VARCHAR(10), region VARCHAR(8), route VARCHAR(16), banner VARCHAR(3), abbrev VARCHAR(3), city VARCHAR(32), root VARCHAR(32), mileage FLOAT, PRIMARY KEY(root), FOREIGN KEY (systemName) REFERENCES systems(systemName));\n')
 sqlfile.write('INSERT INTO routes VALUES\n')
 first = True
 for h in highway_systems:
@@ -1099,8 +1113,34 @@ for h in highway_systems:
         sqlfile.write("(" + r.csv_line() + ")\n")
 sqlfile.write(";\n")
 
-# Now, a table with raw highway route data
+# connected routes table, but only first "root" in each in this table
+sqlfile.write('CREATE TABLE connectedRoutes (systemName VARCHAR(10), route VARCHAR(16), banner VARCHAR(3), groupName VARCHAR(32), firstRoot VARCHAR(32), mileage FLOAT, PRIMARY KEY(firstRoot), FOREIGN KEY (firstRoot) REFERENCES routes(root));\n')
+sqlfile.write('INSERT INTO connectedRoutes VALUES\n')
+first = True
+for h in highway_systems:
+    for cr in h.con_route_list:
+        if not first:
+            sqlfile.write(",")
+        first = False
+        sqlfile.write("(" + cr.csv_line() + ")\n")
+sqlfile.write(";\n")
 
+# This table has remaining roots for any connected route 
+# that connects multiple routes/roots
+sqlfile.write('CREATE TABLE connectedRouteRoots (firstRoot VARCHAR(32), root VARCHAR(32), FOREIGN KEY (firstRoot) REFERENCES connectedRoutes(firstRoot));\n')
+sqlfile.write('INSERT INTO connectedRouteRoots VALUES\n')
+first = True
+for h in highway_systems:
+    for cr in h.con_route_list:
+        if len(cr.roots) > 1:
+            for i in range(1,len(cr.roots)):
+                if not first:
+                    sqlfile.write(",")
+                first = False
+                sqlfile.write("('" + cr.roots[0].root + "','" + cr.roots[i].root + "')\n")
+sqlfile.write(";\n")
+
+# Now, a table with raw highway route data: list of points, in order, that define the route
 sqlfile.write('CREATE TABLE waypoints (pointId INTEGER, pointName VARCHAR(20), latitude DOUBLE, longitude DOUBLE, root VARCHAR(32), PRIMARY KEY(pointId), FOREIGN KEY (root) REFERENCES routes(root));\n')
 point_num = 0
 for h in highway_systems:
@@ -1116,8 +1156,7 @@ for h in highway_systems:
             point_num+=1
         sqlfile.write(";\n")
 
-# Table of all HighwaySegments.  Good?  TBD.  Put in traveler clinches too, but need to keep in a
-# list to make these one large query each
+# Table of all HighwaySegments.
 sqlfile.write('CREATE TABLE segments (segmentId INTEGER, waypoint1 INTEGER, waypoint2 INTEGER, root VARCHAR(32), PRIMARY KEY (segmentId), FOREIGN KEY (waypoint1) REFERENCES waypoints(pointId), FOREIGN KEY (waypoint2) REFERENCES waypoints(pointId), FOREIGN KEY (root) REFERENCES routes(root));\n')
 segment_num = 0
 clinched_list = []
@@ -1147,6 +1186,56 @@ for start in range(0, len(clinched_list), 10000):
         first = False
         sqlfile.write("(" + c + ")\n")
     sqlfile.write(";\n")
+
+# overall mileage by region data (with concurrencies accounted for, active systems only)
+sqlfile.write('CREATE TABLE overallMileageByRegion (region VARCHAR(8), mileage FLOAT);\n')
+sqlfile.write('INSERT INTO overallMileageByRegion VALUES\n')
+first = True
+for region in list(overall_mileage_by_region.keys()):
+    if not first:
+        sqlfile.write(",")
+    first = False
+    sqlfile.write("('" + region + "','" + str(overall_mileage_by_region[region]) + "')\n")
+sqlfile.write(";\n")
+
+# system mileage by region data (with concurrencies accounted for, active systems only)
+sqlfile.write('CREATE TABLE systemMileageByRegion (systemName VARCHAR(10), region VARCHAR(8), mileage FLOAT, FOREIGN KEY (systemName) REFERENCES systems(systemName));\n')
+sqlfile.write('INSERT INTO systemMileageByRegion VALUES\n')
+first = True
+for h in highway_systems:
+    if h.active:
+        for region in list(h.mileage_by_region.keys()):
+            if not first:
+                sqlfile.write(",")
+            first = False
+            sqlfile.write("('" + h.systemname + "','" + region + "','" + str(h.mileage_by_region[region]) + "')\n")
+sqlfile.write(";\n")
+
+# clinched overall mileage by region data (with concurrencies accounted for, active systems only)
+sqlfile.write('CREATE TABLE clinchedOverallMileageByRegion (region VARCHAR(8), traveler VARCHAR(48), mileage FLOAT);\n')
+sqlfile.write('INSERT INTO clinchedOverallMileageByRegion VALUES\n')
+first = True
+for t in traveler_lists:
+    for region in list(t.overall_mileage_by_region.keys()):
+        if not first:
+            sqlfile.write(",")
+        first = False
+        sqlfile.write("('" + region + "','" + t.traveler_name + "','" + str(t.overall_mileage_by_region[region]) + "')\n")
+sqlfile.write(";\n")
+
+# clinched system mileage by region data (with concurrencies accounted for, active systems only)
+#sqlfile.write('CREATE TABLE clinchedSystemMileageByRegion (systemName VARCHAR(10), region VARCHAR(8), traveler VARCHAR(48), mileage FLOAT, FOREIGN KEY (systemName) REFERENCES systems(systemName));\n')
+#sqlfile.write('INSERT INTO clinchedSystemMileageByRegion VALUES\n')
+#first = True
+#for t in traveler_lists:
+#    for h in highway_systems:
+#        if h.active:
+#            for region in list(h.mileage_by_region.keys()):
+#                if not first:
+#                    sqlfile.write(",")
+#                first = False
+#                sqlfile.write("('" + h.systemname + "','" + region + "','" + str(h.mileage_by_region[region]) + "')\n")
+#sqlfile.write(";\n")
 
 sqlfile.close()
 
