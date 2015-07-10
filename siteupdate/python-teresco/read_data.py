@@ -485,7 +485,6 @@ class TravelerList:
     """
 
     def __init__(self,travelername,systems,path="../../../UserData/list_files"):
-        print("Processing " + travelername)
         self.list_entries = []
         self.clinched_segments = set()
         self.traveler_name = travelername[:-5]
@@ -647,9 +646,10 @@ with open(args.highwaydatapath+"/systems.csv", "rt") as file:
     lines = file.readlines()
 
 lines.pop(0)  # ignore header line for now
+ignoring = []
 for line in lines:
     if line.startswith('#'):
-        print("Ignoring comment in systems.csv: " + line.rstrip('\n'))
+        ignoring.append("Ignored comment in systems.csv: " + line.rstrip('\n'))
         continue
     fields = line.rstrip('\n').split(";")
     if len(fields) != 6:
@@ -659,6 +659,9 @@ for line in lines:
                                          fields[3], fields[4], fields[5] != 'yes',\
                                          args.highwaydatapath+"/chm_final/_systems"))
 print("")
+# print at the end the lines ignored
+for line in ignoring:
+    print(line)
 
 # For finding colocated Waypoints and concurrent segments, we have 
 # quadtree of all Waypoints in existence to find them efficiently
@@ -817,10 +820,12 @@ datacheckfile.close()
 # Create a list of TravelerList objects, one per person
 traveler_lists = []
 
-print(et.et() + "Processing traveler list files.")
+print(et.et() + "Processing traveler list files:",end="",flush=True)
 for t in traveler_ids:
     if t.endswith('.list'):
+        print(" " + t,end="",flush=True)
         traveler_lists.append(TravelerList(t,highway_systems,args.userlistfilepath))
+print()
 
 # write log file for points in use -- might be more useful in the DB later,
 # or maybe in another format
@@ -961,6 +966,14 @@ for h in highway_systems:
                 clinchablefile.write("\n" + to_write)
 
 clinchablefile.close()
+# this will be used to store DB entry lines for clinchedSystemMileageByRegion
+# table as needed values are computed here, to be added into the DB
+# later in the program
+csmbr_values = []
+# and similar for DB entry lines for clinchedConnectedRoutes table
+# and clinchedRoutes table
+ccr_values = []
+cr_values = []
 # now add user clinched stats to their log entries
 print(et.et() + "Creating per-traveler stats log entries and augmenting data structure.")
 for t in traveler_lists:
@@ -984,9 +997,11 @@ for t in traveler_lists:
     t.con_routes_traveled = dict()
     t.con_routes_clinched = dict()
     t.routes_traveled = dict()
-    t.routes_clinched = dict()
+    #t.routes_clinched = dict()
 
-    # present stats by system here
+    # present stats by system here, also generate entries for
+    # DB table clinchedSystemMileageByRegion as we compute and
+    # have the data handy
     for h in highway_systems:
         if h.active:
             active_systems += 1
@@ -1008,6 +1023,9 @@ for t in traveler_lists:
                     system_region_mileage = 0.0
                     if h.systemname in t.system_region_mileages and region in t.system_region_mileages[h.systemname]:
                         system_region_mileage = t.system_region_mileages[h.systemname][region]
+                        csmbr_values.append("('" + h.systemname + "','" + region + "','" 
+                                            + t.traveler_name + "','" + 
+                                            str(system_region_mileage) + "')")
                     t.log_entries.append("  " + region + ": " + \
                                          format_clinched_mi(system_region_mileage, h.mileage_by_region[region]))
 
@@ -1026,6 +1044,12 @@ for t in traveler_lists:
                         # find traveled mileage on this by this user
                         miles = r.clinched_by_traveler(t)
                         if miles > 0.0:
+                            if miles >= r.mileage:
+                                clinched = '1'
+                            else:
+                                clinched = '0'
+                            cr_values.append("('" + r.root + "','" + t.traveler_name + "','" +
+                                             str(miles) + "','" + clinched + "')")
                             t.routes_traveled[r] = miles
                             con_clinched_miles += miles
                             to_write += "  " + r.readable_name() + ": " + \
@@ -1033,8 +1057,13 @@ for t in traveler_lists:
                         con_total_miles += r.mileage
                     if con_clinched_miles > 0:
                         system_con_dict[cr] = con_clinched_miles
+                        clinched = '0'
                         if con_clinched_miles == con_total_miles:
                             con_routes_clinched += 1
+                            clinched = '1'
+                        ccr_values.append("('" + cr.roots[0].root + "','" + t.traveler_name 
+                                          + "','" + str(con_clinched_miles) + "','" 
+                                          + clinched + "')")
                         t.log_entries.append(cr.readable_name() + ": " + \
                                              format_clinched_mi(con_clinched_miles,con_total_miles))
                         if len(cr.roots) == 1:
@@ -1071,6 +1100,8 @@ sqlfile = open('siteupdate.sql','w',encoding='UTF-8')
 sqlfile.write('USE '+args.databasename+'\n')
 
 # we have to drop tables in the right order to avoid foreign key errors
+sqlfile.write('DROP TABLE IF EXISTS clinchedConnectedRoutes;\n')
+sqlfile.write('DROP TABLE IF EXISTS clinchedRoutes;\n')
 sqlfile.write('DROP TABLE IF EXISTS clinchedOverallMileageByRegion;\n')
 sqlfile.write('DROP TABLE IF EXISTS clinchedSystemMileageByRegion;\n')
 sqlfile.write('DROP TABLE IF EXISTS overallMileageByRegion;\n')
@@ -1224,18 +1255,37 @@ for t in traveler_lists:
 sqlfile.write(";\n")
 
 # clinched system mileage by region data (with concurrencies accounted for, active systems only)
-#sqlfile.write('CREATE TABLE clinchedSystemMileageByRegion (systemName VARCHAR(10), region VARCHAR(8), traveler VARCHAR(48), mileage FLOAT, FOREIGN KEY (systemName) REFERENCES systems(systemName));\n')
-#sqlfile.write('INSERT INTO clinchedSystemMileageByRegion VALUES\n')
-#first = True
-#for t in traveler_lists:
-#    for h in highway_systems:
-#        if h.active:
-#            for region in list(h.mileage_by_region.keys()):
-#                if not first:
-#                    sqlfile.write(",")
-#                first = False
-#                sqlfile.write("('" + h.systemname + "','" + region + "','" + str(h.mileage_by_region[region]) + "')\n")
-#sqlfile.write(";\n")
+sqlfile.write('CREATE TABLE clinchedSystemMileageByRegion (systemName VARCHAR(10), region VARCHAR(8), traveler VARCHAR(48), mileage FLOAT, FOREIGN KEY (systemName) REFERENCES systems(systemName));\n')
+sqlfile.write('INSERT INTO clinchedSystemMileageByRegion VALUES\n')
+first = True
+for line in csmbr_values:
+    if not first:
+        sqlfile.write(",")
+    first = False
+    sqlfile.write(line + "\n")
+sqlfile.write(";\n")
+
+# clinched mileage by connected route, active systems only
+sqlfile.write('CREATE TABLE clinchedConnectedRoutes (route VARCHAR(32), traveler VARCHAR(48), mileage FLOAT, clinched BOOLEAN, FOREIGN KEY (route) REFERENCES connectedRoutes(firstRoot));\n')
+sqlfile.write('INSERT INTO clinchedConnectedRoutes VALUES\n')
+first = True
+for line in ccr_values:
+    if not first:
+        sqlfile.write(",")
+    first = False
+    sqlfile.write(line + "\n")
+sqlfile.write(";\n")
+
+# clinched mileage by route, active systems only
+sqlfile.write('CREATE TABLE clinchedRoutes (route VARCHAR(32), traveler VARCHAR(48), mileage FLOAT, clinched BOOLEAN, FOREIGN KEY (route) REFERENCES routes(root));\n')
+sqlfile.write('INSERT INTO clinchedRoutes VALUES\n')
+first = True
+for line in cr_values:
+    if not first:
+        sqlfile.write(",")
+    first = False
+    sqlfile.write(line + "\n")
+sqlfile.write(";\n")
 
 sqlfile.close()
 
