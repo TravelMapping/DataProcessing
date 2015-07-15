@@ -320,11 +320,11 @@ class Route:
         """printable version of the object"""
         return self.root + " (" + str(len(self.point_list)) + " total points)"
 
-    def read_wpt(self,all_waypoints,path="../../../HighwayData/chm_final"):
+    def read_wpt(self,all_waypoints,path="../../../HighwayData/hwy_data"):
         """read data into the Route's waypoint list from a .wpt file"""
         #print("read_wpt on " + str(self))
         self.point_list = []
-        with open(path+"/"+self.system.systemname+"/"+self.root+".wpt", "rt",encoding='utf-8') as file:
+        with open(path+"/"+self.region + "/" + self.system.systemname+"/"+self.root+".wpt", "rt",encoding='utf-8') as file:
             lines = file.readlines()
         w = None
         for line in lines:
@@ -442,7 +442,7 @@ class HighwaySystem:
     a designation within the same system crosses region boundaries,
     a connected route defines the entirety of the route.
     """
-    def __init__(self,systemname,country,fullname,color,tier,active,path="../../../HighwayData/chm_final/_systems"):
+    def __init__(self,systemname,country,fullname,color,tier,active,path="../../../HighwayData/hwy_data/_systems"):
         self.route_list = []
         self.con_route_list = []
         self.systemname = systemname
@@ -657,7 +657,7 @@ for line in lines:
     print(fields[0] + ".",end="",flush=True)
     highway_systems.append(HighwaySystem(fields[0], fields[1], fields[2].replace("'","''"),\
                                          fields[3], fields[4], fields[5] != 'yes',\
-                                         args.highwaydatapath+"/chm_final/_systems"))
+                                         args.highwaydatapath+"/hwy_data/_systems"))
 print("")
 # print at the end the lines ignored
 for line in ignoring:
@@ -672,7 +672,7 @@ print(et.et() + "Reading waypoints for all routes.")
 for h in highway_systems:
     print(h.systemname,end="",flush=True)
     for r in h.route_list:
-        r.read_wpt(all_waypoints,args.highwaydatapath+"/chm_final")
+        r.read_wpt(all_waypoints,args.highwaydatapath+"/hwy_data")
         print(".", end="",flush=True)
         #print(str(r))
         #r.print_route()
