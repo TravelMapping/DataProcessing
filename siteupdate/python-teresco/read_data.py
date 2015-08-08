@@ -653,7 +653,8 @@ for line in lines:
         continue
     fields = line.rstrip('\n').split(";")
     if len(fields) != 6:
-        print("Could not parse csv line: " + line)
+        print("Could not parse systems.csv line: " + line)
+        continue
     print(fields[0] + ".",end="",flush=True)
     highway_systems.append(HighwaySystem(fields[0], fields[1], fields[2].replace("'","''"),\
                                          fields[3], fields[4], fields[5] != 'yes',\
@@ -827,6 +828,22 @@ for t in traveler_ids:
         traveler_lists.append(TravelerList(t,highway_systems,args.userlistfilepath))
 print()
 
+# Read updates.csv file, just keep in the fields array for now since we're
+# just going to drop this into the DB later anyway
+updates = []
+print(et.et() + "Reading updates file.  ",end="",flush=True)
+with open(args.highwaydatapath+"/updates.csv", "rt") as file:
+    lines = file.readlines()
+
+lines.pop(0)  # ignore header line
+for line in lines:
+    fields = line.rstrip('\n').split(';')
+    if len(fields) != 4:
+        print("Could not parse updates.csv line: " + line)
+        continue
+    updates.append(fields)
+print("")
+
 # write log file for points in use -- might be more useful in the DB later,
 # or maybe in another format
 print(et.et() + "Writing points in use log.")
@@ -940,8 +957,15 @@ clinchablefile.write("Clinchable mileage as of " + str(datetime.datetime.now()) 
 overall_miles = math.fsum(list(overall_mileage_by_region.values()))
 clinchablefile.write("Overall: " + "{0:.2f}".format(overall_miles) + " mi\n")
 clinchablefile.write("Overall by region:\n")
+# let's sort alphabetically by region instead of using whatever order
+# comes out of the dictionary
+region_entries = []
 for region in list(overall_mileage_by_region.keys()):
-    clinchablefile.write(region + ": " + "{0:.2f}".format(overall_mileage_by_region[region]) + "\n")
+    region_entries.append(region + ": " + "{0:.2f}".format(overall_mileage_by_region[region]) + "\n")
+region_entries.sort()
+for e in region_entries:
+    clinchablefile.write(e)
+
 for h in highway_systems:
     if h.active:
         clinchablefile.write("System " + h.systemname + " overall: " + \
@@ -1113,6 +1137,7 @@ sqlfile.write('DROP TABLE IF EXISTS connectedRouteRoots;\n')
 sqlfile.write('DROP TABLE IF EXISTS connectedRoutes;\n')
 sqlfile.write('DROP TABLE IF EXISTS routes;\n')
 sqlfile.write('DROP TABLE IF EXISTS systems;\n')
+sqlfile.write('DROP TABLE IF EXISTS updates;\n')
 
 # first, a table of the systems, consisting of the system name in the
 # field 'name', the system's country code, its full name, the default
@@ -1285,6 +1310,17 @@ for line in cr_values:
         sqlfile.write(",")
     first = False
     sqlfile.write(line + "\n")
+sqlfile.write(";\n")
+
+# updates entries
+sqlfile.write('CREATE TABLE updates (date VARCHAR(8), region VARCHAR(32), route VARCHAR(32), description VARCHAR(512));\n')
+sqlfile.write('INSERT INTO updates VALUES\n')
+first = True
+for update in updates:
+    if not first:
+        sqlfile.write(",")
+    first = False
+    sqlfile.write("('"+update[0]+"','"+update[1].replace("'","''")+"','"+update[2].replace("'","''")+"','"+update[3].replace("'","''")+"')\n")
 sqlfile.write(";\n")
 
 sqlfile.close()
