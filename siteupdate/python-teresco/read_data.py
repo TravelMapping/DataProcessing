@@ -605,12 +605,38 @@ class ClinchedSegmentEntry:
         self.canonical_start = canonical_start
         self.canonical_end = canonical_end
 
+class DatacheckEntry:
+    """This class encapsulates a datacheck log entry
 
-#route_example = Route("usai;NY;I-684;;Pur;Purchase, NY;ny.i684pur;I-684_S")
-#print(route_example)
-#hs_example = HighwaySystem("usade")
-#print(*hs_example.route_list)
+    route is a reference to the route with a datacheck error
 
+    labels is a list of labels that are related to the error (such
+    as the endpoints of a too-long segment or the three points that
+    form a sharp angle)
+
+    code is the error code string, one of SHARP_ANGLE, BAD_ANGLE,
+    DUPLICATE_LABELS, DUPLICATE_COORDS, LABEL_SELFREF,
+    LABEL_INVALID_CHAR, LONG_SEGMENT, LABEL_NO_VALID,
+    LABEL_UNDERSCORES, VISIBLE_DISTANCE, LABEL_PARENS, LACKS_GENERIC,
+    EXIT0, EXIT999, BUS_WITH_I, NONTERMINAL_UNDERSCORE,
+    LONG_UNDERSCORE, LABEL_SLASHES, US_BANNER
+
+    info is additional information, at this time either a distance (in
+    miles) for a long segment error, an angle (in degrees) for a
+    sharp angle error, or a coordinate pair for duplicate coordinates
+
+    fp is a boolean indicating whether this has been reported as a
+    false positive
+
+    """
+
+    def __init__(self,route,labels,code,info="",fp=False):
+         self.route = route
+         self.labels = labels
+         self.code = code
+         self.info = info
+         self.fp = fp
+         
 def format_clinched_mi(clinched,total):
     return "{0:.2f}".format(clinched) + " of {0:.2f}".format(total) + " mi ({0:.1f}%)".format(100*clinched/total)
 
@@ -642,7 +668,7 @@ traveler_ids = os.listdir(args.userlistfilepath)
 # Create a list of HighwaySystem objects, one per system in systems.csv file
 highway_systems = []
 print(et.et() + "Reading systems list.  ",end="",flush=True)
-with open(args.highwaydatapath+"/systems.csv", "rt") as file:
+with open(args.highwaydatapath+"/systems.csv", "rt",encoding='utf-8') as file:
     lines = file.readlines()
 
 lines.pop(0)  # ignore header line for now
@@ -683,6 +709,7 @@ for h in highway_systems:
 # write to log file for now, maybe should be in DB later
 print(et.et() + "Performing data checks.")
 datacheckfile = open(args.logfilepath+'datacheck.log','w',encoding='utf-8')
+datacheckerrors = []
 for h in highway_systems:
     for r in h.route_list:
         # set to be used per-route to find label duplicates
@@ -704,6 +731,9 @@ for h in highway_systems:
                 if lower_label in all_route_labels:
                     datacheckfile.write(r.readable_name() + \
                                         " duplicate label " + lower_label + '\n')
+                    labels = []
+                    labels.append(lower_label)
+                    datacheckerrors.append(DatacheckEntry(r,labels,"DUPLICATE_LABEL"))
                 else:
                     all_route_labels.add(lower_label)
             # duplicate coordinates
@@ -712,6 +742,8 @@ for h in highway_systems:
                 datacheckfile.write(r.readable_name() + " duplicate coordinates (" + \
                                     str(latlng[0]) + "," + str(latlng[1]) + \
                                     ")\n")
+                datacheckerrors.append(DatacheckEntry(r,[],"DUPLICATE_COORDS",
+                                                      "("+str(latlng[0])+","+str(latlng[1])+")"))
             else:
                 coords_used.add(latlng)
 
@@ -723,6 +755,11 @@ for h in highway_systems:
                     datacheckfile.write(r.readable_name() + " " + prev_w.label + \
                                         ' ' + w.label + " long segment " + \
                                         "({0:.2f} mi)".format(last_distance) + "\n")
+                    labels = []
+                    labels.append(prev_w.label)
+                    labels.append(w.label)
+                    datacheckerrors.append(DatacheckEntry(r,labels,'LONG_SEGMENT',
+                                                          "{0:.2f}".format(last_distance)))
 
             if not w.is_hidden:
                 # complete visible distance check
@@ -731,6 +768,11 @@ for h in highway_systems:
                                         ' ' + w.label + " distance between visible " + \
                                         "waypoints too long " + \
                                         "({0:.2f} mi)".format(visible_distance) + "\n")
+                    labels = []
+                    labels.append(last_visible.label)
+                    labels.append(w.label)
+                    datacheckerrors.append(DatacheckEntry(r,labels,'VISIBLE_DISTANCE',
+                                                          "{0:.2f}".format(visible_distance)))
                 last_visible = w
                 visible_distance = 0.0
 
@@ -748,48 +790,75 @@ for h in highway_systems:
                 if r.route+r.banner == w.label:
                     datacheckfile.write(r.readable_name() + " " + w.label + \
                                         " label references own route\n")
+                    labels = []
+                    labels.append(w.label)
+                    datacheckerrors.append(DatacheckEntry(r,labels,'LABEL_SELFREF'))
                 # look for old "0" or "999" labels
                 for num in ['0','999']:
                     if w.label.startswith(num) or '('+num+')' in w.label:
                         datacheckfile.write(r.readable_name() + " " + w.label + \
                                             " might not refer to an exit " + num + '\n')
+                        labels = []
+                        labels.append(w.label)
+                        datacheckerrors.append(DatacheckEntry(r,labels,'EXIT'+str(num)))
 
                 # look for too many underscores in label
                 if w.label.count('_') > 1:
                     datacheckfile.write(r.readable_name() + " " + w.label + \
                                         ' has too many underscored suffixes\n')
+                    labels = []
+                    labels.append(w.label)
+                    datacheckerrors.append(DatacheckEntry(r,labels,'LABEL_UNDERSCORES'))
 
                 # look for too many characters after underscore in label
                 if '_' in w.label:
                     if w.label.index('_') < len(w.label) - 5:
                         datacheckfile.write(r.readable_name() + " " + w.label + \
                                             ' has long underscore suffix\n')
+                        labels = []
+                        labels.append(w.label)
+                        datacheckerrors.append(DatacheckEntry(r,labels,'LONG_UNDERSCORE'))
 
                 # look for too many slashes in label
                 if w.label.count('/') > 1:
                     datacheckfile.write(r.readable_name() + " " + w.label + \
                                         ' has too many slashes\n')
+                    labels = []
+                    labels.append(w.label)
+                    datacheckerrors.append(DatacheckEntry(r,labels,'LABEL_SLASHES'))
 
                 # look for parenthesis balance in label
                 if w.label.count('(') != w.label.count(')'):
                     datacheckfile.write(r.readable_name() + " " + w.label + \
                                         ' had parenthesis imbalance\n')
+                    labels = []
+                    labels.append(w.label)
+                    datacheckerrors.append(DatacheckEntry(r,labels,'LABEL_PARENS'))
 
                 # look for labels with invalid characters
                 if not re.fullmatch('[a-zA-Z0-9()/\+\*_\-\.]+', w.label):
                     datacheckfile.write(r.readable_name() + " " + w.label + \
                                         ' includes invalid characters\n')
+                    labels = []
+                    labels.append(w.label)
+                    datacheckerrors.append(DatacheckEntry(r,labels,'LABEL_INVALID_CHAR'))
 
                 # look for labels with a slash after an underscore
                 if '_' in w.label and '/' in w.label and \
                         w.label.index('/') > w.label.index('_'):
                     datacheckfile.write(r.readable_name() + " " + w.label + \
                                         ' label has nonterminal underscore suffix\n')
+                    labels = []
+                    labels.append(w.label)
+                    datacheckerrors.append(DatacheckEntry(r,labels,'NONTERMINAL_UNDERSCORE'))
 
                 # look for I-xx with Bus instead of BL or BS
                 if re.fullmatch('I\-[0-9]*Bus', w.label):
                     datacheckfile.write(r.readable_name() + " " + w.label + \
                                         ' label uses Bus with I- (Interstate)\n')
+                    labels = []
+                    labels.append(w.label)
+                    datacheckerrors.append(DatacheckEntry(r,labels,'BUS_WITH_I'))
 
                 # look for USxxxA but not USxxxAlt, B/Bus (others?)
                 if re.fullmatch('US[0-9]+A.*', w.label) and not re.fullmatch('US[0-9]+Alt.*', w.label) or \
@@ -797,6 +866,9 @@ for h in highway_systems:
                    not (re.fullmatch('US[0-9]+Bus.*', w.label) or re.fullmatch('US[0-9]+Byp.*', w.label)):
                     datacheckfile.write(r.readable_name() + " " + w.label + \
                                         ' uses an incorrect banner with US\n')
+                    labels = []
+                    labels.append(w.label)
+                    datacheckerrors.append(DatacheckEntry(r,labels,'US_BANNER'))
 
             prev_w = w
 
@@ -808,6 +880,11 @@ for h in highway_systems:
                 datacheckfile.write(r.readable_name() + ' ' + r.point_list[i-1].label + \
                                     ' ' + r.point_list[i].label + ' ' + \
                                     r.point_list[i+1].label + ' angle not computable\n')
+                labels = []
+                labels.append(r.point_list[i-1].label)
+                labels.append(r.point_list[i].label)
+                labels.append(r.point_list[i+1].label)
+                datacheckerrors.append(DatacheckEntry(r,labels,'BAD_ANGLE'))
             else:
                 angle = r.point_list[i].angle(r.point_list[i-1],r.point_list[i+1])
                 if angle > 135:
@@ -815,6 +892,12 @@ for h in highway_systems:
                                         ' ' + r.point_list[i].label + ' ' + \
                                         r.point_list[i+1].label + ' sharp angle ' + \
                                         "{0:.2f} deg.".format(angle) + "\n")
+                    labels = []
+                    labels.append(r.point_list[i-1].label)
+                    labels.append(r.point_list[i].label)
+                    labels.append(r.point_list[i+1].label)
+                    datacheckerrors.append(DatacheckEntry(r,labels,'SHARP_ANGLE',
+                                                          "{0:.2f}".format(angle)))
 
 datacheckfile.close()
 
@@ -832,13 +915,13 @@ print()
 # just going to drop this into the DB later anyway
 updates = []
 print(et.et() + "Reading updates file.  ",end="",flush=True)
-with open(args.highwaydatapath+"/updates.csv", "rt") as file:
+with open(args.highwaydatapath+"/updates.csv", "rt", encoding='UTF-8') as file:
     lines = file.readlines()
 
 lines.pop(0)  # ignore header line
 for line in lines:
     fields = line.rstrip('\n').split(';')
-    if len(fields) != 4:
+    if len(fields) != 5:
         print("Could not parse updates.csv line: " + line)
         continue
     updates.append(fields)
@@ -1124,6 +1207,7 @@ sqlfile = open('siteupdate.sql','w',encoding='UTF-8')
 sqlfile.write('USE '+args.databasename+'\n')
 
 # we have to drop tables in the right order to avoid foreign key errors
+sqlfile.write('DROP TABLE IF EXISTS datacheckErrors;\n')
 sqlfile.write('DROP TABLE IF EXISTS clinchedConnectedRoutes;\n')
 sqlfile.write('DROP TABLE IF EXISTS clinchedRoutes;\n')
 sqlfile.write('DROP TABLE IF EXISTS clinchedOverallMileageByRegion;\n')
@@ -1313,18 +1397,43 @@ for line in cr_values:
 sqlfile.write(";\n")
 
 # updates entries
-sqlfile.write('CREATE TABLE updates (date VARCHAR(8), region VARCHAR(32), route VARCHAR(32), description VARCHAR(512));\n')
+sqlfile.write('CREATE TABLE updates (date VARCHAR(8), region VARCHAR(32), route VARCHAR(32), root VARCHAR(16), description VARCHAR(512));\n')
 sqlfile.write('INSERT INTO updates VALUES\n')
 first = True
 for update in updates:
     if not first:
         sqlfile.write(",")
     first = False
-    sqlfile.write("('"+update[0]+"','"+update[1].replace("'","''")+"','"+update[2].replace("'","''")+"','"+update[3].replace("'","''")+"')\n")
+    sqlfile.write("('"+update[0]+"','"+update[1].replace("'","''")+"','"+update[2].replace("'","''")+"','"+update[3]+"','"+update[4].replace("'","''")+"')\n")
+sqlfile.write(";\n")
+
+# datacheck errors into the db
+sqlfile.write('CREATE TABLE datacheckErrors (route VARCHAR(16), label1 VARCHAR(20), label2 VARCHAR(20), label3 VARCHAR(20), code VARCHAR(20), value VARCHAR(32), falsePositive BOOLEAN, FOREIGN KEY (route) REFERENCES routes(root));\n')
+if len(datacheckerrors) > 0:
+    sqlfile.write('INSERT INTO datacheckErrors VALUES\n')
+    first = True
+    for d in datacheckerrors:
+        if not first:
+            sqlfile.write(',')
+        first = False
+        sqlfile.write("('"+str(d.route.root)+"',")
+        if len(d.labels) == 0:
+            sqlfile.write("'','','',")
+        elif len(d.labels) == 1:
+            sqlfile.write("'"+d.labels[0]+"','','',")
+        elif len(d.labels) == 2:
+            sqlfile.write("'"+d.labels[0]+"','"+d.labels[1]+"','',")
+        else:
+            sqlfile.write("'"+d.labels[0]+"','"+d.labels[1]+"','"+d.labels[2]+"',")
+        if d.fp:
+            fp = '1'
+        else:
+            fp = '0'
+        sqlfile.write("'"+d.code+"','"+d.info+"','"+fp+"')\n")
 sqlfile.write(";\n")
 
 sqlfile.close()
-
+        
 # print some statistics
 print(et.et() + "Processed " + str(len(highway_systems)) + " highway systems.")
 routes = 0
