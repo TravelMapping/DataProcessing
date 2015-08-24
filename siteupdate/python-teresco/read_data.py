@@ -626,16 +626,34 @@ class DatacheckEntry:
     sharp angle error, or a coordinate pair for duplicate coordinates
 
     fp is a boolean indicating whether this has been reported as a
-    false positive
+    false positive (would be set to true later)
 
     """
 
-    def __init__(self,route,labels,code,info="",fp=False):
+    def __init__(self,route,labels,code,info=""):
          self.route = route
          self.labels = labels
          self.code = code
          self.info = info
-         self.fp = fp
+         self.fp = False
+
+    def match(self,fpentry):
+        """Check if the fpentry from the csv file matches in all fields"""
+        # quick and easy checks first
+        if self.route.root != fpentry[0] or self.code != fpentry[4]:
+            return False
+        # now label matches
+        if self.labels[0] != fpentry[1]:
+            return False
+        if len(self.labels) > 1 and self.labels[1] != fpentry[2]:
+            return False
+        if len(self.labels) > 2 and self.labels[2] != fpentry[3]:
+            return False
+        # finally make sure info matches if we got this far
+        return self.info == fpentry[5]
+
+    def __str__(self):
+        return self.route.root + ";" + str(self.labels) + ";" + self.code + ";" + self.info
          
 def format_clinched_mi(clinched,total):
     return "{0:.2f}".format(clinched) + " of {0:.2f}".format(total) + " mi ({0:.1f}%)".format(100*clinched/total)
@@ -706,9 +724,22 @@ for h in highway_systems:
     print("!")
 
 # data check: visit each system and route and check for various problems
-# write to log file for now, maybe should be in DB later
 print(et.et() + "Performing data checks.")
-datacheckfile = open(args.logfilepath+'datacheck.log','w',encoding='utf-8')
+# first, read in the false positives list
+with open(args.highwaydatapath+"/datacheckfps.csv", "rt",encoding='utf-8') as file:
+    lines = file.readlines()
+
+lines.pop(0)  # ignore header line
+datacheckfps = []
+for line in lines:
+    fields = line.rstrip('\n').split(';')
+    if len(fields) != 6:
+        print("Could not parse datacheckfps.csv line: " + line)
+        continue
+    datacheckfps.append(fields)
+
+# write to log file immediately, will put in DB later in the program
+datacheckfile = open(args.logfilepath+'/datacheck.log','w',encoding='utf-8')
 datacheckerrors = []
 for h in highway_systems:
     for r in h.route_list:
@@ -900,6 +931,15 @@ for h in highway_systems:
                                                           "{0:.2f}".format(angle)))
 
 datacheckfile.close()
+# now mark false positives
+for d in datacheckerrors:
+    for fp in datacheckfps:
+        #print("Comparing: " + str(d) + " to " + str(fp))
+        if d.match(fp):
+            #print("Match!")
+            d.fp = True
+            datacheckfps.remove(fp)
+            break
 
 # Create a list of TravelerList objects, one per person
 traveler_lists = []
@@ -930,7 +970,7 @@ print("")
 # write log file for points in use -- might be more useful in the DB later,
 # or maybe in another format
 print(et.et() + "Writing points in use log.")
-inusefile = open(args.logfilepath+'pointsinuse.log','w',encoding='UTF-8')
+inusefile = open(args.logfilepath+'/pointsinuse.log','w',encoding='UTF-8')
 for h in highway_systems:
     for r in h.route_list:
         if len(r.labels_in_use) > 0:
@@ -940,7 +980,7 @@ inusefile.close()
 # concurrency detection -- will augment our structure with list of concurrent
 # segments with each segment (that has a concurrency)
 print(et.et() + "Concurrent segment detection.",end="",flush=True)
-concurrencyfile = open(args.logfilepath+'concurrencies.log','w',encoding='UTF-8')
+concurrencyfile = open(args.logfilepath+'/concurrencies.log','w',encoding='UTF-8')
 for h in highway_systems:
     print(".",end="",flush=True)
     for r in h.route_list:
@@ -1408,7 +1448,7 @@ for update in updates:
 sqlfile.write(";\n")
 
 # datacheck errors into the db
-sqlfile.write('CREATE TABLE datacheckErrors (route VARCHAR(16), label1 VARCHAR(20), label2 VARCHAR(20), label3 VARCHAR(20), code VARCHAR(20), value VARCHAR(32), falsePositive BOOLEAN, FOREIGN KEY (route) REFERENCES routes(root));\n')
+sqlfile.write('CREATE TABLE datacheckErrors (route VARCHAR(32), label1 VARCHAR(20), label2 VARCHAR(20), label3 VARCHAR(20), code VARCHAR(20), value VARCHAR(32), falsePositive BOOLEAN, FOREIGN KEY (route) REFERENCES routes(root));\n')
 if len(datacheckerrors) > 0:
     sqlfile.write('INSERT INTO datacheckErrors VALUES\n')
     first = True
