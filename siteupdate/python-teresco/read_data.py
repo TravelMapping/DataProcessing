@@ -643,7 +643,7 @@ class DatacheckEntry:
         if self.route.root != fpentry[0] or self.code != fpentry[4]:
             return False
         # now label matches
-        if self.labels[0] != fpentry[1]:
+        if len(self.labels) > 0 and self.labels[0] != fpentry[1]:
             return False
         if len(self.labels) > 1 and self.labels[1] != fpentry[2]:
             return False
@@ -718,6 +718,8 @@ for h in highway_systems:
     print(h.systemname,end="",flush=True)
     for r in h.route_list:
         r.read_wpt(all_waypoints,args.highwaydatapath+"/hwy_data")
+        if len(r.point_list) < 2:
+            print("Route contains fewer than 2 points: " + str(r))
         print(".", end="",flush=True)
         #print(str(r))
         #r.print_route()
