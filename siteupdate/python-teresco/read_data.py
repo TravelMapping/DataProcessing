@@ -652,6 +652,22 @@ class DatacheckEntry:
         # finally make sure info matches if we got this far
         return self.info == fpentry[5]
 
+    def match_except_info(self,fpentry):
+        """Check if the fpentry from the csv file matches in all fields
+        except the info field"""
+        # quick and easy checks first
+        if self.route.root != fpentry[0] or self.code != fpentry[4]:
+            return False
+        # now label matches
+        if len(self.labels) > 0 and self.labels[0] != fpentry[1]:
+            return False
+        if len(self.labels) > 1 and self.labels[1] != fpentry[2]:
+            return False
+        if len(self.labels) > 2 and self.labels[2] != fpentry[3]:
+            return False
+        # call it a match except info if the info does not match
+        return self.info != fpentry[5]
+
     def __str__(self):
         return self.route.root + ";" + str(self.labels) + ";" + self.code + ";" + self.info
          
@@ -707,6 +723,14 @@ print("")
 # print at the end the lines ignored
 for line in ignoring:
     print(line)
+
+# write file mapping CHM datacheck route lists to root (temp)
+print(et.et() + "Writing CHM datacheck to TravelMapping route pairings.")
+file = open("routepairings.csv","wt")
+for h in highway_systems:
+    for r in h.route_list:
+        file.write(r.region + " " + r.route + r.banner + r.abbrev + ";" + r.root + "\n")
+file.close()
 
 # For finding colocated Waypoints and concurrent segments, we have 
 # quadtree of all Waypoints in existence to find them efficiently
@@ -934,6 +958,8 @@ for h in highway_systems:
 
 datacheckfile.close()
 # now mark false positives
+print(et.et() + "Marking datacheck false positives.")
+fpfile = open(args.logfilepath+'/nearmatchfps.log','w',encoding='utf-8')
 for d in datacheckerrors:
     for fp in datacheckfps:
         #print("Comparing: " + str(d) + " to " + str(fp))
@@ -942,6 +968,23 @@ for d in datacheckerrors:
             d.fp = True
             datacheckfps.remove(fp)
             break
+        if d.match_except_info(fp):
+            fpfile.write("DCERROR: " + str(d) + "\n")
+            fpfile.write("FPENTRY: " + fp[0] + ';' + fp[1] + ';' + fp[2] + ';' + fp[3] + ';' + fp[4] + ';' + fp[5] + '\n')
+            fpfile.write("REPLACEWITH: " + fp[0] + ';' + fp[1] + ';' + fp[2] + ';' + fp[3] + ';' + fp[4] + ';' + d.info + '\n')
+
+fpfile.close()
+
+# write log of unmatched false positives from the datacheckfps.csv
+print(et.et() + "Writing log of unmatched datacheck FP entries.")
+fpfile = open(args.logfilepath+'/unmatchedfps.log','w',encoding='utf-8')
+if len(datacheckfps) > 0:
+    for entry in datacheckfps:
+        fpfile.write(entry[0] + ';' + entry[1] + ';' + entry[2] + ';' + entry[3] + ';' + entry[4] + ';' + entry[5] + '\n')
+else:
+    fpfile.write("No unmatched FP entries.")
+fpfile.close()
+
 
 # Create a list of TravelerList objects, one per person
 traveler_lists = []
