@@ -767,6 +767,7 @@ for line in lines:
 # write to log file immediately, will put in DB later in the program
 datacheckfile = open(args.logfilepath+'/datacheck.log','w',encoding='utf-8')
 datacheckerrors = []
+datacheckfile.write("Log file created at: " + str(datetime.datetime.now()) + "\n")
 for h in highway_systems:
     for r in h.route_list:
         # set to be used per-route to find label duplicates
@@ -796,13 +797,20 @@ for h in highway_systems:
             # duplicate coordinates
             latlng = w.lat, w.lng 
             if latlng in coords_used:
-                datacheckfile.write(r.readable_name() + " duplicate coordinates (" + \
-                                    str(latlng[0]) + "," + str(latlng[1]) + \
-                                    ")\n")
-                datacheckerrors.append(DatacheckEntry(r,[],"DUPLICATE_COORDS",
-                                                      "("+str(latlng[0])+","+str(latlng[1])+")"))
+                for other_w in r.point_list:
+                    if w == other_w:
+                        break
+                    if w.lat == other_w.lat and w.lng == other_w.lng and w.label != other_w.label:
+                        datacheckfile.write(r.readable_name() + " duplicate coordinates (" + \
+                                                str(latlng[0]) + "," + str(latlng[1]) + \
+                                                ")\n")
+                        labels = []
+                        labels.append(other_w.label)
+                        labels.append(w.label)
+                        datacheckerrors.append(DatacheckEntry(r,labels,"DUPLICATE_COORDS",
+                                                              "("+str(latlng[0])+","+str(latlng[1])+")"))
             else:
-                coords_used.add(latlng)
+               coords_used.add(latlng)
 
             # visible distance update, and last segment length check
             if prev_w is not None:
@@ -852,7 +860,7 @@ for h in highway_systems:
                     datacheckerrors.append(DatacheckEntry(r,labels,'LABEL_SELFREF'))
                 # look for old "0" or "999" labels
                 for num in ['0','999']:
-                    if w.label.startswith(num) or '('+num+')' in w.label:
+                    if w.label.startswith(num) or '('+num+')' in w.label or '('+num+'A)' in w.label:
                         datacheckfile.write(r.readable_name() + " " + w.label + \
                                             " might not refer to an exit " + num + '\n')
                         labels = []
@@ -960,13 +968,16 @@ datacheckfile.close()
 # now mark false positives
 print(et.et() + "Marking datacheck false positives.")
 fpfile = open(args.logfilepath+'/nearmatchfps.log','w',encoding='utf-8')
+fpfile.write("Log file created at: " + str(datetime.datetime.now()) + "\n")
+toremove = []
 for d in datacheckerrors:
+    #print("Checking: " + str(d))
     for fp in datacheckfps:
         #print("Comparing: " + str(d) + " to " + str(fp))
         if d.match(fp):
             #print("Match!")
             d.fp = True
-            datacheckfps.remove(fp)
+            toremove.append(fp)
             break
         if d.match_except_info(fp):
             fpfile.write("DCERROR: " + str(d) + "\n")
@@ -974,10 +985,17 @@ for d in datacheckerrors:
             fpfile.write("REPLACEWITH: " + fp[0] + ';' + fp[1] + ';' + fp[2] + ';' + fp[3] + ';' + fp[4] + ';' + d.info + '\n')
 
 fpfile.close()
+# now remove the ones we matched from the list
+for fp in toremove:
+    if fp in datacheckfps:
+        datacheckfps.remove(fp)
+    else:
+        print("Matched FP entry not in list!: " + str(fp))
 
 # write log of unmatched false positives from the datacheckfps.csv
 print(et.et() + "Writing log of unmatched datacheck FP entries.")
 fpfile = open(args.logfilepath+'/unmatchedfps.log','w',encoding='utf-8')
+fpfile.write("Log file created at: " + str(datetime.datetime.now()) + "\n")
 if len(datacheckfps) > 0:
     for entry in datacheckfps:
         fpfile.write(entry[0] + ';' + entry[1] + ';' + entry[2] + ';' + entry[3] + ';' + entry[4] + ';' + entry[5] + '\n')
@@ -1016,6 +1034,7 @@ print("")
 # or maybe in another format
 print(et.et() + "Writing points in use log.")
 inusefile = open(args.logfilepath+'/pointsinuse.log','w',encoding='UTF-8')
+inusefile.write("Log file created at: " + str(datetime.datetime.now()) + "\n")
 for h in highway_systems:
     for r in h.route_list:
         if len(r.labels_in_use) > 0:
@@ -1026,6 +1045,7 @@ inusefile.close()
 # segments with each segment (that has a concurrency)
 print(et.et() + "Concurrent segment detection.",end="",flush=True)
 concurrencyfile = open(args.logfilepath+'/concurrencies.log','w',encoding='UTF-8')
+concurrencyfile.write("Log file created at: " + str(datetime.datetime.now()) + "\n")
 for h in highway_systems:
     print(".",end="",flush=True)
     for r in h.route_list:
