@@ -852,7 +852,7 @@ for h in highway_systems:
                 #        datacheckfile.write(r.readable_name() + " " + w.label + \
                 #                                " label references own route\n")
                 # partially complete "references own route" -- too many FPs
-                if r.route+r.banner == w.label:
+                if r.route+r.banner == w.label or re.fullmatch(r.route+r.banner+'[_/].*',w.label):
                     datacheckfile.write(r.readable_name() + " " + w.label + \
                                         " label references own route\n")
                     labels = []
@@ -926,14 +926,14 @@ for h in highway_systems:
                     datacheckerrors.append(DatacheckEntry(r,labels,'BUS_WITH_I'))
 
                 # look for USxxxA but not USxxxAlt, B/Bus (others?)
-                if re.fullmatch('US[0-9]+A.*', w.label) and not re.fullmatch('US[0-9]+Alt.*', w.label) or \
-                   re.fullmatch('US[0-9]+B.*', w.label) and \
-                   not (re.fullmatch('US[0-9]+Bus.*', w.label) or re.fullmatch('US[0-9]+Byp.*', w.label)):
-                    datacheckfile.write(r.readable_name() + " " + w.label + \
-                                        ' uses an incorrect banner with US\n')
-                    labels = []
-                    labels.append(w.label)
-                    datacheckerrors.append(DatacheckEntry(r,labels,'US_BANNER'))
+                ##if re.fullmatch('US[0-9]+A.*', w.label) and not re.fullmatch('US[0-9]+Alt.*', w.label) or \
+                ##   re.fullmatch('US[0-9]+B.*', w.label) and \
+                ##   not (re.fullmatch('US[0-9]+Bus.*', w.label) or re.fullmatch('US[0-9]+Byp.*', w.label)):
+                ##    datacheckfile.write(r.readable_name() + " " + w.label + \
+                ##                        ' uses an incorrect banner with US\n')
+                ##    labels = []
+                ##    labels.append(w.label)
+                ##    datacheckerrors.append(DatacheckEntry(r,labels,'US_BANNER'))
 
             prev_w = w
 
@@ -1502,7 +1502,7 @@ for line in cr_values:
 sqlfile.write(";\n")
 
 # updates entries
-sqlfile.write('CREATE TABLE updates (date VARCHAR(8), region VARCHAR(32), route VARCHAR(32), root VARCHAR(16), description VARCHAR(512));\n')
+sqlfile.write('CREATE TABLE updates (date VARCHAR(8), region VARCHAR(32), route VARCHAR(64), root VARCHAR(16), description VARCHAR(512));\n')
 sqlfile.write('INSERT INTO updates VALUES\n')
 first = True
 for update in updates:
