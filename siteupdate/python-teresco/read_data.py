@@ -851,13 +851,31 @@ for h in highway_systems:
                 #            not w.label[len(r.route) + match_start].isdigit():
                 #        datacheckfile.write(r.readable_name() + " " + w.label + \
                 #                                " label references own route\n")
-                # partially complete "references own route" -- too many FPs
-                if r.route+r.banner == w.label or re.fullmatch(r.route+r.banner+'[_/].*',w.label):
+                # partially complete "references own route" -- too many FP
+                #or re.fullmatch('.*/'+r.route+'.*',w.label[w.label) :
+                # first check for number match after a slash, if there is one
+                selfref_found = False
+                if '/' in w.label and r.route[-1].isdigit():
+                    digit_starts = len(r.route)-1
+                    while digit_starts >= 0 and r.route[digit_starts].isdigit():
+                        digit_starts-=1
+                    if w.label[w.label.index('/')+1:] == r.route[digit_starts+1:]:
+                        selfref_found = True
+                    if w.label[w.label.index('/')+1:] == r.route:
+                        selfref_found = True
+                    if '_' in w.label[w.label.index('/')+1:] and w.label[w.label.index('/')+1:w.label.rindex('_')] == r.route[digit_starts+1:]:
+                        selfref_found = True
+                    if '_' in w.label[w.label.index('/')+1:] and w.label[w.label.index('/')+1:w.label.rindex('_')] == r.route:
+                        selfref_found = True
+
+                # now the remaining checks
+                if selfref_found or r.route+r.banner == w.label or re.fullmatch(r.route+r.banner+'[_/].*',w.label):
                     datacheckfile.write(r.readable_name() + " " + w.label + \
                                         " label references own route\n")
                     labels = []
                     labels.append(w.label)
                     datacheckerrors.append(DatacheckEntry(r,labels,'LABEL_SELFREF'))
+
                 # look for old "0" or "999" labels
                 for num in ['0','999']:
                     if w.label.startswith(num) or '('+num+')' in w.label or '('+num+'A)' in w.label:
