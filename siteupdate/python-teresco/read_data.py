@@ -1510,14 +1510,15 @@ sqlfile.write(";\n")
 
 # clinched mileage by route, active systems only
 sqlfile.write('CREATE TABLE clinchedRoutes (route VARCHAR(32), traveler VARCHAR(48), mileage FLOAT, clinched BOOLEAN, FOREIGN KEY (route) REFERENCES routes(root));\n')
-sqlfile.write('INSERT INTO clinchedRoutes VALUES\n')
-first = True
-for line in cr_values:
-    if not first:
-        sqlfile.write(",")
-    first = False
-    sqlfile.write(line + "\n")
-sqlfile.write(";\n")
+for start in range(0, len(cr_values), 10000):
+    sqlfile.write('INSERT INTO clinchedRoutes VALUES\n')
+    first = True
+    for line in cr_values[start:start+10000]:
+        if not first:
+            sqlfile.write(",")
+        first = False
+        sqlfile.write(line + "\n")
+    sqlfile.write(";\n")
 
 # updates entries
 sqlfile.write('CREATE TABLE updates (date VARCHAR(8), region VARCHAR(32), route VARCHAR(64), root VARCHAR(16), description VARCHAR(512));\n')
