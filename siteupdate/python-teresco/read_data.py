@@ -301,6 +301,7 @@ class Route:
         fields = line.split(";")
         if len(fields) != 8:
             print("Could not parse csv line: " + line)
+            print("Expected 8 fields, found " + str(len(fields)))
         self.system = system
         if system.systemname != fields[0]:
             print("System mismatch parsing line [" + "], expected " + system.systemname)
@@ -457,6 +458,7 @@ class HighwaySystem:
         file.close()
         # ignore the first line of field names
         lines.pop(0)
+        roots = []
         for line in lines:
             self.route_list.append(Route(line.rstrip('\n'),self))
         try:
@@ -723,6 +725,24 @@ print("")
 # print at the end the lines ignored
 for line in ignoring:
     print(line)
+
+# check for duplicate root entries among Route and ConnectedRoute
+# data in all highway systems
+print(et.et() + "Checking for duplicate root in routes and connected routes.")
+roots = []
+for h in highway_systems:
+    for r in h.route_list:
+        if r.root in roots:
+            print("Duplicate root in route lists: " + r.root)
+        else:
+            roots.append(r.root)
+con_roots = []
+for h in highway_systems:
+    for r in h.con_route_list:
+        if r.roots[0].root in con_roots:
+            print("Duplicate root in con_route lists: " + r.roots[0].root)
+        else:
+            con_roots.append(r.roots[0].root)
 
 # write file mapping CHM datacheck route lists to root (temp)
 print(et.et() + "Writing CHM datacheck to TravelMapping route pairings.")
@@ -1521,7 +1541,7 @@ for start in range(0, len(cr_values), 10000):
     sqlfile.write(";\n")
 
 # updates entries
-sqlfile.write('CREATE TABLE updates (date VARCHAR(8), region VARCHAR(32), route VARCHAR(64), root VARCHAR(16), description VARCHAR(512));\n')
+sqlfile.write('CREATE TABLE updates (date VARCHAR(10), region VARCHAR(32), route VARCHAR(64), root VARCHAR(16), description VARCHAR(512));\n')
 sqlfile.write('INSERT INTO updates VALUES\n')
 first = True
 for update in updates:
