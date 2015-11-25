@@ -547,7 +547,7 @@ class TravelerList:
                                         r.labels_in_use.add(lower_label.upper())
                             checking_index += 1
                         if len(canonical_waypoints) != 2:
-                            self.log_entries.append("Waypoint label(s) not found in line: " + line)
+                            self.log_entries.append("Waypoint label(s) not found in line: " + line + " " + str(canonical_waypoints))
                         else:
                             self.list_entries.append(ClinchedSegmentEntry(line, r.root, \
                                                                           canonical_waypoints[0].label, \
@@ -685,6 +685,8 @@ et = ElapsedTime()
 parser = argparse.ArgumentParser(description="Create SQL input and log files from highway and user data for the Travel Mapping project.")
 parser.add_argument("-w", "--highwaydatapath", default="../../../HighwayData", \
                         help="path to the root of the highway data directory structure")
+parser.add_argument("-s", "--systemsfile", default="systems.csv", \
+                        help="file of highway systems to include")
 parser.add_argument("-u", "--userlistfilepath", default="../../../UserData/list_files",\
                         help="path to the user list file data")
 parser.add_argument("-d", "--databasename", default="TravelMapping", \
@@ -703,8 +705,8 @@ traveler_ids = os.listdir(args.userlistfilepath)
 
 # Create a list of HighwaySystem objects, one per system in systems.csv file
 highway_systems = []
-print(et.et() + "Reading systems list.  ",end="",flush=True)
-with open(args.highwaydatapath+"/systems.csv", "rt",encoding='utf-8') as file:
+print(et.et() + "Reading systems list in " + args.highwaydatapath+"/"+args.systemsfile + ".  ",end="",flush=True)
+with open(args.highwaydatapath+"/"+args.systemsfile, "rt",encoding='utf-8') as file:
     lines = file.readlines()
 
 lines.pop(0)  # ignore header line for now
@@ -752,6 +754,17 @@ for h in highway_systems:
         file.write(r.region + " " + r.route + r.banner + r.abbrev + ";" + r.root + "\n")
 file.close()
 
+# For tracking whether any .wpt files are in the directory tree
+# that do not have a .csv file entry that causes them to be
+# read into the data
+print(et.et() + "Finding all .wpt files. ",end="",flush=True)
+all_wpt_files = []
+for dir, sub, files in os.walk(args.highwaydatapath+"/hwy_data"):
+    for file in files:
+        if file.endswith('.wpt') and '_boundaries' not in dir:
+            all_wpt_files.append(dir+"/"+file)
+print(str(len(all_wpt_files)) + " files found.")
+
 # For finding colocated Waypoints and concurrent segments, we have 
 # quadtree of all Waypoints in existence to find them efficiently
 all_waypoints = WaypointQuadtree(-180,-90,180,90)
@@ -761,6 +774,10 @@ print(et.et() + "Reading waypoints for all routes.")
 for h in highway_systems:
     print(h.systemname,end="",flush=True)
     for r in h.route_list:
+        # get full path to remove from all_wpt_files list
+        wpt_path = args.highwaydatapath+"/hwy_data"+"/"+r.region + "/" + r.system.systemname+"/"+r.root+".wpt"
+        if wpt_path in all_wpt_files:
+            all_wpt_files.remove(wpt_path)
         r.read_wpt(all_waypoints,args.highwaydatapath+"/hwy_data")
         if len(r.point_list) < 2:
             print("Route contains fewer than 2 points: " + str(r))
@@ -768,6 +785,17 @@ for h in highway_systems:
         #print(str(r))
         #r.print_route()
     print("!")
+
+unprocessedfile = open(args.logfilepath+'/unprocessedwpts.log','w',encoding='utf-8')
+if len(all_wpt_files) > 0:
+    print(str(len(all_wpt_files)) + " .wpt files in " + args.highwaydatapath +
+          "/hwy_data not processed, see unprocessedwpts.log.")
+    for file in all_wpt_files:
+        unprocessedfile.write(file + '\n')
+else:
+    print("All .wpt files in " + args.highwaydatapath +
+          "/hwy_data processed.")
+unprocessedfile.close()
 
 # data check: visit each system and route and check for various problems
 print(et.et() + "Performing data checks.")
@@ -1593,12 +1621,13 @@ print("Processed " + str(routes) + " routes with a total of " + \
 if points != all_waypoints.size():
     print("MISMATCH: all_waypoints contains " + str(all_waypoints.size()) + " waypoints!")
 # compute colocation of waypoints stats
+print(et.et() + "Computing waypoint colocation stats, reporting all with 10 or more colocations:")
 colocate_counts = [0]*50
 largest_colocate_count = 1
 for w in all_waypoints.point_list():
     c = w.num_colocated()
-    #if c == 10:
-    #    print(str(w))
+    if c >= 10:
+        print(str(w) + " with " + str(c) + " other points.")
     colocate_counts[c] += 1
     if c > largest_colocate_count:
         largest_colocate_count = c
