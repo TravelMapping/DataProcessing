@@ -691,6 +691,8 @@ parser.add_argument("-u", "--userlistfilepath", default="../../../UserData/list_
                         help="path to the user list file data")
 parser.add_argument("-d", "--databasename", default="TravelMapping", \
                         help="Database name for mysql 'USE' statement")
+parser.add_argument("-i", "--includelevels", default="active", \
+                        help="System development levels to include (from systems.csv)")
 parser.add_argument("-l", "--logfilepath", default=".", help="Path to write log files")
 args = parser.parse_args()
 
@@ -706,6 +708,7 @@ traveler_ids = os.listdir(args.userlistfilepath)
 # Create a list of HighwaySystem objects, one per system in systems.csv file
 highway_systems = []
 print(et.et() + "Reading systems list in " + args.highwaydatapath+"/"+args.systemsfile + ".  ",end="",flush=True)
+include_levels = args.includelevels.split(",")
 with open(args.highwaydatapath+"/"+args.systemsfile, "rt",encoding='utf-8') as file:
     lines = file.readlines()
 
@@ -720,8 +723,9 @@ for line in lines:
         print("Could not parse systems.csv line: " + line)
         continue
     print(fields[0] + ".",end="",flush=True)
+    include = fields[5] in include_levels;
     highway_systems.append(HighwaySystem(fields[0], fields[1], fields[2].replace("'","''"),\
-                                         fields[3], fields[4], fields[5] != 'yes',\
+                                         fields[3], fields[4], include,\
                                          args.highwaydatapath+"/hwy_data/_systems"))
 print("")
 # print at the end the lines ignored
@@ -1547,14 +1551,15 @@ sqlfile.write(";\n")
 
 # clinched mileage by connected route, active systems only
 sqlfile.write('CREATE TABLE clinchedConnectedRoutes (route VARCHAR(32), traveler VARCHAR(48), mileage FLOAT, clinched BOOLEAN, FOREIGN KEY (route) REFERENCES connectedRoutes(firstRoot));\n')
-sqlfile.write('INSERT INTO clinchedConnectedRoutes VALUES\n')
-first = True
-for line in ccr_values:
-    if not first:
-        sqlfile.write(",")
-    first = False
-    sqlfile.write(line + "\n")
-sqlfile.write(";\n")
+for start in range(0, len(ccr_values), 10000):
+    sqlfile.write('INSERT INTO clinchedConnectedRoutes VALUES\n')
+    first = True
+    for line in ccr_values[start:start+10000]:
+        if not first:
+            sqlfile.write(",")
+        first = False
+        sqlfile.write(line + "\n")
+    sqlfile.write(";\n")
 
 # clinched mileage by route, active systems only
 sqlfile.write('CREATE TABLE clinchedRoutes (route VARCHAR(32), traveler VARCHAR(48), mileage FLOAT, clinched BOOLEAN, FOREIGN KEY (route) REFERENCES routes(root));\n')
