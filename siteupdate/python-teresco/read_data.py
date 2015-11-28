@@ -547,7 +547,7 @@ class TravelerList:
                                         r.labels_in_use.add(lower_label.upper())
                             checking_index += 1
                         if len(canonical_waypoints) != 2:
-                            self.log_entries.append("Waypoint label(s) not found in line: " + line + " " + str(canonical_waypoints))
+                            self.log_entries.append("Waypoint label(s) not found in line: " + line)
                         else:
                             self.list_entries.append(ClinchedSegmentEntry(line, r.root, \
                                                                           canonical_waypoints[0].label, \
@@ -690,7 +690,7 @@ parser.add_argument("-s", "--systemsfile", default="systems.csv", \
 parser.add_argument("-u", "--userlistfilepath", default="../../../UserData/list_files",\
                         help="path to the user list file data")
 parser.add_argument("-d", "--databasename", default="TravelMapping", \
-                        help="Database name for mysql 'USE' statement")
+                        help="Database name for mysql 'USE' statement and .sql file name")
 parser.add_argument("-i", "--includelevels", default="active", \
                         help="System development levels to include (from systems.csv)")
 parser.add_argument("-l", "--logfilepath", default=".", help="Path to write log files")
@@ -1375,10 +1375,10 @@ print(et.et() + "Writing traveler list logs.")
 for t in traveler_lists:
     t.write_log(args.logfilepath)
 
-print(et.et() + "Writing database file.")
+print(et.et() + "Writing database file " + args.databasename + ".sql.")
 # Once all data is read in and processed, create a .sql file that will 
 # create all of the DB tables to be used by other parts of the project
-sqlfile = open('siteupdate.sql','w',encoding='UTF-8')
+sqlfile = open(args.databasename+'.sql','w',encoding='UTF-8')
 sqlfile.write('USE '+args.databasename+'\n')
 
 # we have to drop tables in the right order to avoid foreign key errors
