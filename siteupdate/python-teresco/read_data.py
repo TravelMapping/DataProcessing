@@ -437,13 +437,17 @@ class HighwaySystem:
     Each HighwaySystem is also designated as active or inactive via
     the parameter active, defaulting to true
 
+    With the implementation of three tiers of systems (active,
+    preview, devel), added parameter and field here, to be stored in
+    DB
+
     After construction and when all Route entries are made, a _con.csv
     file is read that defines the connected routes in the system.
     In most cases, the connected route is just a single Route, but when
     a designation within the same system crosses region boundaries,
     a connected route defines the entirety of the route.
     """
-    def __init__(self,systemname,country,fullname,color,tier,active,path="../../../HighwayData/hwy_data/_systems"):
+    def __init__(self,systemname,country,fullname,color,tier,level,active,path="../../../HighwayData/hwy_data/_systems"):
         self.route_list = []
         self.con_route_list = []
         self.systemname = systemname
@@ -451,6 +455,7 @@ class HighwaySystem:
         self.fullname = fullname
         self.color = color
         self.tier = tier
+        self.level = level
         self.active = active
         self.mileage_by_region = dict()
         with open(path+"/"+systemname+".csv","rt",encoding='utf-8') as file:
@@ -725,7 +730,7 @@ for line in lines:
     print(fields[0] + ".",end="",flush=True)
     include = fields[5] in include_levels;
     highway_systems.append(HighwaySystem(fields[0], fields[1], fields[2].replace("'","''"),\
-                                         fields[3], fields[4], include,\
+                                         fields[3], fields[4], fields[5], include,\
                                          args.highwaydatapath+"/hwy_data/_systems"))
 print("")
 # print at the end the lines ignored
@@ -795,7 +800,7 @@ if len(all_wpt_files) > 0:
     print(str(len(all_wpt_files)) + " .wpt files in " + args.highwaydatapath +
           "/hwy_data not processed, see unprocessedwpts.log.")
     for file in all_wpt_files:
-        unprocessedfile.write(file + '\n')
+        unprocessedfile.write(file[file.find('hwy_data'):] + '\n')
 else:
     print("All .wpt files in " + args.highwaydatapath +
           "/hwy_data processed.")
@@ -1400,9 +1405,10 @@ sqlfile.write('DROP TABLE IF EXISTS updates;\n')
 
 # first, a table of the systems, consisting of the system name in the
 # field 'name', the system's country code, its full name, the default
-# color for its mapping, and a boolean indicating if the system is
-# active for mapping in the project in the field 'active'
-sqlfile.write('CREATE TABLE systems (systemName VARCHAR(10), countryCode CHAR(3), fullName VARCHAR(50), color VARCHAR(10), tier INTEGER, active BOOLEAN, PRIMARY KEY(systemName));\n')
+# color for its mapping, a level (one of active, preview, devel), and
+# a boolean indicating if the system is active for mapping in the
+# project in the field 'active'
+sqlfile.write('CREATE TABLE systems (systemName VARCHAR(10), countryCode CHAR(3), fullName VARCHAR(50), color VARCHAR(10), level VARCHAR(10), tier INTEGER, active BOOLEAN, PRIMARY KEY(systemName));\n')
 sqlfile.write('INSERT INTO systems VALUES\n')
 first = True
 for h in highway_systems:
@@ -1412,12 +1418,13 @@ for h in highway_systems:
     if not first:
         sqlfile.write(",")
     first = False
-    sqlfile.write("('" + h.systemname + "','" +  h.country + "','" +  h.fullname + "','" + \
-                      h.color + "','" + str(h.tier) + "','" + str(active) + "')\n")
+    sqlfile.write("('" + h.systemname + "','" +  h.country + "','" +  
+                  h.fullname + "','" + h.color + "','" + h.level +
+                  "','" + str(h.tier) + "','" + str(active) + "')\n")
 sqlfile.write(";\n")
 
 # next, a table of highways, with the same fields as in the first line
-sqlfile.write('CREATE TABLE routes (systemName VARCHAR(10), region VARCHAR(8), route VARCHAR(16), banner VARCHAR(3), abbrev VARCHAR(3), city VARCHAR(32), root VARCHAR(32), mileage FLOAT, PRIMARY KEY(root), FOREIGN KEY (systemName) REFERENCES systems(systemName));\n')
+sqlfile.write('CREATE TABLE routes (systemName VARCHAR(10), region VARCHAR(8), route VARCHAR(16), banner VARCHAR(3), abbrev VARCHAR(3), city VARCHAR(48), root VARCHAR(32), mileage FLOAT, PRIMARY KEY(root), FOREIGN KEY (systemName) REFERENCES systems(systemName));\n')
 sqlfile.write('INSERT INTO routes VALUES\n')
 first = True
 for h in highway_systems:
