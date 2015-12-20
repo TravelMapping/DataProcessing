@@ -1380,6 +1380,55 @@ print(et.et() + "Writing traveler list logs.")
 for t in traveler_lists:
     t.write_log(args.logfilepath)
 
+# write stats csv files
+print(et.et() + "Writing stats csv files.")
+# first, overall per traveler by region
+allfile = open("allbyregion.csv","w",encoding='UTF-8')
+allfile.write("Traveler")
+regions = list(overall_mileage_by_region.keys())
+regions.sort()
+for region in regions:
+    allfile.write(',' + region)
+allfile.write('\n')
+for t in traveler_lists:
+    allfile.write(t.traveler_name)
+    for region in regions:
+        if region in t.overall_mileage_by_region.keys():
+            allfile.write(',{0:.2f}'.format(t.overall_mileage_by_region[region]))
+        else:
+            allfile.write(',0')
+    allfile.write('\n')
+allfile.write('TOTAL')
+for region in regions:
+    allfile.write(',{0:.2f}'.format(overall_mileage_by_region[region]))
+allfile.write('\n')
+allfile.close()
+
+# now, a file for each system, again per traveler by region
+for h in highway_systems:
+    sysfile = open(h.systemname + '-all.csv',"w",encoding='UTF-8')
+    sysfile.write('Traveler')
+    regions = list(h.mileage_by_region.keys())
+    regions.sort()
+    for region in regions:
+        sysfile.write(',' + region)
+    sysfile.write('\n')
+    for t in traveler_lists:
+        # only include entries for travelers who have any mileage in system
+        if h.systemname in t.system_region_mileages:
+            sysfile.write(t.traveler_name)
+            for region in regions:
+                if region in t.system_region_mileages[h.systemname]:
+                    sysfile.write(',{0:.2f}'.format(t.system_region_mileages[h.systemname][region]))
+                else:
+                    sysfile.write(',0')
+            sysfile.write('\n')
+    sysfile.write('TOTAL')
+    for region in regions:
+        sysfile.write(',{0:.2f}'.format(h.mileage_by_region[region]))
+    sysfile.write('\n')
+    sysfile.close()
+
 print(et.et() + "Writing database file " + args.databasename + ".sql.")
 # Once all data is read in and processed, create a .sql file that will 
 # create all of the DB tables to be used by other parts of the project
