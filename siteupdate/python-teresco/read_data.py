@@ -710,6 +710,60 @@ args = parser.parse_args()
 #traveler_ids = [ 'terescoj', 'si404' ]
 traveler_ids = os.listdir(args.userlistfilepath)
 
+# read region, country, continent descriptions
+print(et.et() + "Reading region, country, and continent descriptions.")
+
+with open(args.highwaydatapath+"/continents.csv", "rt",encoding='utf-8') as file:
+    lines = file.readlines()
+continents = []
+lines.pop(0)  # ignore header line
+for line in lines:
+    fields = line.rstrip('\n').split(";")
+    if len(fields) != 2:
+        print("Could not parse continents.csv line: " + line)
+        continue
+    continents.append(fields)
+
+with open(args.highwaydatapath+"/countries.csv", "rt",encoding='utf-8') as file:
+    lines = file.readlines()
+countries = []
+lines.pop(0)  # ignore header line
+for line in lines:
+    fields = line.rstrip('\n').split(";")
+    if len(fields) != 2:
+        print("Could not parse countries.csv line: " + line)
+        continue
+    countries.append(fields)
+
+with open(args.highwaydatapath+"/regions.csv", "rt",encoding='utf-8') as file:
+    lines = file.readlines()
+all_regions = []
+lines.pop(0)  # ignore header line
+for line in lines:
+    fields = line.rstrip('\n').split(";")
+    if len(fields) != 4:
+        print("Could not parse regions.csv line: " + line)
+        continue
+    # look up country and continent, add index into those arrays
+    # in case they're needed for lookups later (not needed for DB)
+    for i in range(len(countries)):
+        country = countries[i][0]
+        if country == fields[2]:
+            fields.append(i)
+            break
+    if len(fields) != 5:
+        print("Could not find country matching regions.csv line: " + line)
+        continue
+    for i in range(len(continents)):
+        continent = continents[i][0]
+        if continent == fields[3]:
+            fields.append(i)
+            break
+    if len(fields) != 6:
+        print("Could not find continent matching regions.csv line: " + line)
+        continue
+    all_regions.append(fields)
+
 # Create a list of HighwaySystem objects, one per system in systems.csv file
 highway_systems = []
 print(et.et() + "Reading systems list in " + args.highwaydatapath+"/"+args.systemsfile + ".  ",end="",flush=True)
@@ -721,11 +775,11 @@ lines.pop(0)  # ignore header line for now
 ignoring = []
 for line in lines:
     if line.startswith('#'):
-        ignoring.append("Ignored comment in systems.csv: " + line.rstrip('\n'))
+        ignoring.append("Ignored comment in " + args.systemsfile + ": " + line.rstrip('\n'))
         continue
     fields = line.rstrip('\n').split(";")
     if len(fields) != 6:
-        print("Could not parse systems.csv line: " + line)
+        print("Could not parse " + args.systemsfile + " line: " + line)
         continue
     print(fields[0] + ".",end="",flush=True)
     include = fields[5] in include_levels;
@@ -1451,8 +1505,42 @@ sqlfile.write('DROP TABLE IF EXISTS connectedRoutes;\n')
 sqlfile.write('DROP TABLE IF EXISTS routes;\n')
 sqlfile.write('DROP TABLE IF EXISTS systems;\n')
 sqlfile.write('DROP TABLE IF EXISTS updates;\n')
+sqlfile.write('DROP TABLE IF EXISTS regions;\n')
+sqlfile.write('DROP TABLE IF EXISTS countries;\n')
+sqlfile.write('DROP TABLE IF EXISTS continents;\n')
 
-# first, a table of the systems, consisting of the system name in the
+# first, continents, countries, and regions
+sqlfile.write('CREATE TABLE continents (code VARCHAR(3), name VARCHAR(15), PRIMARY KEY(code));\n')
+sqlfile.write('INSERT INTO continents VALUES\n')
+first = True
+for c in continents:
+    if not first:
+        sqlfile.write(",")
+    first = False
+    sqlfile.write("('" + c[0] + "','" + c[1] + "')\n")
+sqlfile.write(";\n")
+
+sqlfile.write('CREATE TABLE countries (code VARCHAR(3), name VARCHAR(32), PRIMARY KEY(code));\n')
+sqlfile.write('INSERT INTO countries VALUES\n')
+first = True
+for c in countries:
+    if not first:
+        sqlfile.write(",")
+    first = False
+    sqlfile.write("('" + c[0] + "','" + c[1].replace("'","''") + "')\n")
+sqlfile.write(";\n")
+
+sqlfile.write('CREATE TABLE regions (code VARCHAR(8), name VARCHAR(32), country VARCHAR(3), continent VARCHAR(3), PRIMARY KEY(code), FOREIGN KEY (country) REFERENCES countries(code), FOREIGN KEY (continent) REFERENCES continents(code));\n')
+sqlfile.write('INSERT INTO regions VALUES\n')
+first = True
+for r in all_regions:
+    if not first:
+        sqlfile.write(",")
+    first = False
+    sqlfile.write("('" + r[0] + "','" + r[1].replace("'","''") + "','" + r[2] + "','" + r[3] + "')\n")
+sqlfile.write(";\n")
+
+# next, a table of the systems, consisting of the system name in the
 # field 'name', the system's country code, its full name, the default
 # color for its mapping, a level (one of active, preview, devel), and
 # a boolean indicating if the system is active for mapping in the
