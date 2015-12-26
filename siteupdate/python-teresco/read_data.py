@@ -1141,7 +1141,7 @@ for t in traveler_ids:
     if t.endswith('.list'):
         print(" " + t,end="",flush=True)
         traveler_lists.append(TravelerList(t,highway_systems,args.userlistfilepath))
-print()
+print(" processed " + str(len(traveler_lists)) + " traveler list files.")
 
 # Read updates.csv file, just keep in the fields array for now since we're
 # just going to drop this into the DB later anyway
@@ -1770,21 +1770,35 @@ print("Processed " + str(routes) + " routes with a total of " + \
 if points != all_waypoints.size():
     print("MISMATCH: all_waypoints contains " + str(all_waypoints.size()) + " waypoints!")
 # compute colocation of waypoints stats
-print(et.et() + "Computing waypoint colocation stats, reporting all with 10 or more colocations:")
+print(et.et() + "Computing waypoint colocation stats, reporting all with 8 or more colocations:")
 colocate_counts = [0]*50
 largest_colocate_count = 1
+big_colocate_locations = dict()
 for w in all_waypoints.point_list():
     c = w.num_colocated()
-    if c >= 10:
-        print(str(w) + " with " + str(c) + " other points.")
+    if c >= 8:
+        point = (w.lat, w.lng)
+        entry = w.route.root + " " + w.label
+        if point in big_colocate_locations:
+            the_list = big_colocate_locations[point]
+            the_list.append(entry)
+            big_colocate_locations[point] = the_list
+        else:
+            the_list = []
+            the_list.append(entry)
+            big_colocate_locations[point] = the_list
+        #print(str(w) + " with " + str(c) + " other points.")
     colocate_counts[c] += 1
     if c > largest_colocate_count:
         largest_colocate_count = c
+for place in big_colocate_locations:
+    the_list = big_colocate_locations[place]
+    print(str(place) + " is occupied by " + str(len(the_list)) + " waypoints: " + str(the_list))
 print("Waypoint colocation counts:")
 unique_locations = 0
 for c in range(1,largest_colocate_count+1):
     unique_locations += colocate_counts[c]//c
-    print(str(colocate_counts[c]//c) + " are each occupied by " + str(c) + " waypoints.")
+    print("{0:6d} are each occupied by {1:2d} waypoints.".format(colocate_counts[c]//c, c))
 print("Unique locations: " + str(unique_locations))
 
 print("Total run time: " + et.et())
