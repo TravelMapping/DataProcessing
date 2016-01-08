@@ -1159,6 +1159,23 @@ for line in lines:
     updates.append(fields)
 print("")
 
+# Same plan for systemupdates.csv file, again just keep in the fields
+# array for now since we're just going to drop this into the DB later
+# anyway
+systemupdates = []
+print(et.et() + "Reading systemupdates file.  ",end="",flush=True)
+with open(args.highwaydatapath+"/systemupdates.csv", "rt", encoding='UTF-8') as file:
+    lines = file.readlines()
+
+lines.pop(0)  # ignore header line
+for line in lines:
+    fields = line.rstrip('\n').split(';')
+    if len(fields) != 5:
+        print("Could not parse systemupdates.csv line: " + line)
+        continue
+    systemupdates.append(fields)
+print("")
+
 # write log file for points in use -- might be more useful in the DB later,
 # or maybe in another format
 print(et.et() + "Writing points in use log.")
@@ -1505,6 +1522,7 @@ sqlfile.write('DROP TABLE IF EXISTS connectedRoutes;\n')
 sqlfile.write('DROP TABLE IF EXISTS routes;\n')
 sqlfile.write('DROP TABLE IF EXISTS systems;\n')
 sqlfile.write('DROP TABLE IF EXISTS updates;\n')
+sqlfile.write('DROP TABLE IF EXISTS systemUpdates;\n')
 sqlfile.write('DROP TABLE IF EXISTS regions;\n')
 sqlfile.write('DROP TABLE IF EXISTS countries;\n')
 sqlfile.write('DROP TABLE IF EXISTS continents;\n')
@@ -1726,6 +1744,17 @@ for update in updates:
         sqlfile.write(",")
     first = False
     sqlfile.write("('"+update[0]+"','"+update[1].replace("'","''")+"','"+update[2].replace("'","''")+"','"+update[3]+"','"+update[4].replace("'","''")+"')\n")
+sqlfile.write(";\n")
+
+# systemUpdates entries
+sqlfile.write('CREATE TABLE systemUpdates (date VARCHAR(10), region VARCHAR(32), systemName VARCHAR(10), description VARCHAR(50), statusChange VARCHAR(16));\n')
+sqlfile.write('INSERT INTO systemUpdates VALUES\n')
+first = True
+for systemupdate in systemupdates:
+    if not first:
+        sqlfile.write(",")
+    first = False
+    sqlfile.write("('"+systemupdate[0]+"','"+systemupdate[1].replace("'","''")+"','"+systemupdate[2]+"','"+systemupdate[3].replace("'","''")+"','"+systemupdate[4]+"')\n")
 sqlfile.write(";\n")
 
 # datacheck errors into the db
