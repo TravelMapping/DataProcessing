@@ -1184,7 +1184,10 @@ inusefile.write("Log file created at: " + str(datetime.datetime.now()) + "\n")
 for h in highway_systems:
     for r in h.route_list:
         if len(r.labels_in_use) > 0:
-            inusefile.write("Labels in use for " + str(r) + ": " + str(r.labels_in_use) + "\n")
+            inusefile.write(r.root + "(" + str(len(r.point_list)) + "):")
+            for label in r.labels_in_use:
+                inusefile.write(" " + label)
+            inusefile.write("\n")
 inusefile.close()
 
 # concurrency detection -- will augment our structure with list of concurrent
