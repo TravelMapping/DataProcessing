@@ -28,6 +28,7 @@ echo "siteupdate.sh: complete"
 echo "siteupdate.sh: sending email notification"
 mailx -s "Travel Mapping Site Update Complete" travelmapping-siteupdates@teresco.org <<EOF
 A Travel Mapping site update has just successfully completed.
+The complete log is available at http://tm.teresco.org/logs/read_data.log .
 Please report any problems to travmap@teresco.org .
 EOF
 date
