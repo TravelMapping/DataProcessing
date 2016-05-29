@@ -9,10 +9,10 @@ if [ $# -eq 1 ]; then
   fi
 fi
 if [ "$read_data" == "1" ]; then
-  echo "devsiteupdate.sh: launching read_data.py"
-  ./read_data.py -d TravelMappingDev -i active,preview
+  echo "devsiteupdate.sh: launching siteupdate.py"
+  ./siteupdate.py -d TravelMappingDev -i active,preview
 else
-  echo "devsiteupdate.sh: SKIPPING read_data.py"
+  echo "devsiteupdate.sh: SKIPPING siteupdate.py"
 fi
 echo "devsiteupdate.sh: Bzipping TravelMappingDev.sql file"
 bzip2 -9f TravelMappingDev.sql
@@ -29,7 +29,7 @@ echo "devsiteupdate.sh: sending email notification"
 mailx -s "Travel Mapping Site Update (with preview systems) Complete" travelmapping-siteupdates@teresco.org <<EOF
 A Travel Mapping site update that includes the preview systems
 has just successfully completed.
-The complete log is available at http://tm.teresco.org/devlogs/read_data.log .
+The complete log is available at http://tm.teresco.org/devlogs/siteupdate.log .
 Please report any problems to travmap@teresco.org .
 EOF
 date

@@ -9,10 +9,10 @@ if [ $# -eq 1 ]; then
   fi
 fi
 if [ "$read_data" == "1" ]; then
-  echo "siteupdate.sh: launching read_data.py"
-  ./read_data.py | tee read_data.log 2>&1
+  echo "siteupdate.sh: launching siteupdate.py"
+  ./siteupdate.py | tee siteupdate.log 2>&1
 else
-  echo "siteupdate.sh: SKIPPING read_data.py"
+  echo "siteupdate.sh: SKIPPING siteupdate.py"
 fi
 echo "siteupdate.sh: Bzipping TravelMapping.sql file"
 bzip2 -9f TravelMapping.sql
@@ -28,7 +28,7 @@ echo "siteupdate.sh: complete"
 echo "siteupdate.sh: sending email notification"
 mailx -s "Travel Mapping Site Update Complete" travelmapping-siteupdates@teresco.org <<EOF
 A Travel Mapping site update has just successfully completed.
-The complete log is available at http://tm.teresco.org/logs/read_data.log .
+The complete log is available at http://tm.teresco.org/logs/siteupdate.log .
 Please report any problems to travmap@teresco.org .
 EOF
 date
