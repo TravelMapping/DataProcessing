@@ -699,6 +699,7 @@ parser.add_argument("-d", "--databasename", default="TravelMapping", \
 parser.add_argument("-i", "--includelevels", default="active", \
                         help="System development levels to include (from systems.csv)")
 parser.add_argument("-l", "--logfilepath", default=".", help="Path to write log files")
+parser.add_argument("-c", "--csvstatfilepath", default=".", help="Path to write csv statistics files")
 args = parser.parse_args()
 
 #
@@ -849,6 +850,7 @@ for h in highway_systems:
         #r.print_route()
     print("!")
 
+print(et.et() + "Finding unprocessed wpt files.")
 unprocessedfile = open(args.logfilepath+'/unprocessedwpts.log','w',encoding='utf-8')
 if len(all_wpt_files) > 0:
     print(str(len(all_wpt_files)) + " .wpt files in " + args.highwaydatapath +
@@ -1457,7 +1459,7 @@ for t in traveler_lists:
 # write stats csv files
 print(et.et() + "Writing stats csv files.")
 # first, overall per traveler by region
-allfile = open("allbyregion.csv","w",encoding='UTF-8')
+allfile = open(args.csvstatfilepath + "/allbyregion.csv","w",encoding='UTF-8')
 allfile.write("Traveler")
 regions = list(overall_mileage_by_region.keys())
 regions.sort()
@@ -1480,7 +1482,7 @@ allfile.close()
 
 # now, a file for each system, again per traveler by region
 for h in highway_systems:
-    sysfile = open(h.systemname + '-all.csv',"w",encoding='UTF-8')
+    sysfile = open(args.csvstatfilepath + "/" + h.systemname + '-all.csv',"w",encoding='UTF-8')
     sysfile.write('Traveler')
     regions = list(h.mileage_by_region.keys())
     regions.sort()

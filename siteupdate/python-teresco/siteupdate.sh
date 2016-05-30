@@ -2,6 +2,9 @@
 #
 set -e
 read_data=1
+logdir=logs
+statdir=stats
+mkdir -p $logdir $statdir
 date
 if [ $# -eq 1 ]; then
   if [ "$1" == "--noread" ]; then
@@ -10,7 +13,7 @@ if [ $# -eq 1 ]; then
 fi
 if [ "$read_data" == "1" ]; then
   echo "siteupdate.sh: launching siteupdate.py"
-  ./siteupdate.py | tee siteupdate.log 2>&1
+  ./siteupdate.py -l $logdir -c $statdir | tee $logdir/siteupdate.log 2>&1
 else
   echo "siteupdate.sh: SKIPPING siteupdate.py"
 fi
@@ -19,7 +22,7 @@ bzip2 -9f TravelMapping.sql
 echo "siteupdate.sh: Transferring TravelMapping.sql.bz2 to blizzard"
 scp TravelMapping.sql.bz2 blizzard.teresco.org:/tmp
 echo "siteupdate.sh: launching xferlogs.sh"
-sh xferlogs.sh &
+sh xferlogs.sh $logdir $statdir &
 echo "siteupdate.sh: sending bunzip to run on blizzard"
 ssh blizzard.teresco.org bunzip2 -f /tmp/TravelMapping.sql.bz2
 echo "siteupdate.sh: sending mysql update to run on blizzard"
