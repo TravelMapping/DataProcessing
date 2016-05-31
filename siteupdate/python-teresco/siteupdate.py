@@ -300,11 +300,11 @@ class Route:
         self.line = line
         fields = line.split(";")
         if len(fields) != 8:
-            print("Could not parse csv line: " + line)
+            print("ERROR: Could not parse csv line: " + line)
             print("Expected 8 fields, found " + str(len(fields)))
         self.system = system
         if system.systemname != fields[0]:
-            print("System mismatch parsing line [" + "], expected " + system.systemname)
+            print("ERROR: System mismatch parsing line [" + "], expected " + system.systemname)
         self.region = fields[1]
         self.route = fields[2]
         self.banner = fields[3]
@@ -390,10 +390,10 @@ class ConnectedRoute:
         self.line = line
         fields = line.split(";")
         if len(fields) != 5:
-            print("Could not parse _con.csv line: " + line)
+            print("ERROR: Could not parse _con.csv line: " + line)
         self.system = system
         if system.systemname != fields[0]:
-            print("System mismatch parsing line [" + line + "], expected " + system.systemname)
+            print("ERROR: System mismatch parsing line [" + line + "], expected " + system.systemname)
         self.route = fields[1]
         self.banner = fields[2]
         self.groupname = fields[3].replace("'","''")
@@ -408,12 +408,12 @@ class ConnectedRoute:
                     route = check_route
                     break
             if route is None:
-                print("Could not find Route matching root " + root + \
+                print("ERROR: Could not find Route matching root " + root + \
                           " in system " + system.systemname + '.')
             else:
                 self.roots.append(route)
         if len(self.roots) < 1:
-            print("No roots in _con.csv line [" + line + "]")
+            print("ERROR: No roots in _con.csv line [" + line + "]")
         # will be computed for routes in active systems later
         self.mileage = 0.0
 
@@ -475,7 +475,7 @@ class HighwaySystem:
             for line in lines:
                 self.con_route_list.append(ConnectedRoute(line.rstrip('\n'),self))
         except IOError:
-            print("Could not open " + path+"/"+systemname+"_con.csv," \
+            print("ERROR: Could not open " + path+"/"+systemname+"_con.csv," \
                       " assuming no connected routes")
 
 
@@ -687,7 +687,7 @@ def format_clinched_mi(clinched,total):
 et = ElapsedTime()
 # argument parsing
 #
-parser = argparse.ArgumentParser(description="Create SQL input and log files from highway and user data for the Travel Mapping project.")
+parser = argparse.ArgumentParser(description="Create SQL, stats, and log files from highway and user data for the Travel Mapping project.")
 parser.add_argument("-w", "--highwaydatapath", default="../../../HighwayData", \
                         help="path to the root of the highway data directory structure")
 parser.add_argument("-s", "--systemsfile", default="systems.csv", \
@@ -703,12 +703,7 @@ parser.add_argument("-c", "--csvstatfilepath", default=".", help="Path to write 
 args = parser.parse_args()
 
 #
-# Also list of travelers in the system
-#traveler_ids = [ 'terescoj', 'Bickendan', 'drfrankenstein', 'imgoph', 'master_son',
-#                 'mojavenc', 'oscar', 'rickmastfan67', 'sammi', 'si404',
-#                 'sipes23', 'froggie', 'mapcat', 'duke87', 'vdeane', 
-#                 'johninkingwood', 'yakra', 'michih' ]
-#traveler_ids = [ 'terescoj', 'si404' ]
+# Get list of travelers in the system
 traveler_ids = os.listdir(args.userlistfilepath)
 
 # read region, country, continent descriptions
@@ -732,7 +727,7 @@ lines.pop(0)  # ignore header line
 for line in lines:
     fields = line.rstrip('\n').split(";")
     if len(fields) != 2:
-        print("Could not parse countries.csv line: " + line)
+        print("ERROR: Could not parse countries.csv line: " + line)
         continue
     countries.append(fields)
 
@@ -743,7 +738,7 @@ lines.pop(0)  # ignore header line
 for line in lines:
     fields = line.rstrip('\n').split(";")
     if len(fields) != 4:
-        print("Could not parse regions.csv line: " + line)
+        print("ERROR: Could not parse regions.csv line: " + line)
         continue
     # look up country and continent, add index into those arrays
     # in case they're needed for lookups later (not needed for DB)
@@ -753,7 +748,7 @@ for line in lines:
             fields.append(i)
             break
     if len(fields) != 5:
-        print("Could not find country matching regions.csv line: " + line)
+        print("ERROR: Could not find country matching regions.csv line: " + line)
         continue
     for i in range(len(continents)):
         continent = continents[i][0]
@@ -761,7 +756,7 @@ for line in lines:
             fields.append(i)
             break
     if len(fields) != 6:
-        print("Could not find continent matching regions.csv line: " + line)
+        print("ERROR: Could not find continent matching regions.csv line: " + line)
         continue
     all_regions.append(fields)
 
@@ -780,7 +775,7 @@ for line in lines:
         continue
     fields = line.rstrip('\n').split(";")
     if len(fields) != 6:
-        print("Could not parse " + args.systemsfile + " line: " + line)
+        print("ERROR: Could not parse " + args.systemsfile + " line: " + line)
         continue
     print(fields[0] + ".",end="",flush=True)
     include = fields[5] in include_levels;
@@ -799,24 +794,25 @@ roots = []
 for h in highway_systems:
     for r in h.route_list:
         if r.root in roots:
-            print("Duplicate root in route lists: " + r.root)
+            print("ERROR: Duplicate root in route lists: " + r.root)
         else:
             roots.append(r.root)
 con_roots = []
 for h in highway_systems:
     for r in h.con_route_list:
         if r.roots[0].root in con_roots:
-            print("Duplicate root in con_route lists: " + r.roots[0].root)
+            print("ERROR: Duplicate root in con_route lists: " + r.roots[0].root)
         else:
             con_roots.append(r.roots[0].root)
 
-# write file mapping CHM datacheck route lists to root (temp)
-print(et.et() + "Writing CHM datacheck to TravelMapping route pairings.")
-file = open("routepairings.csv","wt")
-for h in highway_systems:
-    for r in h.route_list:
-        file.write(r.region + " " + r.route + r.banner + r.abbrev + ";" + r.root + "\n")
-file.close()
+# write file mapping CHM datacheck route lists to root (commented out,
+# unlikely needed now)
+#print(et.et() + "Writing CHM datacheck to TravelMapping route pairings.")
+#file = open(args.csvstatfilepath + "/routepairings.csv","wt")
+#for h in highway_systems:
+#    for r in h.route_list:
+#        file.write(r.region + " " + r.route + r.banner + r.abbrev + ";" + r.root + "\n")
+#file.close()
 
 # For tracking whether any .wpt files are in the directory tree
 # that do not have a .csv file entry that causes them to be
@@ -844,7 +840,7 @@ for h in highway_systems:
             all_wpt_files.remove(wpt_path)
         r.read_wpt(all_waypoints,args.highwaydatapath+"/hwy_data")
         if len(r.point_list) < 2:
-            print("Route contains fewer than 2 points: " + str(r))
+            print("ERROR: Route contains fewer than 2 points: " + str(r))
         print(".", end="",flush=True)
         #print(str(r))
         #r.print_route()
@@ -873,7 +869,7 @@ datacheckfps = []
 for line in lines:
     fields = line.rstrip('\n').split(';')
     if len(fields) != 6:
-        print("Could not parse datacheckfps.csv line: " + line)
+        print("ERROR: Could not parse datacheckfps.csv line: " + line)
         continue
     datacheckfps.append(fields)
 
