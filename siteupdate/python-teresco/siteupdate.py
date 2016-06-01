@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-# Travel Mapping Project, Jim Teresco, 2015
+# Travel Mapping Project, Jim Teresco, 2015, 2016
 """Python code to read .csv and .wpt files and prepare for
 adding to the Travel Mapping Project database.
 
-(c) 2015, Jim Teresco
+(c) 2015, 2016, Jim Teresco
 
 This module defines classes to represent the contents of a
 .csv file that lists the highways within a system, and a
@@ -434,9 +434,6 @@ class HighwaySystem:
 
     See Route for information about the fields of a .csv file
 
-    Each HighwaySystem is also designated as active or inactive via
-    the parameter active, defaulting to true
-
     With the implementation of three tiers of systems (active,
     preview, devel), added parameter and field here, to be stored in
     DB
@@ -447,7 +444,7 @@ class HighwaySystem:
     a designation within the same system crosses region boundaries,
     a connected route defines the entirety of the route.
     """
-    def __init__(self,systemname,country,fullname,color,tier,level,active,path="../../../HighwayData/hwy_data/_systems"):
+    def __init__(self,systemname,country,fullname,color,tier,level,path="../../../HighwayData/hwy_data/_systems"):
         self.route_list = []
         self.con_route_list = []
         self.systemname = systemname
@@ -456,7 +453,6 @@ class HighwaySystem:
         self.color = color
         self.tier = tier
         self.level = level
-        self.active = active
         self.mileage_by_region = dict()
         with open(path+"/"+systemname+".csv","rt",encoding='utf-8') as file:
             lines = file.readlines()
@@ -477,6 +473,22 @@ class HighwaySystem:
         except IOError:
             print("ERROR: Could not open " + path+"/"+systemname+"_con.csv," \
                       " assuming no connected routes")
+
+    """Return whether this is an active system"""
+    def active(self):
+        return self.level == "active" or self.level == "preview"
+
+    """Return whether this is a preview system"""
+    def preview(self):
+        return self.level == "preview"
+
+    """Return whether this is an active or preview system"""
+    def active_or_preview(self):
+        return self.level == "active" or self.level == "preview"
+
+    """Return whether this is a development system"""
+    def devel(self):
+        return self.level == "devel"
 
 
 class TravelerList:
@@ -526,8 +538,8 @@ class TravelerList:
                             break
                     if route_match or (r.route + r.banner + r.abbrev).lower() == route_entry:
                         lineDone = True  # we'll either have success or failure here
-                        if not h.active:
-                            self.log_entries.append("Ignoring line matching highway in inactive system: " + line)
+                        if h.devel():
+                            self.log_entries.append("Ignoring line matching highway in system in development: " + line)
                             break
                         #print("Route match with " + str(r))
                         # r is a route match, r.root is our root, and we need to find
@@ -696,8 +708,6 @@ parser.add_argument("-u", "--userlistfilepath", default="../../../UserData/list_
                         help="path to the user list file data")
 parser.add_argument("-d", "--databasename", default="TravelMapping", \
                         help="Database name for mysql 'USE' statement and .sql file name")
-parser.add_argument("-i", "--includelevels", default="active", \
-                        help="System development levels to include (from systems.csv)")
 parser.add_argument("-l", "--logfilepath", default=".", help="Path to write log files")
 parser.add_argument("-c", "--csvstatfilepath", default=".", help="Path to write csv statistics files")
 args = parser.parse_args()
@@ -763,7 +773,6 @@ for line in lines:
 # Create a list of HighwaySystem objects, one per system in systems.csv file
 highway_systems = []
 print(et.et() + "Reading systems list in " + args.highwaydatapath+"/"+args.systemsfile + ".  ",end="",flush=True)
-include_levels = args.includelevels.split(",")
 with open(args.highwaydatapath+"/"+args.systemsfile, "rt",encoding='utf-8') as file:
     lines = file.readlines()
 
@@ -778,9 +787,8 @@ for line in lines:
         print("ERROR: Could not parse " + args.systemsfile + " line: " + line)
         continue
     print(fields[0] + ".",end="",flush=True)
-    include = fields[5] in include_levels;
     highway_systems.append(HighwaySystem(fields[0], fields[1], fields[2].replace("'","''"),\
-                                         fields[3], fields[4], fields[5], include,\
+                                         fields[3], fields[4], fields[5],\
                                          args.highwaydatapath+"/hwy_data/_systems"))
 print("")
 # print at the end the lines ignored
@@ -1228,7 +1236,7 @@ for t in traveler_lists:
     for s in t.clinched_segments:
         if s.concurrent is not None:
             for hs in s.concurrent:
-                if hs.route.system.active and hs.add_clinched_by(t):
+                if hs.route.system.active_or_preview() and hs.add_clinched_by(t):
                     concurrencyfile.write("Concurrency augment for traveler " + t.traveler_name + ": [" + str(hs) + "] based on [" + str(s) + "]\n")
 print("!")
 concurrencyfile.close()
@@ -1238,7 +1246,7 @@ concurrencyfile.close()
 print(et.et() + "Computing stats.")
 overall_mileage_by_region = dict()
 for h in highway_systems:
-    if h.active:
+    if h.active_or_preview():
         for r in h.route_list:
             for s in r.segment_list:
                 segment_length = s.length()
@@ -1249,7 +1257,7 @@ for h in highway_systems:
                 overall_concurrency_count = 1
                 if s.concurrent is not None:
                     for other in s.concurrent:
-                        if other.route.system.active and other != s:
+                        if other.route.system.active_or_preview() and other != s:
                             overall_concurrency_count += 1
                             if other.route.system == r.system:
                                 system_concurrency_count += 1
@@ -1302,7 +1310,7 @@ for e in region_entries:
     clinchablefile.write(e)
 
 for h in highway_systems:
-    if h.active:
+    if h.active_or_preview():
         clinchablefile.write("System " + h.systemname + " overall: " + \
                              "{0:.2f}".format(math.fsum(list(h.mileage_by_region.values()))) \
                              + ' mi\n')
@@ -1362,7 +1370,7 @@ for t in traveler_lists:
     # DB table clinchedSystemMileageByRegion as we compute and
     # have the data handy
     for h in highway_systems:
-        if h.active:
+        if h.active_or_preview():
             active_systems += 1
             t_system_overall = 0.0
             if h.systemname in t.system_region_mileages:
@@ -1564,19 +1572,16 @@ sqlfile.write(";\n")
 # color for its mapping, a level (one of active, preview, devel), and
 # a boolean indicating if the system is active for mapping in the
 # project in the field 'active'
-sqlfile.write('CREATE TABLE systems (systemName VARCHAR(10), countryCode CHAR(3), fullName VARCHAR(50), color VARCHAR(10), level VARCHAR(10), tier INTEGER, active BOOLEAN, PRIMARY KEY(systemName));\n')
+sqlfile.write('CREATE TABLE systems (systemName VARCHAR(10), countryCode CHAR(3), fullName VARCHAR(50), color VARCHAR(10), level VARCHAR(10), tier INTEGER, PRIMARY KEY(systemName));\n')
 sqlfile.write('INSERT INTO systems VALUES\n')
 first = True
 for h in highway_systems:
-    active = 0;
-    if h.active:
-        active = 1;
     if not first:
         sqlfile.write(",")
     first = False
     sqlfile.write("('" + h.systemname + "','" +  h.country + "','" +  
                   h.fullname + "','" + h.color + "','" + h.level +
-                  "','" + str(h.tier) + "','" + str(active) + "')\n")
+                  "','" + str(h.tier) + "')\n")
 sqlfile.write(";\n")
 
 # next, a table of highways, with the same fields as in the first line
@@ -1681,7 +1686,7 @@ sqlfile.write('CREATE TABLE systemMileageByRegion (systemName VARCHAR(10), regio
 sqlfile.write('INSERT INTO systemMileageByRegion VALUES\n')
 first = True
 for h in highway_systems:
-    if h.active:
+    if h.active_or_preview():
         for region in list(h.mileage_by_region.keys()):
             if not first:
                 sqlfile.write(",")
