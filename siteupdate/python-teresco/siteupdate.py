@@ -476,7 +476,7 @@ class HighwaySystem:
 
     """Return whether this is an active system"""
     def active(self):
-        return self.level == "active" or self.level == "preview"
+        return self.level == "active"
 
     """Return whether this is a preview system"""
     def preview(self):
@@ -590,8 +590,11 @@ class TravelerList:
                                     " good lines marking " +str(len(self.clinched_segments)) + \
                                     " segments traveled.")
         # additional setup for later stats processing
-        # a place to track this user's total mileage per region
-        self.overall_mileage_by_region = dict()
+        # a place to track this user's total mileage per region,
+        # but only active+preview and active only (since devel
+        # systems are not clinchable)
+        self.active_preview_mileage_by_region = dict()
+        self.active_only_mileage_by_region = dict()
         # a place where this user's total mileage per system, again by region
         # this will be a dictionary of dictionaries, keys of the top level
         # are system names (e.g., 'usai') and values are dictionaries whose
@@ -1244,47 +1247,100 @@ concurrencyfile.close()
 # compute lots of stats, first total mileage by route, system, overall, where
 # system and overall are stored in dictionaries by region
 print(et.et() + "Computing stats.")
+# now also keeping separate totals for active only, active+preview,
+# and all for overall (not needed for system, as a system falls into just
+# one of these categories)
+active_only_mileage_by_region = dict()
+active_preview_mileage_by_region = dict()
 overall_mileage_by_region = dict()
 for h in highway_systems:
-    if h.active_or_preview():
-        for r in h.route_list:
-            for s in r.segment_list:
-                segment_length = s.length()
-                # always add the segment mileage to the route
-                r.mileage += segment_length
-                # but we do need to check for concurrencies for others
-                system_concurrency_count = 1
-                overall_concurrency_count = 1
-                if s.concurrent is not None:
-                    for other in s.concurrent:
-                        if other.route.system.active_or_preview() and other != s:
-                            overall_concurrency_count += 1
-                            if other.route.system == r.system:
-                                system_concurrency_count += 1
-                # so we know how many times this segment will be encountered
-                # in both the system and overall in active routes, so let's
-                # add in the appropriate (possibly fractional) mileage to the overall
-                # and system categorized by its region
-                if r.region in overall_mileage_by_region:
-                    overall_mileage_by_region[r.region] = overall_mileage_by_region[r.region] + \
-                        segment_length/overall_concurrency_count
+    for r in h.route_list:
+        for s in r.segment_list:
+            segment_length = s.length()
+            # always add the segment mileage to the route
+            r.mileage += segment_length
+            # but we do need to check for concurrencies for others
+            system_concurrency_count = 1
+            active_only_concurrency_count = 1
+            active_preview_concurrency_count = 1
+            overall_concurrency_count = 1
+            if s.concurrent is not None:
+                for other in s.concurrent:
+                    if other != s:
+                        overall_concurrency_count += 1
+                        if other.route.system.active_or_preview():
+                            active_preview_concurrency_count += 1
+                            if other.route.system.active():
+                                active_only_concurrency_count += 1
+                        if other.route.system == r.system:
+                            system_concurrency_count += 1
+            # so we know how many times this segment will be encountered
+            # in both the system and overall/active+preview/active-only
+            # routes, so let's add in the appropriate (possibly fractional)
+            # mileage to the overall totals and to the system categorized
+            # by its region
+            #
+            # first, overall mileage for this region, add to overall
+            # if an entry already exists, create entry if not
+            if r.region in overall_mileage_by_region:
+                overall_mileage_by_region[r.region] = overall_mileage_by_region[r.region] + \
+                    segment_length/overall_concurrency_count
+            else:
+                overall_mileage_by_region[r.region] = segment_length/overall_concurrency_count
+
+            # next, same thing for active_preview mileage for the region,
+            # if active or preview
+            if r.system.active_or_preview():
+                if r.region in active_preview_mileage_by_region:
+                    active_preview_mileage_by_region[r.region] = active_preview_mileage_by_region[r.region] + \
+                    segment_length/active_preview_concurrency_count
                 else:
-                    overall_mileage_by_region[r.region] = segment_length/overall_concurrency_count
-                if r.region in h.mileage_by_region:
-                    h.mileage_by_region[r.region] = h.mileage_by_region[r.region] + \
+                    active_preview_mileage_by_region[r.region] = segment_length/active_preview_concurrency_count
+
+            # now same thing for active_only mileage for the region,
+            # if active
+            if r.system.active():
+                if r.region in active_only_mileage_by_region:
+                    active_only_mileage_by_region[r.region] = active_only_mileage_by_region[r.region] + \
+                    segment_length/active_only_concurrency_count
+                else:
+                    active_only_mileage_by_region[r.region] = segment_length/active_only_concurrency_count
+            
+            # now we move on to totals by region, only the
+            # overall since an entire highway system must be
+            # at the same level
+            if r.region in h.mileage_by_region:
+                h.mileage_by_region[r.region] = h.mileage_by_region[r.region] + \
                         segment_length/system_concurrency_count
-                else:
-                    h.mileage_by_region[r.region] = segment_length/system_concurrency_count
-                # now credit all travelers who have clinched this segment in their stats
-                for t in s.clinched_by:
-                    # credit overall for this region
-                    if r.region in t.overall_mileage_by_region:
-                        t.overall_mileage_by_region[r.region] = t.overall_mileage_by_region[r.region] + \
-                            segment_length/overall_concurrency_count
+            else:
+                h.mileage_by_region[r.region] = segment_length/system_concurrency_count
+
+            # that's it for overall stats, now credit all travelers
+            # who have clinched this segment in their stats
+            for t in s.clinched_by:
+                # credit active+preview for this region, which it must be
+                # if this segment is clinched by anyone but still check
+                # in case a concurrency detection might otherwise credit
+                # a traveler with miles in a devel system
+                if r.system.active_or_preview():
+                    if r.region in t.active_preview_mileage_by_region:
+                        t.active_preview_mileage_by_region[r.region] = t.active_preview_mileage_by_region[r.region] + \
+                            segment_length/active_preview_concurrency_count
                     else:
-                        t.overall_mileage_by_region[r.region] = segment_length/overall_concurrency_count
-                    # credit this system in this region in the messy dictionary
-                    # of dictionaries
+                        t.active_preview_mileage_by_region[r.region] = segment_length/active_preview_concurrency_count
+
+                # credit active only for this region
+                if r.system.active():
+                    if r.region in t.active_only_mileage_by_region:
+                        t.active_only_mileage_by_region[r.region] = t.active_only_mileage_by_region[r.region] + \
+                            segment_length/active_only_concurrency_count
+                    else:
+                        t.active_only_mileage_by_region[r.region] = segment_length/active_only_concurrency_count
+
+
+                # credit this system in this region in the messy dictionary
+                # of dictionaries, but skip devel system entries
+                if r.system.active_or_preview():
                     if h.systemname not in t.system_region_mileages:
                         t.system_region_mileages[h.systemname] = dict()
                     t_system_dict = t.system_region_mileages[h.systemname]
@@ -1294,45 +1350,63 @@ for h in highway_systems:
                     else:
                         t_system_dict[r.region] = segment_length/system_concurrency_count
 
-print(et.et() + "Writing clinchable stats log file.")
-clinchablefile = open(args.logfilepath+"/clinchableroutes.log","wt",encoding='UTF-8')
-clinchablefile.write("Clinchable mileage as of " + str(datetime.datetime.now()) + '\n')
+print(et.et() + "Writing highway data stats log file (highwaydatastats.log).")
+hdstatsfile = open(args.logfilepath+"/highwaydatastats.log","wt",encoding='UTF-8')
+hdstatsfile.write("Travel Mapping highway mileage as of " + str(datetime.datetime.now()) + '\n')
+active_only_miles = math.fsum(list(active_only_mileage_by_region.values()))
+hdstatsfile.write("Active routes (active): " + "{0:.2f}".format(active_only_miles) + " mi\n")
+active_preview_miles = math.fsum(list(active_preview_mileage_by_region.values()))
+hdstatsfile.write("Clinchable routes (active, preview): " + "{0:.2f}".format(active_preview_miles) + " mi\n")
 overall_miles = math.fsum(list(overall_mileage_by_region.values()))
-clinchablefile.write("Overall: " + "{0:.2f}".format(overall_miles) + " mi\n")
-clinchablefile.write("Overall by region:\n")
+hdstatsfile.write("All routes (active, preview, devel): " + "{0:.2f}".format(overall_miles) + " mi\n")
+hdstatsfile.write("Breakdown by region:\n")
 # let's sort alphabetically by region instead of using whatever order
 # comes out of the dictionary
+# a nice enhancement later here might break down by continent, then country,
+# then region
 region_entries = []
 for region in list(overall_mileage_by_region.keys()):
-    region_entries.append(region + ": " + "{0:.2f}".format(overall_mileage_by_region[region]) + "\n")
+    # look up active+preview and active-only mileages if they exist
+    if region in list(active_preview_mileage_by_region.keys()):
+        active_preview_miles = active_preview_mileage_by_region[region]
+    else:
+        active_preview_miles = 0.0
+    if region in list(active_only_mileage_by_region.keys()):
+        active_only_miles = active_only_mileage_by_region[region]
+    else:
+        active_only_miles = 0.0
+
+    region_entries.append(region + ": " + 
+                          "{0:.2f}".format(active_only_miles) + " (active), " +
+                          "{0:.2f}".format(active_preview_miles) + " (active, preview) " +
+                          "{0:.2f}".format(overall_mileage_by_region[region]) + " (active, preview, devel)\n")
 region_entries.sort()
 for e in region_entries:
-    clinchablefile.write(e)
+    hdstatsfile.write(e)
 
 for h in highway_systems:
-    if h.active_or_preview():
-        clinchablefile.write("System " + h.systemname + " overall: " + \
-                             "{0:.2f}".format(math.fsum(list(h.mileage_by_region.values()))) \
+    hdstatsfile.write("System " + h.systemname + " (" + h.level + ") total: " 
+                      + "{0:.2f}".format(math.fsum(list(h.mileage_by_region.values()))) \
                              + ' mi\n')
-        if len(h.mileage_by_region) > 1:
-            clinchablefile.write("System " + h.systemname + " by region:\n")
-            for region in list(h.mileage_by_region.keys()):
-                clinchablefile.write(region + ": " + "{0:.2f}".format(h.mileage_by_region[region]) + " mi\n")
-        clinchablefile.write("System " + h.systemname + " by route:\n")
-        for cr in h.con_route_list:
-            con_total_miles = 0.0
-            to_write = ""
-            for r in cr.roots:
-                to_write += "  " + r.readable_name() + ": " + "{0:.2f}".format(r.mileage) + " mi\n"
-                con_total_miles += r.mileage
-            cr.mileage = con_total_miles
-            clinchablefile.write(cr.readable_name() + ": " + "{0:.2f}".format(con_total_miles) + " mi")
-            if len(cr.roots) == 1:
-                clinchablefile.write(" (" + cr.roots[0].readable_name() + " only)\n")
-            else:
-                clinchablefile.write("\n" + to_write)
+    if len(h.mileage_by_region) > 1:
+        hdstatsfile.write("System " + h.systemname + " by region:\n")
+        for region in list(h.mileage_by_region.keys()):
+            hdstatsfile.write(region + ": " + "{0:.2f}".format(h.mileage_by_region[region]) + " mi\n")
+    hdstatsfile.write("System " + h.systemname + " by route:\n")
+    for cr in h.con_route_list:
+        con_total_miles = 0.0
+        to_write = ""
+        for r in cr.roots:
+            to_write += "  " + r.readable_name() + ": " + "{0:.2f}".format(r.mileage) + " mi\n"
+            con_total_miles += r.mileage
+        cr.mileage = con_total_miles
+        hdstatsfile.write(cr.readable_name() + ": " + "{0:.2f}".format(con_total_miles) + " mi")
+        if len(cr.roots) == 1:
+            hdstatsfile.write(" (" + cr.roots[0].readable_name() + " only)\n")
+        else:
+            hdstatsfile.write("\n" + to_write)
 
-clinchablefile.close()
+hdstatsfile.close()
 # this will be used to store DB entry lines for clinchedSystemMileageByRegion
 # table as needed values are computed here, to be added into the DB
 # later in the program
