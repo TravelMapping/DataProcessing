@@ -1482,10 +1482,12 @@ for t in traveler_lists:
                 else:
                     t.preview_systems_clinched += 1
 
-            # stats by region covered by system, but only if it's been traveled at all
-            # and it covers multiple regions
-            if len(h.mileage_by_region) > 1 and t_system_overall > 0.0:
-                t.log_entries.append("System " + h.systemname + " by region:")
+            # stats by region covered by system, always in csmbr for
+            # the DB, but add to logs only if it's been traveled at
+            # all and it covers multiple regions
+            if t_system_overall > 0.0:
+                if len(h.mileage_by_region) > 1:
+                    t.log_entries.append("System " + h.systemname + " by region:")
                 for region in list(h.mileage_by_region.keys()):
                     system_region_mileage = 0.0
                     if h.systemname in t.system_region_mileages and region in t.system_region_mileages[h.systemname]:
@@ -1493,11 +1495,12 @@ for t in traveler_lists:
                         csmbr_values.append("('" + h.systemname + "','" + region + "','" 
                                             + t.traveler_name + "','" + 
                                             str(system_region_mileage) + "')")
-                    t.log_entries.append("  " + region + ": " + \
-                                         format_clinched_mi(system_region_mileage, h.mileage_by_region[region]))
+                    if len(h.mileage_by_region) > 1:
+                        t.log_entries.append("  " + region + ": " + \
+                                                 format_clinched_mi(system_region_mileage, h.mileage_by_region[region]))
 
-            # stats by highway for the system, by connected route and by each segment
-            # crossing region boundaries if applicable
+            # stats by highway for the system, by connected route and
+            # by each segment crossing region boundaries if applicable
             if t_system_overall > 0.0:
                 system_con_dict = dict()
                 t.con_routes_traveled[h.systemname] = system_con_dict
@@ -1818,7 +1821,8 @@ for region in list(active_preview_mileage_by_region.keys()):
                   str(active_preview_mileage) + "')\n")
 sqlfile.write(";\n")
 
-# system mileage by region data (with concurrencies accounted for, active systems only)
+# system mileage by region data (with concurrencies accounted for,
+# active systems and preview systems only)
 sqlfile.write('CREATE TABLE systemMileageByRegion (systemName VARCHAR(10), region VARCHAR(8), mileage FLOAT, FOREIGN KEY (systemName) REFERENCES systems(systemName));\n')
 sqlfile.write('INSERT INTO systemMileageByRegion VALUES\n')
 first = True
@@ -1831,7 +1835,8 @@ for h in highway_systems:
             sqlfile.write("('" + h.systemname + "','" + region + "','" + str(h.mileage_by_region[region]) + "')\n")
 sqlfile.write(";\n")
 
-# clinched overall mileage by region data (with concurrencies accounted for, active systems only)
+# clinched overall mileage by region data (with concurrencies
+# accounted for, active systems and preview systems only)
 sqlfile.write('CREATE TABLE clinchedOverallMileageByRegion (region VARCHAR(8), traveler VARCHAR(48), activeMileage FLOAT, activePreviewMileage FLOAT);\n')
 sqlfile.write('INSERT INTO clinchedOverallMileageByRegion VALUES\n')
 first = True
@@ -1848,7 +1853,8 @@ for t in traveler_lists:
                       str(t.active_preview_mileage_by_region[region]) + "')\n")
 sqlfile.write(";\n")
 
-# clinched system mileage by region data (with concurrencies accounted for, active systems only)
+# clinched system mileage by region data (with concurrencies accounted
+# for, active systems and preview systems only)
 sqlfile.write('CREATE TABLE clinchedSystemMileageByRegion (systemName VARCHAR(10), region VARCHAR(8), traveler VARCHAR(48), mileage FLOAT, FOREIGN KEY (systemName) REFERENCES systems(systemName));\n')
 sqlfile.write('INSERT INTO clinchedSystemMileageByRegion VALUES\n')
 first = True
@@ -1859,7 +1865,8 @@ for line in csmbr_values:
     sqlfile.write(line + "\n")
 sqlfile.write(";\n")
 
-# clinched mileage by connected route, active systems only
+# clinched mileage by connected route, active systems and preview
+# systems only
 sqlfile.write('CREATE TABLE clinchedConnectedRoutes (route VARCHAR(32), traveler VARCHAR(48), mileage FLOAT, clinched BOOLEAN, FOREIGN KEY (route) REFERENCES connectedRoutes(firstRoot));\n')
 for start in range(0, len(ccr_values), 10000):
     sqlfile.write('INSERT INTO clinchedConnectedRoutes VALUES\n')
@@ -1871,7 +1878,7 @@ for start in range(0, len(ccr_values), 10000):
         sqlfile.write(line + "\n")
     sqlfile.write(";\n")
 
-# clinched mileage by route, active systems only
+# clinched mileage by route, active systems and preview systems only
 sqlfile.write('CREATE TABLE clinchedRoutes (route VARCHAR(32), traveler VARCHAR(48), mileage FLOAT, clinched BOOLEAN, FOREIGN KEY (route) REFERENCES routes(root));\n')
 for start in range(0, len(cr_values), 10000):
     sqlfile.write('INSERT INTO clinchedRoutes VALUES\n')
