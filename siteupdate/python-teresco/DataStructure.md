@@ -39,5 +39,14 @@ Each `HighwaySegment` object has
 * a list `concurrent` that contains references to other `HighwaySegment` objects that are concurrent.  If `None` this means there are no other highway segment at the same location.  Any set of `HighwaySegment` objects that are concurrent will share a reference to the same list.
 * a list `clinched_by` that contains references to `TravelerList` objects of any traveler whose list file marks this segment as traveled.
 
-
+Each `TravelerList` object has
+* a list `list_entries`, each entry of which contains a reference to a `ClinchedSegmentEntry` object that represents one line of the traveler's list file
+* a set `clinched_segments` that contains references to all of the `HighwaySegment` objects that have been clinched by this traveler
+* a string `traveler_name`, which is the name of the list file, minus the .list extension
+* a list of strings `log_entries`, where entries are placed that will be written to the user's log file during a site update
+* three `dict` objects where mileage stats are stored:
+  * `active_preview_mileage_by_region` has keys which are region codes, and values that are the traverler's overall clinchecd mileage on all active or preview systems in that region
+  * `active_only_mileage_by_region` has keys which are region codes, and values that are the traverler's overall clinchecd mileage on only active systems in that region
+  * `system_region_mileages` has keys which are system codes, and values that are themselves `dict` objects that have keys which are region codes and values that are the traveler's clinched mileage within that region for the system.
+  * 
 
