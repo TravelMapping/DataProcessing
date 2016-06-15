@@ -1,4 +1,4 @@
-# Data Strucutures built in siteupdate.py
+# Data Structures built in siteupdate.py
 
 ### General information data
 `continents`, `countries`, and `regions` are all simple lists of arrays, containing the fields from the corresponding csv files.
