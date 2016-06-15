@@ -7,6 +7,15 @@
 
 The global `highway_systems` is a list of `HighwaySystem` objects, one per system in `systems.csv`.
 
+The global `all_waypoints` is a `WaypointQuadtree` that stores all waypoints in a conveniently and efficiently searchable spatial data structure.
+
+The global `traveler_lists` is a list of `TravelerList` objects, one for each traveler's list file that is processed.
+
+The globals `active_only_mileage_by_region`, `active_preview_mileage_by_region`, and `overall_mileage_by_region` are each `dict`s that track overall project mileage.
+* `active_preview_mileage_by_region` has keys which are region codes, and values that are the overall mileage on all active or preview systems in that region
+* `active_only_mileage_by_region` has keys which are region codes, and values that are the overall mileage on only active systems in that region
+* `system_region_mileages` has keys which are system codes, and values that are themselves `dict` objects that have keys which are region codes and values that are the mileage within that region for the system.
+
 Each `HighwaySystem` object has 
 * the csv fields from its entry in `systems.csv' (system name, country, full name, color, tier, level)
 * a list of `Route` objects in its field `route_list`
@@ -45,8 +54,19 @@ Each `TravelerList` object has
 * a string `traveler_name`, which is the name of the list file, minus the .list extension
 * a list of strings `log_entries`, where entries are placed that will be written to the user's log file during a site update
 * three `dict` objects where mileage stats are stored:
-  * `active_preview_mileage_by_region` has keys which are region codes, and values that are the traverler's overall clinchecd mileage on all active or preview systems in that region
-  * `active_only_mileage_by_region` has keys which are region codes, and values that are the traverler's overall clinchecd mileage on only active systems in that region
+  * `active_preview_mileage_by_region` has keys which are region codes, and values that are the traverler's overall clinched mileage on all active or preview systems in that region
+  * `active_only_mileage_by_region` has keys which are region codes, and values that are the traverler's overall clinched mileage on only active systems in that region
   * `system_region_mileages` has keys which are system codes, and values that are themselves `dict` objects that have keys which are region codes and values that are the traveler's clinched mileage within that region for the system.
-  * 
+  
+### Auxiliary structures
+
+Structures that have a temporary and/or fairly trivial purpose are excluded, such as the global `roots` and `con_roots` arrays that are used to check for duplicate route names.
+
+The global `et` is an instance of `ElapsedTime`, and is used to report time from the start of a site update run in informational messages.
+
+The global `args` contains the command-line arguments as parsed by an instance of `argparse.ArgumentParser`.
+
+The global lists `datacheckfps` and `datacheck_errors` are used in datacheck detection, and make use of the `DatacheckEntry` class.
+
+The global lists `updates` and `system_updates` simply take information from the corresponding csv files and later write them to the database.
 
