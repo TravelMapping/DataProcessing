@@ -5,7 +5,7 @@
 
 ### Highway Data structures
 
-The global `highway_systems` is a list of `HighwaySystem` objects, one per system in `systems.csv`
+The global `highway_systems` is a list of `HighwaySystem` objects, one per system in `systems.csv`.
 
 Each `HighwaySystem` object has 
 * the csv fields from its entry in `systems.csv' (system name, country, full name, color, tier, level)
@@ -15,13 +15,29 @@ Each `HighwaySystem` object has
 
 Each `Route` object has
 * the csv fields from its entry in the `hwy_data/_systems/XXXX.csv` file where this route is listed (region, route, banner, abbreviation, city, wpt file root, and a list of alternate names)
-* a list of `Waypoint` objects in its field `point_list`, one per waypoint in the route
+* a list of `Waypoint` objects in its field `point_list`, one per waypoint in the route (one per line in the wpt file)
 * a `set` in its field `labels_in_use`, which lists each label in this route used in any user's list file
 * a list of `HighwaySegment` objects in its field `segment_list` connecting pairs of consecutive waypoints in this route
-* a field `mileage` that gives the total mileage of the route
+* a field `mileage` that gives the total mileage of the route.
 
 Each `ConnectedRoute` object has
 * the csv fields from its entry in the `hwy_data/_systems/XXXX_con.csv` file where this route is listed (route, banner, group name)
 * a list of wpt file roots in its field `roots`, one per `Route` that makes up this `ConnectedRoute`
-* a field `mileage` that gives the total mileage of the connected route
+* a field `mileage` that gives the total mileage of the connected route.
+
+Each `Waypoint` object has
+* a field `route` that refers to the `Route` object representing the route of which this waypoint is a part
+* a field `label` which is a string containing the primary label of this waypoint
+* a boolean field `is_hidden` indicating if this is a hidden label (i.e., that its primary label starts with a '+')
+* a list of strings in `alt_labels` containing any alternate (usually former) labels for this waypoint that might still be used in some user list files
+* two fields `lat` and `lng` containing the latitude and longitude of the waypoint
+* a list `colocated` that contains references to other `Waypoint` objects that occupy the same point.  If `None` this means there are no other waypoints at the same location.  Any set of `Waypoint` objects that are co-located at a given point will share a reference to the same list.
+
+Each `HighwaySegment` object has
+* two fields `w1` and `w2`, that refer to the two `Waypoint` objects at the segment's endpoints
+* a field `route` that refers to the `Route` object representing the route of which this highway segment is a part
+* a list `concurrent` that contains references to other `HighwaySegment` objects that are concurrent.  If `None` this means there are no other highway segment at the same location.  Any set of `HighwaySegment` objects that are concurrent will share a reference to the same list.
+* a list `clinched_by` that contains references to `TravelerList` objects of any traveler whose list file marks this segment as traveled.
+
+
 
