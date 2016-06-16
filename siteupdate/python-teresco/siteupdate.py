@@ -221,7 +221,16 @@ class Waypoint:
         z2 = math.sin(rlatsucc)
 
         return math.degrees(math.acos(((x2 - x1)*(x1 - x0) + (y2 - y1)*(y1 - y0) + (z2 - z1)*(z1 - z0)) / math.sqrt(((x2 - x1)*(x2 - x1) + (y2 - y1)*(y2 - y1) + (z2 - z1)*(z2 - z1)) * ((x1 - x0)*(x1 - x0) + (y1 - y0)*(y1 - y0) + (z1 - z0)*(z1 - z0)))))                              
-        
+
+    def simple_waypoint_name(self):
+        if self.colocated is None:
+            return self.route.list_entry_name() + "@" + self.label
+        long_label = ""
+        for w in self.colocated:
+            if long_label != "":
+                long_label += "&"
+            long_label += w.route.list_entry_name() + "@" + w.label
+        return long_label
 
 class HighwaySegment:
     """This class represents one highway segment: the connection between two
@@ -256,6 +265,16 @@ class HighwaySegment:
     def length(self):
         """return segment length in miles"""
         return self.waypoint1.distance_to(self.waypoint2)
+
+    def set_segment_name(self):
+        """compute and set a segment name based on names of all
+        concurrent routes"""
+        if self.concurrent is None:
+            self.segment_name = self.route.list_entry_name()
+        else:
+            self.segment_name = self.concurrent[0].route.list_entry_name()
+            for i in range(1,len(self.concurrent)):
+                self.segment_name += "," + self.concurrent[i].route.list_entry_name()
 
 class Route:
     """This class encapsulates the contents of one .csv file line
@@ -373,6 +392,11 @@ class Route:
         """return a string for a human-readable route name"""
         return self.region+ " " + self.route + self.banner + self.abbrev
 
+    def list_entry_name(self):
+        """return a string for a human-readable route name in the
+        format expected in traveler list files"""
+        return self.route + self.banner + self.abbrev
+
     def clinched_by_traveler(self,t):
         miles = 0.0
         for s in self.segment_list:
@@ -459,7 +483,7 @@ class HighwaySystem:
         file.close()
         # ignore the first line of field names
         lines.pop(0)
-        roots = []
+        roots = []  # not needed or used?
         for line in lines:
             self.route_list.append(Route(line.rstrip('\n'),self))
         try:
@@ -533,10 +557,10 @@ class TravelerList:
                     route_match = False
                     for a in r.alt_route_names:
                         if route_entry == a.lower():
-                            self.log_entries.append("Note: replacing deprecated route name " + fields[1] + " with canonical name " + r.route + r.banner + r.abbrev + " in line " + line)
+                            self.log_entries.append("Note: replacing deprecated route name " + fields[1] + " with canonical name " + r.list_entry_name() + " in line " + line)
                             route_match = True
                             break
-                    if route_match or (r.route + r.banner + r.abbrev).lower() == route_entry:
+                    if route_match or (r.list_entry_name().lower() == route_entry):
                         lineDone = True  # we'll either have success or failure here
                         if h.devel():
                             self.log_entries.append("Ignoring line matching highway in system in development: " + line)
@@ -827,7 +851,7 @@ for h in highway_systems:
 #file = open(args.csvstatfilepath + "/routepairings.csv","wt")
 #for h in highway_systems:
 #    for r in h.route_list:
-#        file.write(r.region + " " + r.route + r.banner + r.abbrev + ";" + r.root + "\n")
+#        file.write(r.region + " " + r.list_entry_name() + ";" + r.root + "\n")
 #file.close()
 
 # For tracking whether any .wpt files are in the directory tree
@@ -1640,6 +1664,109 @@ for h in highway_systems:
     sysfile.write('\n')
     sysfile.close()
 
+# Build a graph structure out of all highway data in active and
+# preview systems
+print(et.et() + "Creating graph of highway data.", flush=True)
+# first, build a list of the unique waypoints and create
+# unique names that will be our vertex labels, these will
+# be in a dict where the keys are the unique vertex labels
+# and the values are lists of Waypoint objects (either a
+# colocation list or a singleton list for a place occupied
+# by a single Waypoint)
+unique_waypoints = dict()
+all_waypoint_list = all_waypoints.point_list()
+# add a unique name field to each waypoint, initialized to None, which
+# should get filled in for everyone later
+for w in all_waypoint_list:
+    w.unique_name = None
+
+# loop again, for each Waypoint, create a unique name and an entry
+# in the unique_waypoints list
+for w in all_waypoint_list:
+    # skip if named previously as someone else's colocated point
+    if w.unique_name is not None:
+        continue
+
+    # come up with a unique name that brings in its meaning
+    
+    # try the canonical name
+    simple_name = w.simple_waypoint_name()
+    
+    # if that's taken, append the region code
+    if simple_name in unique_waypoints:
+        simple_name += "|" + w.route.region
+
+    # if that's taken, append exclamation points until we find
+    # something unused
+    while simple_name in unique_waypoints:
+        print("Appending ! to " + simple_name, flush=True)
+        simple_name += "!"
+
+    # we're good, add the list of waypoints, either as a singleton
+    # list or the colocated list a values for the key of the
+    # unique name we just computed
+    if w.colocated is None:
+        unique_waypoints[simple_name] = [ w ]
+    else:
+        unique_waypoints[simple_name] = w.colocated
+
+    # mark each of these Waypoint objects also with this name
+    for wpt in unique_waypoints[simple_name]:
+        wpt.unique_name = simple_name
+
+# now create graph edges from highway segments
+# start by marking all as unvisited and giving a
+# segment name of None, so only those segments that
+# are given a name are used later in the graph edge
+# listing
+for h in highway_systems:
+    for r in h.route_list:
+        for s in r.segment_list:
+            s.visited = False
+            s.segment_name = None
+
+# now go back and visit again, but concurrent segments just get named once
+# also count up unique edges as we go
+unique_edges = 0
+for h in highway_systems:
+    for r in h.route_list:
+        for s in r.segment_list:
+            if not s.visited:
+                unique_edges += 1
+                s.set_segment_name()
+                if s.concurrent is None:
+                    s.visited = True
+                else:
+                    for cs in s.concurrent:
+                        cs.visited = True
+                
+print(et.et() + "Writing master TM graph file.")
+grafile = open('tm-master.gra', 'w')
+grafile.write(str(len(unique_waypoints)) + ' ' + str(unique_edges) + '\n')
+# number waypoint entries as we go to support original .gra format output
+vertex_num = 0
+for label, pointlist in unique_waypoints.items():
+    grafile.write(label + ' ' + str(pointlist[0].lat) + ' ' + str(pointlist[0].lng) + '\n')
+    pointlist[0].vertex_num = vertex_num
+    vertex_num += 1
+
+# visit unique segments as edges
+for h in highway_systems:
+    for r in h.route_list:
+        for s in r.segment_list:
+            if s.segment_name is not None:
+                if s.waypoint1.colocated is None:
+                     grafile.write(str(s.waypoint1.vertex_num) + ' ')
+                else:
+                     grafile.write(str(s.waypoint1.colocated[0].vertex_num) + ' ')
+                if s.waypoint2.colocated is None:
+                     grafile.write(str(s.waypoint2.vertex_num) + ' ')
+                else:
+                     grafile.write(str(s.waypoint2.colocated[0].vertex_num) + ' ')
+                grafile.write(s.segment_name + '\n')
+
+grafile.close()
+    
 print(et.et() + "Writing database file " + args.databasename + ".sql.")
 # Once all data is read in and processed, create a .sql file that will 
 # create all of the DB tables to be used by other parts of the project
