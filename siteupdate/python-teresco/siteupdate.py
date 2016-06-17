@@ -222,7 +222,17 @@ class Waypoint:
 
         return math.degrees(math.acos(((x2 - x1)*(x1 - x0) + (y2 - y1)*(y1 - y0) + (z2 - z1)*(z1 - z0)) / math.sqrt(((x2 - x1)*(x2 - x1) + (y2 - y1)*(y2 - y1) + (z2 - z1)*(z2 - z1)) * ((x1 - x0)*(x1 - x0) + (y1 - y0)*(y1 - y0) + (z1 - z0)*(z1 - z0)))))                              
 
+    def canonical_waypoint_name(self):
+        """Best name we can come up with for this point bringing in
+        information from itself and colocated points (if active/preview)
+        """
+        name = self.simple_waypoint_name()
+
+        return name
+
     def simple_waypoint_name(self):
+        """Failsafe name for a point, simply the string of route name @
+        label, concatenated with & characters for colocated points."""
         if self.colocated is None:
             return self.route.list_entry_name() + "@" + self.label
         long_label = ""
@@ -291,6 +301,21 @@ class HighwaySegment:
                         self.segment_name += ","
                     self.segment_name += cs.route.list_entry_name()
 
+    def gra_line(self):
+        """compute the line that should represent this segment in a
+        .gra format graph file (2 waypoint numbers, edge label)"""
+        line = ""
+        if self.waypoint1.colocated is None:
+            line += str(self.waypoint1.vertex_num) + ' '
+        else:
+            line += str(self.waypoint1.colocated[0].vertex_num) + ' '
+        if self.waypoint2.colocated is None:
+            line += str(self.waypoint2.vertex_num) + ' '
+        else:
+            line += str(self.waypoint2.colocated[0].vertex_num) + ' '
+        line += self.segment_name
+        return line
+        
 class Route:
     """This class encapsulates the contents of one .csv file line
     that represents a highway within a system and the corresponding
@@ -730,7 +755,133 @@ class DatacheckEntry:
 
     def __str__(self):
         return self.route.root + ";" + str(self.labels) + ";" + self.code + ";" + self.info
-         
+
+class HighwayGraph:
+    """This class implements the capability to create graph
+    data structures representing the highway data.
+
+    On construction, build a list (as keys of a dict) of unique
+    waypoint names that can be used as vertex labels in unique_waypoints,
+    and a determine edges, at most one per concurrent segment, by
+    setting segment names only on certain HighwaySegments in the overall
+    data set.
+    """
+
+    def __init__(self, all_waypoints, highway_systems):
+        # first, build a list of the unique waypoints and create
+        # unique names that will be our vertex labels, these will
+        # be in a dict where the keys are the unique vertex labels
+        # and the values are lists of Waypoint objects (either a
+        # colocation list or a singleton list for a place occupied
+        # by a single Waypoint)
+        self.unique_waypoints = dict()
+        all_waypoint_list = all_waypoints.point_list()
+        self.highway_systems = highway_systems
+
+        # add a unique name field to each waypoint, initialized to
+        # None, which should get filled in later for any waypoint that
+        # is or shares a location with any waypoint in an active or
+        # preview system
+        for w in all_waypoint_list:
+            w.unique_name = None
+
+        # loop again, for each Waypoint, create a unique name and an
+        # entry in the unique_waypoints list, unless it's a point not
+        # in or colocated with any active or preview system
+        for w in all_waypoint_list:
+            # skip if this point is occupied by only waypoints in
+            # devel systems
+            if not w.is_or_colocated_with_active_or_preview():
+                continue
+    
+            # skip if named previously as someone else's colocated point
+            if w.unique_name is not None:
+                continue
+
+            # come up with a unique name that brings in its meaning
+    
+            # start with the canonical name
+            point_name = w.canonical_waypoint_name()
+    
+            # if that's taken, append the region code
+            if point_name in self.unique_waypoints:
+                point_name += "|" + w.route.region
+
+            # if that's taken, see if the simple name
+            # is available
+            if point_name in self.unique_waypoints:
+                simple_name = w.simple_waypoint_name()
+                if simple_name not in self.unique_waypoints:
+                    point_name = simple_name
+            
+            # if we have not yet succeeded, add !'s until we do
+            while point_name in self.unique_waypoints:
+                point_name += "!"
+
+            # we're good, add the list of waypoints, either as a
+            # singleton list or the colocated list a values for the
+            # key of the unique name we just computed
+            if w.colocated is None:
+                self.unique_waypoints[point_name] = [ w ]
+            else:
+                self.unique_waypoints[point_name] = w.colocated
+
+            # mark each of these Waypoint objects also with this name
+            for wpt in self.unique_waypoints[point_name]:
+                wpt.unique_name = point_name
+
+        # now create graph edges from highway segments start by
+        # marking all as unvisited and giving a segment name of None,
+        # so only those segments that are given a name are used later
+        # in the graph edge listing
+        for h in highway_systems:
+            if h.devel():
+                continue
+            for r in h.route_list:
+                for s in r.segment_list:
+                    s.visited = False
+                    s.segment_name = None
+
+        # now go back and visit again, but concurrent segments just
+        # get named once. also count up unique edges as we go
+        self.unique_edges = 0
+        for h in highway_systems:
+            if h.devel():
+                continue
+            for r in h.route_list:
+                for s in r.segment_list:
+                    if not s.visited:
+                        self.unique_edges += 1
+                        s.set_segment_name()
+                        if s.concurrent is None:
+                            s.visited = True
+                        else:
+                            for cs in s.concurrent:
+                                cs.visited = True
+
+    def write_master_gra(self,filename):
+        grafile = open(filename, 'w')
+        grafile.write(str(len(self.unique_waypoints)) + ' ' +
+                      str(self.unique_edges) + '\n')
+        # number waypoint entries as we go to support original .gra
+        # format output
+        vertex_num = 0
+        for label, pointlist in self.unique_waypoints.items():
+            grafile.write(label + ' ' + str(pointlist[0].lat) + ' ' + str(pointlist[0].lng) + '\n')
+            pointlist[0].vertex_num = vertex_num
+            vertex_num += 1
+
+        # visit unique segments as edges
+        for h in self.highway_systems:
+            if h.devel():
+                continue
+            for r in h.route_list:
+                for s in r.segment_list:
+                    if s.segment_name is not None:
+                        grafile.write(s.gra_line() + '\n')
+
+        grafile.close()
+        
 def format_clinched_mi(clinched,total):
     percentage = "-.-%"
     if total != 0.0:
@@ -899,9 +1050,9 @@ for h in highway_systems:
         print(".", end="",flush=True)
         #print(str(r))
         #r.print_route()
-    print("!")
+    print("!", flush=True)
 
-print(et.et() + "Finding unprocessed wpt files.")
+print(et.et() + "Finding unprocessed wpt files.", flush=True)
 unprocessedfile = open(args.logfilepath+'/unprocessedwpts.log','w',encoding='utf-8')
 if len(all_wpt_files) > 0:
     print(str(len(all_wpt_files)) + " .wpt files in " + args.highwaydatapath +
@@ -914,7 +1065,7 @@ else:
 unprocessedfile.close()
 
 # data check: visit each system and route and check for various problems
-print(et.et() + "Performing data checks.")
+print(et.et() + "Performing data checks.", flush=True)
 # first, read in the false positives list
 with open(args.highwaydatapath+"/datacheckfps.csv", "rt",encoding='utf-8') as file:
     lines = file.readlines()
@@ -1148,7 +1299,7 @@ for h in highway_systems:
 
 datacheckfile.close()
 # now mark false positives
-print(et.et() + "Marking datacheck false positives.")
+print(et.et() + "Marking datacheck false positives.", flush=True)
 fpfile = open(args.logfilepath+'/nearmatchfps.log','w',encoding='utf-8')
 fpfile.write("Log file created at: " + str(datetime.datetime.now()) + "\n")
 toremove = []
@@ -1681,122 +1832,14 @@ for h in highway_systems:
 
 # Build a graph structure out of all highway data in active and
 # preview systems
-print(et.et() + "Creating graphs of highway data.", flush=True)
-print("Master (all data, tm-master.gra", end="", flush=True)
-# first, build a list of the unique waypoints and create
-# unique names that will be our vertex labels, these will
-# be in a dict where the keys are the unique vertex labels
-# and the values are lists of Waypoint objects (either a
-# colocation list or a singleton list for a place occupied
-# by a single Waypoint)
-unique_waypoints = dict()
-all_waypoint_list = all_waypoints.point_list()
-# add a unique name field to each waypoint, initialized to None, which
-# should get filled in later for any waypoint that is or shares a
-# location with any waypoint in an active or preview system
-for w in all_waypoint_list:
-    w.unique_name = None
+print(et.et() + "Setting up for graphs of highway data.", flush=True)
+graph_data = HighwayGraph(all_waypoints, highway_systems)
 
-# loop again, for each Waypoint, create a unique name and an entry
-# in the unique_waypoints list, unless it's a point not in or colocated
-# with any active or preview system
-for w in all_waypoint_list:
-    # skip if this point is occupied by only waypoints in devel systems
-    if not w.is_or_colocated_with_active_or_preview():
-        continue
-    
-    # skip if named previously as someone else's colocated point
-    if w.unique_name is not None:
-        continue
-
-    # come up with a unique name that brings in its meaning
-    
-    # try the canonical name
-    simple_name = w.simple_waypoint_name()
-    
-    # if that's taken, append the region code
-    if simple_name in unique_waypoints:
-        simple_name += "|" + w.route.region
-
-    # if that's taken, append exclamation points until we find
-    # something unused
-    while simple_name in unique_waypoints:
-        print("Appending ! to " + simple_name, flush=True)
-        simple_name += "!"
-
-    # we're good, add the list of waypoints, either as a singleton
-    # list or the colocated list a values for the key of the
-    # unique name we just computed
-    if w.colocated is None:
-        unique_waypoints[simple_name] = [ w ]
-    else:
-        unique_waypoints[simple_name] = w.colocated
-
-    # mark each of these Waypoint objects also with this name
-    for wpt in unique_waypoints[simple_name]:
-        wpt.unique_name = simple_name
-
-# now create graph edges from highway segments
-# start by marking all as unvisited and giving a
-# segment name of None, so only those segments that
-# are given a name are used later in the graph edge
-# listing
-for h in highway_systems:
-    if h.devel():
-        continue
-    for r in h.route_list:
-        for s in r.segment_list:
-            s.visited = False
-            s.segment_name = None
-
-# now go back and visit again, but concurrent segments just get named once
-# also count up unique edges as we go
-unique_edges = 0
-for h in highway_systems:
-    if h.devel():
-        continue
-    for r in h.route_list:
-        for s in r.segment_list:
-            if not s.visited:
-                unique_edges += 1
-                s.set_segment_name()
-                if s.concurrent is None:
-                    s.visited = True
-                else:
-                    for cs in s.concurrent:
-                        cs.visited = True
-                
-print(et.et() + "Writing master TM graph file.")
-grafile = open(args.graphfilepath+'/tm-master.gra', 'w')
-grafile.write(str(len(unique_waypoints)) + ' ' + str(unique_edges) + '\n')
-# number waypoint entries as we go to support original .gra format output
-vertex_num = 0
-for label, pointlist in unique_waypoints.items():
-    grafile.write(label + ' ' + str(pointlist[0].lat) + ' ' + str(pointlist[0].lng) + '\n')
-    pointlist[0].vertex_num = vertex_num
-    vertex_num += 1
-
-# visit unique segments as edges
-for h in highway_systems:
-    if h.devel():
-        continue
-    for r in h.route_list:
-        for s in r.segment_list:
-            if s.segment_name is not None:
-                if s.waypoint1.colocated is None:
-                     grafile.write(str(s.waypoint1.vertex_num) + ' ')
-                else:
-                     grafile.write(str(s.waypoint1.colocated[0].vertex_num) + ' ')
-                if s.waypoint2.colocated is None:
-                     grafile.write(str(s.waypoint2.vertex_num) + ' ')
-                else:
-                     grafile.write(str(s.waypoint2.colocated[0].vertex_num) + ' ')
-                grafile.write(s.segment_name + '\n')
-
-grafile.close()
+print(et.et() + "Writing master TM graph file, tm-master.gra.", flush=True)
+graph_data.write_master_gra(args.graphfilepath+'/tm-master.gra')
 
 # Graphs restricted by region
-print(et.et() + "Creating regional data graphs.")
+print(et.et() + "Creating regional data graphs.", flush=True)
 # We will create graph data and a graph file for each region that includes
 # any active or preview systems
 for r in all_regions:
@@ -1806,7 +1849,7 @@ for r in all_regions:
     print(region_code + ' ', end="",flush=True)
     # count up waypoints that are in or colocated in the region (note: borders)
     region_waypoints = 0
-    for label, pointlist in unique_waypoints.items():
+    for label, pointlist in graph_data.unique_waypoints.items():
         for w in pointlist:
             if w.route.region == region_code:
                 region_waypoints += 1
@@ -1829,7 +1872,7 @@ for r in all_regions:
 
     # write waypoint/vertex data
     vertex_num = 0
-    for label, pointlist in unique_waypoints.items():
+    for label, pointlist in graph_data.unique_waypoints.items():
         for w in pointlist:
             if w.route.region == region_code:
                 grafile.write(label + ' ' + str(pointlist[0].lat) + ' ' + str(pointlist[0].lng) + '\n')
@@ -1849,15 +1892,7 @@ for r in all_regions:
                 continue
             for s in route.segment_list:
                 if s.segment_name is not None:
-                    if s.waypoint1.colocated is None:
-                        grafile.write(str(s.waypoint1.vertex_num) + ' ')
-                    else:
-                        grafile.write(str(s.waypoint1.colocated[0].vertex_num) + ' ')
-                    if s.waypoint2.colocated is None:
-                        grafile.write(str(s.waypoint2.vertex_num) + ' ')
-                    else:
-                        grafile.write(str(s.waypoint2.colocated[0].vertex_num) + ' ')
-                    grafile.write(s.segment_name + '\n')
+                    grafile.write(s.gra_line() + '\n')
             
     grafile.close()
 print("!")
