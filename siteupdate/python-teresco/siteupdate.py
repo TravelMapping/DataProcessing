@@ -227,10 +227,20 @@ class Waypoint:
             return self.route.list_entry_name() + "@" + self.label
         long_label = ""
         for w in self.colocated:
-            if long_label != "":
-                long_label += "&"
-            long_label += w.route.list_entry_name() + "@" + w.label
+            if w.route.system.active_or_preview():
+                if long_label != "":
+                    long_label += "&"
+                long_label += w.route.list_entry_name() + "@" + w.label
         return long_label
+
+    def is_or_colocated_with_active_or_preview(self):
+        if self.route.system.active_or_preview():
+            return True
+        if self.colocated is not None:
+            for w in self.colocated:
+                if w.route.system.active_or_preview():
+                    return True
+        return False
 
 class HighwaySegment:
     """This class represents one highway segment: the connection between two
@@ -268,13 +278,18 @@ class HighwaySegment:
 
     def set_segment_name(self):
         """compute and set a segment name based on names of all
-        concurrent routes"""
+        concurrent routes, used for graph edge labels"""
+        # hate to use a global here, maybe fix later
+        self.segment_name = ""
         if self.concurrent is None:
-            self.segment_name = self.route.list_entry_name()
+            if self.route.system.active_or_preview():
+                self.segment_name += self.route.list_entry_name()
         else:
-            self.segment_name = self.concurrent[0].route.list_entry_name()
-            for i in range(1,len(self.concurrent)):
-                self.segment_name += "," + self.concurrent[i].route.list_entry_name()
+            for cs in self.concurrent:
+                if cs.route.system.active_or_preview():
+                    if self.segment_name != "":
+                        self.segment_name += ","
+                    self.segment_name += cs.route.list_entry_name()
 
 class Route:
     """This class encapsulates the contents of one .csv file line
@@ -290,7 +305,7 @@ class Route:
     one per highway, with values for each field.
 
     System: the name of the highway system this route belongs to,
-    normally the same as the name of the .csv file.
+    an instance of HighwaySystem
 
     Region: the project region or subdivision in which the
     route belongs.
@@ -513,7 +528,6 @@ class HighwaySystem:
     """Return whether this is a development system"""
     def devel(self):
         return self.level == "devel"
-
 
 class TravelerList:
     """This class encapsulates the contents of one .list file
@@ -742,6 +756,7 @@ parser.add_argument("-d", "--databasename", default="TravelMapping", \
                         help="Database name for mysql 'USE' statement and .sql file name")
 parser.add_argument("-l", "--logfilepath", default=".", help="Path to write log files")
 parser.add_argument("-c", "--csvstatfilepath", default=".", help="Path to write csv statistics files")
+parser.add_argument("-g", "--graphfilepath", default=".", help="Path to write graph format data files")
 args = parser.parse_args()
 
 #
@@ -1666,7 +1681,8 @@ for h in highway_systems:
 
 # Build a graph structure out of all highway data in active and
 # preview systems
-print(et.et() + "Creating graph of highway data.", flush=True)
+print(et.et() + "Creating graphs of highway data.", flush=True)
+print("Master (all data, tm-master.gra", end="", flush=True)
 # first, build a list of the unique waypoints and create
 # unique names that will be our vertex labels, these will
 # be in a dict where the keys are the unique vertex labels
@@ -1676,13 +1692,19 @@ print(et.et() + "Creating graph of highway data.", flush=True)
 unique_waypoints = dict()
 all_waypoint_list = all_waypoints.point_list()
 # add a unique name field to each waypoint, initialized to None, which
-# should get filled in for everyone later
+# should get filled in later for any waypoint that is or shares a
+# location with any waypoint in an active or preview system
 for w in all_waypoint_list:
     w.unique_name = None
 
 # loop again, for each Waypoint, create a unique name and an entry
-# in the unique_waypoints list
+# in the unique_waypoints list, unless it's a point not in or colocated
+# with any active or preview system
 for w in all_waypoint_list:
+    # skip if this point is occupied by only waypoints in devel systems
+    if not w.is_or_colocated_with_active_or_preview():
+        continue
+    
     # skip if named previously as someone else's colocated point
     if w.unique_name is not None:
         continue
@@ -1720,6 +1742,8 @@ for w in all_waypoint_list:
 # are given a name are used later in the graph edge
 # listing
 for h in highway_systems:
+    if h.devel():
+        continue
     for r in h.route_list:
         for s in r.segment_list:
             s.visited = False
@@ -1729,6 +1753,8 @@ for h in highway_systems:
 # also count up unique edges as we go
 unique_edges = 0
 for h in highway_systems:
+    if h.devel():
+        continue
     for r in h.route_list:
         for s in r.segment_list:
             if not s.visited:
@@ -1741,7 +1767,7 @@ for h in highway_systems:
                         cs.visited = True
                 
 print(et.et() + "Writing master TM graph file.")
-grafile = open('tm-master.gra', 'w')
+grafile = open(args.graphfilepath+'/tm-master.gra', 'w')
 grafile.write(str(len(unique_waypoints)) + ' ' + str(unique_edges) + '\n')
 # number waypoint entries as we go to support original .gra format output
 vertex_num = 0
@@ -1752,6 +1778,8 @@ for label, pointlist in unique_waypoints.items():
 
 # visit unique segments as edges
 for h in highway_systems:
+    if h.devel():
+        continue
     for r in h.route_list:
         for s in r.segment_list:
             if s.segment_name is not None:
@@ -1766,7 +1794,74 @@ for h in highway_systems:
                 grafile.write(s.segment_name + '\n')
 
 grafile.close()
-    
+
+# Graphs restricted by region
+print(et.et() + "Creating regional data graphs.")
+# We will create graph data and a graph file for each region that includes
+# any active or preview systems
+for r in all_regions:
+    region_code = r[0]
+    if region_code not in active_preview_mileage_by_region:
+        continue
+    print(region_code + ' ', end="",flush=True)
+    # count up waypoints that are in or colocated in the region (note: borders)
+    region_waypoints = 0
+    for label, pointlist in unique_waypoints.items():
+        for w in pointlist:
+            if w.route.region == region_code:
+                region_waypoints += 1
+                break
+    # count up segments that are in the region
+    region_segments = 0
+    for h in highway_systems:
+        if h.devel():
+            continue
+        for route in h.route_list:
+            if route.region == region_code:
+                for s in route.segment_list:
+                    if s.segment_name is not None:
+                        region_segments += 1
+
+    print('(' + str(region_waypoints) + ',' + str(region_segments) + ') ', end="", flush=True)
+    # ready to write the header
+    grafile = open(args.graphfilepath + '/' + region_code + '-all.gra', 'w')
+    grafile.write(str(region_waypoints) + ' ' + str(region_segments) + '\n')
+
+    # write waypoint/vertex data
+    vertex_num = 0
+    for label, pointlist in unique_waypoints.items():
+        for w in pointlist:
+            if w.route.region == region_code:
+                grafile.write(label + ' ' + str(pointlist[0].lat) + ' ' + str(pointlist[0].lng) + '\n')
+                pointlist[0].vertex_num = vertex_num
+                vertex_num += 1
+                break
+    # sanity check
+    if region_waypoints != vertex_num:
+        print("ERROR: computed " + str(region_waypoints) + " waypoints but wrote " + str(vertex_num))
+
+    # write edge data
+    for h in highway_systems:
+        if h.devel():
+            continue
+        for route in h.route_list:
+            if route.region != region_code:
+                continue
+            for s in route.segment_list:
+                if s.segment_name is not None:
+                    if s.waypoint1.colocated is None:
+                        grafile.write(str(s.waypoint1.vertex_num) + ' ')
+                    else:
+                        grafile.write(str(s.waypoint1.colocated[0].vertex_num) + ' ')
+                    if s.waypoint2.colocated is None:
+                        grafile.write(str(s.waypoint2.vertex_num) + ' ')
+                    else:
+                        grafile.write(str(s.waypoint2.colocated[0].vertex_num) + ' ')
+                    grafile.write(s.segment_name + '\n')
+            
+    grafile.close()
+print("!")
+
 print(et.et() + "Writing database file " + args.databasename + ".sql.")
 # Once all data is read in and processed, create a .sql file that will 
 # create all of the DB tables to be used by other parts of the project
