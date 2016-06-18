@@ -226,7 +226,85 @@ class Waypoint:
         """Best name we can come up with for this point bringing in
         information from itself and colocated points (if active/preview)
         """
+        # start with the failsafe name, and see if we can improve before
+        # returning
         name = self.simple_waypoint_name()
+        print("cwn: simple_waypoint_name: " + name)
+
+        # if no colocated points, there's nothing to do - we just use
+        # the route@label form and deal with conflicts elsewhere
+        if self.colocated is None:
+            return name
+
+        # get a colocated list that any devel system entries removed
+        colocated = []
+        for w in self.colocated:
+            if w.route.system.active_or_preview():
+                colocated.append(w)
+        # just return the simple name if only one active/preview waypoint
+        if (len(colocated) == 1):
+            return name
+        
+        # straightforward concurrency example with matching waypoint
+        # labels, use route/route/route@label, except also matches
+        # any hidden label
+        routes = ""
+        pointname = ""
+        matches = 0
+        for w in colocated:
+            if routes == "":
+                routes = w.route.list_entry_name()
+                pointname = w.label
+                matches = 1
+            elif pointname == w.label or w.label.startswith('+'):
+                # this check seems odd, but avoids double route names
+                # at border crossings
+                if routes != w.route.list_entry_name():
+                    routes += "/" + w.route.list_entry_name()
+                matches += 1
+        if matches == len(colocated):
+            return routes + "@" + pointname
+
+        # straightforward 2-route intersection with matching labels
+        # NY30@US20&US20@NY30 would become NY30/US20
+        # or
+        # 2-route intersection with one or both labels having directional
+        # suffixes but otherwise matching route
+        # US24@CO21_N&CO21@US24_E would become US24_E/CO21_N
+
+        if len(colocated) == 2:
+            w0_list_entry = colocated[0].route.list_entry_name()
+            w1_list_entry = colocated[1].route.list_entry_name()
+            w0_label = colocated[0].label
+            w1_label = colocated[1].label
+            if (w0_list_entry == w1_label or \
+                w1_label.startswith(w0_list_entry + '_')) and \
+                (w1_list_entry == w0_label or \
+                w0_label.startswith(w1_list_entry + '_')):
+                return w1_label + '/' + w0_label
+
+
+        # TODO: NY5@NY16/384&NY16@NY5/384&NY384@NY5/16
+        # should become NY5/NY16/NY384
+        # or a more complex case:
+        # US1@US21/176&US21@US1/378&US176@US1/378&US321@US1/378&US378@US21/176
+        # another kind of like this:
+        # US41@IN246&US150@IN246&IN246@US41/150
+
+        # TODO: I-90@47B(94)&I-94@47B
+        # should become I-90/I-94@47B
+
+        # TODO: I-10@753B&US90@I-10(753B)
+        # should become I-10(753B)/US90, idea: try matching any
+        # label that starts with a number as the route name and
+        # that number in parens as exit number
+        # needs to include cases like I-30@135&US67@I-30(135)&US70@I-30(135)
+
+        # TODO: I-90@175&I-90BLAus@I-90_W
+        # should probably become something like I-90(175)/I-90BLAus
+
+        # INVESTIGATE: VA262@US11&US11@VA262&VA262@US11_S
+        # should be 2 colocated, shows up as 3?
 
         return name
 
@@ -883,12 +961,13 @@ class HighwayGraph:
         grafile.close()
         
 def format_clinched_mi(clinched,total):
+    """return a nicely-formatted string for a given number of miles
+    clinched and total miles, including percentage"""
     percentage = "-.-%"
     if total != 0.0:
         percentage = "({0:.1f}%)".format(100*clinched/total)
     return "{0:.2f}".format(clinched) + " of {0:.2f}".format(total) + \
         " mi " + percentage
-
 
 # Execution code starts here
 #
