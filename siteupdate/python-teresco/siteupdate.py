@@ -229,7 +229,6 @@ class Waypoint:
         # start with the failsafe name, and see if we can improve before
         # returning
         name = self.simple_waypoint_name()
-        print("cwn: simple_waypoint_name: " + name)
 
         # if no colocated points, there's nothing to do - we just use
         # the route@label form and deal with conflicts elsewhere
@@ -283,26 +282,66 @@ class Waypoint:
                 w0_label.startswith(w1_list_entry + '_')):
                 return w1_label + '/' + w0_label
 
+        # check for cases like
+        # I-10@753B&US90@I-10(753B)
+        # which becomes
+        # I-10(753B)/US90
+        # more generally,
+        # I-30@135&US67@I-30(135)&US70@I-30(135)
+        # becomes
+        # I-30(135)/US67/US70
+        # but also matches some other cases that perhaps should
+        # be checked or handled separately, though seems OK
+        # US20@NY30A&NY30A@US20&NY162@US20 
+        # becomes
+        # US20/NY30A/NY162
 
+        for match_index in range(0,len(colocated)):
+            lookfor1 = colocated[match_index].route.list_entry_name()
+            lookfor2 = colocated[match_index].route.list_entry_name() + \
+               '(' + colocated[match_index].label + ')'
+            all_match = True
+            for check_index in range(0,len(colocated)):
+                if match_index == check_index:
+                    continue
+                if (colocated[check_index].label != lookfor1) and \
+                   (colocated[check_index].label != lookfor2):
+                    all_match = False
+            if all_match:
+                if (colocated[match_index].label[0:1].isnumeric()):
+                    label = lookfor2
+                else:
+                    label = lookfor1
+                for add_index in range(0,len(colocated)):
+                    if match_index == add_index:
+                        continue
+                    label += '/' + colocated[add_index].route.list_entry_name()
+                print("MATCH " + name + " BECOMES " + label)
+                return label
+            
         # TODO: NY5@NY16/384&NY16@NY5/384&NY384@NY5/16
         # should become NY5/NY16/NY384
         # or a more complex case:
         # US1@US21/176&US21@US1/378&US176@US1/378&US321@US1/378&US378@US21/176
         # another kind of like this:
         # US41@IN246&US150@IN246&IN246@US41/150
+        # Idea: look for points not part of a continuing concurrency
 
         # TODO: I-90@47B(94)&I-94@47B
         # should become I-90/I-94@47B
+        # complication: I-39@171C(90)&I-90@171C&US14@I-39/90
 
-        # TODO: I-10@753B&US90@I-10(753B)
-        # should become I-10(753B)/US90, idea: try matching any
-        # label that starts with a number as the route name and
-        # that number in parens as exit number
-        # needs to include cases like I-30@135&US67@I-30(135)&US70@I-30(135)
+        # TODO: I-20@76&I-77@16
+        # should become I-20/I-77 or maybe I-20(76)/I-77(16)
 
         # TODO: I-90@175&I-90BLAus@I-90_W
         # should probably become something like I-90(175)/I-90BLAus
 
+        # TODO: US2@VT15_W&US7@VT15&VT15@US2_W
+        # should probably end up as something like US2_W/US7/VT15_W
+
+        # How about? 
+        # I-581@4&US220@I-581(4)&US460@I-581&US11AltRoa@I-581&US220AltRoa@US220_S&VA116@I-581(4)
         # INVESTIGATE: VA262@US11&US11@VA262&VA262@US11_S
         # should be 2 colocated, shows up as 3?
 
