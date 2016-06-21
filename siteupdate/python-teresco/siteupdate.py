@@ -222,7 +222,7 @@ class Waypoint:
 
         return math.degrees(math.acos(((x2 - x1)*(x1 - x0) + (y2 - y1)*(y1 - y0) + (z2 - z1)*(z1 - z0)) / math.sqrt(((x2 - x1)*(x2 - x1) + (y2 - y1)*(y2 - y1) + (z2 - z1)*(z2 - z1)) * ((x1 - x0)*(x1 - x0) + (y1 - y0)*(y1 - y0) + (z1 - z0)*(z1 - z0)))))                              
 
-    def canonical_waypoint_name(self):
+    def canonical_waypoint_name(self,log):
         """Best name we can come up with for this point bringing in
         information from itself and colocated points (if active/preview)
         """
@@ -247,6 +247,9 @@ class Waypoint:
         # straightforward concurrency example with matching waypoint
         # labels, use route/route/route@label, except also matches
         # any hidden label
+        # TODO: compress when some but not all labels match, such as
+        # E127@Kan&AH60@Kan_N&AH64@Kan&AH67@Kan&M38@Kan
+        # or possibly just compress ignoring the _ suffixes here
         routes = ""
         pointname = ""
         matches = 0
@@ -262,6 +265,7 @@ class Waypoint:
                     routes += "/" + w.route.list_entry_name()
                 matches += 1
         if matches == len(colocated):
+            log.append("Straightforward concurrency: " + name + " -> " + routes + "@" + pointname)
             return routes + "@" + pointname
 
         # straightforward 2-route intersection with matching labels
@@ -280,6 +284,7 @@ class Waypoint:
                 w1_label.startswith(w0_list_entry + '_')) and \
                 (w1_list_entry == w0_label or \
                 w0_label.startswith(w1_list_entry + '_')):
+                log.append("Straightforward intersection: " + name + " -> " + w1_label + '/' + w0_label)
                 return w1_label + '/' + w0_label
 
         # check for cases like
@@ -316,7 +321,7 @@ class Waypoint:
                     if match_index == add_index:
                         continue
                     label += '/' + colocated[add_index].route.list_entry_name()
-                print("MATCH " + name + " BECOMES " + label)
+                log.append("Exit/Intersection: " + name + " -> " + label)
                 return label
             
         # TODO: NY5@NY16/384&NY16@NY5/384&NY384@NY5/16
@@ -326,6 +331,7 @@ class Waypoint:
         # another kind of like this:
         # US41@IN246&US150@IN246&IN246@US41/150
         # Idea: look for points not part of a continuing concurrency
+        # where there are at least three colocated points
 
         # TODO: I-90@47B(94)&I-94@47B
         # should become I-90/I-94@47B
@@ -333,6 +339,7 @@ class Waypoint:
 
         # TODO: I-20@76&I-77@16
         # should become I-20/I-77 or maybe I-20(76)/I-77(16)
+        # not shorter, so maybe who cares about this one?
 
         # TODO: I-90@175&I-90BLAus@I-90_W
         # should probably become something like I-90(175)/I-90BLAus
@@ -345,6 +352,7 @@ class Waypoint:
         # INVESTIGATE: VA262@US11&US11@VA262&VA262@US11_S
         # should be 2 colocated, shows up as 3?
 
+        log.append("Keep failsafe: " + name)
         return name
 
     def simple_waypoint_name(self):
@@ -379,6 +387,7 @@ class HighwaySegment:
         self.route = route
         self.concurrent = None
         self.clinched_by = []
+        self.segment_name = None
 
     def __str__(self):
         return self.waypoint1.label + " to " + self.waypoint2.label + \
@@ -902,6 +911,10 @@ class HighwayGraph:
         for w in all_waypoint_list:
             w.unique_name = None
 
+        # to track the waypoint name compressions, add log entries
+        # to this list
+        self.waypoint_naming_log = []
+
         # loop again, for each Waypoint, create a unique name and an
         # entry in the unique_waypoints list, unless it's a point not
         # in or colocated with any active or preview system
@@ -918,22 +931,25 @@ class HighwayGraph:
             # come up with a unique name that brings in its meaning
     
             # start with the canonical name
-            point_name = w.canonical_waypoint_name()
+            point_name = w.canonical_waypoint_name(self.waypoint_naming_log)
     
             # if that's taken, append the region code
             if point_name in self.unique_waypoints:
                 point_name += "|" + w.route.region
+                self.waypoint_naming_log.append("Appended region: " + point_name)
 
             # if that's taken, see if the simple name
             # is available
             if point_name in self.unique_waypoints:
                 simple_name = w.simple_waypoint_name()
                 if simple_name not in self.unique_waypoints:
+                    self.waypoint_naming_log.append("Revert to simple: " + simple_name + " from (taken) " + point_name)
                     point_name = simple_name
             
             # if we have not yet succeeded, add !'s until we do
             while point_name in self.unique_waypoints:
                 point_name += "!"
+                self.waypoint_naming_log.append("Appended !: " + point_name)
 
             # we're good, add the list of waypoints, either as a
             # singleton list or the colocated list a values for the
@@ -1113,7 +1129,7 @@ for line in ignoring:
 
 # check for duplicate root entries among Route and ConnectedRoute
 # data in all highway systems
-print(et.et() + "Checking for duplicate root in routes and connected routes.")
+print(et.et() + "Checking for duplicate root in routes and connected routes.", flush=True)
 roots = []
 for h in highway_systems:
     for r in h.route_list:
@@ -1953,6 +1969,12 @@ for h in highway_systems:
 print(et.et() + "Setting up for graphs of highway data.", flush=True)
 graph_data = HighwayGraph(all_waypoints, highway_systems)
 
+print(et.et() + "Writing graph waypoint simplification log.", flush=True)
+logfile = open(args.logfilepath + '/waypointsimplification.log', 'w')
+for line in graph_data.waypoint_naming_log:
+    logfile.write(line + '\n')
+logfile.close()
+
 print(et.et() + "Writing master TM graph file, tm-master.gra.", flush=True)
 graph_data.write_master_gra(args.graphfilepath+'/tm-master.gra')
 
@@ -2002,6 +2024,7 @@ for r in all_regions:
         print("ERROR: computed " + str(region_waypoints) + " waypoints but wrote " + str(vertex_num))
 
     # write edge data
+    edge_num = 0
     for h in highway_systems:
         if h.devel():
             continue
@@ -2010,8 +2033,116 @@ for r in all_regions:
                 continue
             for s in route.segment_list:
                 if s.segment_name is not None:
+                    edge_num += 1
                     grafile.write(s.gra_line() + '\n')
             
+    # sanity check on number of edges
+    if region_segments != edge_num:
+        print("ERROR: computed " + str(region_segments) + " edges but wrote " + str(edge_num))
+
+
+    grafile.close()
+print("!")
+
+# Graphs restricted by system
+print(et.et() + "Creating system data graphs.", flush=True)
+# We will create graph data and a graph file for each active or
+# preview system
+for h in highway_systems:
+    if h.devel():
+        continue
+    print(h.systemname + ' ', end="",flush=True)
+    # count up waypoints that are in or colocated in the system
+    system_waypoints = 0
+    for label, pointlist in graph_data.unique_waypoints.items():
+        for w in pointlist:
+            if w.route.system.systemname == h.systemname:
+                system_waypoints += 1
+                break
+    # count up segments that are in the system
+    system_segments = 0
+    for route in h.route_list:
+        #print("Considering route " + str(route))
+        for s in route.segment_list:
+            #print("Considering segment " + str(s))
+            if s.segment_name is not None:
+                # always count if we have the name
+                #print("Has segment name.")
+                system_segments += 1
+            else:
+                # If we don't have the name, might need to count
+                # anyway, if the name is attached to a segment not in
+                # our system.  But make sure we only count it once,
+                # and do so by counting only if this route's segment
+                # is the first in the list from this system
+                in_sys_count = 0
+                first_in_sys = False
+                named_in_sys = False
+                for cs in s.concurrent:
+                    if cs.route.system.systemname == h.systemname:
+                        if in_sys_count == 0:
+                            first_in_sys = True
+                        if cs.segment_name is not None:
+                            named_in_sys = True
+                        in_sys_count += 1
+                #print("Does not have segment name, in_sys_count = " + str(in_sys_count) + ", first_in_sys = " + str(first_in_sys) + ", named_in_sys = " + str(named_in_sys))
+                if not named_in_sys and first_in_sys:
+                    #print("Does not have segment name but counting")
+                    system_segments += 1
+                #else:
+                #    print("Does not have segment name but not counting")
+
+    print('(' + str(system_waypoints) + ',' + str(system_segments) + ') ', end="", flush=True)
+    # ready to write the header
+    grafile = open(args.graphfilepath + '/' + h.systemname + '.gra', 'w')
+    grafile.write(str(system_waypoints) + ' ' + str(system_segments) + '\n')
+
+    # write waypoint/vertex data
+    vertex_num = 0
+    for label, pointlist in graph_data.unique_waypoints.items():
+        for w in pointlist:
+            if w.route.system.systemname == h.systemname:
+                grafile.write(label + ' ' + str(pointlist[0].lat) + ' ' + str(pointlist[0].lng) + '\n')
+                pointlist[0].vertex_num = vertex_num
+                vertex_num += 1
+                break
+    # sanity check
+    if system_waypoints != vertex_num:
+        print("ERROR: computed " + str(system_waypoints) + " waypoints but wrote " + str(vertex_num))
+
+    # write edge data
+    edge_num = 0
+    for route in h.route_list:
+        for s in route.segment_list:
+            if s.segment_name is not None:
+                edge_num += 1
+                grafile.write(s.gra_line() + '\n')
+            else:
+                # similar check as above in case we're responsible for
+                # writing even though not the "owner" by having the
+                # segment name
+                in_sys_count = 0
+                first_in_sys = False
+                named_in_sys = False
+                cs_with_name = None
+                for cs in s.concurrent:
+                    if cs.route.system.systemname == h.systemname:
+                        if in_sys_count == 0:
+                            first_in_sys = True
+                        if cs.segment_name is not None:
+                            named_in_sys = True
+                        in_sys_count += 1
+                    if cs.segment_name is not None:
+                        cs_with_name = cs
+                if not named_in_sys and first_in_sys:
+                    edge_num += 1
+                    grafile.write(cs_with_name.gra_line() + '\n')
+            
+    # sanity check on number of edges
+    if system_segments != edge_num:
+        print("ERROR: computed " + str(system_segments) + " edges but wrote " + str(edge_num))
+
+
     grafile.close()
 print("!")
 
