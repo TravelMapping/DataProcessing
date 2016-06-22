@@ -1014,6 +1014,116 @@ class HighwayGraph:
                         grafile.write(s.gra_line() + '\n')
 
         grafile.close()
+
+    def write_subgraph_gra(self,filename,regions,systems):
+        grafile = open(filename, 'w')
+
+        # count up the waypoints in or colocated in the system(s)
+        # and/or regions(s)
+        matching_waypoints = 0
+        for label, pointlist in self.unique_waypoints.items():
+            for w in pointlist:
+                if (regions is None or w.route.region in regions) and \
+                   (systems is None or w.route.system in systems):
+                    matching_waypoints += 1
+                    break
+
+        # count up the segments that are in or colocated in the
+        # system(s) and/or region(s)
+        matching_segments = 0
+        for h in self.highway_systems:
+            if h.devel():
+                continue
+            if systems is not None and h not in systems:
+                continue
+            for route in h.route_list:
+                if regions is None or route.region in regions:
+                    for s in route.segment_list:
+                        if s.segment_name is not None:
+                            # always count if we have the name
+                            matching_segments += 1
+
+                        elif systems is not None:
+                            # If we don't have the name, might need to
+                            # count anyway, if the name is attached to
+                            # a segment not in our system.  But make
+                            # sure we only count it once, and do so by
+                            # counting only if this route's segment is
+                            # the first in the list from included systems
+                            in_sys_count = 0
+                            first_in_sys = False
+                            named_in_sys = False
+                            for cs in s.concurrent:
+                                if cs.route.system in systems:
+                                    if in_sys_count == 0:
+                                        first_in_sys = True
+                                        if cs.segment_name is not None:
+                                            named_in_sys = True
+                                            in_sys_count += 1
+                            #print("Does not have segment name, in_sys_count = " + str(in_sys_count) + ", first_in_sys = " + str(first_in_sys) + ", named_in_sys = " + str(named_in_sys))
+                            if not named_in_sys and first_in_sys:
+                                #print("Does not have segment name but counting")
+                                matching_segments += 1
+
+
+        print('(' + str(matching_waypoints) + ',' + str(matching_segments) + ') ', end="", flush=True)
+        # ready to write the header
+        grafile.write(str(matching_waypoints) + ' ' + str(matching_segments) + '\n')
+
+        # write waypoint/vertex data
+        vertex_num = 0
+        for label, pointlist in graph_data.unique_waypoints.items():
+            for w in pointlist:
+                if (regions is None or w.route.region in regions) and \
+                   (systems is None or w.route.system in systems):
+                    grafile.write(label + ' ' + str(pointlist[0].lat) + ' ' + str(pointlist[0].lng) + '\n')
+                    pointlist[0].vertex_num = vertex_num
+                    vertex_num += 1
+                    break
+        # sanity check
+        if matching_waypoints != vertex_num:
+            print("ERROR: computed " + str(matching_waypoints) + " waypoints but wrote " + str(vertex_num))
+
+
+        # write edge data
+        edge_num = 0
+        for h in self.highway_systems:
+            if h.devel():
+                continue
+            if systems is not None and h not in systems:
+                continue
+            for route in h.route_list:
+                if regions is None or route.region in regions:
+                    for s in route.segment_list:
+                        if s.segment_name is not None:
+                            edge_num += 1
+                            grafile.write(s.gra_line() + '\n')
+                        elif systems is not None:
+                            # similar check as above in case we're
+                            # responsible for writing even though not
+                            # the "owner" by having the segment name
+                            in_sys_count = 0
+                            first_in_sys = False
+                            named_in_sys = False
+                            cs_with_name = None
+                            for cs in s.concurrent:
+                                if cs.route.system in systems:
+                                    if in_sys_count == 0:
+                                        first_in_sys = True
+                                    if cs.segment_name is not None:
+                                        named_in_sys = True
+                                    in_sys_count += 1
+                                if cs.segment_name is not None:
+                                    cs_with_name = cs
+                            if not named_in_sys and first_in_sys:
+                                edge_num += 1
+                                grafile.write(cs_with_name.gra_line() + '\n')
+                                                    
+        # sanity check on number of edges
+        if matching_segments != edge_num:
+            print("ERROR: computed " + str(matching_segments) + " edges but wrote " + str(edge_num))
+
+        grafile.close()
         
 def format_clinched_mi(clinched,total):
     """return a nicely-formatted string for a given number of miles
@@ -1987,61 +2097,7 @@ for r in all_regions:
     if region_code not in active_preview_mileage_by_region:
         continue
     print(region_code + ' ', end="",flush=True)
-    # count up waypoints that are in or colocated in the region (note: borders)
-    region_waypoints = 0
-    for label, pointlist in graph_data.unique_waypoints.items():
-        for w in pointlist:
-            if w.route.region == region_code:
-                region_waypoints += 1
-                break
-    # count up segments that are in the region
-    region_segments = 0
-    for h in highway_systems:
-        if h.devel():
-            continue
-        for route in h.route_list:
-            if route.region == region_code:
-                for s in route.segment_list:
-                    if s.segment_name is not None:
-                        region_segments += 1
-
-    print('(' + str(region_waypoints) + ',' + str(region_segments) + ') ', end="", flush=True)
-    # ready to write the header
-    grafile = open(args.graphfilepath + '/' + region_code + '-all.gra', 'w')
-    grafile.write(str(region_waypoints) + ' ' + str(region_segments) + '\n')
-
-    # write waypoint/vertex data
-    vertex_num = 0
-    for label, pointlist in graph_data.unique_waypoints.items():
-        for w in pointlist:
-            if w.route.region == region_code:
-                grafile.write(label + ' ' + str(pointlist[0].lat) + ' ' + str(pointlist[0].lng) + '\n')
-                pointlist[0].vertex_num = vertex_num
-                vertex_num += 1
-                break
-    # sanity check
-    if region_waypoints != vertex_num:
-        print("ERROR: computed " + str(region_waypoints) + " waypoints but wrote " + str(vertex_num))
-
-    # write edge data
-    edge_num = 0
-    for h in highway_systems:
-        if h.devel():
-            continue
-        for route in h.route_list:
-            if route.region != region_code:
-                continue
-            for s in route.segment_list:
-                if s.segment_name is not None:
-                    edge_num += 1
-                    grafile.write(s.gra_line() + '\n')
-            
-    # sanity check on number of edges
-    if region_segments != edge_num:
-        print("ERROR: computed " + str(region_segments) + " edges but wrote " + str(edge_num))
-
-
-    grafile.close()
+    graph_data.write_subgraph_gra(args.graphfilepath + '/' + region_code + '-all-test.gra', [ region_code ], None)
 print("!")
 
 # Graphs restricted by system
@@ -2052,98 +2108,25 @@ for h in highway_systems:
     if h.devel():
         continue
     print(h.systemname + ' ', end="",flush=True)
-    # count up waypoints that are in or colocated in the system
-    system_waypoints = 0
-    for label, pointlist in graph_data.unique_waypoints.items():
-        for w in pointlist:
-            if w.route.system.systemname == h.systemname:
-                system_waypoints += 1
-                break
-    # count up segments that are in the system
-    system_segments = 0
-    for route in h.route_list:
-        #print("Considering route " + str(route))
-        for s in route.segment_list:
-            #print("Considering segment " + str(s))
-            if s.segment_name is not None:
-                # always count if we have the name
-                #print("Has segment name.")
-                system_segments += 1
-            else:
-                # If we don't have the name, might need to count
-                # anyway, if the name is attached to a segment not in
-                # our system.  But make sure we only count it once,
-                # and do so by counting only if this route's segment
-                # is the first in the list from this system
-                in_sys_count = 0
-                first_in_sys = False
-                named_in_sys = False
-                for cs in s.concurrent:
-                    if cs.route.system.systemname == h.systemname:
-                        if in_sys_count == 0:
-                            first_in_sys = True
-                        if cs.segment_name is not None:
-                            named_in_sys = True
-                        in_sys_count += 1
-                #print("Does not have segment name, in_sys_count = " + str(in_sys_count) + ", first_in_sys = " + str(first_in_sys) + ", named_in_sys = " + str(named_in_sys))
-                if not named_in_sys and first_in_sys:
-                    #print("Does not have segment name but counting")
-                    system_segments += 1
-                #else:
-                #    print("Does not have segment name but not counting")
+    graph_data.write_subgraph_gra(args.graphfilepath + '/' + h.systemname + '-test.gra', None, [ h ])
+print("!")
 
-    print('(' + str(system_waypoints) + ',' + str(system_segments) + ') ', end="", flush=True)
-    # ready to write the header
-    grafile = open(args.graphfilepath + '/' + h.systemname + '.gra', 'w')
-    grafile.write(str(system_waypoints) + ' ' + str(system_segments) + '\n')
-
-    # write waypoint/vertex data
-    vertex_num = 0
-    for label, pointlist in graph_data.unique_waypoints.items():
-        for w in pointlist:
-            if w.route.system.systemname == h.systemname:
-                grafile.write(label + ' ' + str(pointlist[0].lat) + ' ' + str(pointlist[0].lng) + '\n')
-                pointlist[0].vertex_num = vertex_num
-                vertex_num += 1
-                break
-    # sanity check
-    if system_waypoints != vertex_num:
-        print("ERROR: computed " + str(system_waypoints) + " waypoints but wrote " + str(vertex_num))
-
-    # write edge data
-    edge_num = 0
-    for route in h.route_list:
-        for s in route.segment_list:
-            if s.segment_name is not None:
-                edge_num += 1
-                grafile.write(s.gra_line() + '\n')
-            else:
-                # similar check as above in case we're responsible for
-                # writing even though not the "owner" by having the
-                # segment name
-                in_sys_count = 0
-                first_in_sys = False
-                named_in_sys = False
-                cs_with_name = None
-                for cs in s.concurrent:
-                    if cs.route.system.systemname == h.systemname:
-                        if in_sys_count == 0:
-                            first_in_sys = True
-                        if cs.segment_name is not None:
-                            named_in_sys = True
-                        in_sys_count += 1
-                    if cs.segment_name is not None:
-                        cs_with_name = cs
-                if not named_in_sys and first_in_sys:
-                    edge_num += 1
-                    grafile.write(cs_with_name.gra_line() + '\n')
-            
-    # sanity check on number of edges
-    if system_segments != edge_num:
-        print("ERROR: computed " + str(system_segments) + " edges but wrote " + str(edge_num))
-
-
-    grafile.close()
+# Some additional interesting graphs
+print(et.et() + "Creating additional graphs.", flush=True)
+# U.S. national systems
+print("usa-national ", end="", flush=True)
+systems = []
+for h in highway_systems:
+    if h.systemname in [ 'usai', 'usaus', 'usaif', 'usaib', 'usausb', 'usansf', 'usasf' ]:
+        systems.append(h)
+graph_data.write_subgraph_gra(args.graphfilepath + '/usa-national.gra', None, systems)
+# U.S. all routes
+print("usa-all ", end="", flush=True)
+systems = []
+for h in highway_systems:
+    if h.country == 'USA':
+        systems.append(h)
+graph_data.write_subgraph_gra(args.graphfilepath + '/usa-all.gra', None, systems)
 print("!")
 
 print(et.et() + "Writing database file " + args.databasename + ".sql.")
