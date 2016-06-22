@@ -4,7 +4,7 @@
 # and can run concurrently with parts of siteupdate.sh
 #
 echo "xferlogstest.sh: Creating logstoxfer.tar"
-tar cf logstoxfer.tar $1/*.log $2/*.csv
+tar cf logstoxfer.tar $1/*.log $2/*.csv $3/*.gra
 echo "xferlogstest.sh: Bzipping logstoxfer.tar"
 bzip2 -9f logstoxfer.tar
 echo "xferlogstest.sh: Transfering logstoxfer.tar.bz2"
