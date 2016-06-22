@@ -1140,7 +1140,7 @@ def format_clinched_mi(clinched,total):
 et = ElapsedTime()
 # argument parsing
 #
-parser = argparse.ArgumentParser(description="Create SQL, stats, and log files from highway and user data for the Travel Mapping project.")
+parser = argparse.ArgumentParser(description="Create SQL, stats, graphs, and log files from highway and user data for the Travel Mapping project.")
 parser.add_argument("-w", "--highwaydatapath", default="../../../HighwayData", \
                         help="path to the root of the highway data directory structure")
 parser.add_argument("-s", "--systemsfile", default="systems.csv", \
@@ -1151,7 +1151,7 @@ parser.add_argument("-d", "--databasename", default="TravelMapping", \
                         help="Database name for mysql 'USE' statement and .sql file name")
 parser.add_argument("-l", "--logfilepath", default=".", help="Path to write log files")
 parser.add_argument("-c", "--csvstatfilepath", default=".", help="Path to write csv statistics files")
-parser.add_argument("-g", "--graphfilepath", default=".", help="Path to write graph format data files")
+parser.add_argument("-g", "--graphfilepath", default="", help="Path to write graph format data files")
 args = parser.parse_args()
 
 #
@@ -2097,7 +2097,7 @@ for r in all_regions:
     if region_code not in active_preview_mileage_by_region:
         continue
     print(region_code + ' ', end="",flush=True)
-    graph_data.write_subgraph_gra(args.graphfilepath + '/' + region_code + '-all-test.gra', [ region_code ], None)
+    graph_data.write_subgraph_gra(args.graphfilepath + '/' + region_code + '-all.gra', [ region_code ], None)
 print("!")
 
 # Graphs restricted by system
@@ -2108,7 +2108,7 @@ for h in highway_systems:
     if h.devel():
         continue
     print(h.systemname + ' ', end="",flush=True)
-    graph_data.write_subgraph_gra(args.graphfilepath + '/' + h.systemname + '-test.gra', None, [ h ])
+    graph_data.write_subgraph_gra(args.graphfilepath + '/' + h.systemname + '.gra', None, [ h ])
 print("!")
 
 # Some additional interesting graphs
@@ -2120,6 +2120,13 @@ for h in highway_systems:
     if h.systemname in [ 'usai', 'usaus', 'usaif', 'usaib', 'usausb', 'usansf', 'usasf' ]:
         systems.append(h)
 graph_data.write_subgraph_gra(args.graphfilepath + '/usa-national.gra', None, systems)
+print("by region ", end="", flush=True)
+for r in all_regions:
+    if r[2] == 'USA':
+        print(r[0] + ' ', end="", flush=True)
+        graph_data.write_subgraph_gra(args.graphfilepath + '/' + r[0] + '-usa-national.gra', [ r[0] ], systems)
+print("!")
+
 # U.S. all routes
 print("usa-all ", end="", flush=True)
 systems = []
@@ -2127,6 +2134,15 @@ for h in highway_systems:
     if h.country == 'USA':
         systems.append(h)
 graph_data.write_subgraph_gra(args.graphfilepath + '/usa-all.gra', None, systems)
+print("!")
+
+# Canada all routes
+print("canada-all ", end="", flush=True)
+systems = []
+for h in highway_systems:
+    if h.country == 'CAN':
+        systems.append(h)
+graph_data.write_subgraph_gra(args.graphfilepath + '/canada-all.gra', None, systems)
 print("!")
 
 print(et.et() + "Writing database file " + args.databasename + ".sql.")

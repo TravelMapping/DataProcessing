@@ -4,7 +4,8 @@ set -e
 read_data=1
 logdir=logs
 statdir=stats
-mkdir -p $logdir $statdir
+graphdir=graphs
+mkdir -p $logdir $statdir $graphdir
 date
 if [ $# -eq 1 ]; then
   if [ "$1" == "--noread" ]; then
@@ -14,7 +15,8 @@ fi
 if [ "$read_data" == "1" ]; then
   echo "testsiteupdate.sh: launching siteupdate.py"
   #./siteupdate.py -w ../../../../HighwayData -d TravelMappingTest -s smallsystems.csv -u a_few_lists -l $logdir -c $statdir | tee $logdir/testsiteupdate.log 2>&1
-  ./siteupdate.py -w ../../../../HighwayData -d TravelMappingTest -u ../../../../UserData/list_files -l $logdir -c $statdir | tee $logdir/testsiteupdate.log 2>&1
+  ./siteupdate.py -w ../../../../HighwayData -s systems.csv -d TravelMappingTest -g $graphdir -u . -l $logdir -c $statdir | tee $logdir/testsiteupdate.log 2>&1
+  #./siteupdate.py -w ../../../../HighwayData -d TravelMappingTest -u ../../../../UserData/list_files -l $logdir -c $statdir | tee $logdir/testsiteupdate.log 2>&1
 else
   echo "testsiteupdate.sh: SKIPPING siteupdate.py"
 fi
@@ -23,7 +25,7 @@ bzip2 -9f TravelMappingTest.sql
 echo "testsiteupdate.sh: Transferring TravelMappingTest.sql.bz2 to blizzard"
 scp TravelMappingTest.sql.bz2 blizzard.teresco.org:/tmp
 echo "testsiteupdate.sh: launching xferlogs.sh"
-sh xferlogstest.sh $logdir $statdir &
+sh xferlogstest.sh $logdir $statdir $graphdir &
 echo "testsiteupdate.sh: sending bunzip to run on blizzard"
 ssh blizzard.teresco.org bunzip2 -f /tmp/TravelMappingTest.sql.bz2
 echo "testsiteupdate.sh: sending mysql update to run on blizzard"
