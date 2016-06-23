@@ -154,6 +154,10 @@ class Waypoint:
         self.lng = float(lng_string)
         # also keep track of a list of colocated waypoints, if any
         self.colocated = None
+        # when added as one ends of a HighwaySegment, that segment
+        # will be added here, this is used in compressed graph
+        # construction (and will be modified by that process)
+        #self.adjacent_segments = []
 
     def __str__(self):
         ans = self.route.root + " " + self.label
@@ -388,6 +392,9 @@ class HighwaySegment:
         self.concurrent = None
         self.clinched_by = []
         self.segment_name = None
+        # connect to our endpoints
+        #w1.adjacent_segments.append(self)
+        #w2.adjacent_segments.append(self)
 
     def __str__(self):
         return self.waypoint1.label + " to " + self.waypoint2.label + \
@@ -526,6 +533,8 @@ class Route:
                         other_w.colocated = [ other_w ]
                     other_w.colocated.append(w)
                     w.colocated = other_w.colocated
+                    if w.is_hidden != other_w.is_hidden:
+                        print("\nERROR: hidden waypoint colocated with visible, " + str(w) + " and " + str(other_w))
                     #print("New colocation found: " + str(w) + " with " + str(other_w))
                 all_waypoints.insert(w)
                 # add HighwaySegment, if not first point
@@ -882,6 +891,47 @@ class DatacheckEntry:
     def __str__(self):
         return self.route.root + ";" + str(self.labels) + ";" + self.code + ";" + self.info
 
+class HighwayGraphVertexInfo:
+    """This class encapsulates information needed for a highway graph
+    vertex.
+    """
+
+    def __init__(self,waypoint_list):
+        self.lat = waypoint_list[0].lat
+        self.lng = waypoint_list[0].lng
+        self.is_hidden = waypoint_list[0].is_hidden
+        self.regions = set()
+        self.systems = set()
+        for w in waypoint_list:
+            self.regions.add(w.route.region)
+            self.systems.add(w.route.system)
+        self.incident_edges = []
+
+class HighwayGraphEdgeInfo:
+    """This class encapsulates information needed for a highway graph
+    edge.
+    """
+
+    def __init__(self,s,graph):
+        self.segment_name = s.segment_name
+        self.vertex1 = graph.vertices[s.waypoint1.unique_name]
+        self.vertex2 = graph.vertices[s.waypoint2.unique_name]
+        # assumption: each edge/segment lives within a unique region
+        self.region = s.route.region
+        # a list of route name/system pairs
+        self.route_names_and_systems = []
+        if s.concurrent is None:
+            self.route_names_and_systems.append((s.route.list_entry_name(), s.route.system))
+        else:
+            for cs in s.concurrent:
+                if cs.route.system.devel():
+                    continue
+                self.route_names_and_systems.append((cs.route.list_entry_name(), cs.route.system))
+
+        graph.vertices[s.waypoint1.unique_name].incident_edges.append(self)
+        graph.vertices[s.waypoint2.unique_name].incident_edges.append(self)
+
+
 class HighwayGraph:
     """This class implements the capability to create graph
     data structures representing the highway data.
@@ -991,6 +1041,34 @@ class HighwayGraph:
                         else:
                             for cs in s.concurrent:
                                 cs.visited = True
+
+        # Full graph info now complete.  Next, build a graph structure
+        # from it that will be used to "compress" edges that traverse
+        # only one or more hidden waypoints remembering their
+        # coordinates with the new, compressed edge.
+        # start by adding the vertices
+        self.vertices = {}
+        for label, pointlist in self.unique_waypoints.items():
+            self.vertices[label] = HighwayGraphVertexInfo(pointlist)
+
+        # add edges, which end up in vertex adjacency lists
+        for h in self.highway_systems:
+            if h.devel():
+                continue
+            for r in h.route_list:
+                for s in r.segment_list:
+                    if s.segment_name is not None:
+                        HighwayGraphEdgeInfo(s, self)
+
+        print("Full graph has " + str(len(self.vertices)) + 
+              " vertices, " + str(self.edge_count()) + " edges.")
+
+    def edge_count(self):
+        edges = 0
+        for v in self.vertices.values():
+            edges += len(v.incident_edges)
+        return edges//2
+
 
     def write_master_gra(self,filename):
         grafile = open(filename, 'w')
