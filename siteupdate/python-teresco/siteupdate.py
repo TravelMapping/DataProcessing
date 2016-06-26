@@ -154,6 +154,10 @@ class Waypoint:
         self.lng = float(lng_string)
         # also keep track of a list of colocated waypoints, if any
         self.colocated = None
+        # when added as one ends of a HighwaySegment, that segment
+        # will be added here, this is used in compressed graph
+        # construction (and will be modified by that process)
+        #self.adjacent_segments = []
 
     def __str__(self):
         ans = self.route.root + " " + self.label
@@ -388,6 +392,9 @@ class HighwaySegment:
         self.concurrent = None
         self.clinched_by = []
         self.segment_name = None
+        # connect to our endpoints
+        #w1.adjacent_segments.append(self)
+        #w2.adjacent_segments.append(self)
 
     def __str__(self):
         return self.waypoint1.label + " to " + self.waypoint2.label + \
@@ -415,7 +422,6 @@ class HighwaySegment:
     def set_segment_name(self):
         """compute and set a segment name based on names of all
         concurrent routes, used for graph edge labels"""
-        # hate to use a global here, maybe fix later
         self.segment_name = ""
         if self.concurrent is None:
             if self.route.system.active_or_preview():
@@ -439,6 +445,22 @@ class HighwaySegment:
             line += str(self.waypoint2.vertex_num) + ' '
         else:
             line += str(self.waypoint2.colocated[0].vertex_num) + ' '
+        line += self.segment_name
+        return line
+
+    def edge_line_with_labels(self):
+        """compute the line that should represent this segment in an
+        alternate format for a potential future graph file format
+        (2 waypoint labels, edge label)"""
+        line = ""
+        if self.waypoint1.colocated is None:
+            line += str(self.waypoint1.unique_name) + ' '
+        else:
+            line += str(self.waypoint1.colocated[0].unique_name) + ' '
+        if self.waypoint2.colocated is None:
+            line += str(self.waypoint2.unique_name) + ' '
+        else:
+            line += str(self.waypoint2.colocated[0].unique_name) + ' '
         line += self.segment_name
         return line
         
@@ -526,6 +548,8 @@ class Route:
                         other_w.colocated = [ other_w ]
                     other_w.colocated.append(w)
                     w.colocated = other_w.colocated
+                    if w.is_hidden != other_w.is_hidden:
+                        print("\nWARNING: hidden waypoint colocated with visible, " + str(w) + " and " + str(other_w))
                     #print("New colocation found: " + str(w) + " with " + str(other_w))
                 all_waypoints.insert(w)
                 # add HighwaySegment, if not first point
@@ -882,6 +906,81 @@ class DatacheckEntry:
     def __str__(self):
         return self.route.root + ";" + str(self.labels) + ";" + self.code + ";" + self.info
 
+class HighwayGraphVertexInfo:
+    """This class encapsulates information needed for a highway graph
+    vertex.
+    """
+
+    def __init__(self,waypoint_list):
+        self.lat = waypoint_list[0].lat
+        self.lng = waypoint_list[0].lng
+        self.unique_name = waypoint_list[0].unique_name
+        self.is_hidden = waypoint_list[0].is_hidden
+        self.regions = set()
+        self.systems = set()
+        for w in waypoint_list:
+            self.regions.add(w.route.region)
+            self.systems.add(w.route.system)
+        self.incident_edges = []
+
+    # printable string
+    def __str__(self):
+        return self.unique_name
+
+class HighwayGraphEdgeInfo:
+    """This class encapsulates information needed for a highway graph
+    edge.
+    """
+
+    def __init__(self,s,graph):
+        # temp debug
+        self.written = False
+        self.segment_name = s.segment_name
+        self.vertex1 = graph.vertices[s.waypoint1.unique_name]
+        self.vertex2 = graph.vertices[s.waypoint2.unique_name]
+        # assumption: each edge/segment lives within a unique region
+        self.region = s.route.region
+        # a list of route name/system pairs
+        self.route_names_and_systems = []
+        if s.concurrent is None:
+            self.route_names_and_systems.append((s.route.list_entry_name(), s.route.system))
+        else:
+            for cs in s.concurrent:
+                if cs.route.system.devel():
+                    continue
+                self.route_names_and_systems.append((cs.route.list_entry_name(), cs.route.system))
+
+        # checks for the very unusual cases where an edge ends up
+        # in the system as itself and its "reverse"
+        duplicate = False
+        for e in graph.vertices[s.waypoint1.unique_name].incident_edges:
+            if e.vertex1 == self.vertex2 and e.vertex2 == self.vertex1:
+                duplicate = True
+
+        for e in graph.vertices[s.waypoint2.unique_name].incident_edges:
+            if e.vertex1 == self.vertex2 and e.vertex2 == self.vertex1:
+                duplicate = True
+
+        if not duplicate:
+            graph.vertices[s.waypoint1.unique_name].incident_edges.append(self)
+            graph.vertices[s.waypoint2.unique_name].incident_edges.append(self)
+
+    # compute an edge label, optionally resticted by systems
+    def label(self,systems=None):
+        the_label = ""
+        for (name, system) in self.route_names_and_systems:
+            if systems is None or system in systems:
+                if the_label == "":
+                    the_label = name
+                else:
+                    the_label += ","+name
+
+        return the_label
+
+    # printable string for this edge
+    def __str__(self):
+        return "HighwayGraphEdgeInfo: " + self.segment_name + " from " + str(self.vertex1) + " to " + str(self.vertex2)
+
 class HighwayGraph:
     """This class implements the capability to create graph
     data structures representing the highway data.
@@ -992,139 +1091,135 @@ class HighwayGraph:
                             for cs in s.concurrent:
                                 cs.visited = True
 
-    def write_master_gra(self,filename):
-        grafile = open(filename, 'w')
-        grafile.write(str(len(self.unique_waypoints)) + ' ' +
-                      str(self.unique_edges) + '\n')
-        # number waypoint entries as we go to support original .gra
-        # format output
-        vertex_num = 0
+        # Full graph info now complete.  Next, build a graph structure
+        # from it that will be used to "compress" edges that traverse
+        # only one or more hidden waypoints remembering their
+        # coordinates with the new, compressed edge.
+        # start by adding the vertices
+        self.vertices = {}
         for label, pointlist in self.unique_waypoints.items():
-            grafile.write(label + ' ' + str(pointlist[0].lat) + ' ' + str(pointlist[0].lng) + '\n')
-            pointlist[0].vertex_num = vertex_num
-            vertex_num += 1
+            self.vertices[label] = HighwayGraphVertexInfo(pointlist)
 
-        # visit unique segments as edges
+        # add edges, which end up in vertex adjacency lists
         for h in self.highway_systems:
             if h.devel():
                 continue
             for r in h.route_list:
                 for s in r.segment_list:
                     if s.segment_name is not None:
-                        grafile.write(s.gra_line() + '\n')
+                        HighwayGraphEdgeInfo(s, self)
+
+        print("Full graph has " + str(len(self.vertices)) + 
+              " vertices, " + str(self.edge_count()) + " edges.")
+
+    def edge_count(self):
+        edges = 0
+        for v in self.vertices.values():
+            edges += len(v.incident_edges)
+        return edges//2
+
+    def matching_waypoint(self, label, vinfo, regions=None, systems=None):
+        # determine if the vertex list entry given in label and vinfo
+        # belongs in the subset restricted by the listed regions and/or
+        # systems
+        region_match = regions is None
+        if not region_match:
+            for r in regions:
+                if r in vinfo.regions:
+                    region_match = True
+        system_match = systems is None
+        if not system_match:
+            for s in systems:
+                if s in vinfo.systems:
+                    system_match = True
+        return region_match and system_match
+
+
+    def num_matching_waypoints(self, regions=None, systems=None):
+        # count up the waypoints in or colocated in the system(s)
+        # and/or regions(s)
+        matching_waypoints = 0
+        for label, vinfo in self.vertices.items():
+            if self.matching_waypoint(label, vinfo, regions, systems):
+                matching_waypoints += 1
+
+        return matching_waypoints
+
+    def matching_edges(self, regions=None, systems=None):
+        # return a set of edges from the graph, optionally
+        # restricted by region or system
+        edge_set = set()
+        for v in self.vertices.values():
+            for e in v.incident_edges:
+                if regions is None or e.region in regions:
+                    system_match = systems is None
+                    if not system_match:
+                        for (r, s) in e.route_names_and_systems:
+                            if s in systems:
+                                system_match = True
+                    if system_match:
+                        edge_set.add(e)
+
+        return edge_set
+
+    def write_master_gra(self,filename):
+        grafile = open(filename, 'w')
+        grafile.write(str(len(self.vertices)) + ' ' + str(self.edge_count()) + '\n')
+        # number waypoint entries as we go to support original .gra
+        # format output
+        vertex_num = 0
+        for label, vinfo in self.vertices.items():
+            grafile.write(label + ' ' + str(vinfo.lat) + ' ' + str(vinfo.lng) + '\n')
+            vinfo.vertex_num = vertex_num
+            vertex_num += 1
+
+        # sanity check
+        if len(self.vertices) != vertex_num:
+            print("ERROR: computed " + str(len(self.vertices)) + " waypoints but wrote " + str(vertex_num))
+
+        # now edges, only print if not already printed
+        edge = 0
+        for v in self.vertices.values():
+            for e in v.incident_edges:
+                if not e.written:
+                    e.written = True
+                    grafile.write(str(e.vertex1.vertex_num) + ' ' + str(e.vertex2.vertex_num) + ' ' + e.label() + '\n')
+                    edge += 1
+
+        # sanity checks
+        for v in self.vertices.values():
+            for e in v.incident_edges:
+                if not e.written:
+                    print("ERROR: never wrote edge " + str(e.vertex1.vertex_num) + ' ' + str(e.vertex2.vertex_num) + ' ' + e.label() + '\n')
+        if self.edge_count() != edge:
+            print("ERROR: computed " + str(self.edge_count()) + " edges but wrote " + str(edge))
 
         grafile.close()
 
     def write_subgraph_gra(self,filename,regions,systems):
+
         grafile = open(filename, 'w')
-
-        # count up the waypoints in or colocated in the system(s)
-        # and/or regions(s)
-        matching_waypoints = 0
-        for label, pointlist in self.unique_waypoints.items():
-            for w in pointlist:
-                if (regions is None or w.route.region in regions) and \
-                   (systems is None or w.route.system in systems):
-                    matching_waypoints += 1
-                    break
-
-        # count up the segments that are in or colocated in the
-        # system(s) and/or region(s)
-        matching_segments = 0
-        for h in self.highway_systems:
-            if h.devel():
-                continue
-            if systems is not None and h not in systems:
-                continue
-            for route in h.route_list:
-                if regions is None or route.region in regions:
-                    for s in route.segment_list:
-                        if s.segment_name is not None:
-                            # always count if we have the name
-                            matching_segments += 1
-
-                        elif systems is not None:
-                            # If we don't have the name, might need to
-                            # count anyway, if the name is attached to
-                            # a segment not in our system.  But make
-                            # sure we only count it once, and do so by
-                            # counting only if this route's segment is
-                            # the first in the list from included systems
-                            in_sys_count = 0
-                            first_in_sys = False
-                            named_in_sys = False
-                            for cs in s.concurrent:
-                                if cs.route.system in systems:
-                                    if in_sys_count == 0:
-                                        first_in_sys = True
-                                        if cs.segment_name is not None:
-                                            named_in_sys = True
-                                            in_sys_count += 1
-                            #print("Does not have segment name, in_sys_count = " + str(in_sys_count) + ", first_in_sys = " + str(first_in_sys) + ", named_in_sys = " + str(named_in_sys))
-                            if not named_in_sys and first_in_sys:
-                                #print("Does not have segment name but counting")
-                                matching_segments += 1
-
-
-        print('(' + str(matching_waypoints) + ',' + str(matching_segments) + ') ', end="", flush=True)
+        matching_edges = self.matching_edges(regions, systems)
+        print('(' + str(self.num_matching_waypoints(regions, systems)) + ',' + str(len(matching_edges)) + ') ', end="", flush=True)
         # ready to write the header
-        grafile.write(str(matching_waypoints) + ' ' + str(matching_segments) + '\n')
+        grafile.write(str(self.num_matching_waypoints(regions, systems)) + ' ' + str(len(matching_edges)) + '\n')
 
-        # write waypoint/vertex data
+        # write waypoints
         vertex_num = 0
-        for label, pointlist in graph_data.unique_waypoints.items():
-            for w in pointlist:
-                if (regions is None or w.route.region in regions) and \
-                   (systems is None or w.route.system in systems):
-                    grafile.write(label + ' ' + str(pointlist[0].lat) + ' ' + str(pointlist[0].lng) + '\n')
-                    pointlist[0].vertex_num = vertex_num
-                    vertex_num += 1
-                    break
-        # sanity check
-        if matching_waypoints != vertex_num:
-            print("ERROR: computed " + str(matching_waypoints) + " waypoints but wrote " + str(vertex_num))
+        for label, vinfo in self.vertices.items():
+            if self.matching_waypoint(label, vinfo, regions, systems):
+                grafile.write(label + ' ' + str(vinfo.lat) + ' ' + str(vinfo.lng) + '\n')
+                vinfo.vertex_num = vertex_num
+                vertex_num += 1
 
-
-        # write edge data
-        edge_num = 0
-        for h in self.highway_systems:
-            if h.devel():
-                continue
-            if systems is not None and h not in systems:
-                continue
-            for route in h.route_list:
-                if regions is None or route.region in regions:
-                    for s in route.segment_list:
-                        if s.segment_name is not None:
-                            edge_num += 1
-                            grafile.write(s.gra_line() + '\n')
-                        elif systems is not None:
-                            # similar check as above in case we're
-                            # responsible for writing even though not
-                            # the "owner" by having the segment name
-                            in_sys_count = 0
-                            first_in_sys = False
-                            named_in_sys = False
-                            cs_with_name = None
-                            for cs in s.concurrent:
-                                if cs.route.system in systems:
-                                    if in_sys_count == 0:
-                                        first_in_sys = True
-                                    if cs.segment_name is not None:
-                                        named_in_sys = True
-                                    in_sys_count += 1
-                                if cs.segment_name is not None:
-                                    cs_with_name = cs
-                            if not named_in_sys and first_in_sys:
-                                edge_num += 1
-                                grafile.write(cs_with_name.gra_line() + '\n')
-                                                    
-        # sanity check on number of edges
-        if matching_segments != edge_num:
-            print("ERROR: computed " + str(matching_segments) + " edges but wrote " + str(edge_num))
+        # write edges
+        edge = 0
+        for e in matching_edges:
+            grafile.write(str(e.vertex1.vertex_num) + ' ' + str(e.vertex2.vertex_num) + ' ' + e.label(systems) + '\n')
+            edge += 1
 
         grafile.close()
-        
+
 def format_clinched_mi(clinched,total):
     """return a nicely-formatted string for a given number of miles
     clinched and total miles, including percentage"""
