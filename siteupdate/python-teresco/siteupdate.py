@@ -915,21 +915,25 @@ class HighwayGraphVertexInfo:
         self.lat = waypoint_list[0].lat
         self.lng = waypoint_list[0].lng
         self.unique_name = waypoint_list[0].unique_name
-        self.is_hidden = waypoint_list[0].is_hidden
+        # will consider hidden iff all colocated waypoints are hidden
+        self.is_hidden = True
         self.regions = set()
         self.systems = set()
         for w in waypoint_list:
+            if not w.is_hidden:
+                self.is_hidden = False
             self.regions.add(w.route.region)
             self.systems.add(w.route.system)
         self.incident_edges = []
+        self.incident_collapsed_edges = []
 
     # printable string
     def __str__(self):
         return self.unique_name
 
 class HighwayGraphEdgeInfo:
-    """This class encapsulates information needed for a highway graph
-    edge.
+    """This class encapsulates information needed for a 'standard'
+    highway graph edge.
     """
 
     def __init__(self,s,graph):
@@ -981,6 +985,144 @@ class HighwayGraphEdgeInfo:
     def __str__(self):
         return "HighwayGraphEdgeInfo: " + self.segment_name + " from " + str(self.vertex1) + " to " + str(self.vertex2)
 
+class HighwayGraphCollapsedEdgeInfo:
+    """This class encapsulates information needed for a highway graph
+    edge that can incorporate intermediate points.
+    """
+
+    def __init__(self,graph,segment=None,vertex_info=None):
+        if segment is None and vertex_info is None:
+            print("ERROR: improper use of HighwayGraphCollapsedEdgeInfo constructor\n")
+            return
+
+        # a few items we can do for either construction type
+        self.written = False
+
+        # intermediate points, if more than 1, will go from vertex1 to
+        # vertex2
+        self.intermediate_points = []
+
+        # initial construction is based on a HighwaySegment
+        if segment is not None:
+            self.segment_name = segment.segment_name
+            self.vertex1 = graph.vertices[segment.waypoint1.unique_name]
+            self.vertex2 = graph.vertices[segment.waypoint2.unique_name]
+            # assumption: each edge/segment lives within a unique region
+            # and a 'multi-edge' would not be able to span regions as there
+            # would be a required visible waypoint at the border
+            self.region = segment.route.region
+            # a list of route name/system pairs
+            self.route_names_and_systems = []
+            if segment.concurrent is None:
+                self.route_names_and_systems.append((segment.route.list_entry_name(), segment.route.system))
+            else:
+                for cs in segment.concurrent:
+                    if cs.route.system.devel():
+                        continue
+                    self.route_names_and_systems.append((cs.route.list_entry_name(), cs.route.system))
+
+            # checks for the very unusual cases where an edge ends up
+            # in the system as itself and its "reverse"
+            duplicate = False
+            for e in self.vertex1.incident_collapsed_edges:
+                if e.vertex1 == self.vertex2 and e.vertex2 == self.vertex1:
+                    duplicate = True
+
+            for e in self.vertex2.incident_collapsed_edges:
+                if e.vertex1 == self.vertex2 and e.vertex2 == self.vertex1:
+                    duplicate = True
+
+            if not duplicate:
+                self.vertex1.incident_collapsed_edges.append(self)
+                self.vertex2.incident_collapsed_edges.append(self)
+
+        # build by collapsing two existing edges around a common
+        # hidden vertex waypoint, whose information is given in
+        # vertex_info
+        if vertex_info is not None:
+            # we know there are exactly 2 incident edges, as we
+            # checked for that, and we will replace these two
+            # with the single edge we are constructing here
+            edge1 = vertex_info.incident_collapsed_edges[0]
+            edge2 = vertex_info.incident_collapsed_edges[1]
+            # segment names should match as routes should not start or end
+            # nor should concurrencies begin or end at a hidden point
+            if edge1.segment_name != edge2.segment_name:
+                print("ERROR: segment name mismatch in HighwayGraphCollapsedEdgeInfo: edge1 named " + edge1.segment_name + " edge2 named " + edge2.segment_name + "\n")
+            self.segment_name = edge1.segment_name
+            # region and route names/systems should also match, but not
+            # doing that sanity check here, as the above check should take
+            # care of that
+            self.region = edge1.region
+            self.route_names_and_systems = edge1.route_names_and_systems
+
+            # figure out and remember which endpoints are not the
+            # vertex we are collapsing and set them as our new
+            # endpoints, and at the same time, build up our list of
+            # intermediate vertices
+            self.intermediate_points = edge1.intermediate_points.copy()
+            if edge1.vertex1 == vertex_info:
+                self.vertex1 = edge1.vertex2
+                self.intermediate_points.reverse()
+            else:
+                self.vertex1 = edge1.vertex1
+
+            self.intermediate_points.append(vertex_info)
+
+            toappend = edge2.intermediate_points.copy()
+            if edge2.vertex1 == vertex_info:
+                self.vertex2 = edge2.vertex2
+                toappend.reverse()
+            else:
+                self.vertex2 = edge2.vertex1
+            self.intermediate_points.extend(toappend)
+
+            # replace edge references at our endpoints with ourself
+            removed = 0
+            if edge1 in self.vertex1.incident_collapsed_edges:
+                self.vertex1.incident_collapsed_edges.remove(edge1)
+                removed += 1
+            if edge1 in self.vertex2.incident_collapsed_edges:
+                self.vertex2.incident_collapsed_edges.remove(edge1)
+                removed += 1
+            if removed != 1:
+                print("ERROR: edge1 " + str(edge1) + " removed from " + removed + " adjacency lists instead of 1.")
+            removed = 0
+            if edge2 in self.vertex1.incident_collapsed_edges:
+                self.vertex1.incident_collapsed_edges.remove(edge2)
+                removed += 1
+            if edge2 in self.vertex2.incident_collapsed_edges:
+                self.vertex2.incident_collapsed_edges.remove(edge2)
+                removed += 1
+            if removed != 1:
+                print("ERROR: edge2 " + str(edge2) + " removed from " + removed + " adjacency lists instead of 1.")
+            self.vertex1.incident_collapsed_edges.append(self)
+            self.vertex2.incident_collapsed_edges.append(self)
+            
+
+    # compute an edge label, optionally resticted by systems
+    def label(self,systems=None):
+        the_label = ""
+        for (name, system) in self.route_names_and_systems:
+            if systems is None or system in systems:
+                if the_label == "":
+                    the_label = name
+                else:
+                    the_label += ","+name
+
+        return the_label
+
+    # printable string for this edge
+    def __str__(self):
+        return "HighwayGraphCollapsedEdgeInfo: " + self.segment_name + " from " + str(self.vertex1) + " to " + str(self.vertex2) + " via " + str(len(self.intermediate_points)) + " points"
+
+    # line appropriate for a tmg collapsed edge file
+    def tmg_line(self, systems=None):
+        line = str(self.vertex1.vertex_num) + " " + str(self.vertex2.vertex_num) + " " + self.label(systems)
+        for intermediate in self.intermediate_points:
+            line += " " + str(intermediate.lat) + " " + str(intermediate.lng)
+        return line
+
 class HighwayGraph:
     """This class implements the capability to create graph
     data structures representing the highway data.
@@ -989,7 +1131,9 @@ class HighwayGraph:
     waypoint names that can be used as vertex labels in unique_waypoints,
     and a determine edges, at most one per concurrent segment, by
     setting segment names only on certain HighwaySegments in the overall
-    data set.
+    data set.  Create two sets of edges - one for the full graph
+    and one for the graph with hidden waypoints compressed into
+    multi-point edges.
     """
 
     def __init__(self, all_waypoints, highway_systems):
@@ -1092,15 +1236,15 @@ class HighwayGraph:
                                 cs.visited = True
 
         # Full graph info now complete.  Next, build a graph structure
-        # from it that will be used to "compress" edges that traverse
-        # only one or more hidden waypoints remembering their
-        # coordinates with the new, compressed edge.
-        # start by adding the vertices
+        # that is more convenient to use.
+
+        # One copy of the vertices
         self.vertices = {}
         for label, pointlist in self.unique_waypoints.items():
             self.vertices[label] = HighwayGraphVertexInfo(pointlist)
 
-        # add edges, which end up in vertex adjacency lists
+        # add edges, which end up in vertex adjacency lists, first one
+        # copy for the full graph
         for h in self.highway_systems:
             if h.devel():
                 continue
@@ -1112,10 +1256,50 @@ class HighwayGraph:
         print("Full graph has " + str(len(self.vertices)) + 
               " vertices, " + str(self.edge_count()) + " edges.")
 
+        # add edges again, which end up in a separate set of vertex
+        # adjacency lists, this one will be used to create a graph
+        # where the hidden waypoints are merged into the edge
+        # structures
+        for h in self.highway_systems:
+            if h.devel():
+                continue
+            for r in h.route_list:
+                for s in r.segment_list:
+                    if s.segment_name is not None:
+                        HighwayGraphCollapsedEdgeInfo(self, segment=s)
+
+        # compress edges adjacent to hidden vertices
+        for label, vinfo in self.vertices.items():
+            if vinfo.is_hidden:
+                if len(vinfo.incident_collapsed_edges) != 2:
+                    print("ERROR: cannot compress vertex " + str(vinfo) + " because it has " + str(len(vinfo.incident_collapsed_edges)) + " incident edges.  UNHIDING.")
+                    vinfo.is_hidden = False
+                    continue
+                # construct from vertex_info this time
+                HighwayGraphCollapsedEdgeInfo(self, vertex_info=vinfo)
+
+        # print summary info
+        print("Edge compressed graph has " + str(self.num_visible_vertices()) + 
+              " vertices, " + str(self.collapsed_edge_count()) + " edges.")
+
+    def num_visible_vertices(self):
+        count = 0
+        for v in self.vertices.values():
+            if not v.is_hidden:
+                count += 1
+        return count
+
     def edge_count(self):
         edges = 0
         for v in self.vertices.values():
             edges += len(v.incident_edges)
+        return edges//2
+
+    def collapsed_edge_count(self):
+        edges = 0
+        for v in self.vertices.values():
+            if not v.is_hidden:
+                edges += len(v.incident_collapsed_edges)
         return edges//2
 
     def matching_waypoint(self, label, vinfo, regions=None, systems=None):
@@ -1135,13 +1319,14 @@ class HighwayGraph:
         return region_match and system_match
 
 
-    def num_matching_waypoints(self, regions=None, systems=None):
+    def num_matching_waypoints(self, regions=None, systems=None, visible_only=False):
         # count up the waypoints in or colocated in the system(s)
         # and/or regions(s)
         matching_waypoints = 0
         for label, vinfo in self.vertices.items():
-            if self.matching_waypoint(label, vinfo, regions, systems):
-                matching_waypoints += 1
+            if not visible_only or not vinfo.is_hidden:
+                if self.matching_waypoint(label, vinfo, regions, systems):
+                    matching_waypoints += 1
 
         return matching_waypoints
 
@@ -1162,6 +1347,30 @@ class HighwayGraph:
 
         return edge_set
 
+    def matching_collapsed_edges(self, regions=None, systems=None):
+        # return a set of edges from the graph edges for the collapsed
+        # edge format, optionally restricted by region or system
+        edge_set = set()
+        for v in self.vertices.values():
+            if v.is_hidden:
+                continue
+            for e in v.incident_collapsed_edges:
+                if regions is None or e.region in regions:
+                    system_match = systems is None
+                    if not system_match:
+                        for (r, s) in e.route_names_and_systems:
+                            if s in systems:
+                                system_match = True
+                    if system_match:
+                        edge_set.add(e)
+
+        return edge_set
+
+    # write the entire set of highway data in the original .gra
+    # format, with the first line specifying the number of waypoints,
+    # w, and the number of connections, c, then w lines describing
+    # waypoints (label, latitude, longitude), then c lines describing
+    # connections (endpoint 1 number, endpoint 2 number, route label)
     def write_master_gra(self,filename):
         grafile = open(filename, 'w')
         grafile.write(str(len(self.vertices)) + ' ' + str(self.edge_count()) + '\n')
@@ -1192,17 +1401,21 @@ class HighwayGraph:
                 if not e.written:
                     print("ERROR: never wrote edge " + str(e.vertex1.vertex_num) + ' ' + str(e.vertex2.vertex_num) + ' ' + e.label() + '\n')
         if self.edge_count() != edge:
-            print("ERROR: computed " + str(self.edge_count()) + " edges but wrote " + str(edge))
+            print("ERROR: computed " + str(self.edge_count()) + " edges but wrote " + str(edge) + "\n")
 
         grafile.close()
 
+    # write a subset of the data in the original gra format,
+    # restricted by regions in the list if given, by system in the
+    # list if given
     def write_subgraph_gra(self,filename,regions,systems):
 
         grafile = open(filename, 'w')
         matching_edges = self.matching_edges(regions, systems)
-        print('(' + str(self.num_matching_waypoints(regions, systems)) + ',' + str(len(matching_edges)) + ') ', end="", flush=True)
+        matching_waypoints = self.num_matching_waypoints(regions, systems)
+        print('(' + str(matching_waypoints) + ',' + str(len(matching_edges)) + ') ', end="", flush=True)
         # ready to write the header
-        grafile.write(str(self.num_matching_waypoints(regions, systems)) + ' ' + str(len(matching_edges)) + '\n')
+        grafile.write(str(matching_waypoints) + ' ' + str(len(matching_edges)) + '\n')
 
         # write waypoints
         vertex_num = 0
@@ -1219,6 +1432,69 @@ class HighwayGraph:
             edge += 1
 
         grafile.close()
+
+    # write the entire set of data in the tmg collapsed edge format
+    def write_master_tmg_collapsed(self, filename):
+        tmgfile = open(filename, 'w')
+        tmgfile.write("TMG 1.0 collapsed\n")
+        print("(" + str(self.num_visible_vertices()) + "," +
+              str(self.collapsed_edge_count()) + ") ", end="", flush=True)
+        tmgfile.write(str(self.num_visible_vertices()) + " " +
+                      str(self.collapsed_edge_count()) + "\n")
+
+        # write visible vertices
+        vertex_num = 0
+        for label, vinfo in self.vertices.items():
+            if not vinfo.is_hidden:
+                vinfo.vertex_num = vertex_num
+                tmgfile.write(label + ' ' + str(vinfo.lat) + ' ' + str(vinfo.lng) + '\n')
+                vertex_num += 1
+
+        # write collapsed edges
+        edge = 0
+        for v in self.vertices.values():
+            if not v.is_hidden:
+                for e in v.incident_collapsed_edges:
+                    if not e.written:
+                        e.written = True
+                        tmgfile.write(e.tmg_line() + '\n')
+                        edge += 1
+
+        # sanity check on edges written
+        if self.collapsed_edge_count() != edge:
+            print("ERROR: computed " + str(self.collapsed_edge_count()) + " collapsed edges, but wrote " + str(edge) + "\n")
+        
+        tmgfile.close()
+
+    # write a tmg-format collapsed edge file restricted by region
+    # and/or system
+    def write_subgraph_tmg_collapsed(self, filename, regions, systems):
+
+        tmgfile = open(filename, 'w')
+        tmgfile.write("TMG 1.0 collapsed\n")
+
+        matching_edges = self.matching_collapsed_edges(regions, systems)
+        matching_waypoints = self.num_matching_waypoints(regions, systems, visible_only=True)
+
+        print("(" + str(matching_waypoints) + "," + str(len(matching_edges)) + ") ", end="", flush=True)
+        tmgfile.write(str(matching_waypoints) + " " + str(len(matching_edges)) + "\n")
+
+        # write visible vertices
+        vertex_num = 0
+        for label, vinfo in self.vertices.items():
+            if not vinfo.is_hidden and \
+                    self.matching_waypoint(label, vinfo, regions, systems):
+                vinfo.vertex_num = vertex_num
+                tmgfile.write(label + ' ' + str(vinfo.lat) + ' ' + str(vinfo.lng) + '\n')
+                vertex_num += 1
+
+        # write collapsed edges
+        edge = 0
+        for e in matching_edges:
+            tmgfile.write(e.tmg_line(systems) + '\n')
+            edge += 1
+
+        tmgfile.close()
 
 def format_clinched_mi(clinched,total):
     """return a nicely-formatted string for a given number of miles
@@ -2183,6 +2459,9 @@ logfile.close()
 print(et.et() + "Writing master TM graph file, tm-master.gra.", flush=True)
 graph_data.write_master_gra(args.graphfilepath+'/tm-master.gra')
 
+print(et.et() + "Writing master TM collapsed graph file, tm-master.tmg.", flush=True)
+graph_data.write_master_tmg_collapsed(args.graphfilepath+'/tm-master.tmg')
+
 # Graphs restricted by region
 print(et.et() + "Creating regional data graphs.", flush=True)
 # We will create graph data and a graph file for each region that includes
@@ -2193,6 +2472,7 @@ for r in all_regions:
         continue
     print(region_code + ' ', end="",flush=True)
     graph_data.write_subgraph_gra(args.graphfilepath + '/' + region_code + '-all.gra', [ region_code ], None)
+    graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/' + region_code + '-all.tmg', [ region_code ], None)
 print("!")
 
 # Graphs restricted by system
@@ -2204,6 +2484,7 @@ for h in highway_systems:
         continue
     print(h.systemname + ' ', end="",flush=True)
     graph_data.write_subgraph_gra(args.graphfilepath + '/' + h.systemname + '.gra', None, [ h ])
+    graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/' + h.systemname + '.tmg', None, [ h ])
 print("!")
 
 # Some additional interesting graphs
@@ -2215,11 +2496,13 @@ for h in highway_systems:
     if h.systemname in [ 'usai', 'usaus', 'usaif', 'usaib', 'usausb', 'usansf', 'usasf' ]:
         systems.append(h)
 graph_data.write_subgraph_gra(args.graphfilepath + '/usa-national.gra', None, systems)
+graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/usa-national.tmg', None, systems)
 print("by region ", end="", flush=True)
 for r in all_regions:
     if r[2] == 'USA':
         print(r[0] + ' ', end="", flush=True)
         graph_data.write_subgraph_gra(args.graphfilepath + '/' + r[0] + '-usa-national.gra', [ r[0] ], systems)
+        graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/' + r[0] + '-usa-national.tmg', [ r[0] ], systems)
 print("!")
 
 # U.S. all routes
@@ -2229,6 +2512,7 @@ for h in highway_systems:
     if h.country == 'USA':
         systems.append(h)
 graph_data.write_subgraph_gra(args.graphfilepath + '/usa-all.gra', None, systems)
+graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/usa-all.tmg', None, systems)
 print("!")
 
 # Canada all routes
@@ -2238,6 +2522,7 @@ for h in highway_systems:
     if h.country == 'CAN':
         systems.append(h)
 graph_data.write_subgraph_gra(args.graphfilepath + '/canada-all.gra', None, systems)
+graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/canada-all.tmg', None, systems)
 print("!")
 
 print(et.et() + "Writing database file " + args.databasename + ".sql.")
