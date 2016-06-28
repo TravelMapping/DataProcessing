@@ -704,6 +704,10 @@ class HighwaySystem:
     def devel(self):
         return self.level == "devel"
 
+    """String representation"""
+    def __str__(self):
+        return self.systemname
+
 class TravelerList:
     """This class encapsulates the contents of one .list file
     that represents the travels of one individual user.
@@ -1272,7 +1276,7 @@ class HighwayGraph:
         for label, vinfo in self.vertices.items():
             if vinfo.is_hidden:
                 if len(vinfo.incident_collapsed_edges) != 2:
-                    print("ERROR: cannot compress vertex " + str(vinfo) + " because it has " + str(len(vinfo.incident_collapsed_edges)) + " incident edges.  UNHIDING.")
+                    print("ERROR: cannot compress vertex " + str(vinfo) + " because it has " + str(len(vinfo.incident_collapsed_edges)) + " incident edges.  UNHIDING. Regions: " + str(vinfo.regions))
                     vinfo.is_hidden = False
                     continue
                 # construct from vertex_info this time
