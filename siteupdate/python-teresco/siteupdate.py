@@ -1698,10 +1698,9 @@ for line in lines:
         continue
     datacheckfps.append(fields)
 
-# write to log file immediately, will put in DB later in the program
-datacheckfile = open(args.logfilepath+'/datacheck.log','w',encoding='utf-8')
+# log file has been removed, just remember to store in DB later in the
+# program
 datacheckerrors = []
-datacheckfile.write("Log file created at: " + str(datetime.datetime.now()) + "\n")
 for h in highway_systems:
     for r in h.route_list:
         # set to be used per-route to find label duplicates
@@ -1721,8 +1720,6 @@ for h in highway_systems:
             for label in label_list:
                 lower_label = label.lower().strip("+*")
                 if lower_label in all_route_labels:
-                    datacheckfile.write(r.readable_name() + \
-                                        " duplicate label " + lower_label + '\n')
                     labels = []
                     labels.append(lower_label)
                     datacheckerrors.append(DatacheckEntry(r,labels,"DUPLICATE_LABEL"))
@@ -1735,9 +1732,6 @@ for h in highway_systems:
                     if w == other_w:
                         break
                     if w.lat == other_w.lat and w.lng == other_w.lng and w.label != other_w.label:
-                        datacheckfile.write(r.readable_name() + " duplicate coordinates (" + \
-                                                str(latlng[0]) + "," + str(latlng[1]) + \
-                                                ")\n")
                         labels = []
                         labels.append(other_w.label)
                         labels.append(w.label)
@@ -1751,9 +1745,6 @@ for h in highway_systems:
                 last_distance = w.distance_to(prev_w)
                 visible_distance += last_distance
                 if last_distance > 20.0:
-                    datacheckfile.write(r.readable_name() + " " + prev_w.label + \
-                                        ' ' + w.label + " long segment " + \
-                                        "({0:.2f} mi)".format(last_distance) + "\n")
                     labels = []
                     labels.append(prev_w.label)
                     labels.append(w.label)
@@ -1763,10 +1754,6 @@ for h in highway_systems:
             if not w.is_hidden:
                 # complete visible distance check
                 if visible_distance > 10.0:
-                    datacheckfile.write(r.readable_name() + " " + last_visible.label + \
-                                        ' ' + w.label + " distance between visible " + \
-                                        "waypoints too long " + \
-                                        "({0:.2f} mi)".format(visible_distance) + "\n")
                     labels = []
                     labels.append(last_visible.label)
                     labels.append(w.label)
@@ -1783,8 +1770,6 @@ for h in highway_systems:
                     # by more numbers (e.g., NY50 is an OK label in NY5)
                 #    if len(r.route) + match_start == len(w.label) or \
                 #            not w.label[len(r.route) + match_start].isdigit():
-                #        datacheckfile.write(r.readable_name() + " " + w.label + \
-                #                                " label references own route\n")
                 # partially complete "references own route" -- too many FP
                 #or re.fullmatch('.*/'+r.route+'.*',w.label[w.label) :
                 # first check for number match after a slash, if there is one
@@ -1804,8 +1789,6 @@ for h in highway_systems:
 
                 # now the remaining checks
                 if selfref_found or r.route+r.banner == w.label or re.fullmatch(r.route+r.banner+'[_/].*',w.label):
-                    datacheckfile.write(r.readable_name() + " " + w.label + \
-                                        " label references own route\n")
                     labels = []
                     labels.append(w.label)
                     datacheckerrors.append(DatacheckEntry(r,labels,'LABEL_SELFREF'))
@@ -1813,16 +1796,12 @@ for h in highway_systems:
                 # look for old "0" or "999" labels
                 for num in ['0','999']:
                     if w.label.startswith(num) or '('+num+')' in w.label or '('+num+'A)' in w.label:
-                        datacheckfile.write(r.readable_name() + " " + w.label + \
-                                            " might not refer to an exit " + num + '\n')
                         labels = []
                         labels.append(w.label)
                         datacheckerrors.append(DatacheckEntry(r,labels,'EXIT'+str(num)))
 
                 # look for too many underscores in label
                 if w.label.count('_') > 1:
-                    datacheckfile.write(r.readable_name() + " " + w.label + \
-                                        ' has too many underscored suffixes\n')
                     labels = []
                     labels.append(w.label)
                     datacheckerrors.append(DatacheckEntry(r,labels,'LABEL_UNDERSCORES'))
@@ -1830,32 +1809,24 @@ for h in highway_systems:
                 # look for too many characters after underscore in label
                 if '_' in w.label:
                     if w.label.index('_') < len(w.label) - 5:
-                        datacheckfile.write(r.readable_name() + " " + w.label + \
-                                            ' has long underscore suffix\n')
                         labels = []
                         labels.append(w.label)
                         datacheckerrors.append(DatacheckEntry(r,labels,'LONG_UNDERSCORE'))
 
                 # look for too many slashes in label
                 if w.label.count('/') > 1:
-                    datacheckfile.write(r.readable_name() + " " + w.label + \
-                                        ' has too many slashes\n')
                     labels = []
                     labels.append(w.label)
                     datacheckerrors.append(DatacheckEntry(r,labels,'LABEL_SLASHES'))
 
                 # look for parenthesis balance in label
                 if w.label.count('(') != w.label.count(')'):
-                    datacheckfile.write(r.readable_name() + " " + w.label + \
-                                        ' had parenthesis imbalance\n')
                     labels = []
                     labels.append(w.label)
                     datacheckerrors.append(DatacheckEntry(r,labels,'LABEL_PARENS'))
 
                 # look for labels with invalid characters
                 if not re.fullmatch('[a-zA-Z0-9()/\+\*_\-\.]+', w.label):
-                    datacheckfile.write(r.readable_name() + " " + w.label + \
-                                        ' includes invalid characters\n')
                     labels = []
                     labels.append(w.label)
                     datacheckerrors.append(DatacheckEntry(r,labels,'LABEL_INVALID_CHAR'))
@@ -1863,16 +1834,12 @@ for h in highway_systems:
                 # look for labels with a slash after an underscore
                 if '_' in w.label and '/' in w.label and \
                         w.label.index('/') > w.label.index('_'):
-                    datacheckfile.write(r.readable_name() + " " + w.label + \
-                                        ' label has nonterminal underscore suffix\n')
                     labels = []
                     labels.append(w.label)
                     datacheckerrors.append(DatacheckEntry(r,labels,'NONTERMINAL_UNDERSCORE'))
 
                 # look for I-xx with Bus instead of BL or BS
                 if re.fullmatch('I\-[0-9]*Bus', w.label):
-                    datacheckfile.write(r.readable_name() + " " + w.label + \
-                                        ' label uses Bus with I- (Interstate)\n')
                     labels = []
                     labels.append(w.label)
                     datacheckerrors.append(DatacheckEntry(r,labels,'BUS_WITH_I'))
@@ -1881,8 +1848,6 @@ for h in highway_systems:
                 ##if re.fullmatch('US[0-9]+A.*', w.label) and not re.fullmatch('US[0-9]+Alt.*', w.label) or \
                 ##   re.fullmatch('US[0-9]+B.*', w.label) and \
                 ##   not (re.fullmatch('US[0-9]+Bus.*', w.label) or re.fullmatch('US[0-9]+Byp.*', w.label)):
-                ##    datacheckfile.write(r.readable_name() + " " + w.label + \
-                ##                        ' uses an incorrect banner with US\n')
                 ##    labels = []
                 ##    labels.append(w.label)
                 ##    datacheckerrors.append(DatacheckEntry(r,labels,'US_BANNER'))
@@ -1894,9 +1859,6 @@ for h in highway_systems:
             #print("computing angle for " + str(r.point_list[i-1]) + ' ' + str(r.point_list[i]) + ' ' + str(r.point_list[i+1]))
             if r.point_list[i-1].same_coords(r.point_list[i]) or \
                r.point_list[i+1].same_coords(r.point_list[i]):
-                datacheckfile.write(r.readable_name() + ' ' + r.point_list[i-1].label + \
-                                    ' ' + r.point_list[i].label + ' ' + \
-                                    r.point_list[i+1].label + ' angle not computable\n')
                 labels = []
                 labels.append(r.point_list[i-1].label)
                 labels.append(r.point_list[i].label)
@@ -1905,10 +1867,6 @@ for h in highway_systems:
             else:
                 angle = r.point_list[i].angle(r.point_list[i-1],r.point_list[i+1])
                 if angle > 135:
-                    datacheckfile.write(r.readable_name() + ' ' + r.point_list[i-1].label + \
-                                        ' ' + r.point_list[i].label + ' ' + \
-                                        r.point_list[i+1].label + ' sharp angle ' + \
-                                        "{0:.2f} deg.".format(angle) + "\n")
                     labels = []
                     labels.append(r.point_list[i-1].label)
                     labels.append(r.point_list[i].label)
@@ -1916,7 +1874,6 @@ for h in highway_systems:
                     datacheckerrors.append(DatacheckEntry(r,labels,'SHARP_ANGLE',
                                                           "{0:.2f}".format(angle)))
 
-datacheckfile.close()
 # now mark false positives
 print(et.et() + "Marking datacheck false positives.", flush=True)
 fpfile = open(args.logfilepath+'/nearmatchfps.log','w',encoding='utf-8')
