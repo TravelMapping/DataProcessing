@@ -528,7 +528,7 @@ class Route:
         """printable version of the object"""
         return self.root + " (" + str(len(self.point_list)) + " total points)"
 
-    def read_wpt(self,all_waypoints,path="../../../HighwayData/hwy_data"):
+    def read_wpt(self,all_waypoints,datacheckerrors,path="../../../HighwayData/hwy_data"):
         """read data into the Route's waypoint list from a .wpt file"""
         #print("read_wpt on " + str(self))
         self.point_list = []
@@ -549,8 +549,7 @@ class Route:
                     other_w.colocated.append(w)
                     w.colocated = other_w.colocated
                     if w.is_hidden != other_w.is_hidden:
-                        print("\nWARNING: hidden waypoint colocated with visible, " + str(w) + " and " + str(other_w))
-                    #print("New colocation found: " + str(w) + " with " + str(other_w))
+                        datacheckerrors.append(DatacheckEntry(self,[w.label],"VISIBLE_HIDDEN_COLOC",other_w.route.root + "@" + other_w.label))
                 all_waypoints.insert(w)
                 # add HighwaySegment, if not first point
                 if previous_point is not None:
@@ -858,11 +857,13 @@ class DatacheckEntry:
     LABEL_INVALID_CHAR, LONG_SEGMENT, LABEL_NO_VALID,
     LABEL_UNDERSCORES, VISIBLE_DISTANCE, LABEL_PARENS, LACKS_GENERIC,
     EXIT0, EXIT999, BUS_WITH_I, NONTERMINAL_UNDERSCORE,
-    LONG_UNDERSCORE, LABEL_SLASHES, US_BANNER
+    LONG_UNDERSCORE, LABEL_SLASHES, US_BANNER, VISIBLE_HIDDEN_COLOC,
+    HIDDEN_JUNCTION
 
     info is additional information, at this time either a distance (in
-    miles) for a long segment error, an angle (in degrees) for a
-    sharp angle error, or a coordinate pair for duplicate coordinates
+    miles) for a long segment error, an angle (in degrees) for a sharp
+    angle error, or a coordinate pair for duplicate coordinates, other
+    route/label for point pair errors
 
     fp is a boolean indicating whether this has been reported as a
     false positive (would be set to true later)
@@ -921,6 +922,9 @@ class HighwayGraphVertexInfo:
         self.unique_name = waypoint_list[0].unique_name
         # will consider hidden iff all colocated waypoints are hidden
         self.is_hidden = True
+        # note: if saving the first waypoint, no longer need first
+        # three fields and can replace with methods
+        self.first_waypoint = waypoint_list[0]
         self.regions = set()
         self.systems = set()
         for w in waypoint_list:
@@ -1140,7 +1144,7 @@ class HighwayGraph:
     multi-point edges.
     """
 
-    def __init__(self, all_waypoints, highway_systems):
+    def __init__(self, all_waypoints, highway_systems, datacheckerrors):
         # first, build a list of the unique waypoints and create
         # unique names that will be our vertex labels, these will
         # be in a dict where the keys are the unique vertex labels
@@ -1276,7 +1280,7 @@ class HighwayGraph:
         for label, vinfo in self.vertices.items():
             if vinfo.is_hidden:
                 if len(vinfo.incident_collapsed_edges) != 2:
-                    print("ERROR: cannot compress vertex " + str(vinfo) + " because it has " + str(len(vinfo.incident_collapsed_edges)) + " incident edges.  UNHIDING. Regions: " + str(vinfo.regions))
+                    datacheckerrors.append(DatacheckEntry(vinfo.first_waypoint.route,[vinfo.unique_name],"HIDDEN_JUNCTION",str(len(vinfo.incident_collapsed_edges))))
                     vinfo.is_hidden = False
                     continue
                 # construct from vertex_info this time
@@ -1375,6 +1379,9 @@ class HighwayGraph:
     # w, and the number of connections, c, then w lines describing
     # waypoints (label, latitude, longitude), then c lines describing
     # connections (endpoint 1 number, endpoint 2 number, route label)
+    #
+    # returns tuple of number of vertices and number of edges written
+    #
     def write_master_gra(self,filename):
         grafile = open(filename, 'w')
         grafile.write(str(len(self.vertices)) + ' ' + str(self.edge_count()) + '\n')
@@ -1408,6 +1415,7 @@ class HighwayGraph:
             print("ERROR: computed " + str(self.edge_count()) + " edges but wrote " + str(edge) + "\n")
 
         grafile.close()
+        return (len(self.vertices), self.edge_count())
 
     # write a subset of the data in the original gra format,
     # restricted by regions in the list if given, by system in the
@@ -1436,6 +1444,7 @@ class HighwayGraph:
             edge += 1
 
         grafile.close()
+        return (matching_waypoints, len(matching_edges))
 
     # write the entire set of data in the tmg collapsed edge format
     def write_master_tmg_collapsed(self, filename):
@@ -1469,6 +1478,7 @@ class HighwayGraph:
             print("ERROR: computed " + str(self.collapsed_edge_count()) + " collapsed edges, but wrote " + str(edge) + "\n")
         
         tmgfile.close()
+        return (self.num_visible_vertices(), self.collapsed_edge_count())
 
     # write a tmg-format collapsed edge file restricted by region
     # and/or system
@@ -1499,6 +1509,7 @@ class HighwayGraph:
             edge += 1
 
         tmgfile.close()
+        return (matching_waypoints, len(matching_edges))
 
 def format_clinched_mi(clinched,total):
     """return a nicely-formatted string for a given number of miles
@@ -1650,6 +1661,9 @@ for dir, sub, files in os.walk(args.highwaydatapath+"/hwy_data"):
             all_wpt_files.append(dir+"/"+file)
 print(str(len(all_wpt_files)) + " files found.")
 
+# list for datacheck errors that we will need later
+datacheckerrors = []
+
 # For finding colocated Waypoints and concurrent segments, we have 
 # quadtree of all Waypoints in existence to find them efficiently
 all_waypoints = WaypointQuadtree(-180,-90,180,90)
@@ -1663,7 +1677,7 @@ for h in highway_systems:
         wpt_path = args.highwaydatapath+"/hwy_data"+"/"+r.region + "/" + r.system.systemname+"/"+r.root+".wpt"
         if wpt_path in all_wpt_files:
             all_wpt_files.remove(wpt_path)
-        r.read_wpt(all_waypoints,args.highwaydatapath+"/hwy_data")
+        r.read_wpt(all_waypoints,datacheckerrors,args.highwaydatapath+"/hwy_data")
         if len(r.point_list) < 2:
             print("ERROR: Route contains fewer than 2 points: " + str(r))
         print(".", end="",flush=True)
@@ -1698,9 +1712,7 @@ for line in lines:
         continue
     datacheckfps.append(fields)
 
-# log file has been removed, just remember to store in DB later in the
-# program
-datacheckerrors = []
+# perform most datachecks here (list initialized above)
 for h in highway_systems:
     for r in h.route_list:
         # set to be used per-route to find label duplicates
@@ -2409,7 +2421,63 @@ for h in highway_systems:
 # Build a graph structure out of all highway data in active and
 # preview systems
 print(et.et() + "Setting up for graphs of highway data.", flush=True)
-graph_data = HighwayGraph(all_waypoints, highway_systems)
+graph_data = HighwayGraph(all_waypoints, highway_systems, datacheckerrors)
+
+# Also build up a page with a table of information about the graphs we
+# are generating
+graphindexfile = open(args.graphfilepath+'/index.php', 'w')
+graphindexfile.write("""\
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<?php require $_SERVER['DOCUMENT_ROOT']."/lib/tmphpfuncs.php" ?>
+<title>Travel Mapping Graph Data</title>
+<link rel="stylesheet" type="text/css" href="/css/travelMapping.css">
+</head>
+<body>
+<?php require  $_SERVER['DOCUMENT_ROOT']."/lib/tmheader.php"; ?>
+
+<p class="heading">Travel Mapping Graph Data</p>
+
+<div class="text"> 
+
+The tables below show many graphs generated from the current <a
+href="http://tm.teresco.org/">Travel Mapping Project</a> data.  You
+may contact <a href="http://j.teresco.org/">the author</a> if you
+would like an archive of some or all of the graphs.  If you do make
+use of these graphs and/or the tools here, please drop at note to <a
+href="http://j.teresco.org/">the author</a>.
+
+</div>
+
+<div class="text">
+
+For each graph, the table below gives the graph name, a brief
+description, number of vertices and edges in both the simple and
+collapsed formats, and links to download the graph files.
+<b>Note:</b> larger graphs greatly tax the Highway Data Explorer and
+the Google Maps API.  They should all work, but large graphs require a
+lot of memory for your browser and some patience.
+
+</div>
+
+<div class="text"> 
+
+Graphs are copyright &copy; <a href="http://j.teresco.org/">James
+D. Teresco</a>, generated from highway data gathered and maintained by
+<a href="http://tm.teresco.org/credits.php#contributors">Travel
+Mapping Project</a> contributors.  Graphs may be downloaded freely for
+academic use.  Other use prohibited.
+
+</div>
+
+<table style="gratable" border="1">
+<thead>
+<tr><th rowspan="2">Graph Description</th><th colspan="2">Simple Format Graph</th><th colspan="2">Collapsed Format Graph</th></tr>
+<tr><th>Download Link</th><th>(|V|,|E|)</th><th>Download Link</th><th>(|V|,|E|)</th></tr></thead>
+""")
 
 print(et.et() + "Writing graph waypoint simplification log.", flush=True)
 logfile = open(args.logfilepath + '/waypointsimplification.log', 'w')
@@ -2418,10 +2486,12 @@ for line in graph_data.waypoint_naming_log:
 logfile.close()
 
 print(et.et() + "Writing master TM graph file, tm-master.gra.", flush=True)
-graph_data.write_master_gra(args.graphfilepath+'/tm-master.gra')
+(v, e) = graph_data.write_master_gra(args.graphfilepath+'/tm-master.gra')
+graphindexfile.write("<tr><td>Master Travel Mapping Data</td><td><a href=\"tm-master.gra\">tm-master.gra</a></td><td>(" + str(v) + "," + str(e) + ")</td>\n")
 
 print(et.et() + "Writing master TM collapsed graph file, tm-master.tmg.", flush=True)
-graph_data.write_master_tmg_collapsed(args.graphfilepath+'/tm-master.tmg')
+(v, e) = graph_data.write_master_tmg_collapsed(args.graphfilepath+'/tm-master.tmg')
+graphindexfile.write("<td><a href=\"tm-master.tmg\">tm-master.tmg</a></td><td>(" + str(v) + "," + str(e) + ")</td></tr>\n")
 
 # Graphs restricted by region
 print(et.et() + "Creating regional data graphs.", flush=True)
@@ -2431,9 +2501,12 @@ for r in all_regions:
     region_code = r[0]
     if region_code not in active_preview_mileage_by_region:
         continue
+    region_name = r[1]
     print(region_code + ' ', end="",flush=True)
-    graph_data.write_subgraph_gra(args.graphfilepath + '/' + region_code + '-all.gra', [ region_code ], None)
-    graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/' + region_code + '-all.tmg', [ region_code ], None)
+    (v, e) = graph_data.write_subgraph_gra(args.graphfilepath + '/' + region_code + '-all.gra', [ region_code ], None)
+    graphindexfile.write("<tr><td>" + region_code + "(" + region_name + ") All Routes</td><td><a href=\"" + region_code + "-all.gra\">" + region_code + "-all.gra</a></td><td>(" + str(v) + "," + str(e) + ")</td>\n")
+    (v, e) = graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/' + region_code + '-all.tmg', [ region_code ], None)
+    graphindexfile.write("<td><a href=\"" + region_code + "-all.tmg\">" + region_code + "-all.tmg</a></td><td>(" + str(v) + "," + str(e) + ")</td></tr>\n")
 print("!")
 
 # Graphs restricted by system
@@ -2444,8 +2517,10 @@ for h in highway_systems:
     if h.devel():
         continue
     print(h.systemname + ' ', end="",flush=True)
-    graph_data.write_subgraph_gra(args.graphfilepath + '/' + h.systemname + '.gra', None, [ h ])
-    graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/' + h.systemname + '.tmg', None, [ h ])
+    (v, e) = graph_data.write_subgraph_gra(args.graphfilepath + '/' + h.systemname + '.gra', None, [ h ])
+    graphindexfile.write("<tr><td>" + h.systemname + "(" + h.fullname + ")</td><td><a href=\"" + h.systemname + ".gra\">" + h.systemname + ".gra</a></td><td>(" + str(v) + "," + str(e) + ")</td>\n")
+    (v, e) = graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/' + h.systemname + '.tmg', None, [ h ])
+    graphindexfile.write("<td><a href=\"" + h.systemname + ".tmg\">" + h.systemname + ".tmg</a></td><td>(" + str(v) + "," + str(e) + ")</td></tr>\n")
 print("!")
 
 # Some additional interesting graphs
@@ -2456,14 +2531,17 @@ systems = []
 for h in highway_systems:
     if h.systemname in [ 'usai', 'usaus', 'usaif', 'usaib', 'usausb', 'usansf', 'usasf' ]:
         systems.append(h)
-graph_data.write_subgraph_gra(args.graphfilepath + '/usa-national.gra', None, systems)
-graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/usa-national.tmg', None, systems)
-print("by region ", end="", flush=True)
-for r in all_regions:
-    if r[2] == 'USA':
-        print(r[0] + ' ', end="", flush=True)
-        graph_data.write_subgraph_gra(args.graphfilepath + '/' + r[0] + '-usa-national.gra', [ r[0] ], systems)
-        graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/' + r[0] + '-usa-national.tmg', [ r[0] ], systems)
+(v, e) = graph_data.write_subgraph_gra(args.graphfilepath + '/usa-national.gra', None, systems)
+graphindexfile.write("<tr><td>United States National Routes</td><td><a href=\"usa-national.gra\">usa-national.gra</a></td><td>(" + str(v) + "," + str(e) + ")</td>\n")
+(v, e) = graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/usa-national.tmg', None, systems)
+graphindexfile.write("<td><a href=\"usa-national.tmg\">usa-national.tmg</a></td><td>(" + str(v) + "," + str(e) + ")</td></tr>\n")
+
+#print("by region ", end="", flush=True)
+#for r in all_regions:
+#    if r[2] == 'USA':
+#        print(r[0] + ' ', end="", flush=True)
+#        graph_data.write_subgraph_gra(args.graphfilepath + '/' + r[0] + '-usa-n#ational.gra', [ r[0] ], systems)
+#        graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/' + r[0]# + '-usa-national.tmg', [ r[0] ], systems)
 print("!")
 
 # U.S. all routes
@@ -2472,8 +2550,10 @@ systems = []
 for h in highway_systems:
     if h.country == 'USA':
         systems.append(h)
-graph_data.write_subgraph_gra(args.graphfilepath + '/usa-all.gra', None, systems)
-graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/usa-all.tmg', None, systems)
+(v, e) = graph_data.write_subgraph_gra(args.graphfilepath + '/usa-all.gra', None, systems)
+graphindexfile.write("<tr><td>United States All Routes</td><td><a href=\"usa-all.gra\">usa-all.gra</a></td><td>(" + str(v) + "," + str(e) + ")</td>\n")
+(v, e) = graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/usa-all.tmg', None, systems)
+graphindexfile.write("<td><a href=\"usa-all.tmg\">usa-all.tmg</a></td><td>(" + str(v) + "," + str(e) + ")</td></tr>\n")
 print("!")
 
 # Canada all routes
@@ -2482,9 +2562,26 @@ systems = []
 for h in highway_systems:
     if h.country == 'CAN':
         systems.append(h)
-graph_data.write_subgraph_gra(args.graphfilepath + '/canada-all.gra', None, systems)
-graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/canada-all.tmg', None, systems)
+(v, e) = graph_data.write_subgraph_gra(args.graphfilepath + '/canada-all.gra', None, systems)
+graphindexfile.write("<tr><td>Canada All Routes</td><td><a href=\"canada-all.gra\">canada-all.gra</a></td><td>(" + str(v) + "," + str(e) + ")</td>\n")
+(v, e) = graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/canada-all.tmg', None, systems)
+graphindexfile.write("<td><a href=\"canada-all.tmg\">canada-all.tmg</a></td><td>(" + str(v) + "," + str(e) + ")</td></tr>\n")
 print("!")
+
+graphindexfile.write("""\
+</table>
+<p class="text">
+The most recent site update including graph generation completed at <?php echo tm_update_time(); ?> US/Eastern.
+</p>
+
+<?php require  $_SERVER['DOCUMENT_ROOT']."/lib/tmfooter.php"; ?>
+</body>
+<?php
+    $tmdb->close();
+?>
+</html>
+""")
+graphindexfile.close()
 
 print(et.et() + "Writing database file " + args.databasename + ".sql.")
 # Once all data is read in and processed, create a .sql file that will 
