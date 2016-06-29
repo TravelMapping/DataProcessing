@@ -858,7 +858,7 @@ class DatacheckEntry:
     LABEL_UNDERSCORES, VISIBLE_DISTANCE, LABEL_PARENS, LACKS_GENERIC,
     EXIT0, EXIT999, BUS_WITH_I, NONTERMINAL_UNDERSCORE,
     LONG_UNDERSCORE, LABEL_SLASHES, US_BANNER, VISIBLE_HIDDEN_COLOC,
-    HIDDEN_JUNCTION
+    HIDDEN_JUNCTION, LABEL_LOOKS_HIDDEN
 
     info is additional information, at this time either a distance (in
     miles) for a long segment error, an angle (in degrees) for a sharp
@@ -1855,6 +1855,13 @@ for h in highway_systems:
                     labels = []
                     labels.append(w.label)
                     datacheckerrors.append(DatacheckEntry(r,labels,'BUS_WITH_I'))
+
+                # look for labels that look like hidden waypoints but
+                # which aren't hidden
+                if re.fullmatch('X[0-9][0-9][0-9][0-9][0-9][0-9]', w.label):
+                    labels = []
+                    labels.append(w.label)
+                    datacheckerrors.append(DatacheckEntry(r,labels,'LABEL_LOOKS_HIDDEN'))
 
                 # look for USxxxA but not USxxxAlt, B/Bus (others?)
                 ##if re.fullmatch('US[0-9]+A.*', w.label) and not re.fullmatch('US[0-9]+Alt.*', w.label) or \
