@@ -2158,17 +2158,17 @@ region_entries = []
 for region in list(overall_mileage_by_region.keys()):
     # look up active+preview and active-only mileages if they exist
     if region in list(active_preview_mileage_by_region.keys()):
-        active_preview_miles = active_preview_mileage_by_region[region]
+        region_active_preview_miles = active_preview_mileage_by_region[region]
     else:
-        active_preview_miles = 0.0
+        region_active_preview_miles = 0.0
     if region in list(active_only_mileage_by_region.keys()):
-        active_only_miles = active_only_mileage_by_region[region]
+        region_active_only_miles = active_only_mileage_by_region[region]
     else:
-        active_only_miles = 0.0
+        region_active_only_miles = 0.0
 
     region_entries.append(region + ": " + 
-                          "{0:.2f}".format(active_only_miles) + " (active), " +
-                          "{0:.2f}".format(active_preview_miles) + " (active, preview) " +
+                          "{0:.2f}".format(region_active_only_miles) + " (active), " +
+                          "{0:.2f}".format(region_active_preview_miles) + " (active, preview) " +
                           "{0:.2f}".format(overall_mileage_by_region[region]) + " (active, preview, devel)\n")
 region_entries.sort()
 for e in region_entries:
@@ -2210,9 +2210,9 @@ print(et.et() + "Creating per-traveler stats log entries and augmenting data str
 for t in traveler_lists:
     t.log_entries.append("Clinched Highway Statistics")
     t_active_only_miles = math.fsum(list(t.active_only_mileage_by_region.values()))
-    t.log_entries.append("Overall in active systems: " + format_clinched_mi(active_only_miles,t_active_only_miles))
+    t.log_entries.append("Overall in active systems: " + format_clinched_mi(t_active_only_miles,active_only_miles))
     t_active_preview_miles = math.fsum(list(t.active_preview_mileage_by_region.values()))
-    t.log_entries.append("Overall in active+preview systems: " + format_clinched_mi(active_preview_miles,t_active_preview_miles))
+    t.log_entries.append("Overall in active+preview systems: " + format_clinched_mi(t_active_preview_miles,active_preview_miles))
 
     t.log_entries.append("Overall by region: (each line reports active only then active+preview)")
     for region in list(t.active_preview_mileage_by_region.keys()):
@@ -2863,7 +2863,7 @@ for systemupdate in systemupdates:
 sqlfile.write(";\n")
 
 # datacheck errors into the db
-sqlfile.write('CREATE TABLE datacheckErrors (route VARCHAR(32), label1 VARCHAR(20), label2 VARCHAR(20), label3 VARCHAR(20), code VARCHAR(20), value VARCHAR(32), falsePositive BOOLEAN, FOREIGN KEY (route) REFERENCES routes(root));\n')
+sqlfile.write('CREATE TABLE datacheckErrors (route VARCHAR(32), label1 VARCHAR(50), label2 VARCHAR(20), label3 VARCHAR(20), code VARCHAR(20), value VARCHAR(32), falsePositive BOOLEAN, FOREIGN KEY (route) REFERENCES routes(root));\n')
 if len(datacheckerrors) > 0:
     sqlfile.write('INSERT INTO datacheckErrors VALUES\n')
     first = True
