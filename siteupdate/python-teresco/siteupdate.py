@@ -2432,7 +2432,7 @@ graph_data = HighwayGraph(all_waypoints, highway_systems, datacheckerrors)
 
 # Also build up a page with a table of information about the graphs we
 # are generating
-graphindexfile = open(args.graphfilepath+'/index.php', 'w')
+graphindexfile = open(args.graphfilepath+'/index.php', 'w', encoding='utf-8')
 graphindexfile.write("""\
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en">
