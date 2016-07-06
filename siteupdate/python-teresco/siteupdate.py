@@ -1058,6 +1058,7 @@ class HighwayGraphCollapsedEdgeInfo:
             if edge1.segment_name != edge2.segment_name:
                 print("ERROR: segment name mismatch in HighwayGraphCollapsedEdgeInfo: edge1 named " + edge1.segment_name + " edge2 named " + edge2.segment_name + "\n")
             self.segment_name = edge1.segment_name
+            #print("\nDEBUG: collapsing edges along " + self.segment_name + " at vertex " + str(vertex_info) + ", edge1 is " + str(edge1) + " and edge2 is " + str(edge2))
             # region and route names/systems should also match, but not
             # doing that sanity check here, as the above check should take
             # care of that
@@ -1069,21 +1070,32 @@ class HighwayGraphCollapsedEdgeInfo:
             # endpoints, and at the same time, build up our list of
             # intermediate vertices
             self.intermediate_points = edge1.intermediate_points.copy()
+            #print("DEBUG: copied edge1 intermediates" + self.intermediate_point_string())
+
             if edge1.vertex1 == vertex_info:
+                #print("DEBUG: self.vertex1 getting edge1.vertex2: " + str(edge1.vertex2) + " and reversing edge1 intermediates")
                 self.vertex1 = edge1.vertex2
                 self.intermediate_points.reverse()
             else:
+                #print("DEBUG: self.vertex1 getting edge1.vertex1: " + str(edge1.vertex1))
                 self.vertex1 = edge1.vertex1
 
+            #print("DEBUG: appending to intermediates: " + str(vertex_info))
             self.intermediate_points.append(vertex_info)
 
             toappend = edge2.intermediate_points.copy()
+            #print("DEBUG: copied edge2 intermediates" + edge2.intermediate_point_string())
             if edge2.vertex1 == vertex_info:
+                #print("DEBUG: self.vertex2 getting edge2.vertex2: " + str(edge2.vertex2))
                 self.vertex2 = edge2.vertex2
-                toappend.reverse()
             else:
+                #print("DEBUG: self.vertex2 getting edge2.vertex1: " + str(edge2.vertex1) + " and reversing edge2 intermediates")
                 self.vertex2 = edge2.vertex1
+                toappend.reverse()
+
             self.intermediate_points.extend(toappend)
+
+            #print("DEBUG: intermediates complete: from " + str(self.vertex1) + " via " + self.intermediate_point_string() + " to " + str(self.vertex2))
 
             # replace edge references at our endpoints with ourself
             removed = 0
@@ -1129,6 +1141,23 @@ class HighwayGraphCollapsedEdgeInfo:
         line = str(self.vertex1.vertex_num) + " " + str(self.vertex2.vertex_num) + " " + self.label(systems)
         for intermediate in self.intermediate_points:
             line += " " + str(intermediate.lat) + " " + str(intermediate.lng)
+        return line
+
+    # line appropriate for a tmg collapsed edge file, with debug info
+    def debug_tmg_line(self, systems=None):
+        line = str(self.vertex1.vertex_num) + " [" + self.vertex1.unique_name + "] " + str(self.vertex2.vertex_num) + " [" + self.vertex2.unique_name + "] " + self.label(systems)
+        for intermediate in self.intermediate_points:
+            line += " [" + intermediate.unique_name + "] " + str(intermediate.lat) + " " + str(intermediate.lng)
+        return line
+
+    # return the intermediate points as a string
+    def intermediate_point_string(self):
+        if len(self.intermediate_points) == 0:
+            return " None"
+
+        line = ""
+        for intermediate in self.intermediate_points:
+            line += " [" + intermediate.unique_name + "] " + str(intermediate.lat) + " " + str(intermediate.lng)
         return line
 
 class HighwayGraph:
