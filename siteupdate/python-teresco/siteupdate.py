@@ -1058,6 +1058,7 @@ class HighwayGraphCollapsedEdgeInfo:
             if edge1.segment_name != edge2.segment_name:
                 print("ERROR: segment name mismatch in HighwayGraphCollapsedEdgeInfo: edge1 named " + edge1.segment_name + " edge2 named " + edge2.segment_name + "\n")
             self.segment_name = edge1.segment_name
+            #print("\nDEBUG: collapsing edges along " + self.segment_name + " at vertex " + str(vertex_info) + ", edge1 is " + str(edge1) + " and edge2 is " + str(edge2))
             # region and route names/systems should also match, but not
             # doing that sanity check here, as the above check should take
             # care of that
@@ -1069,21 +1070,32 @@ class HighwayGraphCollapsedEdgeInfo:
             # endpoints, and at the same time, build up our list of
             # intermediate vertices
             self.intermediate_points = edge1.intermediate_points.copy()
+            #print("DEBUG: copied edge1 intermediates" + self.intermediate_point_string())
+
             if edge1.vertex1 == vertex_info:
+                #print("DEBUG: self.vertex1 getting edge1.vertex2: " + str(edge1.vertex2) + " and reversing edge1 intermediates")
                 self.vertex1 = edge1.vertex2
                 self.intermediate_points.reverse()
             else:
+                #print("DEBUG: self.vertex1 getting edge1.vertex1: " + str(edge1.vertex1))
                 self.vertex1 = edge1.vertex1
 
+            #print("DEBUG: appending to intermediates: " + str(vertex_info))
             self.intermediate_points.append(vertex_info)
 
             toappend = edge2.intermediate_points.copy()
+            #print("DEBUG: copied edge2 intermediates" + edge2.intermediate_point_string())
             if edge2.vertex1 == vertex_info:
+                #print("DEBUG: self.vertex2 getting edge2.vertex2: " + str(edge2.vertex2))
                 self.vertex2 = edge2.vertex2
-                toappend.reverse()
             else:
+                #print("DEBUG: self.vertex2 getting edge2.vertex1: " + str(edge2.vertex1) + " and reversing edge2 intermediates")
                 self.vertex2 = edge2.vertex1
+                toappend.reverse()
+
             self.intermediate_points.extend(toappend)
+
+            #print("DEBUG: intermediates complete: from " + str(self.vertex1) + " via " + self.intermediate_point_string() + " to " + str(self.vertex2))
 
             # replace edge references at our endpoints with ourself
             removed = 0
@@ -1129,6 +1141,23 @@ class HighwayGraphCollapsedEdgeInfo:
         line = str(self.vertex1.vertex_num) + " " + str(self.vertex2.vertex_num) + " " + self.label(systems)
         for intermediate in self.intermediate_points:
             line += " " + str(intermediate.lat) + " " + str(intermediate.lng)
+        return line
+
+    # line appropriate for a tmg collapsed edge file, with debug info
+    def debug_tmg_line(self, systems=None):
+        line = str(self.vertex1.vertex_num) + " [" + self.vertex1.unique_name + "] " + str(self.vertex2.vertex_num) + " [" + self.vertex2.unique_name + "] " + self.label(systems)
+        for intermediate in self.intermediate_points:
+            line += " [" + intermediate.unique_name + "] " + str(intermediate.lat) + " " + str(intermediate.lng)
+        return line
+
+    # return the intermediate points as a string
+    def intermediate_point_string(self):
+        if len(self.intermediate_points) == 0:
+            return " None"
+
+        line = ""
+        for intermediate in self.intermediate_points:
+            line += " [" + intermediate.unique_name + "] " + str(intermediate.lat) + " " + str(intermediate.lng)
         return line
 
 class HighwayGraph:
@@ -2158,17 +2187,17 @@ region_entries = []
 for region in list(overall_mileage_by_region.keys()):
     # look up active+preview and active-only mileages if they exist
     if region in list(active_preview_mileage_by_region.keys()):
-        active_preview_miles = active_preview_mileage_by_region[region]
+        region_active_preview_miles = active_preview_mileage_by_region[region]
     else:
-        active_preview_miles = 0.0
+        region_active_preview_miles = 0.0
     if region in list(active_only_mileage_by_region.keys()):
-        active_only_miles = active_only_mileage_by_region[region]
+        region_active_only_miles = active_only_mileage_by_region[region]
     else:
-        active_only_miles = 0.0
+        region_active_only_miles = 0.0
 
     region_entries.append(region + ": " + 
-                          "{0:.2f}".format(active_only_miles) + " (active), " +
-                          "{0:.2f}".format(active_preview_miles) + " (active, preview) " +
+                          "{0:.2f}".format(region_active_only_miles) + " (active), " +
+                          "{0:.2f}".format(region_active_preview_miles) + " (active, preview) " +
                           "{0:.2f}".format(overall_mileage_by_region[region]) + " (active, preview, devel)\n")
 region_entries.sort()
 for e in region_entries:
@@ -2210,9 +2239,9 @@ print(et.et() + "Creating per-traveler stats log entries and augmenting data str
 for t in traveler_lists:
     t.log_entries.append("Clinched Highway Statistics")
     t_active_only_miles = math.fsum(list(t.active_only_mileage_by_region.values()))
-    t.log_entries.append("Overall in active systems: " + format_clinched_mi(active_only_miles,t_active_only_miles))
+    t.log_entries.append("Overall in active systems: " + format_clinched_mi(t_active_only_miles,active_only_miles))
     t_active_preview_miles = math.fsum(list(t.active_preview_mileage_by_region.values()))
-    t.log_entries.append("Overall in active+preview systems: " + format_clinched_mi(active_preview_miles,t_active_preview_miles))
+    t.log_entries.append("Overall in active+preview systems: " + format_clinched_mi(t_active_preview_miles,active_preview_miles))
 
     t.log_entries.append("Overall by region: (each line reports active only then active+preview)")
     for region in list(t.active_preview_mileage_by_region.keys()):
@@ -2432,7 +2461,7 @@ graph_data = HighwayGraph(all_waypoints, highway_systems, datacheckerrors)
 
 # Also build up a page with a table of information about the graphs we
 # are generating
-graphindexfile = open(args.graphfilepath+'/index.php', 'w')
+graphindexfile = open(args.graphfilepath+'/index.php', 'w', encoding='utf-8')
 graphindexfile.write("""\
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en">
@@ -2863,7 +2892,7 @@ for systemupdate in systemupdates:
 sqlfile.write(";\n")
 
 # datacheck errors into the db
-sqlfile.write('CREATE TABLE datacheckErrors (route VARCHAR(32), label1 VARCHAR(20), label2 VARCHAR(20), label3 VARCHAR(20), code VARCHAR(20), value VARCHAR(32), falsePositive BOOLEAN, FOREIGN KEY (route) REFERENCES routes(root));\n')
+sqlfile.write('CREATE TABLE datacheckErrors (route VARCHAR(32), label1 VARCHAR(50), label2 VARCHAR(20), label3 VARCHAR(20), code VARCHAR(20), value VARCHAR(32), falsePositive BOOLEAN, FOREIGN KEY (route) REFERENCES routes(root));\n')
 if len(datacheckerrors) > 0:
     sqlfile.write('INSERT INTO datacheckErrors VALUES\n')
     first = True
