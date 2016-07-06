@@ -154,10 +154,6 @@ class Waypoint:
         self.lng = float(lng_string)
         # also keep track of a list of colocated waypoints, if any
         self.colocated = None
-        # when added as one ends of a HighwaySegment, that segment
-        # will be added here, this is used in compressed graph
-        # construction (and will be modified by that process)
-        #self.adjacent_segments = []
 
     def __str__(self):
         ans = self.route.root + " " + self.label
@@ -392,9 +388,6 @@ class HighwaySegment:
         self.concurrent = None
         self.clinched_by = []
         self.segment_name = None
-        # connect to our endpoints
-        #w1.adjacent_segments.append(self)
-        #w2.adjacent_segments.append(self)
 
     def __str__(self):
         return self.waypoint1.label + " to " + self.waypoint2.label + \
