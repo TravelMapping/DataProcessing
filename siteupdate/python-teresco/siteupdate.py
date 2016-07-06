@@ -46,11 +46,11 @@ class WaypointQuadtree:
 
     def refine(self):
         """refine a quadtree into 4 sub-quadrants"""
-        #print(str(self) + " being refined")
-        self.nw_child = WaypointQuadtree(self.min_lat,self.mid_lng,self.mid_lat,self.max_lng)
+        #print("QTDEBUG: " + str(self) + " being refined")
+        self.nw_child = WaypointQuadtree(self.mid_lat,self.min_lng,self.max_lat,self.mid_lng)
         self.ne_child = WaypointQuadtree(self.mid_lat,self.mid_lng,self.max_lat,self.max_lng)
         self.sw_child = WaypointQuadtree(self.min_lat,self.min_lng,self.mid_lat,self.mid_lng)
-        self.se_child = WaypointQuadtree(self.mid_lat,self.min_lng,self.max_lat,self.mid_lng)
+        self.se_child = WaypointQuadtree(self.min_lat,self.mid_lng,self.mid_lat,self.max_lng)
         points = self.points
         self.points = None
         for p in points:
@@ -59,7 +59,7 @@ class WaypointQuadtree:
 
     def insert(self,w):
         """insert Waypoint w into this quadtree node"""
-        #print(str(self) + " insert " + str(w))
+        #print("QTDEBUG: " + str(self) + " insert " + str(w))
         if self.points is not None:
             self.points.append(w)
             if len(self.points) > 50:  # 50 points max per quadtree node
@@ -69,10 +69,10 @@ class WaypointQuadtree:
                 if w.lng < self.mid_lng:
                     self.sw_child.insert(w)
                 else:
-                    self.nw_child.insert(w)
+                    self.se_child.insert(w)
             else:
                 if w.lng < self.mid_lng:
-                    self.se_child.insert(w)
+                    self.nw_child.insert(w)
                 else:
                     self.ne_child.insert(w)
 
@@ -88,13 +88,49 @@ class WaypointQuadtree:
                 if w.lng < self.mid_lng:
                     return self.sw_child.waypoint_at_same_point(w)
                 else:
-                    return self.nw_child.waypoint_at_same_point(w)
+                    return self.se_child.waypoint_at_same_point(w)
             else:
                 if w.lng < self.mid_lng:
-                    return self.se_child.waypoint_at_same_point(w)
+                    return self.nw_child.waypoint_at_same_point(w)
                 else:
                     return self.ne_child.waypoint_at_same_point(w)
             
+    def near_miss_waypoints(self, w, tolerance):
+        """compute and return a list of existing waypoints which are
+        within the near-miss tolerance (in degrees lat, lng) of w"""
+        near_miss_points = []
+
+        #print("DEBUG: computing nmps for " + str(w) + " within " + str(tolerance) + " in " + str(self))
+        # first check if this is a terminal quadrant, and if it is,
+        # we search for NMPs within this quadrant
+        if self.points is not None:
+            #print("DEBUG: terminal quadrant (self.points is not None) comparing with " + str(len(self.points)) + " points.")
+            for p in self.points:
+                if p != w and not p.same_coords(w) and p.nearby(w, tolerance):
+                    #print("DEBUG: found nmp " + str(p))
+                    near_miss_points.append(p)
+
+        # if we're not a terminal quadrant, we need to determine which
+        # of our child quadrants we need to search and recurse into
+        # each
+        else:
+            #print("DEBUG: recursive case, mid_lat=" + str(self.mid_lat) + " mid_lng=" + str(self.mid_lng))
+            look_north = (w.lat + tolerance) >= self.mid_lat
+            look_south = (w.lat - tolerance) <= self.mid_lat
+            look_east = (w.lng + tolerance) >= self.mid_lng
+            look_west = (w.lng - tolerance) <= self.mid_lng
+            #print("DEBUG: recursive case, " + str(look_north) + " " + str(look_south) + " " + str(look_east) + " " + str(look_west))
+            # now look in the appropriate child quadrants
+            if look_north and look_west:
+                near_miss_points.extend(self.nw_child.near_miss_waypoints(w, tolerance))
+            if look_north and look_east:
+                near_miss_points.extend(self.ne_child.near_miss_waypoints(w, tolerance))
+            if look_south and look_west:
+                near_miss_points.extend(self.sw_child.near_miss_waypoints(w, tolerance))
+            if look_south and look_east:
+                near_miss_points.extend(self.se_child.near_miss_waypoints(w, tolerance))
+
+        return near_miss_points
 
     def __str__(self):
         s = "WaypointQuadtree at (" + str(self.min_lat) + "," + \
@@ -124,6 +160,45 @@ class WaypointQuadtree:
         else:
             return self.points
 
+    def is_valid(self):
+        """make sure the quadtree is valid"""
+        if self.points is None:
+            # this should be a refined, so should have all 4 children
+            if self.nw_child is None:
+                print("ERROR: WaypointQuadtree.is_valid refined quadrant has no NW child.")
+                return False
+            if self.ne_child is None:
+                print("ERROR: WaypointQuadtree.is_valid refined quadrant has no NE child.")
+                return False
+            if self.sw_child is None:
+                print("ERROR: WaypointQuadtree.is_valid refined quadrant has no SW child.")
+                return False
+            if self.se_child is None:
+                print("ERROR: WaypointQuadtree.is_valid refined quadrant has no SE child.")
+                return False
+            return self.nw_child.is_valid() and self.ne_child.is_valid() and self.sw_child.is_valid() and self.se_child.is_valid()
+
+        else:
+            # not refined, but should have no more than 50 points
+            if len(self.points) > 50:
+                print("ERROR: WaypointQuadtree.is_valid terminal quadrant has too many points (" + str(len(self.points)) + ")")
+                return False
+            # not refined, so should not have any children
+            if self.nw_child is not None:
+                print("ERROR: WaypointQuadtree.is_valid terminal quadrant has NW child.")
+                return False
+            if self.ne_child is not None:
+                print("ERROR: WaypointQuadtree.is_valid terminal quadrant has NE child.")
+                return False
+            if self.sw_child is not None:
+                print("ERROR: WaypointQuadtree.is_valid terminal quadrant has SW child.")
+                return False
+            if self.se_child is not None:
+                print("ERROR: WaypointQuadtree.is_valid terminal quadrant has SE child.")
+                return False
+
+        return True
+        
 class Waypoint:
     """This class encapsulates the information about a single waypoint
     from a .wpt file.
@@ -154,10 +229,8 @@ class Waypoint:
         self.lng = float(lng_string)
         # also keep track of a list of colocated waypoints, if any
         self.colocated = None
-        # when added as one ends of a HighwaySegment, that segment
-        # will be added here, this is used in compressed graph
-        # construction (and will be modified by that process)
-        #self.adjacent_segments = []
+        # and keep a list of "near-miss points", if any
+        self.near_miss_points = None
 
     def __str__(self):
         ans = self.route.root + " " + self.label
@@ -178,6 +251,12 @@ class Waypoint:
         """return if this waypoint is colocated with the other,
         using exact lat,lng match"""
         return self.lat == other.lat and self.lng == other.lng
+
+    def nearby(self,other,tolerance):
+        """return if this waypoint's coordinates are within the given
+        tolerance (in degrees) of the other"""
+        return abs(self.lat - other.lat) < tolerance and \
+            abs(self.lng - other.lng) < tolerance
 
     def num_colocated(self):
         """return the number of points colocated with this one (including itself)"""
@@ -392,9 +471,6 @@ class HighwaySegment:
         self.concurrent = None
         self.clinched_by = []
         self.segment_name = None
-        # connect to our endpoints
-        #w1.adjacent_segments.append(self)
-        #w2.adjacent_segments.append(self)
 
     def __str__(self):
         return self.waypoint1.label + " to " + self.waypoint2.label + \
@@ -550,6 +626,28 @@ class Route:
                     w.colocated = other_w.colocated
                     if w.is_hidden != other_w.is_hidden:
                         datacheckerrors.append(DatacheckEntry(self,[w.label],"VISIBLE_HIDDEN_COLOC",other_w.route.root + "@" + other_w.label))
+
+                # look for near-miss points (before we add this one in)
+                #print("DEBUG: START search for nmps for waypoint " + str(w) + " in quadtree of size " + str(all_waypoints.size()))
+                #if not all_waypoints.is_valid():
+                #    sys.exit()
+                nmps = all_waypoints.near_miss_waypoints(w, 0.0001)
+                #print("DEBUG: for waypoint " + str(w) + " got " + str(len(nmps)) + " nmps: ", end="")
+                #for dbg_w in nmps:
+                #    print(str(dbg_w) + " ", end="")
+                #print()
+                if len(nmps) > 0:
+                    if w.near_miss_points is None:
+                        w.near_miss_points = nmps
+                    else:
+                        w.near_miss_points.extend(nmps)
+
+                    for other_w in nmps:
+                        if other_w.near_miss_points is None:
+                            other_w.near_miss_points = [ w ]
+                        else:
+                            other_w.near_miss_points.append(w)
+
                 all_waypoints.insert(w)
                 # add HighwaySegment, if not first point
                 if previous_point is not None:
@@ -1725,6 +1823,26 @@ else:
     print("All .wpt files in " + args.highwaydatapath +
           "/hwy_data processed.")
 unprocessedfile.close()
+
+# Near-miss point log
+print(et.et() + "Near-miss point log and tm-master.nmp file.", flush=True)
+nmpfile = open(args.logfilepath+'/nearmisspoints.log','w')
+nmpnmp = open(args.graphfilepath+'/tm-master.nmp','w')
+for w in all_waypoints.point_list():
+    if w.near_miss_points is not None:
+        nmpfile.write(str(w) + " NMP ")
+        for other_w in w.near_miss_points:
+            nmpfile.write(str(other_w) + " ")
+            w_label = w.route.root + "@" + w.label
+            other_label = other_w.route.root + "@" + other_w.label
+            # make sure we only plot once, since the NMP should be listed
+            # both ways (other_w in w's list, w in other_w's list)
+            if w_label < other_label:
+                nmpnmp.write(w_label + " " + str(w.lat) + " " + str(w.lng) + "\n")
+                nmpnmp.write(other_label + " " + str(other_w.lat) + " " + str(other_w.lng) + "\n")
+        nmpfile.write('\n')
+nmpfile.close()
+nmpnmp.close()
 
 # data check: visit each system and route and check for various problems
 print(et.et() + "Performing data checks.", flush=True)
