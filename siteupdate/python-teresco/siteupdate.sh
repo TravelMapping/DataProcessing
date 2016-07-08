@@ -27,7 +27,7 @@ sh xferlogs.sh $logdir $statdir $graphdir &
 echo "siteupdate.sh: sending bunzip to run on blizzard"
 ssh blizzard.teresco.org bunzip2 -f /tmp/TravelMapping.sql.bz2
 echo "siteupdate.sh: sending mysql update to run on blizzard"
-ssh blizzard.teresco.org "mysql --defaults-group-suffix=tmapadmin -u travmapadmin TravelMapping < /tmp/TravelMapping.sql"
+ssh blizzard.teresco.org "touch /home/www/tm/dbupdating; mysql --defaults-group-suffix=tmapadmin -u travmapadmin TravelMapping < /tmp/TravelMapping.sql; /bin/rm /home/www/tm/dbupdating"
 echo "siteupdate.sh: complete"
 echo "siteupdate.sh: sending email notification"
 mailx -s "Travel Mapping Site Update Complete" travelmapping-siteupdates@teresco.org <<EOF
