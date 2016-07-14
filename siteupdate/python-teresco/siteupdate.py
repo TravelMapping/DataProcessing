@@ -2601,7 +2601,7 @@ The tables below show many graphs generated from the current <a
 href="http://tm.teresco.org/">Travel Mapping Project</a> data.  You
 may contact <a href="http://j.teresco.org/">the author</a> if you
 would like an archive of some or all of the graphs.  If you do make
-use of these graphs and/or the tools here, please drop at note to <a
+use of these graphs and/or the tools here, please drop a note to <a
 href="http://j.teresco.org/">the author</a>.
 
 </div>
@@ -2658,7 +2658,7 @@ for r in all_regions:
     region_name = r[1]
     print(region_code + ' ', end="",flush=True)
     (v, e) = graph_data.write_subgraph_gra(args.graphfilepath + '/' + region_code + '-all.gra', [ region_code ], None)
-    graphindexfile.write("<tr><td>" + region_code + "(" + region_name + ") All Routes</td><td><a href=\"" + region_code + "-all.gra\">" + region_code + "-all.gra</a></td><td>(" + str(v) + "," + str(e) + ")</td>\n")
+    graphindexfile.write("<tr><td>" + region_code + " (" + region_name + ") All Routes</td><td><a href=\"" + region_code + "-all.gra\">" + region_code + "-all.gra</a></td><td>(" + str(v) + "," + str(e) + ")</td>\n")
     (v, e) = graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/' + region_code + '-all.tmg', [ region_code ], None)
     graphindexfile.write("<td><a href=\"" + region_code + "-all.tmg\">" + region_code + "-all.tmg</a></td><td>(" + str(v) + "," + str(e) + ")</td></tr>\n")
 print("!")
@@ -2672,7 +2672,7 @@ for h in highway_systems:
         continue
     print(h.systemname + ' ', end="",flush=True)
     (v, e) = graph_data.write_subgraph_gra(args.graphfilepath + '/' + h.systemname + '.gra', None, [ h ])
-    graphindexfile.write("<tr><td>" + h.systemname + "(" + h.fullname + ")</td><td><a href=\"" + h.systemname + ".gra\">" + h.systemname + ".gra</a></td><td>(" + str(v) + "," + str(e) + ")</td>\n")
+    graphindexfile.write("<tr><td>" + h.systemname + " (" + h.fullname + ")</td><td><a href=\"" + h.systemname + ".gra\">" + h.systemname + ".gra</a></td><td>(" + str(v) + "," + str(e) + ")</td>\n")
     (v, e) = graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/' + h.systemname + '.tmg', None, [ h ])
     graphindexfile.write("<td><a href=\"" + h.systemname + ".tmg\">" + h.systemname + ".tmg</a></td><td>(" + str(v) + "," + str(e) + ")</td></tr>\n")
 print("!")
