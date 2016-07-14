@@ -1235,7 +1235,7 @@ class HighwayGraphCollapsedEdgeInfo:
         return "HighwayGraphCollapsedEdgeInfo: " + self.segment_name + " from " + str(self.vertex1) + " to " + str(self.vertex2) + " via " + str(len(self.intermediate_points)) + " points"
 
     # line appropriate for a tmg collapsed edge file
-    def tmg_line(self, systems=None):
+    def collapsed_tmg_line(self, systems=None):
         line = str(self.vertex1.vertex_num) + " " + str(self.vertex2.vertex_num) + " " + self.label(systems)
         for intermediate in self.intermediate_points:
             line += " " + str(intermediate.lat) + " " + str(intermediate.lng)
@@ -1501,22 +1501,25 @@ class HighwayGraph:
 
         return edge_set
 
-    # write the entire set of highway data in the original .gra
-    # format, with the first line specifying the number of waypoints,
-    # w, and the number of connections, c, then w lines describing
-    # waypoints (label, latitude, longitude), then c lines describing
-    # connections (endpoint 1 number, endpoint 2 number, route label)
+    # write the entire set of highway data a format very similar to
+    # the original .gra format.  The first line is a header specifying
+    # the format and version number, the second line specifying the
+    # number of waypoints, w, and the number of connections, c, then w
+    # lines describing waypoints (label, latitude, longitude), then c
+    # lines describing connections (endpoint 1 number, endpoint 2
+    # number, route label)
     #
     # returns tuple of number of vertices and number of edges written
     #
-    def write_master_gra(self,filename):
-        grafile = open(filename, 'w')
-        grafile.write(str(len(self.vertices)) + ' ' + str(self.edge_count()) + '\n')
+    def write_master_tmg_simple(self,filename):
+        tmgfile = open(filename, 'w')
+        tmgfile.write("TMG 1.0 simple\n")
+        tmgfile.write(str(len(self.vertices)) + ' ' + str(self.edge_count()) + '\n')
         # number waypoint entries as we go to support original .gra
         # format output
         vertex_num = 0
         for label, vinfo in self.vertices.items():
-            grafile.write(label + ' ' + str(vinfo.lat) + ' ' + str(vinfo.lng) + '\n')
+            tmgfile.write(label + ' ' + str(vinfo.lat) + ' ' + str(vinfo.lng) + '\n')
             vinfo.vertex_num = vertex_num
             vertex_num += 1
 
@@ -1530,7 +1533,7 @@ class HighwayGraph:
             for e in v.incident_edges:
                 if not e.written:
                     e.written = True
-                    grafile.write(str(e.vertex1.vertex_num) + ' ' + str(e.vertex2.vertex_num) + ' ' + e.label() + '\n')
+                    tmgfile.write(str(e.vertex1.vertex_num) + ' ' + str(e.vertex2.vertex_num) + ' ' + e.label() + '\n')
                     edge += 1
 
         # sanity checks
@@ -1541,36 +1544,37 @@ class HighwayGraph:
         if self.edge_count() != edge:
             print("ERROR: computed " + str(self.edge_count()) + " edges but wrote " + str(edge) + "\n")
 
-        grafile.close()
+        tmgfile.close()
         return (len(self.vertices), self.edge_count())
 
     # write a subset of the data in the original gra format,
     # restricted by regions in the list if given, by system in the
     # list if given
-    def write_subgraph_gra(self,filename,regions,systems):
+    def write_subgraph_tmg_simple(self,filename,regions,systems):
 
-        grafile = open(filename, 'w')
+        tmgfile = open(filename, 'w')
+        tmgfile.write("TMG 1.0 simple\n")
         matching_edges = self.matching_edges(regions, systems)
         matching_waypoints = self.num_matching_waypoints(regions, systems)
         print('(' + str(matching_waypoints) + ',' + str(len(matching_edges)) + ') ', end="", flush=True)
         # ready to write the header
-        grafile.write(str(matching_waypoints) + ' ' + str(len(matching_edges)) + '\n')
+        tmgfile.write(str(matching_waypoints) + ' ' + str(len(matching_edges)) + '\n')
 
         # write waypoints
         vertex_num = 0
         for label, vinfo in self.vertices.items():
             if self.matching_waypoint(label, vinfo, regions, systems):
-                grafile.write(label + ' ' + str(vinfo.lat) + ' ' + str(vinfo.lng) + '\n')
+                tmgfile.write(label + ' ' + str(vinfo.lat) + ' ' + str(vinfo.lng) + '\n')
                 vinfo.vertex_num = vertex_num
                 vertex_num += 1
 
         # write edges
         edge = 0
         for e in matching_edges:
-            grafile.write(str(e.vertex1.vertex_num) + ' ' + str(e.vertex2.vertex_num) + ' ' + e.label(systems) + '\n')
+            tmgfile.write(str(e.vertex1.vertex_num) + ' ' + str(e.vertex2.vertex_num) + ' ' + e.label(systems) + '\n')
             edge += 1
 
-        grafile.close()
+        tmgfile.close()
         return (matching_waypoints, len(matching_edges))
 
     # write the entire set of data in the tmg collapsed edge format
@@ -1597,7 +1601,7 @@ class HighwayGraph:
                 for e in v.incident_collapsed_edges:
                     if not e.written:
                         e.written = True
-                        tmgfile.write(e.tmg_line() + '\n')
+                        tmgfile.write(e.collapsed_tmg_line() + '\n')
                         edge += 1
 
         # sanity check on edges written
@@ -1632,7 +1636,7 @@ class HighwayGraph:
         # write collapsed edges
         edge = 0
         for e in matching_edges:
-            tmgfile.write(e.tmg_line(systems) + '\n')
+            tmgfile.write(e.collapsed_tmg_line(systems) + '\n')
             edge += 1
 
         tmgfile.close()
@@ -2639,9 +2643,9 @@ for line in graph_data.waypoint_naming_log:
     logfile.write(line + '\n')
 logfile.close()
 
-print(et.et() + "Writing master TM graph file, tm-master.gra.", flush=True)
-(v, e) = graph_data.write_master_gra(args.graphfilepath+'/tm-master.gra')
-graphindexfile.write("<tr><td>Master Travel Mapping Data</td><td><a href=\"tm-master.gra\">tm-master.gra</a></td><td>(" + str(v) + "," + str(e) + ")</td>\n")
+print(et.et() + "Writing master TM simple graph file, tm-master-simple.tmg", flush=True)
+(v, e) = graph_data.write_master_tmg_simple(args.graphfilepath+'/tm-master-simple.tmg')
+graphindexfile.write("<tr><td>Master Travel Mapping Data</td><td><a href=\"tm-master-simple.tmg\">tm-master-simple.tmg</a></td><td>(" + str(v) + "," + str(e) + ")</td>\n")
 
 print(et.et() + "Writing master TM collapsed graph file, tm-master.tmg.", flush=True)
 (v, e) = graph_data.write_master_tmg_collapsed(args.graphfilepath+'/tm-master.tmg')
@@ -2657,8 +2661,8 @@ for r in all_regions:
         continue
     region_name = r[1]
     print(region_code + ' ', end="",flush=True)
-    (v, e) = graph_data.write_subgraph_gra(args.graphfilepath + '/' + region_code + '-all.gra', [ region_code ], None)
-    graphindexfile.write("<tr><td>" + region_code + " (" + region_name + ") All Routes</td><td><a href=\"" + region_code + "-all.gra\">" + region_code + "-all.gra</a></td><td>(" + str(v) + "," + str(e) + ")</td>\n")
+    (v, e) = graph_data.write_subgraph_tmg_simple(args.graphfilepath + '/' + region_code + '-all-simple.tmg', [ region_code ], None)
+    graphindexfile.write("<tr><td>" + region_code + " (" + region_name + ") All Routes</td><td><a href=\"" + region_code + "-all-simple.tmg\">" + region_code + "-all-simple.tmg</a></td><td>(" + str(v) + "," + str(e) + ")</td>\n")
     (v, e) = graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/' + region_code + '-all.tmg', [ region_code ], None)
     graphindexfile.write("<td><a href=\"" + region_code + "-all.tmg\">" + region_code + "-all.tmg</a></td><td>(" + str(v) + "," + str(e) + ")</td></tr>\n")
 print("!")
@@ -2671,8 +2675,8 @@ for h in highway_systems:
     if h.devel():
         continue
     print(h.systemname + ' ', end="",flush=True)
-    (v, e) = graph_data.write_subgraph_gra(args.graphfilepath + '/' + h.systemname + '.gra', None, [ h ])
-    graphindexfile.write("<tr><td>" + h.systemname + " (" + h.fullname + ")</td><td><a href=\"" + h.systemname + ".gra\">" + h.systemname + ".gra</a></td><td>(" + str(v) + "," + str(e) + ")</td>\n")
+    (v, e) = graph_data.write_subgraph_tmg_simple(args.graphfilepath + '/' + h.systemname + '-simple.tmg', None, [ h ])
+    graphindexfile.write("<tr><td>" + h.systemname + " (" + h.fullname + ")</td><td><a href=\"" + h.systemname + "-simple.tmg\">" + h.systemname + "-simple.tmg</a></td><td>(" + str(v) + "," + str(e) + ")</td>\n")
     (v, e) = graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/' + h.systemname + '.tmg', None, [ h ])
     graphindexfile.write("<td><a href=\"" + h.systemname + ".tmg\">" + h.systemname + ".tmg</a></td><td>(" + str(v) + "," + str(e) + ")</td></tr>\n")
 print("!")
@@ -2685,8 +2689,8 @@ systems = []
 for h in highway_systems:
     if h.systemname in [ 'usai', 'usaus', 'usaif', 'usaib', 'usausb', 'usansf', 'usasf' ]:
         systems.append(h)
-(v, e) = graph_data.write_subgraph_gra(args.graphfilepath + '/usa-national.gra', None, systems)
-graphindexfile.write("<tr><td>United States National Routes</td><td><a href=\"usa-national.gra\">usa-national.gra</a></td><td>(" + str(v) + "," + str(e) + ")</td>\n")
+(v, e) = graph_data.write_subgraph_tmg_simple(args.graphfilepath + '/usa-national-simple.tmg', None, systems)
+graphindexfile.write("<tr><td>United States National Routes</td><td><a href=\"usa-national-simple.tmg\">usa-national-simple.tmg</a></td><td>(" + str(v) + "," + str(e) + ")</td>\n")
 (v, e) = graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/usa-national.tmg', None, systems)
 graphindexfile.write("<td><a href=\"usa-national.tmg\">usa-national.tmg</a></td><td>(" + str(v) + "," + str(e) + ")</td></tr>\n")
 
@@ -2694,7 +2698,7 @@ graphindexfile.write("<td><a href=\"usa-national.tmg\">usa-national.tmg</a></td>
 #for r in all_regions:
 #    if r[2] == 'USA':
 #        print(r[0] + ' ', end="", flush=True)
-#        graph_data.write_subgraph_gra(args.graphfilepath + '/' + r[0] + '-usa-n#ational.gra', [ r[0] ], systems)
+#        graph_data.write_subgraph_tmg_simple(args.graphfilepath + '/' + r[0] + '-usa-n#ational.gra', [ r[0] ], systems)
 #        graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/' + r[0]# + '-usa-national.tmg', [ r[0] ], systems)
 print("!")
 
@@ -2704,8 +2708,8 @@ systems = []
 for h in highway_systems:
     if h.country == 'USA':
         systems.append(h)
-(v, e) = graph_data.write_subgraph_gra(args.graphfilepath + '/usa-all.gra', None, systems)
-graphindexfile.write("<tr><td>United States All Routes</td><td><a href=\"usa-all.gra\">usa-all.gra</a></td><td>(" + str(v) + "," + str(e) + ")</td>\n")
+(v, e) = graph_data.write_subgraph_tmg_simple(args.graphfilepath + '/usa-all-simple.tmg', None, systems)
+graphindexfile.write("<tr><td>United States All Routes</td><td><a href=\"usa-all-simple.tmg\">usa-all-simple.tmg</a></td><td>(" + str(v) + "," + str(e) + ")</td>\n")
 (v, e) = graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/usa-all.tmg', None, systems)
 graphindexfile.write("<td><a href=\"usa-all.tmg\">usa-all.tmg</a></td><td>(" + str(v) + "," + str(e) + ")</td></tr>\n")
 print("!")
@@ -2716,8 +2720,8 @@ systems = []
 for h in highway_systems:
     if h.country == 'CAN':
         systems.append(h)
-(v, e) = graph_data.write_subgraph_gra(args.graphfilepath + '/canada-all.gra', None, systems)
-graphindexfile.write("<tr><td>Canada All Routes</td><td><a href=\"canada-all.gra\">canada-all.gra</a></td><td>(" + str(v) + "," + str(e) + ")</td>\n")
+(v, e) = graph_data.write_subgraph_tmg_simple(args.graphfilepath + '/canada-all-simple.tmg', None, systems)
+graphindexfile.write("<tr><td>Canada All Routes</td><td><a href=\"canada-all-simple.tmg\">canada-all-simple.tmg</a></td><td>(" + str(v) + "," + str(e) + ")</td>\n")
 (v, e) = graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/canada-all.tmg', None, systems)
 graphindexfile.write("<td><a href=\"canada-all.tmg\">canada-all.tmg</a></td><td>(" + str(v) + "," + str(e) + ")</td></tr>\n")
 print("!")
