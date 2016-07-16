@@ -2581,7 +2581,13 @@ for h in highway_systems:
 print(et.et() + "Setting up for graphs of highway data.", flush=True)
 graph_data = HighwayGraph(all_waypoints, highway_systems, datacheckerrors)
 
-# Also build up a page with a table of information about the graphs we
+print(et.et() + "Writing graph waypoint simplification log.", flush=True)
+logfile = open(args.logfilepath + '/waypointsimplification.log', 'w')
+for line in graph_data.waypoint_naming_log:
+    logfile.write(line + '\n')
+logfile.close()
+
+# Also build up a page with tables of information about the graphs we
 # are generating
 graphindexfile = open(args.graphfilepath+'/index.php', 'w', encoding='utf-8')
 graphindexfile.write("""\
@@ -2601,23 +2607,29 @@ graphindexfile.write("""\
 
 <div class="text"> 
 
-The tables below show many graphs generated from the current <a
-href="http://tm.teresco.org/">Travel Mapping Project</a> data.  You
-may contact <a href="http://j.teresco.org/">the author</a> if you
-would like an archive of some or all of the graphs.  If you do make
-use of these graphs and/or the tools here, please drop a note to <a
+This is the repository of graphs generated from the current <a
+href="/">Travel Mapping Project</a> data.  These were created for use
+in the <a href="http://courses.teresco.org/tm/">Travel Mapping Data as
+a Pedagogical Tool</a> academic project.  You may contact <a
+href="http://j.teresco.org/">the author</a> if you would like an
+archive of some or all of the graphs, or if you have special requests
+for a graph of specific subset of the project's data to be generated.
+If you do decide to make use of these graphs and/or the tools
+described here, please drop a note to <a
 href="http://j.teresco.org/">the author</a>.
 
 </div>
 
 <div class="text">
 
-For each graph, the table below gives the graph name, a brief
-description, number of vertices and edges in both the simple and
-collapsed formats, and links to download the graph files.
-<b>Note:</b> larger graphs greatly tax the Highway Data Explorer and
-the Google Maps API.  They should all work, but large graphs require a
-lot of memory for your browser and some patience.
+For each graph, the tables below gives the graph name, a brief
+description, number of vertices and edges in both the collapsed and
+simple <a
+href="http://courses.teresco.org/tm/graph-formats.shtml">formats</a>,
+and links to download the graph files.  <b>Note:</b> larger graphs
+greatly tax the Highway Data Explorer and the Google Maps API.  They
+should all work, but large graphs require a lot of memory for your
+browser and some patience.
 
 </div>
 
@@ -2630,29 +2642,37 @@ Mapping Project</a> contributors.  Graphs may be downloaded freely for
 academic use.  Other use prohibited.
 
 </div>
-
-<table style="gratable" border="1">
-<thead>
-<tr><th rowspan="2">Graph Description</th><th colspan="2">Simple Format Graph</th><th colspan="2">Collapsed Format Graph</th></tr>
-<tr><th>Download Link</th><th>(|V|,|E|)</th><th>Download Link</th><th>(|V|,|E|)</th></tr></thead>
 """)
 
-print(et.et() + "Writing graph waypoint simplification log.", flush=True)
-logfile = open(args.logfilepath + '/waypointsimplification.log', 'w')
-for line in graph_data.waypoint_naming_log:
-    logfile.write(line + '\n')
-logfile.close()
+# header for each table of graph data
+tableheader = """
+<p />
+<table class="gratable" border="1">
+<thead>
+<tr><th rowspan="2">Graph Description</th><th colspan="2">Collapsed Format Graph</th><th colspan="2">Simple Format Graph</th></tr>
+<tr><th>Download Link</th><th>(|V|,|E|)</th><th>Download Link</th><th>(|V|,|E|)</th></tr></thead>
+"""
+
+# start generating graphs and writing tables of graph data
+graphindexfile.write('<p class="subheading">Graphs of All TM Data</p>\n')
+
+
+graphindexfile.write(tableheader)
 
 print(et.et() + "Writing master TM simple graph file, tm-master-simple.tmg", flush=True)
-(v, e) = graph_data.write_master_tmg_simple(args.graphfilepath+'/tm-master-simple.tmg')
-graphindexfile.write("<tr><td>Master Travel Mapping Data</td><td><a href=\"tm-master-simple.tmg\">tm-master-simple.tmg</a></td><td>(" + str(v) + "," + str(e) + ")</td>\n")
-
+(sv, se) = graph_data.write_master_tmg_simple(args.graphfilepath+'/tm-master-simple.tmg')
 print(et.et() + "Writing master TM collapsed graph file, tm-master.tmg.", flush=True)
-(v, e) = graph_data.write_master_tmg_collapsed(args.graphfilepath+'/tm-master.tmg')
-graphindexfile.write("<td><a href=\"tm-master.tmg\">tm-master.tmg</a></td><td>(" + str(v) + "," + str(e) + ")</td></tr>\n")
+(cv, ce) = graph_data.write_master_tmg_collapsed(args.graphfilepath+'/tm-master.tmg')
+graphindexfile.write("<tr><td>Master Travel Mapping Data</td><td><a href=\"tm-master.tmg\">tm-master.tmg</a></td><td>(" + str(cv) + "," + str(ce) + ")</td><td><a href=\"tm-master-simple.tmg\">tm-master-simple.tmg</a></td><td>(" + str(sv) + "," + str(se) + ")</td></tr>\n")
+
+graphindexfile.write("</table>\n")
+
 
 # Graphs restricted by region
 print(et.et() + "Creating regional data graphs.", flush=True)
+graphindexfile.write('<p class="subheading">Graphs Restricted by Region</p>\n')
+graphindexfile.write(tableheader)
+
 # We will create graph data and a graph file for each region that includes
 # any active or preview systems
 for r in all_regions:
@@ -2661,38 +2681,43 @@ for r in all_regions:
         continue
     region_name = r[1]
     print(region_code + ' ', end="",flush=True)
-    (v, e) = graph_data.write_subgraph_tmg_simple(args.graphfilepath + '/' + region_code + '-all-simple.tmg', [ region_code ], None)
-    graphindexfile.write("<tr><td>" + region_code + " (" + region_name + ") All Routes</td><td><a href=\"" + region_code + "-all-simple.tmg\">" + region_code + "-all-simple.tmg</a></td><td>(" + str(v) + "," + str(e) + ")</td>\n")
-    (v, e) = graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/' + region_code + '-all.tmg', [ region_code ], None)
-    graphindexfile.write("<td><a href=\"" + region_code + "-all.tmg\">" + region_code + "-all.tmg</a></td><td>(" + str(v) + "," + str(e) + ")</td></tr>\n")
+    (sv, se) = graph_data.write_subgraph_tmg_simple(args.graphfilepath + '/' + region_code + '-all-simple.tmg', [ region_code ], None)
+    (cv, ce) = graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/' + region_code + '-all.tmg', [ region_code ], None)
+    graphindexfile.write("<tr><td>" + region_code + " (" + region_name + ") All Routes</td><td><a href=\"" + region_code + "-all.tmg\">" + region_code + "-all.tmg</a></td><td>(" + str(cv) + "," + str(ce) + ")</td><td><a href=\"" + region_code + "-all-simple.tmg\">" + region_code + "-all-simple.tmg</a></td><td>(" + str(sv) + "," + str(se) + ")</td></tr>\n")
 print("!")
+
+graphindexfile.write("</table>\n")
 
 # Graphs restricted by system
 print(et.et() + "Creating system data graphs.", flush=True)
+graphindexfile.write('<p class="subheading">Graphs Restricted by Highway System</p>\n')
+graphindexfile.write(tableheader)
 # We will create graph data and a graph file for each active or
 # preview system
 for h in highway_systems:
     if h.devel():
         continue
     print(h.systemname + ' ', end="",flush=True)
-    (v, e) = graph_data.write_subgraph_tmg_simple(args.graphfilepath + '/' + h.systemname + '-simple.tmg', None, [ h ])
-    graphindexfile.write("<tr><td>" + h.systemname + " (" + h.fullname + ")</td><td><a href=\"" + h.systemname + "-simple.tmg\">" + h.systemname + "-simple.tmg</a></td><td>(" + str(v) + "," + str(e) + ")</td>\n")
-    (v, e) = graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/' + h.systemname + '.tmg', None, [ h ])
-    graphindexfile.write("<td><a href=\"" + h.systemname + ".tmg\">" + h.systemname + ".tmg</a></td><td>(" + str(v) + "," + str(e) + ")</td></tr>\n")
+    (sv, se) = graph_data.write_subgraph_tmg_simple(args.graphfilepath + '/' + h.systemname + '-simple.tmg', None, [ h ])
+    (cv, ce) = graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/' + h.systemname + '.tmg', None, [ h ])
+    graphindexfile.write("<tr><td>" + h.systemname + " (" + h.fullname + ")</td><td><a href=\"" + h.systemname + ".tmg\">" + h.systemname + ".tmg</a></td><td>(" + str(cv) + "," + str(ce) + ")</td><td><a href=\"" + h.systemname + "-simple.tmg\">" + h.systemname + "-simple.tmg</a></td><td>(" + str(sv) + "," + str(se) + ")</td></tr>\n")
 print("!")
+
+graphindexfile.write("</table>\n")
 
 # Some additional interesting graphs
 print(et.et() + "Creating additional graphs.", flush=True)
+graphindexfile.write('<p class="subheading">Additional Interesting Graphs</p>\n')
+graphindexfile.write(tableheader)
 # U.S. national systems
 print("usa-national ", end="", flush=True)
 systems = []
 for h in highway_systems:
     if h.systemname in [ 'usai', 'usaus', 'usaif', 'usaib', 'usausb', 'usansf', 'usasf' ]:
         systems.append(h)
-(v, e) = graph_data.write_subgraph_tmg_simple(args.graphfilepath + '/usa-national-simple.tmg', None, systems)
-graphindexfile.write("<tr><td>United States National Routes</td><td><a href=\"usa-national-simple.tmg\">usa-national-simple.tmg</a></td><td>(" + str(v) + "," + str(e) + ")</td>\n")
-(v, e) = graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/usa-national.tmg', None, systems)
-graphindexfile.write("<td><a href=\"usa-national.tmg\">usa-national.tmg</a></td><td>(" + str(v) + "," + str(e) + ")</td></tr>\n")
+(sv, se) = graph_data.write_subgraph_tmg_simple(args.graphfilepath + '/usa-national-simple.tmg', None, systems)
+(cv, ce) = graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/usa-national.tmg', None, systems)
+graphindexfile.write("<tr><td>United States National Routes</td><td><a href=\"usa-national.tmg\">usa-national.tmg</a></td><td>(" + str(cv) + "," + str(ce) + ")</td><td><a href=\"usa-national-simple.tmg\">usa-national-simple.tmg</a></td><td>(" + str(sv) + "," + str(se) + ")</td></tr>\n")
 
 #print("by region ", end="", flush=True)
 #for r in all_regions:
@@ -2708,10 +2733,9 @@ systems = []
 for h in highway_systems:
     if h.country == 'USA':
         systems.append(h)
-(v, e) = graph_data.write_subgraph_tmg_simple(args.graphfilepath + '/usa-all-simple.tmg', None, systems)
-graphindexfile.write("<tr><td>United States All Routes</td><td><a href=\"usa-all-simple.tmg\">usa-all-simple.tmg</a></td><td>(" + str(v) + "," + str(e) + ")</td>\n")
-(v, e) = graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/usa-all.tmg', None, systems)
-graphindexfile.write("<td><a href=\"usa-all.tmg\">usa-all.tmg</a></td><td>(" + str(v) + "," + str(e) + ")</td></tr>\n")
+(sv, se) = graph_data.write_subgraph_tmg_simple(args.graphfilepath + '/usa-all-simple.tmg', None, systems)
+(cv, ce) = graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/usa-all.tmg', None, systems)
+graphindexfile.write("<tr><td>United States All Routes</td><td><a href=\"usa-all.tmg\">usa-all.tmg</a></td><td>(" + str(cv) + "," + str(ce) + ")</td><td><a href=\"usa-all-simple.tmg\">usa-all-simple.tmg</a></td><td>(" + str(sv) + "," + str(se) + ")</td></tr>\n")
 print("!")
 
 # Canada all routes
@@ -2720,10 +2744,9 @@ systems = []
 for h in highway_systems:
     if h.country == 'CAN':
         systems.append(h)
-(v, e) = graph_data.write_subgraph_tmg_simple(args.graphfilepath + '/canada-all-simple.tmg', None, systems)
-graphindexfile.write("<tr><td>Canada All Routes</td><td><a href=\"canada-all-simple.tmg\">canada-all-simple.tmg</a></td><td>(" + str(v) + "," + str(e) + ")</td>\n")
-(v, e) = graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/canada-all.tmg', None, systems)
-graphindexfile.write("<td><a href=\"canada-all.tmg\">canada-all.tmg</a></td><td>(" + str(v) + "," + str(e) + ")</td></tr>\n")
+(sv, se) = graph_data.write_subgraph_tmg_simple(args.graphfilepath + '/canada-all-simple.tmg', None, systems)
+(cv, ce) = graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/canada-all.tmg', None, systems)
+graphindexfile.write("<tr><td>Canada All Routes</td><td><a href=\"canada-all.tmg\">canada-all.tmg</a></td><td>(" + str(cv) + "," + str(ce) + ")</td><td><a href=\"canada-all-simple.tmg\">canada-all-simple.tmg</a></td><td>(" + str(sv) + "," + str(se) + ")</td></tr>\n")
 print("!")
 
 graphindexfile.write("""\
