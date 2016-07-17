@@ -1668,7 +1668,8 @@ parser.add_argument("-d", "--databasename", default="TravelMapping", \
                         help="Database name for mysql 'USE' statement and .sql file name")
 parser.add_argument("-l", "--logfilepath", default=".", help="Path to write log files")
 parser.add_argument("-c", "--csvstatfilepath", default=".", help="Path to write csv statistics files")
-parser.add_argument("-g", "--graphfilepath", default="", help="Path to write graph format data files")
+parser.add_argument("-g", "--graphfilepath", default=".", help="Path to write graph format data files")
+parser.add_argument("-n", "--nmpmergepath", default="", help="Path to write data with NMPs merged (generated only if specified)")
 args = parser.parse_args()
 
 #
@@ -1830,13 +1831,27 @@ unprocessedfile.close()
 
 # Near-miss point log
 print(et.et() + "Near-miss point log and tm-master.nmp file.", flush=True)
+
+# read in fp file
+nmpfplist = []
+nmpfpfile = open(args.highwaydatapath+'/nmpfps.log','r')
+nmpfilelines = nmpfpfile.readlines()
+for line in nmpfilelines:
+    if len(line.rstrip('\n')) > 0:
+        nmpfplist.append(line.rstrip('\n'))
+nmpfpfile.close()
+
 nmpfile = open(args.logfilepath+'/nearmisspoints.log','w')
 nmpnmp = open(args.graphfilepath+'/tm-master.nmp','w')
 for w in all_waypoints.point_list():
     if w.near_miss_points is not None:
-        nmpfile.write(str(w) + " NMP ")
+        nmpline = str(w) + " NMP "
+        nmplooksintentional = False
         for other_w in w.near_miss_points:
-            nmpfile.write(str(other_w) + " ")
+            if (abs(w.lat - other_w.lat) < 0.0000015) and \
+               (abs(w.lng - other_w.lng) < 0.0000015):
+                nmplooksintentional = True
+            nmpline += str(other_w) + " "
             w_label = w.route.root + "@" + w.label
             other_label = other_w.route.root + "@" + other_w.label
             # make sure we only plot once, since the NMP should be listed
@@ -1844,9 +1859,50 @@ for w in all_waypoints.point_list():
             if w_label < other_label:
                 nmpnmp.write(w_label + " " + str(w.lat) + " " + str(w.lng) + "\n")
                 nmpnmp.write(other_label + " " + str(other_w.lat) + " " + str(other_w.lng) + "\n")
-        nmpfile.write('\n')
+        # indicate if this was in the FP list or if it's off by exact amt
+        # so looks like it's intentional, and detach near_miss_points list
+        # so it doesn't get a rewrite
+        if nmpline in nmpfplist:
+            nmpline += "[MARKED FP]"
+            w.near_miss_points = None
+        if nmplooksintentional:
+            nmpline += "[LOOKS INTENTIONAL]"
+            w.near_miss_points = None
+        nmpfile.write(nmpline + '\n')
 nmpfile.close()
 nmpnmp.close()
+
+# if requested, rewrite data with near-miss points merged in
+if args.nmpmergepath != "":
+    print(et.et() + "Writing near-miss point merged wpt files.", flush=True)
+    for h in highway_systems:
+        print(h.systemname, end="", flush=True)
+        for r in h.route_list:
+            wptpath = args.nmpmergepath + "/" + r.region + "/" + h.systemname
+            os.makedirs(wptpath, exist_ok=True)
+            wptfile = open(wptpath + "/" + r.root + ".wpt", "wt")
+            for w in r.point_list:
+                wptfile.write(w.label + ' ')
+                for a in w.alt_labels:
+                    wptfile.write(a + ' ')
+                if w.near_miss_points is None:
+                    wptfile.write("http://www.openstreetmap.org/?lat={0:.6f}".format(w.lat) + "&lon={0:.6f}".format(w.lng) + "\n")
+                else:
+                    # for now, arbitrarily choose the northernmost
+                    # latitude and westernmost longitude values in the
+                    # list and denote a "merged" point with the https
+                    lat = w.lat
+                    lng = w.lng
+                    for other_w in w.near_miss_points:
+                        if other_w.lat > lat:
+                            lat = other_w.lat
+                        if other_w.lng > lng:
+                            lng = other_w.lng
+                    wptfile.write("https://www.openstreetmap.org/?lat={0:.6f}".format(lat) + "&lon={0:.6f}".format(lng) + "\n")
+
+            wptfile.close()
+        print(".", end="", flush=True)
+    print()
 
 # data check: visit each system and route and check for various problems
 print(et.et() + "Performing data checks.", flush=True)
