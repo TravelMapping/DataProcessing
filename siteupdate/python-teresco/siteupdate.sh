@@ -15,7 +15,8 @@ if [ $# -eq 1 ]; then
 fi
 if [ "$read_data" == "1" ]; then
   echo "siteupdate.sh: launching siteupdate.py"
-  ./siteupdate.py -l $logdir -c $statdir -g $graphdir -n $nmpmerged | tee $logdir/siteupdate.log 2>&1
+  # Remove -k to generate new version of graphs
+  ./siteupdate.py -k -l $logdir -c $statdir -g $graphdir -n $nmpmerged | tee $logdir/siteupdate.log 2>&1
 else
   echo "siteupdate.sh: SKIPPING siteupdate.py"
 fi

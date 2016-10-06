@@ -1669,6 +1669,7 @@ parser.add_argument("-d", "--databasename", default="TravelMapping", \
 parser.add_argument("-l", "--logfilepath", default=".", help="Path to write log files")
 parser.add_argument("-c", "--csvstatfilepath", default=".", help="Path to write csv statistics files")
 parser.add_argument("-g", "--graphfilepath", default=".", help="Path to write graph format data files")
+parser.add_argument("-k", "--skipgraphs", action="store_true", help="Turn off generation of graph files")
 parser.add_argument("-n", "--nmpmergepath", default="", help="Path to write data with NMPs merged (generated only if specified)")
 args = parser.parse_args()
 
@@ -2634,19 +2635,22 @@ for h in highway_systems:
 
 # Build a graph structure out of all highway data in active and
 # preview systems
-print(et.et() + "Setting up for graphs of highway data.", flush=True)
-graph_data = HighwayGraph(all_waypoints, highway_systems, datacheckerrors)
+if args.skipgraphs:
+    print(et.et() + "SKIPPING generation of graphs.", flush=True)
+else:
+    print(et.et() + "Setting up for graphs of highway data.", flush=True)
+    graph_data = HighwayGraph(all_waypoints, highway_systems, datacheckerrors)
 
-print(et.et() + "Writing graph waypoint simplification log.", flush=True)
-logfile = open(args.logfilepath + '/waypointsimplification.log', 'w')
-for line in graph_data.waypoint_naming_log:
-    logfile.write(line + '\n')
-logfile.close()
+    print(et.et() + "Writing graph waypoint simplification log.", flush=True)
+    logfile = open(args.logfilepath + '/waypointsimplification.log', 'w')
+    for line in graph_data.waypoint_naming_log:
+        logfile.write(line + '\n')
+    logfile.close()
 
-# Also build up a page with tables of information about the graphs we
-# are generating
-graphindexfile = open(args.graphfilepath+'/index.php', 'w', encoding='utf-8')
-graphindexfile.write("""\
+    # Also build up a page with tables of information about the graphs we
+    # are generating
+    graphindexfile = open(args.graphfilepath+'/index.php', 'w', encoding='utf-8')
+    graphindexfile.write("""\
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en">
 <head>
@@ -2700,8 +2704,8 @@ academic use.  Other use prohibited.
 </div>
 """)
 
-# header for each table of graph data
-tableheader = """
+    # header for each table of graph data
+    tableheader = """
 <p />
 <table class="gratable" border="1">
 <thead>
@@ -2709,71 +2713,70 @@ tableheader = """
 <tr><th>Download Link</th><th>(|V|,|E|)</th><th>Download Link</th><th>(|V|,|E|)</th></tr></thead>
 """
 
-# start generating graphs and writing tables of graph data
-graphindexfile.write('<p class="subheading">Graphs of All TM Data</p>\n')
+    # start generating graphs and writing tables of graph data
+    graphindexfile.write('<p class="subheading">Graphs of All TM Data</p>\n')
+
+    graphindexfile.write(tableheader)
+
+    print(et.et() + "Writing master TM simple graph file, tm-master-simple.tmg", flush=True)
+    (sv, se) = graph_data.write_master_tmg_simple(args.graphfilepath+'/tm-master-simple.tmg')
+    print(et.et() + "Writing master TM collapsed graph file, tm-master.tmg.", flush=True)
+    (cv, ce) = graph_data.write_master_tmg_collapsed(args.graphfilepath+'/tm-master.tmg')
+    graphindexfile.write("<tr><td>Master Travel Mapping Data</td><td><a href=\"tm-master.tmg\">tm-master.tmg</a></td><td>(" + str(cv) + "," + str(ce) + ")</td><td><a href=\"tm-master-simple.tmg\">tm-master-simple.tmg</a></td><td>(" + str(sv) + "," + str(se) + ")</td></tr>\n")
+
+    graphindexfile.write("</table>\n")
 
 
-graphindexfile.write(tableheader)
+    # Graphs restricted by region
+    print(et.et() + "Creating regional data graphs.", flush=True)
+    graphindexfile.write('<p class="subheading">Graphs Restricted by Region</p>\n')
+    graphindexfile.write(tableheader)
 
-print(et.et() + "Writing master TM simple graph file, tm-master-simple.tmg", flush=True)
-(sv, se) = graph_data.write_master_tmg_simple(args.graphfilepath+'/tm-master-simple.tmg')
-print(et.et() + "Writing master TM collapsed graph file, tm-master.tmg.", flush=True)
-(cv, ce) = graph_data.write_master_tmg_collapsed(args.graphfilepath+'/tm-master.tmg')
-graphindexfile.write("<tr><td>Master Travel Mapping Data</td><td><a href=\"tm-master.tmg\">tm-master.tmg</a></td><td>(" + str(cv) + "," + str(ce) + ")</td><td><a href=\"tm-master-simple.tmg\">tm-master-simple.tmg</a></td><td>(" + str(sv) + "," + str(se) + ")</td></tr>\n")
+    # We will create graph data and a graph file for each region that includes
+    # any active or preview systems
+    for r in all_regions:
+        region_code = r[0]
+        if region_code not in active_preview_mileage_by_region:
+            continue
+        region_name = r[1]
+        print(region_code + ' ', end="",flush=True)
+        (sv, se) = graph_data.write_subgraph_tmg_simple(args.graphfilepath + '/' + region_code + '-all-simple.tmg', [ region_code ], None)
+        (cv, ce) = graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/' + region_code + '-all.tmg', [ region_code ], None)
+        graphindexfile.write("<tr><td>" + region_code + " (" + region_name + ") All Routes</td><td><a href=\"" + region_code + "-all.tmg\">" + region_code + "-all.tmg</a></td><td>(" + str(cv) + "," + str(ce) + ")</td><td><a href=\"" + region_code + "-all-simple.tmg\">" + region_code + "-all-simple.tmg</a></td><td>(" + str(sv) + "," + str(se) + ")</td></tr>\n")
+        print("!")
 
-graphindexfile.write("</table>\n")
+    graphindexfile.write("</table>\n")
 
+    # Graphs restricted by system
+    print(et.et() + "Creating system data graphs.", flush=True)
+    graphindexfile.write('<p class="subheading">Graphs Restricted by Highway System</p>\n')
+    graphindexfile.write(tableheader)
+    # We will create graph data and a graph file for each active or
+    # preview system
+    for h in highway_systems:
+        if h.devel():
+            continue
+        print(h.systemname + ' ', end="",flush=True)
+        (sv, se) = graph_data.write_subgraph_tmg_simple(args.graphfilepath + '/' + h.systemname + '-simple.tmg', None, [ h ])
+        (cv, ce) = graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/' + h.systemname + '.tmg', None, [ h ])
+        graphindexfile.write("<tr><td>" + h.systemname + " (" + h.fullname + ")</td><td><a href=\"" + h.systemname + ".tmg\">" + h.systemname + ".tmg</a></td><td>(" + str(cv) + "," + str(ce) + ")</td><td><a href=\"" + h.systemname + "-simple.tmg\">" + h.systemname + "-simple.tmg</a></td><td>(" + str(sv) + "," + str(se) + ")</td></tr>\n")
+    print("!")
 
-# Graphs restricted by region
-print(et.et() + "Creating regional data graphs.", flush=True)
-graphindexfile.write('<p class="subheading">Graphs Restricted by Region</p>\n')
-graphindexfile.write(tableheader)
+    graphindexfile.write("</table>\n")
 
-# We will create graph data and a graph file for each region that includes
-# any active or preview systems
-for r in all_regions:
-    region_code = r[0]
-    if region_code not in active_preview_mileage_by_region:
-        continue
-    region_name = r[1]
-    print(region_code + ' ', end="",flush=True)
-    (sv, se) = graph_data.write_subgraph_tmg_simple(args.graphfilepath + '/' + region_code + '-all-simple.tmg', [ region_code ], None)
-    (cv, ce) = graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/' + region_code + '-all.tmg', [ region_code ], None)
-    graphindexfile.write("<tr><td>" + region_code + " (" + region_name + ") All Routes</td><td><a href=\"" + region_code + "-all.tmg\">" + region_code + "-all.tmg</a></td><td>(" + str(cv) + "," + str(ce) + ")</td><td><a href=\"" + region_code + "-all-simple.tmg\">" + region_code + "-all-simple.tmg</a></td><td>(" + str(sv) + "," + str(se) + ")</td></tr>\n")
-print("!")
-
-graphindexfile.write("</table>\n")
-
-# Graphs restricted by system
-print(et.et() + "Creating system data graphs.", flush=True)
-graphindexfile.write('<p class="subheading">Graphs Restricted by Highway System</p>\n')
-graphindexfile.write(tableheader)
-# We will create graph data and a graph file for each active or
-# preview system
-for h in highway_systems:
-    if h.devel():
-        continue
-    print(h.systemname + ' ', end="",flush=True)
-    (sv, se) = graph_data.write_subgraph_tmg_simple(args.graphfilepath + '/' + h.systemname + '-simple.tmg', None, [ h ])
-    (cv, ce) = graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/' + h.systemname + '.tmg', None, [ h ])
-    graphindexfile.write("<tr><td>" + h.systemname + " (" + h.fullname + ")</td><td><a href=\"" + h.systemname + ".tmg\">" + h.systemname + ".tmg</a></td><td>(" + str(cv) + "," + str(ce) + ")</td><td><a href=\"" + h.systemname + "-simple.tmg\">" + h.systemname + "-simple.tmg</a></td><td>(" + str(sv) + "," + str(se) + ")</td></tr>\n")
-print("!")
-
-graphindexfile.write("</table>\n")
-
-# Some additional interesting graphs
-print(et.et() + "Creating additional graphs.", flush=True)
-graphindexfile.write('<p class="subheading">Additional Interesting Graphs</p>\n')
-graphindexfile.write(tableheader)
-# U.S. national systems
-print("usa-national ", end="", flush=True)
-systems = []
-for h in highway_systems:
-    if h.systemname in [ 'usai', 'usaus', 'usaif', 'usaib', 'usausb', 'usansf', 'usasf' ]:
-        systems.append(h)
-(sv, se) = graph_data.write_subgraph_tmg_simple(args.graphfilepath + '/usa-national-simple.tmg', None, systems)
-(cv, ce) = graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/usa-national.tmg', None, systems)
-graphindexfile.write("<tr><td>United States National Routes</td><td><a href=\"usa-national.tmg\">usa-national.tmg</a></td><td>(" + str(cv) + "," + str(ce) + ")</td><td><a href=\"usa-national-simple.tmg\">usa-national-simple.tmg</a></td><td>(" + str(sv) + "," + str(se) + ")</td></tr>\n")
+    # Some additional interesting graphs
+    print(et.et() + "Creating additional graphs.", flush=True)
+    graphindexfile.write('<p class="subheading">Additional Interesting Graphs</p>\n')
+    graphindexfile.write(tableheader)
+    # U.S. national systems
+    print("usa-national ", end="", flush=True)
+    systems = []
+    for h in highway_systems:
+        if h.systemname in [ 'usai', 'usaus', 'usaif', 'usaib', 'usausb', 'usansf', 'usasf' ]:
+            systems.append(h)
+    (sv, se) = graph_data.write_subgraph_tmg_simple(args.graphfilepath + '/usa-national-simple.tmg', None, systems)
+    (cv, ce) = graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/usa-national.tmg', None, systems)
+    graphindexfile.write("<tr><td>United States National Routes</td><td><a href=\"usa-national.tmg\">usa-national.tmg</a></td><td>(" + str(cv) + "," + str(ce) + ")</td><td><a href=\"usa-national-simple.tmg\">usa-national-simple.tmg</a></td><td>(" + str(sv) + "," + str(se) + ")</td></tr>\n")
 
 #print("by region ", end="", flush=True)
 #for r in all_regions:
@@ -2781,31 +2784,31 @@ graphindexfile.write("<tr><td>United States National Routes</td><td><a href=\"us
 #        print(r[0] + ' ', end="", flush=True)
 #        graph_data.write_subgraph_tmg_simple(args.graphfilepath + '/' + r[0] + '-usa-n#ational.gra', [ r[0] ], systems)
 #        graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/' + r[0]# + '-usa-national.tmg', [ r[0] ], systems)
-print("!")
+    print("!")
 
-# U.S. all routes
-print("usa-all ", end="", flush=True)
-systems = []
-for h in highway_systems:
-    if h.country == 'USA':
-        systems.append(h)
-(sv, se) = graph_data.write_subgraph_tmg_simple(args.graphfilepath + '/usa-all-simple.tmg', None, systems)
-(cv, ce) = graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/usa-all.tmg', None, systems)
-graphindexfile.write("<tr><td>United States All Routes</td><td><a href=\"usa-all.tmg\">usa-all.tmg</a></td><td>(" + str(cv) + "," + str(ce) + ")</td><td><a href=\"usa-all-simple.tmg\">usa-all-simple.tmg</a></td><td>(" + str(sv) + "," + str(se) + ")</td></tr>\n")
-print("!")
+    # U.S. all routes
+    print("usa-all ", end="", flush=True)
+    systems = []
+    for h in highway_systems:
+        if h.country == 'USA':
+            systems.append(h)
+    (sv, se) = graph_data.write_subgraph_tmg_simple(args.graphfilepath + '/usa-all-simple.tmg', None, systems)
+    (cv, ce) = graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/usa-all.tmg', None, systems)
+    graphindexfile.write("<tr><td>United States All Routes</td><td><a href=\"usa-all.tmg\">usa-all.tmg</a></td><td>(" + str(cv) + "," + str(ce) + ")</td><td><a href=\"usa-all-simple.tmg\">usa-all-simple.tmg</a></td><td>(" + str(sv) + "," + str(se) + ")</td></tr>\n")
+    print("!")
 
-# Canada all routes
-print("canada-all ", end="", flush=True)
-systems = []
-for h in highway_systems:
-    if h.country == 'CAN':
-        systems.append(h)
-(sv, se) = graph_data.write_subgraph_tmg_simple(args.graphfilepath + '/canada-all-simple.tmg', None, systems)
-(cv, ce) = graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/canada-all.tmg', None, systems)
-graphindexfile.write("<tr><td>Canada All Routes</td><td><a href=\"canada-all.tmg\">canada-all.tmg</a></td><td>(" + str(cv) + "," + str(ce) + ")</td><td><a href=\"canada-all-simple.tmg\">canada-all-simple.tmg</a></td><td>(" + str(sv) + "," + str(se) + ")</td></tr>\n")
-print("!")
+    # Canada all routes
+    print("canada-all ", end="", flush=True)
+    systems = []
+    for h in highway_systems:
+        if h.country == 'CAN':
+            systems.append(h)
+    (sv, se) = graph_data.write_subgraph_tmg_simple(args.graphfilepath + '/canada-all-simple.tmg', None, systems)
+    (cv, ce) = graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/canada-all.tmg', None, systems)
+    graphindexfile.write("<tr><td>Canada All Routes</td><td><a href=\"canada-all.tmg\">canada-all.tmg</a></td><td>(" + str(cv) + "," + str(ce) + ")</td><td><a href=\"canada-all-simple.tmg\">canada-all-simple.tmg</a></td><td>(" + str(sv) + "," + str(se) + ")</td></tr>\n")
+    print("!")
 
-graphindexfile.write("""\
+    graphindexfile.write("""\
 </table>
 <p class="text">
 The most recent site update including graph generation completed at <?php echo tm_update_time(); ?> US/Eastern.
@@ -2818,7 +2821,8 @@ The most recent site update including graph generation completed at <?php echo t
 ?>
 </html>
 """)
-graphindexfile.close()
+    graphindexfile.close()
+    #else for skipgraphs ends here
 
 print(et.et() + "Writing database file " + args.databasename + ".sql.")
 # Once all data is read in and processed, create a .sql file that will 
