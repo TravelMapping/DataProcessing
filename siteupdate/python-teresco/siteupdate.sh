@@ -15,6 +15,7 @@ if [ $# -eq 1 ]; then
 fi
 if [ "$read_data" == "1" ]; then
   echo "siteupdate.sh: launching siteupdate.py"
+  # Add -k to prevent generation of new version of graphs
   # Remove -k to generate new version of graphs
   ./siteupdate.py -k -l $logdir -c $statdir -g $graphdir -n $nmpmerged | tee $logdir/siteupdate.log 2>&1
 else

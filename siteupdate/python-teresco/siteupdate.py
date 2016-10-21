@@ -2669,13 +2669,13 @@ else:
 
 This is the repository of graphs generated from the current <a
 href="/">Travel Mapping Project</a> data.  These were created for use
-in the <a href="http://courses.teresco.org/tm/">Travel Mapping Data as
-a Pedagogical Tool</a> academic project.  You may contact <a
-href="http://j.teresco.org/">the author</a> if you would like an
-archive of some or all of the graphs, or if you have special requests
-for a graph of specific subset of the project's data to be generated.
-If you do decide to make use of these graphs and/or the tools
-described here, please drop a note to <a
+in the <a href="http://courses.teresco.org/metal/">Map-based
+Educational Tools for Algorithm Learning (METAL)</a> academic project.
+You may contact <a href="http://j.teresco.org/">the author</a> if you
+would like an archive of some or all of the graphs, or if you have
+special requests for a graph of specific subset of the project's data
+to be generated.  If you do decide to make use of these graphs and/or
+the tools described here, please drop a note to <a
 href="http://j.teresco.org/">the author</a>.
 
 </div>
@@ -2685,7 +2685,7 @@ href="http://j.teresco.org/">the author</a>.
 For each graph, the tables below gives the graph name, a brief
 description, number of vertices and edges in both the collapsed and
 simple <a
-href="http://courses.teresco.org/tm/graph-formats.shtml">formats</a>,
+href="http://courses.teresco.org/metal/graph-formats.shtml">formats</a>,
 and links to download the graph files.  <b>Note:</b> larger graphs
 greatly tax the Highway Data Examiner and the Google Maps API.  They
 should all work, but large graphs require a lot of memory for your
