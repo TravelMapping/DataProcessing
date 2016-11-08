@@ -2693,6 +2693,14 @@ browser and some patience.
 
 </div>
 
+<div class="text">
+
+If you would like a local copy of all of the latest graphs, you can
+download <a href="../graphs.zip">a zip archive of all of them</a>.
+Beware that this is a large file!
+
+</div>
+
 <div class="text"> 
 
 Graphs are copyright &copy; <a href="http://j.teresco.org/">James
