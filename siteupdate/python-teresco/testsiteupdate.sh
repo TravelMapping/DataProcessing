@@ -17,7 +17,7 @@ if [ "$read_data" == "1" ]; then
   echo "testsiteupdate.sh: launching siteupdate.py"
   #./siteupdate.py -w ../../../../HighwayData -d TravelMappingTest -s smallsystems.csv -u a_few_lists -l $logdir -c $statdir | tee $logdir/testsiteupdate.log 2>&1
   #./siteupdate.py -k -w ../../../../HighwayData -s systems.csv -d TravelMappingTest -g $graphdir -u . -l $logdir -c $statdir | tee $logdir/testsiteupdate.log 2>&1
-  ./siteupdate.py -k -s railsystems.csv -d TravelMappingTest -g $graphdir -l $logdir -c $statdir | tee $logdir/testsiteupdate.log 2>&1
+  ./siteupdate.py -k -s cypa-only.csv -d TravelMappingTest -g $graphdir -l $logdir -c $statdir | tee $logdir/testsiteupdate.log 2>&1
   #./siteupdate.py -w ../../../../HighwayData -d TravelMappingTest -u ../../../../UserData/list_files -l $logdir -c $statdir | tee $logdir/testsiteupdate.log 2>&1
 else
   echo "testsiteupdate.sh: SKIPPING siteupdate.py"

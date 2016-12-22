@@ -13,7 +13,7 @@ if [ $# -eq 1 ]; then
 fi
 if [ "$read_data" == "1" ]; then
   echo "devsiteupdate.sh: launching siteupdate.py"
-  ./siteupdate.py -d TravelMappingDev -i active,preview -l $logdir -c $statdir
+  ./siteupdate.py -s cypa-only.csv -k -d TravelMappingDev -i active,preview -l $logdir -c $statdir | tee $logdir/devsiteupdate.log 2>&1
 else
   echo "devsiteupdate.sh: SKIPPING siteupdate.py"
 fi
@@ -28,11 +28,11 @@ ssh blizzard.teresco.org bunzip2 -f /tmp/TravelMappingDev.sql.bz2
 echo "devsiteupdate.sh: sending mysql update to run on blizzard"
 ssh blizzard.teresco.org "mysql --defaults-group-suffix=tmapadmin -u travmapadmin TravelMappingDev < /tmp/TravelMappingDev.sql"
 echo "devsiteupdate.sh: complete"
-echo "devsiteupdate.sh: sending email notification"
-mailx -s "Travel Mapping Site Update (with preview systems) Complete" travelmapping-siteupdates@teresco.org <<EOF
-A Travel Mapping site update that includes the preview systems
-has just successfully completed.
-The complete log is available at http://tm.teresco.org/devlogs/siteupdate.log .
-Please report any problems to travmap@teresco.org .
-EOF
+#echo "devsiteupdate.sh: sending email notification"
+#mailx -s "Travel Mapping Site Update (with preview systems) Complete" travelmapping-siteupdates@teresco.org <<EOF
+#A Travel Mapping site update that includes the preview systems
+#has just successfully completed.
+#The complete log is available at http://tm.teresco.org/devlogs/siteupdate.log .
+#Please report any problems to travmap@teresco.org .
+#EOF
 date
