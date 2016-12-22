@@ -2934,12 +2934,13 @@ sqlfile.write(";\n")
 # This table has remaining roots for any connected route 
 # that connects multiple routes/roots
 sqlfile.write('CREATE TABLE connectedRouteRoots (firstRoot VARCHAR(32), root VARCHAR(32), FOREIGN KEY (firstRoot) REFERENCES connectedRoutes(firstRoot));\n')
-sqlfile.write('INSERT INTO connectedRouteRoots VALUES\n')
 first = True
 for h in highway_systems:
     for cr in h.con_route_list:
         if len(cr.roots) > 1:
             for i in range(1,len(cr.roots)):
+                if first:
+                    sqlfile.write('INSERT INTO connectedRouteRoots VALUES\n')
                 if not first:
                     sqlfile.write(",")
                 first = False
