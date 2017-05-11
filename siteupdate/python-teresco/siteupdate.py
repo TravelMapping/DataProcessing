@@ -1769,10 +1769,20 @@ for h in highway_systems:
 con_roots = []
 for h in highway_systems:
     for r in h.con_route_list:
-        if r.roots[0].root in con_roots:
-            print("ERROR: Duplicate root in con_route lists: " + r.roots[0].root)
-        else:
-            con_roots.append(r.roots[0].root)
+        for cr in r.roots:
+            if cr.root in con_roots:
+                print("ERROR: Duplicate root in con_route lists: " + cr.root)
+            else:
+                con_roots.append(cr.root)
+# Make sure every route was listed as a part of some connected route
+if len(roots) == len(con_roots):
+    print("Check passed: same number of routes as connected route roots. " + str(len(roots)))
+else:
+    print("Check FAILED: " + str(len(roots)) + " routes != " + str(len(con_roots)) + " connected route roots.")
+    for r in con_roots:
+        roots.remove(r)
+    for r in roots:
+        print("ERROR: route " + r + " not matched by any connected route root.")
 
 # write file mapping CHM datacheck route lists to root (commented out,
 # unlikely needed now)
