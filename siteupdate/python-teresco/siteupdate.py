@@ -956,7 +956,7 @@ class DatacheckEntry:
     LABEL_UNDERSCORES, VISIBLE_DISTANCE, LABEL_PARENS, LACKS_GENERIC,
     EXIT0, EXIT999, BUS_WITH_I, NONTERMINAL_UNDERSCORE,
     LONG_UNDERSCORE, LABEL_SLASHES, US_BANNER, VISIBLE_HIDDEN_COLOC,
-    HIDDEN_JUNCTION, LABEL_LOOKS_HIDDEN
+    HIDDEN_JUNCTION, LABEL_LOOKS_HIDDEN, ROUTE_NOT_IN_CONNECTED
 
     info is additional information, at this time either a distance (in
     miles) for a long segment error, an angle (in degrees) for a sharp
@@ -1756,6 +1756,9 @@ print("")
 for line in ignoring:
     print(line)
 
+# list for datacheck errors that we will need later
+datacheckerrors = []
+
 # check for duplicate root entries among Route and ConnectedRoute
 # data in all highway systems
 print(et.et() + "Checking for duplicate root in routes and connected routes.", flush=True)
@@ -1778,11 +1781,21 @@ for h in highway_systems:
 if len(roots) == len(con_roots):
     print("Check passed: same number of routes as connected route roots. " + str(len(roots)))
 else:
-    print("Check FAILED: " + str(len(roots)) + " routes != " + str(len(con_roots)) + " connected route roots.")
+    print("Check FAILED: " + str(len(roots)) + " routes != " + str(len(con_roots)) + " connected route roots, see datacheck.")
     for r in con_roots:
         roots.remove(r)
-    for r in roots:
-        print("ERROR: route " + r + " not matched by any connected route root.")
+    # there will be some leftovers, let's look up their routes to make
+    # a datacheck entry
+    num_found = 0
+    for h in highway_systems:
+        for r in h.route_list:
+            for lr in roots:
+                #print("ERROR: route " + lr + " not matched by any connected route root.")
+                if lr == r.root:
+                    datacheckerrors.append(DatacheckEntry(r,[],"ROUTE_NOT_IN_CONNECTED"))
+                    num_found += 1
+                    break
+    print("Added " + str(num_found) + " ROUTE_NOT_IN_CONNECTED datacheck entries.")
 
 # write file mapping CHM datacheck route lists to root (commented out,
 # unlikely needed now)
@@ -1803,9 +1816,6 @@ for dir, sub, files in os.walk(args.highwaydatapath+"/hwy_data"):
         if file.endswith('.wpt') and '_boundaries' not in dir:
             all_wpt_files.append(dir+"/"+file)
 print(str(len(all_wpt_files)) + " files found.")
-
-# list for datacheck errors that we will need later
-datacheckerrors = []
 
 # For finding colocated Waypoints and concurrent segments, we have 
 # quadtree of all Waypoints in existence to find them efficiently
