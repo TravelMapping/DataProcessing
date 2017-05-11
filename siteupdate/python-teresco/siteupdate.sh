@@ -6,18 +6,22 @@ logdir=logs
 statdir=stats
 graphdir=graphs
 nmpmerged=nmp_merged
+graphflag=
 mkdir -p $logdir $statdir $graphdir
 date
 if [ $# -eq 1 ]; then
   if [ "$1" == "--noread" ]; then
      read_data=0
   fi
+  if [ "$1" == "--nographs" ]; then
+      graphflag="-k"
+  fi
 fi
 if [ "$read_data" == "1" ]; then
   echo "siteupdate.sh: launching siteupdate.py"
   # Add -k to prevent generation of new version of graphs
   # Remove -k to generate new version of graphs
-  ./siteupdate.py -l $logdir -c $statdir -g $graphdir -n $nmpmerged | tee $logdir/siteupdate.log 2>&1
+  ./siteupdate.py $graphflag -l $logdir -c $statdir -g $graphdir -n $nmpmerged | tee $logdir/siteupdate.log 2>&1
 else
   echo "siteupdate.sh: SKIPPING siteupdate.py"
 fi
