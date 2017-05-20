@@ -2983,6 +2983,10 @@ for h in highway_systems:
             point_num+=1
         sqlfile.write(";\n")
 
+# Build indices to speed latitude/longitude joins for intersecting highway queries
+sqlfile.write('CREATE INDEX `latitude` ON waypoints(`latitude`);\n')
+sqlfile.write('CREATE INDEX `longitude` ON waypoints(`longitude`);\n')
+
 # Table of all HighwaySegments.
 sqlfile.write('CREATE TABLE segments (segmentId INTEGER, waypoint1 INTEGER, waypoint2 INTEGER, root VARCHAR(32), PRIMARY KEY (segmentId), FOREIGN KEY (waypoint1) REFERENCES waypoints(pointId), FOREIGN KEY (waypoint2) REFERENCES waypoints(pointId), FOREIGN KEY (root) REFERENCES routes(root));\n')
 segment_num = 0
