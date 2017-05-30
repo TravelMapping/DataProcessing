@@ -1652,6 +1652,21 @@ def format_clinched_mi(clinched,total):
     return "{0:.2f}".format(clinched) + " of {0:.2f}".format(total) + \
         " mi " + percentage
 
+class GraphListEntry:
+    """This class encapsulates information about generated graphs for
+    inclusion in the DB table.  Field names here match column names
+    in the "graphs" DB table.
+    """
+
+    def __init__(self,filename,descr,vertices,edges,format,category):
+        self.filename = filename
+        self.descr = descr
+        self.vertices = vertices
+        self.edges = edges
+        self.format = format
+        self.category = category
+    
+# 
 # Execution code starts here
 #
 # start a timer for including elapsed time reports in messages
@@ -2763,6 +2778,9 @@ academic use.  Other use prohibited.
 <tr><th>Download Link</th><th>(|V|,|E|)</th><th>Download Link</th><th>(|V|,|E|)</th></tr></thead>
 """
 
+    # create list of graph information for the DB
+    graph_list = []
+    
     # start generating graphs and writing tables of graph data
     graphindexfile.write('<p class="subheading">Graphs of All TM Data</p>\n')
 
@@ -2770,8 +2788,10 @@ academic use.  Other use prohibited.
 
     print(et.et() + "Writing master TM simple graph file, tm-master-simple.tmg", flush=True)
     (sv, se) = graph_data.write_master_tmg_simple(args.graphfilepath+'/tm-master-simple.tmg')
+    graph_list.append(GraphListEntry('tm-master-simple.tmg', 'Master Travel Mapping Data', sv, se, 'simple', 'master'))
     print(et.et() + "Writing master TM collapsed graph file, tm-master.tmg.", flush=True)
     (cv, ce) = graph_data.write_master_tmg_collapsed(args.graphfilepath+'/tm-master.tmg')
+    graph_list.append(GraphListEntry('tm-master.tmg', 'Master Travel Mapping Data', cv, ce, 'collapsed', 'master'))
     graphindexfile.write("<tr><td>Master Travel Mapping Data</td><td><a href=\"tm-master.tmg\">tm-master.tmg</a></td><td>(" + str(cv) + "," + str(ce) + ")</td><td><a href=\"tm-master-simple.tmg\">tm-master-simple.tmg</a></td><td>(" + str(sv) + "," + str(se) + ")</td></tr>\n")
 
     graphindexfile.write("</table>\n")
@@ -2792,6 +2812,8 @@ academic use.  Other use prohibited.
         print(region_code + ' ', end="",flush=True)
         (sv, se) = graph_data.write_subgraph_tmg_simple(args.graphfilepath + '/' + region_code + '-all-simple.tmg', [ region_code ], None)
         (cv, ce) = graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/' + region_code + '-all.tmg', [ region_code ], None)
+        graph_list.append(GraphListEntry(region_code + '-all-simple.tmg', '(' + region_name + ') All Routes', sv, se, 'simple', 'region'))
+        graph_list.append(GraphListEntry(region_code + '-all.tmg', '(' + region_name + ') All Routes', cv, ce, 'collapsed', 'region'))
         graphindexfile.write("<tr><td>" + region_code + " (" + region_name + ") All Routes</td><td><a href=\"" + region_code + "-all.tmg\">" + region_code + "-all.tmg</a></td><td>(" + str(cv) + "," + str(ce) + ")</td><td><a href=\"" + region_code + "-all-simple.tmg\">" + region_code + "-all-simple.tmg</a></td><td>(" + str(sv) + "," + str(se) + ")</td></tr>\n")
         print("!")
 
@@ -2809,6 +2831,8 @@ academic use.  Other use prohibited.
         print(h.systemname + ' ', end="",flush=True)
         (sv, se) = graph_data.write_subgraph_tmg_simple(args.graphfilepath + '/' + h.systemname + '-simple.tmg', None, [ h ])
         (cv, ce) = graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/' + h.systemname + '.tmg', None, [ h ])
+        graph_list.append(GraphListEntry(h.systemname + '-simple.tmg', h.systemname + ' (' + h.fullname + ')', sv, se, 'simple', 'system'))
+        graph_list.append(GraphListEntry(h.systemname + '.tmg', h.systemname + ' (' + h.fullname + ')', cv, ce, 'collapsed', 'system'))
         graphindexfile.write("<tr><td>" + h.systemname + " (" + h.fullname + ")</td><td><a href=\"" + h.systemname + ".tmg\">" + h.systemname + ".tmg</a></td><td>(" + str(cv) + "," + str(ce) + ")</td><td><a href=\"" + h.systemname + "-simple.tmg\">" + h.systemname + "-simple.tmg</a></td><td>(" + str(sv) + "," + str(se) + ")</td></tr>\n")
     print("!")
 
@@ -2826,6 +2850,8 @@ academic use.  Other use prohibited.
             systems.append(h)
     (sv, se) = graph_data.write_subgraph_tmg_simple(args.graphfilepath + '/usa-national-simple.tmg', None, systems)
     (cv, ce) = graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/usa-national.tmg', None, systems)
+    graph_list.append(GraphListEntry('usa-national-simple.tmg', 'United States National Routes', sv, se, 'simple', 'country'))
+    graph_list.append(GraphListEntry('usa-national.tmg', 'United States National Routes', cv, ce, 'collapsed', 'country'))
     graphindexfile.write("<tr><td>United States National Routes</td><td><a href=\"usa-national.tmg\">usa-national.tmg</a></td><td>(" + str(cv) + "," + str(ce) + ")</td><td><a href=\"usa-national-simple.tmg\">usa-national-simple.tmg</a></td><td>(" + str(sv) + "," + str(se) + ")</td></tr>\n")
 
 #print("by region ", end="", flush=True)
@@ -2844,6 +2870,8 @@ academic use.  Other use prohibited.
             systems.append(h)
     (sv, se) = graph_data.write_subgraph_tmg_simple(args.graphfilepath + '/usa-all-simple.tmg', None, systems)
     (cv, ce) = graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/usa-all.tmg', None, systems)
+    graph_list.append(GraphListEntry('usa-all-simple.tmg', 'United States All Routes', sv, se, 'simple', 'country'))
+    graph_list.append(GraphListEntry('usa-all.tmg', 'United States All Routes', cv, ce, 'collapsed', 'country'))
     graphindexfile.write("<tr><td>United States All Routes</td><td><a href=\"usa-all.tmg\">usa-all.tmg</a></td><td>(" + str(cv) + "," + str(ce) + ")</td><td><a href=\"usa-all-simple.tmg\">usa-all-simple.tmg</a></td><td>(" + str(sv) + "," + str(se) + ")</td></tr>\n")
     print("!")
 
@@ -2855,6 +2883,8 @@ academic use.  Other use prohibited.
             systems.append(h)
     (sv, se) = graph_data.write_subgraph_tmg_simple(args.graphfilepath + '/canada-all-simple.tmg', None, systems)
     (cv, ce) = graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/canada-all.tmg', None, systems)
+    graph_list.append(GraphListEntry('canada-all-simple.tmg', 'Canada All Routes', sv, se, 'simple', 'country'))
+    graph_list.append(GraphListEntry('canada-all.tmg', 'Canada All Routes', cv, ce, 'collapsed', 'country'))
     graphindexfile.write("<tr><td>Canada All Routes</td><td><a href=\"canada-all.tmg\">canada-all.tmg</a></td><td>(" + str(cv) + "," + str(ce) + ")</td><td><a href=\"canada-all-simple.tmg\">canada-all-simple.tmg</a></td><td>(" + str(sv) + "," + str(se) + ")</td></tr>\n")
     print("!")
 
@@ -3175,6 +3205,20 @@ if len(datacheckerrors) > 0:
             fp = '0'
         sqlfile.write("'"+d.code+"','"+d.info+"','"+fp+"')\n")
 sqlfile.write(";\n")
+
+# update graph info in DB if graphs were generated
+if not args.skipgraphs:
+    sqlfile.write('DROP TABLE IF EXISTS graphs;\n')
+    sqlfile.write('CREATE TABLE graphs (filename VARCHAR(32), descr VARCHAR(100), vertices INTEGER, edges INTEGER, format VARCHAR(10), category VARCHAR(10));\n')
+    if len(graph_list) > 0:
+        sqlfile.write('INSERT INTO graphs VALUES\n')
+        first = True
+        for g in graph_list:
+            if not first:
+                sqlfile.write(',')
+            first = False
+            sqlfile.write("('" + g.filename + "','" + g.descr.replace("'","''") + "','" + str(g.vertices) + "','" + str(g.edges) + "','" + g.format + "','" + g.category + "')\n")
+        sqlfile.write(";\n")
 
 sqlfile.close()
         
