@@ -956,7 +956,8 @@ class DatacheckEntry:
     LABEL_UNDERSCORES, VISIBLE_DISTANCE, LABEL_PARENS, LACKS_GENERIC,
     EXIT0, EXIT999, BUS_WITH_I, NONTERMINAL_UNDERSCORE,
     LONG_UNDERSCORE, LABEL_SLASHES, US_BANNER, VISIBLE_HIDDEN_COLOC,
-    HIDDEN_JUNCTION, LABEL_LOOKS_HIDDEN, ROUTE_NOT_IN_CONNECTED
+    HIDDEN_JUNCTION, LABEL_LOOKS_HIDDEN, ROUTE_NOT_IN_CONNECTED,
+    DUPLICATE_LIST_NAME
 
     info is additional information, at this time either a distance (in
     miles) for a long segment error, an angle (in degrees) for a sharp
@@ -1761,14 +1762,22 @@ datacheckerrors = []
 
 # check for duplicate root entries among Route and ConnectedRoute
 # data in all highway systems
-print(et.et() + "Checking for duplicate root in routes and connected routes.", flush=True)
+print(et.et() + "Checking for duplicate list names in routes, roots in routes and connected routes.", flush=True)
 roots = []
+list_names = []
+duplicate_list_names = set()
 for h in highway_systems:
     for r in h.route_list:
         if r.root in roots:
             print("ERROR: Duplicate root in route lists: " + r.root)
         else:
             roots.append(r.root)
+        list_name = r.region + ' ' + r.list_entry_name()
+        if list_name in list_names:
+            duplicate_list_names.add(list_name)
+        else:
+            list_names.append(list_name)
+            
 con_roots = []
 for h in highway_systems:
     for r in h.con_route_list:
@@ -1796,6 +1805,16 @@ else:
                     num_found += 1
                     break
     print("Added " + str(num_found) + " ROUTE_NOT_IN_CONNECTED datacheck entries.")
+
+# report any duplicate list names as a datacheck error
+if len(duplicate_list_names) > 0:
+    print("Adding " + str(len(duplicate_list_names)) + " DUPLICATE_LIST_NAME datacheck entries.")
+    for h in highway_systems:
+        for r in h.route_list:
+            if r.list_entry_name() in duplicate_list_names:
+                datacheckerrors.append(DatacheckEntry(r,[],"DUPLICATE_LIST_NAME"))
+else:
+    print("No duplicate list names found.")
 
 # write file mapping CHM datacheck route lists to root (commented out,
 # unlikely needed now)
