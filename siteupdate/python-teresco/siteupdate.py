@@ -1808,11 +1808,14 @@ else:
 
 # report any duplicate list names as a datacheck error
 if len(duplicate_list_names) > 0:
-    print("Adding " + str(len(duplicate_list_names)) + " DUPLICATE_LIST_NAME datacheck entries.")
+    print("Found " + str(len(duplicate_list_names)) + " DUPLICATE_LIST_NAME cases.")
+    num_found = 0
     for h in highway_systems:
         for r in h.route_list:
-            if r.list_entry_name() in duplicate_list_names:
-                datacheckerrors.append(DatacheckEntry(r,[],"DUPLICATE_LIST_NAME"))
+            if r.region + ' ' + r.list_entry_name() in duplicate_list_names:
+                datacheckerrors.append(DatacheckEntry(r,[],"DUPLICATE_LIST_NAME", r.region + ' ' + r.list_entry_name()))
+                num_found += 1
+    print("Added " + str(num_found) + " DUPLICATE_LIST_NAME datacheck entries.")
 else:
     print("No duplicate list names found.")
 
