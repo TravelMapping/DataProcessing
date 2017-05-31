@@ -16,6 +16,7 @@ import math
 import os
 import re
 import time
+import threading
 
 class ElapsedTime:
     """To get a nicely-formatted elapsed time string for printing"""
@@ -604,7 +605,7 @@ class Route:
         """printable version of the object"""
         return self.root + " (" + str(len(self.point_list)) + " total points)"
 
-    def read_wpt(self,all_waypoints,datacheckerrors,path="../../../HighwayData/hwy_data"):
+    def read_wpt(self,all_waypoints,all_waypoints_lock,datacheckerrors,path="../../../HighwayData/hwy_data"):
         """read data into the Route's waypoint list from a .wpt file"""
         #print("read_wpt on " + str(self))
         self.point_list = []
@@ -617,6 +618,7 @@ class Route:
                 w = Waypoint(line.rstrip('\n'),self)
                 self.point_list.append(w)
                 # look for colocated points
+                all_waypoints_lock.acquire()
                 other_w = all_waypoints.waypoint_at_same_point(w)
                 if other_w is not None:
                     # see if this is the first point colocated with other_w
@@ -649,6 +651,7 @@ class Route:
                             other_w.near_miss_points.append(w)
 
                 all_waypoints.insert(w)
+                all_waypoints_lock.release()
                 # add HighwaySegment, if not first point
                 if previous_point is not None:
                     self.segment_list.append(HighwaySegment(previous_point, w, self))
@@ -1687,11 +1690,15 @@ parser.add_argument("-c", "--csvstatfilepath", default=".", help="Path to write 
 parser.add_argument("-g", "--graphfilepath", default=".", help="Path to write graph format data files")
 parser.add_argument("-k", "--skipgraphs", action="store_true", help="Turn off generation of graph files")
 parser.add_argument("-n", "--nmpmergepath", default="", help="Path to write data with NMPs merged (generated only if specified)")
+parser.add_argument("-t", "--numthreads", default="4", help="Number of threads to use for concurrent tasks")
 args = parser.parse_args()
 
 #
 # Get list of travelers in the system
 traveler_ids = os.listdir(args.userlistfilepath)
+
+# number of threads to use
+num_threads = int(args.numthreads)
 
 # read region, country, continent descriptions
 print(et.et() + "Reading region, country, and continent descriptions.")
@@ -1857,23 +1864,68 @@ print(str(len(all_wpt_files)) + " files found.")
 # For finding colocated Waypoints and concurrent segments, we have 
 # quadtree of all Waypoints in existence to find them efficiently
 all_waypoints = WaypointQuadtree(-180,-90,180,90)
+all_waypoints_lock = threading.Lock()
 
 print(et.et() + "Reading waypoints for all routes.")
 # Next, read all of the .wpt files for each HighwaySystem
-for h in highway_systems:
+def read_wpts_for_highway_system(h):
     print(h.systemname,end="",flush=True)
     for r in h.route_list:
         # get full path to remove from all_wpt_files list
         wpt_path = args.highwaydatapath+"/hwy_data"+"/"+r.region + "/" + r.system.systemname+"/"+r.root+".wpt"
         if wpt_path in all_wpt_files:
             all_wpt_files.remove(wpt_path)
-        r.read_wpt(all_waypoints,datacheckerrors,args.highwaydatapath+"/hwy_data")
+        r.read_wpt(all_waypoints,all_waypoints_lock,datacheckerrors,args.highwaydatapath+"/hwy_data")
         if len(r.point_list) < 2:
             print("ERROR: Route contains fewer than 2 points: " + str(r))
         print(".", end="",flush=True)
         #print(str(r))
         #r.print_route()
     print("!", flush=True)
+
+# set up for threaded processing of highway systems
+class ReadWptThread(threading.Thread):
+
+    def __init__(self, id, hs_list, lock):
+        threading.Thread.__init__(self)
+        self.id = id
+        self.hs_list = hs_list
+        self.lock = lock
+
+    def run(self):
+        #print("Starting ReadWptThread " + str(self.id) + " lock is " + str(self.lock))
+        while True:
+            self.lock.acquire(True)
+            #print("Thread " + str(self.id) + " with len(self.hs_list)=" + str(len(self.hs_list)))
+            if len(self.hs_list) == 0:
+                self.lock.release()
+                break
+            h = self.hs_list.pop()
+            self.lock.release()
+            #print("Thread " + str(self.id) + " assigned " + str(h))
+            read_wpts_for_highway_system(h)
+                
+        #print("Exiting ReadWptThread " + str(self.id))
+        
+hs_lock = threading.Lock()
+#print("Created lock: " + str(hs_lock))
+hs = highway_systems[:]
+hs.reverse()
+thread_list = []
+# create threads
+for i in range(num_threads):
+    thread_list.append(ReadWptThread(i, hs, hs_lock))
+
+# start threads
+for t in thread_list:
+    t.start()
+
+# wait for threads
+for t in thread_list:
+    t.join()
+
+#for h in highway_systems:
+#    read_wpts_for_highway_system(h)
 
 print(et.et() + "Finding unprocessed wpt files.", flush=True)
 unprocessedfile = open(args.logfilepath+'/unprocessedwpts.log','w',encoding='utf-8')
