@@ -430,6 +430,12 @@ class Waypoint:
                             suffix = colocated[check_index].label[colocated[check_index].label.find('_'):]
                             if colocated[other_index].route.list_entry_name() + suffix == colocated[check_index].label:
                                 suffixes[other_index] = suffix
+                    if colocated[check_index].label.startswith(colocated[other_index].route.name_no_abbrev()):
+                        this_match = True
+                        if '_' in colocated[check_index].label:
+                            suffix = colocated[check_index].label[colocated[check_index].label.find('_'):]
+                            if colocated[other_index].route.name_no_abbrev() + suffix == colocated[check_index].label:
+                                suffixes[other_index] = suffix
                 if not this_match:
                     all_match = False
                     break
@@ -717,6 +723,12 @@ class Route:
         """return a string for a human-readable route name in the
         format expected in traveler list files"""
         return self.route + self.banner + self.abbrev
+
+    def name_no_abbrev(self):
+        """return a string for a human-readable route name in the
+        format that might be encountered for intersecting route
+        labels, where the abbrev field is often omitted"""
+        return self.route + self.banner
 
     def clinched_by_traveler(self,t):
         miles = 0.0
