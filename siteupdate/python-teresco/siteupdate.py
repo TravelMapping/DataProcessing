@@ -429,6 +429,8 @@ class Waypoint:
                     if other_index == check_index:
                         continue
                     if colocated[check_index].label.startswith(colocated[other_index].route.list_entry_name()):
+                        # should check here for false matches, like
+                        # NY50/67 would match startswith NY5
                         this_match = True
                         if '_' in colocated[check_index].label:
                             suffix = colocated[check_index].label[colocated[check_index].label.find('_'):]
