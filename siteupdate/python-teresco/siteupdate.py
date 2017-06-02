@@ -412,6 +412,34 @@ class Waypoint:
         # should become NY5/NY16/NY384
         # or a more complex case:
         # US1@US21/176&US21@US1/378&US176@US1/378&US321@US1/378&US378@US21/176
+        # approach: check if each label starts with some route number
+        # in the list of colocated routes, and if so, create a label
+        # slashing together all of the route names, and save any _
+        # suffixes to put in and reduce the chance of conflicting names
+        if len(colocated) > 2:
+            all_match = True
+            suffixes = [""] * len(colocated)
+            for check_index in range(len(colocated)):
+                this_match = False
+                for other_index in range(len(colocated)):
+                    if other_index == check_index:
+                        continue
+                    if colocated[check_index].label.startswith(colocated[other_index].route.list_entry_name()):
+                        this_match = True
+                        if '_' in colocated[check_index].label:
+                            suffix = colocated[check_index].label[colocated[check_index].label.find('_'):]
+                            if colocated[other_index].route.list_entry_name() + suffix == colocated[check_index].label:
+                                suffixes[other_index] = suffix
+                if not this_match:
+                    all_match = False
+                    break
+            if all_match:
+                label = colocated[0].route.list_entry_name()
+                for index in range(1,len(colocated)):
+                    label += "/" + colocated[index].route.list_entry_name() + suffixes[index]
+                log.append("3+ intersection: " + name + " -> " + label)
+                return label
+
         # another kind of like this:
         # US41@IN246&US150@IN246&IN246@US41/150
         # Idea: look for points not part of a continuing concurrency
@@ -430,6 +458,9 @@ class Waypoint:
 
         # TODO: US2@VT15_W&US7@VT15&VT15@US2_W
         # should probably end up as something like US2_W/US7/VT15_W
+
+        # TODO: US83@FM1263_S&US380@FM1263
+        # should probably end up as US83/US280@FM1263 or @FM1263_S
 
         # How about? 
         # I-581@4&US220@I-581(4)&US460@I-581&US11AltRoa@I-581&US220AltRoa@US220_S&VA116@I-581(4)
