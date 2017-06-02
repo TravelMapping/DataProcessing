@@ -434,7 +434,7 @@ class Waypoint:
                     all_match = False
                     break
             if all_match:
-                label = colocated[0].route.list_entry_name()
+                label = colocated[0].route.list_entry_name() + suffixes[0]
                 for index in range(1,len(colocated)):
                     label += "/" + colocated[index].route.list_entry_name() + suffixes[index]
                 log.append("3+ intersection: " + name + " -> " + label)
