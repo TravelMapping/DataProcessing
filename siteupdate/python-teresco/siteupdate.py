@@ -408,14 +408,18 @@ class Waypoint:
                 log.append("Exit/Intersection: " + name + " -> " + label)
                 return label
             
-        # TODO: NY5@NY16/384&NY16@NY5/384&NY384@NY5/16
-        # should become NY5/NY16/NY384
+        # 3+ intersection with matching or partially matching labels
+        # NY5@NY16/384&NY16@NY5/384&NY384@NY5/16
+        # becomes NY5/NY16/NY384
         # or a more complex case:
         # US1@US21/176&US21@US1/378&US176@US1/378&US321@US1/378&US378@US21/176
+        # becomes US1/US21/US176/US321/US378
         # approach: check if each label starts with some route number
         # in the list of colocated routes, and if so, create a label
         # slashing together all of the route names, and save any _
         # suffixes to put in and reduce the chance of conflicting names
+        # and a second check to find matches when labels do not include
+        # the abbrev field (which they often do not)
         if len(colocated) > 2:
             all_match = True
             suffixes = [""] * len(colocated)
@@ -446,11 +450,6 @@ class Waypoint:
                 log.append("3+ intersection: " + name + " -> " + label)
                 return label
 
-        # another kind of like this:
-        # US41@IN246&US150@IN246&IN246@US41/150
-        # Idea: look for points not part of a continuing concurrency
-        # where there are at least three colocated points
-
         # TODO: I-90@47B(94)&I-94@47B
         # should become I-90/I-94@47B
         # complication: I-39@171C(90)&I-90@171C&US14@I-39/90
@@ -461,9 +460,6 @@ class Waypoint:
 
         # TODO: I-90@175&I-90BLAus@I-90_W
         # should probably become something like I-90(175)/I-90BLAus
-
-        # TODO: US2@VT15_W&US7@VT15&VT15@US2_W
-        # should probably end up as something like US2_W/US7/VT15_W
 
         # TODO: US83@FM1263_S&US380@FM1263
         # should probably end up as US83/US280@FM1263 or @FM1263_S
