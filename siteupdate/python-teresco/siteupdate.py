@@ -55,7 +55,7 @@ class WaypointQuadtree:
         self.points = None
         for p in points:
             self.insert(p)
-        
+
 
     def insert(self,w):
         """insert Waypoint w into this quadtree node"""
@@ -94,7 +94,7 @@ class WaypointQuadtree:
                     return self.nw_child.waypoint_at_same_point(w)
                 else:
                     return self.ne_child.waypoint_at_same_point(w)
-            
+
     def near_miss_waypoints(self, w, tolerance):
         """compute and return a list of existing waypoints which are
         within the near-miss tolerance (in degrees lat, lng) of w"""
@@ -198,7 +198,7 @@ class WaypointQuadtree:
                 return False
 
         return True
-        
+
 class Waypoint:
     """This class encapsulates the information about a single waypoint
     from a .wpt file.
@@ -274,7 +274,7 @@ class Waypoint:
         rlng1 = math.radians(self.lng)
         rlat2 = math.radians(other.lat)
         rlng2 = math.radians(other.lng)
-        
+
         ans = math.acos(math.cos(rlat1)*math.cos(rlng1)*math.cos(rlat2)*math.cos(rlng2) +\
                         math.cos(rlat1)*math.sin(rlng1)*math.cos(rlat2)*math.sin(rlng2) +\
                         math.sin(rlat1)*math.sin(rlat2)) * 3963.1 # EARTH_RADIUS;
@@ -303,7 +303,7 @@ class Waypoint:
         z1 = math.sin(rlatself)
         z2 = math.sin(rlatsucc)
 
-        return math.degrees(math.acos(((x2 - x1)*(x1 - x0) + (y2 - y1)*(y1 - y0) + (z2 - z1)*(z1 - z0)) / math.sqrt(((x2 - x1)*(x2 - x1) + (y2 - y1)*(y2 - y1) + (z2 - z1)*(z2 - z1)) * ((x1 - x0)*(x1 - x0) + (y1 - y0)*(y1 - y0) + (z1 - z0)*(z1 - z0)))))                              
+        return math.degrees(math.acos(((x2 - x1)*(x1 - x0) + (y2 - y1)*(y1 - y0) + (z2 - z1)*(z1 - z0)) / math.sqrt(((x2 - x1)*(x2 - x1) + (y2 - y1)*(y2 - y1) + (z2 - z1)*(z2 - z1)) * ((x1 - x0)*(x1 - x0) + (y1 - y0)*(y1 - y0) + (z1 - z0)*(z1 - z0)))))
 
     def canonical_waypoint_name(self,log):
         """Best name we can come up with for this point bringing in
@@ -326,7 +326,7 @@ class Waypoint:
         # just return the simple name if only one active/preview waypoint
         if (len(colocated) == 1):
             return name
-        
+
         # straightforward concurrency example with matching waypoint
         # labels, use route/route/route@label, except also matches
         # any hidden label
@@ -380,7 +380,7 @@ class Waypoint:
         # I-30(135)/US67/US70
         # but also matches some other cases that perhaps should
         # be checked or handled separately, though seems OK
-        # US20@NY30A&NY30A@US20&NY162@US20 
+        # US20@NY30A&NY30A@US20&NY162@US20
         # becomes
         # US20/NY30A/NY162
 
@@ -406,7 +406,7 @@ class Waypoint:
                     label += '/' + colocated[add_index].route.list_entry_name()
                 log.append("Exit/Intersection: " + name + " -> " + label)
                 return label
-            
+
         # TODO: NY5@NY16/384&NY16@NY5/384&NY384@NY5/16
         # should become NY5/NY16/NY384
         # or a more complex case:
@@ -430,7 +430,7 @@ class Waypoint:
         # TODO: US2@VT15_W&US7@VT15&VT15@US2_W
         # should probably end up as something like US2_W/US7/VT15_W
 
-        # How about? 
+        # How about?
         # I-581@4&US220@I-581(4)&US460@I-581&US11AltRoa@I-581&US220AltRoa@US220_S&VA116@I-581(4)
         # INVESTIGATE: VA262@US11&US11@VA262&VA262@US11_S
         # should be 2 colocated, shows up as 3?
@@ -539,7 +539,7 @@ class HighwaySegment:
             line += str(self.waypoint2.colocated[0].unique_name) + ' '
         line += self.segment_name
         return line
-        
+
 class Route:
     """This class encapsulates the contents of one .csv file line
     that represents a highway within a system and the corresponding
@@ -895,7 +895,7 @@ class TravelerList:
                                 hs.add_clinched_by(self)
                                 if hs not in self.clinched_segments:
                                     self.clinched_segments.add(hs)
-                    
+
                 if lineDone:
                     break
             if not lineDone:
@@ -915,7 +915,7 @@ class TravelerList:
         # keys are region names and values are total mileage in that
         # system in that region
         self.system_region_mileages = dict()
-       
+
     def write_log(self,path="."):
         logfile = open(path+"/"+self.traveler_name+".log","wt",encoding='UTF-8')
         logfile.write("Log file created at: " + str(datetime.datetime.now()) + "\n")
@@ -927,7 +927,7 @@ class ClinchedSegmentEntry:
     """This class encapsulates one line of a traveler's list file
 
     raw_line is the actual line from the list file for error reporting
-    
+
     root is the root name of the route clinched
 
     canonical_start and canonical_end are waypoint labels, which must be
@@ -1216,7 +1216,7 @@ class HighwayGraphCollapsedEdgeInfo:
                 print("ERROR: edge2 " + str(edge2) + " removed from " + removed + " adjacency lists instead of 1.")
             self.vertex1.incident_collapsed_edges.append(self)
             self.vertex2.incident_collapsed_edges.append(self)
-            
+
 
     # compute an edge label, optionally resticted by systems
     def label(self,systems=None):
@@ -1301,16 +1301,16 @@ class HighwayGraph:
             # devel systems
             if not w.is_or_colocated_with_active_or_preview():
                 continue
-    
+
             # skip if named previously as someone else's colocated point
             if w.unique_name is not None:
                 continue
 
             # come up with a unique name that brings in its meaning
-    
+
             # start with the canonical name
             point_name = w.canonical_waypoint_name(self.waypoint_naming_log)
-    
+
             # if that's taken, append the region code
             if point_name in self.unique_waypoints:
                 point_name += "|" + w.route.region
@@ -1323,7 +1323,7 @@ class HighwayGraph:
                 if simple_name not in self.unique_waypoints:
                     self.waypoint_naming_log.append("Revert to simple: " + simple_name + " from (taken) " + point_name)
                     point_name = simple_name
-            
+
             # if we have not yet succeeded, add !'s until we do
             while point_name in self.unique_waypoints:
                 point_name += "!"
@@ -1388,7 +1388,7 @@ class HighwayGraph:
                     if s.segment_name is not None:
                         HighwayGraphEdgeInfo(s, self)
 
-        print("Full graph has " + str(len(self.vertices)) + 
+        print("Full graph has " + str(len(self.vertices)) +
               " vertices, " + str(self.edge_count()) + " edges.")
 
         # add edges again, which end up in a separate set of vertex
@@ -1414,7 +1414,7 @@ class HighwayGraph:
                 HighwayGraphCollapsedEdgeInfo(self, vertex_info=vinfo)
 
         # print summary info
-        print("Edge compressed graph has " + str(self.num_visible_vertices()) + 
+        print("Edge compressed graph has " + str(self.num_visible_vertices()) +
               " vertices, " + str(self.collapsed_edge_count()) + " edges.")
 
     def num_visible_vertices(self):
@@ -1607,7 +1607,7 @@ class HighwayGraph:
         # sanity check on edges written
         if self.collapsed_edge_count() != edge:
             print("ERROR: computed " + str(self.collapsed_edge_count()) + " collapsed edges, but wrote " + str(edge) + "\n")
-        
+
         tmgfile.close()
         return (self.num_visible_vertices(), self.collapsed_edge_count())
 
@@ -1671,11 +1671,14 @@ parser.add_argument("-c", "--csvstatfilepath", default=".", help="Path to write 
 parser.add_argument("-g", "--graphfilepath", default=".", help="Path to write graph format data files")
 parser.add_argument("-k", "--skipgraphs", action="store_true", help="Turn off generation of graph files")
 parser.add_argument("-n", "--nmpmergepath", default="", help="Path to write data with NMPs merged (generated only if specified)")
+parser.add_argument("-U", "--userlist", default=None, nargs="+", help="For Development: list of users to use in dataset")
 args = parser.parse_args()
 
 #
 # Get list of travelers in the system
-traveler_ids = os.listdir(args.userlistfilepath)
+traveler_ids = args.userlist
+traveler_ids = os.listdir(args.userlistfilepath) if traveler_ids is None else (id + ".list" for id in traveler_ids)
+print(traveler_ids)
 
 # read region, country, continent descriptions
 print(et.et() + "Reading region, country, and continent descriptions.")
@@ -1817,7 +1820,7 @@ for dir, sub, files in os.walk(args.highwaydatapath+"/hwy_data"):
             all_wpt_files.append(dir+"/"+file)
 print(str(len(all_wpt_files)) + " files found.")
 
-# For finding colocated Waypoints and concurrent segments, we have 
+# For finding colocated Waypoints and concurrent segments, we have
 # quadtree of all Waypoints in existence to find them efficiently
 all_waypoints = WaypointQuadtree(-180,-90,180,90)
 
@@ -1947,7 +1950,7 @@ for h in highway_systems:
         all_route_labels = set()
         # set of tuples to be used for finding duplicate coordinates
         coords_used = set()
-        
+
         visible_distance = 0.0
         # note that we assume the first point will be visible in each route
         # so the following is simply a placeholder
@@ -1966,7 +1969,7 @@ for h in highway_systems:
                 else:
                     all_route_labels.add(lower_label)
             # duplicate coordinates
-            latlng = w.lat, w.lng 
+            latlng = w.lat, w.lng
             if latlng in coords_used:
                 for other_w in r.point_list:
                     if w == other_w:
@@ -2323,7 +2326,7 @@ for h in highway_systems:
                     segment_length/active_only_concurrency_count
                 else:
                     active_only_mileage_by_region[r.region] = segment_length/active_only_concurrency_count
-            
+
             # now we move on to totals by region, only the
             # overall since an entire highway system must be
             # at the same level
@@ -2394,7 +2397,7 @@ for region in list(overall_mileage_by_region.keys()):
     else:
         region_active_only_miles = 0.0
 
-    region_entries.append(region + ": " + 
+    region_entries.append(region + ": " +
                           "{0:.2f}".format(region_active_only_miles) + " (active), " +
                           "{0:.2f}".format(region_active_preview_miles) + " (active, preview) " +
                           "{0:.2f}".format(overall_mileage_by_region[region]) + " (active, preview, devel)\n")
@@ -2403,7 +2406,7 @@ for e in region_entries:
     hdstatsfile.write(e)
 
 for h in highway_systems:
-    hdstatsfile.write("System " + h.systemname + " (" + h.level + ") total: " 
+    hdstatsfile.write("System " + h.systemname + " (" + h.level + ") total: "
                       + "{0:.2f}".format(math.fsum(list(h.mileage_by_region.values()))) \
                              + ' mi\n')
     if len(h.mileage_by_region) > 1:
@@ -2505,8 +2508,8 @@ for t in traveler_lists:
                     system_region_mileage = 0.0
                     if h.systemname in t.system_region_mileages and region in t.system_region_mileages[h.systemname]:
                         system_region_mileage = t.system_region_mileages[h.systemname][region]
-                        csmbr_values.append("('" + h.systemname + "','" + region + "','" 
-                                            + t.traveler_name + "','" + 
+                        csmbr_values.append("('" + h.systemname + "','" + region + "','"
+                                            + t.traveler_name + "','" +
                                             str(system_region_mileage) + "')")
                     if len(h.mileage_by_region) > 1:
                         t.log_entries.append("  " + region + ": " + \
@@ -2544,8 +2547,8 @@ for t in traveler_lists:
                         if con_clinched_miles == con_total_miles:
                             con_routes_clinched += 1
                             clinched = '1'
-                        ccr_values.append("('" + cr.roots[0].root + "','" + t.traveler_name 
-                                          + "','" + str(con_clinched_miles) + "','" 
+                        ccr_values.append("('" + cr.roots[0].root + "','" + t.traveler_name
+                                          + "','" + str(con_clinched_miles) + "','"
                                           + clinched + "')")
                         t.log_entries.append(cr.readable_name() + ": " + \
                                              format_clinched_mi(con_clinched_miles,con_total_miles))
@@ -2562,7 +2565,7 @@ for t in traveler_lists:
                                          str(len(h.con_route_list)) + \
                                          " ({0:.1f}%)".format(100*con_routes_clinched/len(h.con_route_list)) + \
                                          ".")
-                                         
+
 
     # grand summary, active only
     t.log_entries.append("Traveled " + str(t.active_systems_traveled) + " of " + str(active_systems) +
@@ -2685,7 +2688,7 @@ else:
 
 <p class="heading">Travel Mapping Graph Data</p>
 
-<div class="text"> 
+<div class="text">
 
 This is the repository of graphs generated from the current <a
 href="/">Travel Mapping Project</a> data.  These were created for use
@@ -2721,7 +2724,7 @@ Beware that this is a large file!
 
 </div>
 
-<div class="text"> 
+<div class="text">
 
 Graphs are copyright &copy; <a href="http://j.teresco.org/">James
 D. Teresco</a>, generated from highway data gathered and maintained by
@@ -2853,10 +2856,11 @@ The most recent site update including graph generation completed at <?php echo t
     #else for skipgraphs ends here
 
 print(et.et() + "Writing database file " + args.databasename + ".sql.")
-# Once all data is read in and processed, create a .sql file that will 
+# Once all data is read in and processed, create a .sql file that will
 # create all of the DB tables to be used by other parts of the project
 sqlfile = open(args.databasename+'.sql','w',encoding='UTF-8')
-sqlfile.write('USE '+args.databasename+'\n')
+sqlfile.write('SET @@global.sql_mode= \'NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION\';\n')
+sqlfile.write('USE '+args.databasename+';\n')
 
 # we have to drop tables in the right order to avoid foreign key errors
 sqlfile.write('DROP TABLE IF EXISTS datacheckErrors;\n')
@@ -2922,7 +2926,7 @@ for h in highway_systems:
     if not first:
         sqlfile.write(",")
     first = False
-    sqlfile.write("('" + h.systemname + "','" +  h.country + "','" +  
+    sqlfile.write("('" + h.systemname + "','" +  h.country + "','" +
                   h.fullname + "','" + h.color + "','" + h.level +
                   "','" + str(h.tier) + "')\n")
 sqlfile.write(";\n")
@@ -2951,7 +2955,7 @@ for h in highway_systems:
         sqlfile.write("(" + cr.csv_line() + ")\n")
 sqlfile.write(";\n")
 
-# This table has remaining roots for any connected route 
+# This table has remaining roots for any connected route
 # that connects multiple routes/roots
 sqlfile.write('CREATE TABLE connectedRouteRoots (firstRoot VARCHAR(32), root VARCHAR(32), FOREIGN KEY (firstRoot) REFERENCES connectedRoutes(firstRoot));\n')
 first = True
@@ -3033,8 +3037,8 @@ for region in list(active_preview_mileage_by_region.keys()):
         active_only_mileage = active_only_mileage_by_region[region]
     if region in list(active_preview_mileage_by_region.keys()):
         active_preview_mileage = active_preview_mileage_by_region[region]
-    sqlfile.write("('" + region + "','" + 
-                  str(active_only_mileage) + "','" + 
+    sqlfile.write("('" + region + "','" +
+                  str(active_only_mileage) + "','" +
                   str(active_preview_mileage) + "')\n")
 sqlfile.write(";\n")
 
@@ -3155,7 +3159,7 @@ if len(datacheckerrors) > 0:
 sqlfile.write(";\n")
 
 sqlfile.close()
-        
+
 # print some statistics
 print(et.et() + "Processed " + str(len(highway_systems)) + " highway systems.")
 routes = 0
