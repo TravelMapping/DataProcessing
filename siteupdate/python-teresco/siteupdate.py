@@ -16,6 +16,7 @@ import math
 import os
 import re
 import time
+import threading
 
 class ElapsedTime:
     """To get a nicely-formatted elapsed time string for printing"""
@@ -409,31 +410,120 @@ class Waypoint:
 
         # TODO: NY5@NY16/384&NY16@NY5/384&NY384@NY5/16
         # should become NY5/NY16/NY384
+            
+        # 3+ intersection with matching or partially matching labels
+        # NY5@NY16/384&NY16@NY5/384&NY384@NY5/16
+        # becomes NY5/NY16/NY384
+
         # or a more complex case:
         # US1@US21/176&US21@US1/378&US176@US1/378&US321@US1/378&US378@US21/176
-        # another kind of like this:
-        # US41@IN246&US150@IN246&IN246@US41/150
-        # Idea: look for points not part of a continuing concurrency
-        # where there are at least three colocated points
+        # becomes US1/US21/US176/US321/US378
+        # approach: check if each label starts with some route number
+        # in the list of colocated routes, and if so, create a label
+        # slashing together all of the route names, and save any _
+        # suffixes to put in and reduce the chance of conflicting names
+        # and a second check to find matches when labels do not include
+        # the abbrev field (which they often do not)
+        if len(colocated) > 2:
+            all_match = True
+            suffixes = [""] * len(colocated)
+            for check_index in range(len(colocated)):
+                this_match = False
+                for other_index in range(len(colocated)):
+                    if other_index == check_index:
+                        continue
+                    if colocated[check_index].label.startswith(colocated[other_index].route.list_entry_name()):
+                        # should check here for false matches, like
+                        # NY50/67 would match startswith NY5
+                        this_match = True
+                        if '_' in colocated[check_index].label:
+                            suffix = colocated[check_index].label[colocated[check_index].label.find('_'):]
+                            if colocated[other_index].route.list_entry_name() + suffix == colocated[check_index].label:
+                                suffixes[other_index] = suffix
+                    if colocated[check_index].label.startswith(colocated[other_index].route.name_no_abbrev()):
+                        this_match = True
+                        if '_' in colocated[check_index].label:
+                            suffix = colocated[check_index].label[colocated[check_index].label.find('_'):]
+                            if colocated[other_index].route.name_no_abbrev() + suffix == colocated[check_index].label:
+                                suffixes[other_index] = suffix
+                if not this_match:
+                    all_match = False
+                    break
+            if all_match:
+                label = colocated[0].route.list_entry_name() + suffixes[0]
+                for index in range(1,len(colocated)):
+                    label += "/" + colocated[index].route.list_entry_name() + suffixes[index]
+                log.append("3+ intersection: " + name + " -> " + label)
+                return label
 
-        # TODO: I-90@47B(94)&I-94@47B
-        # should become I-90/I-94@47B
-        # complication: I-39@171C(90)&I-90@171C&US14@I-39/90
+        # Exit number simplification: I-90@47B(94)&I-94@47B
+        # becomes I-90/I-94@47B, with many other cases also matched
+        # Still TODO: I-39@171C(90)&I-90@171C&US14@I-39/90
+        # try each as a possible route@exit type situation and look
+        # for matches
+        for try_as_exit in range(len(colocated)):
+            # see if all colocated points are potential matches
+            # when considering the one at try_as_exit as a primary
+            # exit number
+            if not colocated[try_as_exit].label[0].isdigit():
+                continue
+            all_match = True
+            # get the route number only version for one of the checks below
+            route_number_only = colocated[try_as_exit].route.name_no_abbrev()
+            for pos in range(len(route_number_only)):
+                if route_number_only[pos].isdigit():
+                    route_number_only = route_number_only[pos:]
+                    break
+            for try_as_match in range(len(colocated)):
+                if try_as_exit == try_as_match:
+                    continue
+                this_match = False
+                # check for any of the patterns that make sense as a match:
+                # exact match, match without abbrev field, match with exit
+                # number in parens, match concurrency exit number format
+                # nn(rr), match with _ suffix (like _N), match with a slash
+                # match with exit number only
+                if (colocated[try_as_match].label == colocated[try_as_exit].route.list_entry_name()
+                    or colocated[try_as_match].label == colocated[try_as_exit].route.name_no_abbrev()
+                    or colocated[try_as_match].label == colocated[try_as_exit].route.list_entry_name() + "(" + colocated[try_as_exit].label + ")"
+                    or colocated[try_as_match].label == colocated[try_as_exit].label + "(" + route_number_only + ")"
+                    or colocated[try_as_match].label == colocated[try_as_exit].label + "(" + colocated[try_as_exit].route.name_no_abbrev() + ")"
+                    or colocated[try_as_match].label.startswith(colocated[try_as_exit].route.name_no_abbrev() + "_")
+                    or colocated[try_as_match].label.startswith(colocated[try_as_exit].route.name_no_abbrev() + "/")
+                    or colocated[try_as_match].label == colocated[try_as_exit].label):
+                    this_match = True
+                if not this_match:
+                    all_match = False
+
+            if all_match:
+                label = ""
+                for pos in range(len(colocated)):
+                    if pos == try_as_exit:
+                        label += colocated[pos].route.list_entry_name() + "(" + colocated[pos].label + ")"
+                    else:
+                        label += colocated[pos].route.list_entry_name()
+                    if pos < len(colocated) - 1:
+                        label += "/"
+                log.append("Exit number: " + name + " -> " + label)
+                return label
 
         # TODO: I-20@76&I-77@16
         # should become I-20/I-77 or maybe I-20(76)/I-77(16)
         # not shorter, so maybe who cares about this one?
 
-        # TODO: I-90@175&I-90BLAus@I-90_W
-        # should probably become something like I-90(175)/I-90BLAus
-
-        # TODO: US2@VT15_W&US7@VT15&VT15@US2_W
-        # should probably end up as something like US2_W/US7/VT15_W
+        # TODO: US83@FM1263_S&US380@FM1263
+        # should probably end up as US83/US280@FM1263 or @FM1263_S
 
         # How about?
         # I-581@4&US220@I-581(4)&US460@I-581&US11AltRoa@I-581&US220AltRoa@US220_S&VA116@I-581(4)
         # INVESTIGATE: VA262@US11&US11@VA262&VA262@US11_S
         # should be 2 colocated, shows up as 3?
+
+        # TODO: I-610@TX288&I-610@38&TX288@I-610
+        # this is the overlap point of a loop
+
+        # TODO: boundaries where order is reversed on colocated points
+        # Vt4@FIN/NOR&E75@NOR/FIN&E75@NOR/FIN
 
         log.append("Keep failsafe: " + name)
         return name
@@ -604,7 +694,7 @@ class Route:
         """printable version of the object"""
         return self.root + " (" + str(len(self.point_list)) + " total points)"
 
-    def read_wpt(self,all_waypoints,datacheckerrors,path="../../../HighwayData/hwy_data"):
+    def read_wpt(self,all_waypoints,all_waypoints_lock,datacheckerrors,path="../../../HighwayData/hwy_data"):
         """read data into the Route's waypoint list from a .wpt file"""
         #print("read_wpt on " + str(self))
         self.point_list = []
@@ -617,6 +707,7 @@ class Route:
                 w = Waypoint(line.rstrip('\n'),self)
                 self.point_list.append(w)
                 # look for colocated points
+                all_waypoints_lock.acquire()
                 other_w = all_waypoints.waypoint_at_same_point(w)
                 if other_w is not None:
                     # see if this is the first point colocated with other_w
@@ -649,6 +740,7 @@ class Route:
                             other_w.near_miss_points.append(w)
 
                 all_waypoints.insert(w)
+                all_waypoints_lock.release()
                 # add HighwaySegment, if not first point
                 if previous_point is not None:
                     self.segment_list.append(HighwaySegment(previous_point, w, self))
@@ -683,6 +775,12 @@ class Route:
         """return a string for a human-readable route name in the
         format expected in traveler list files"""
         return self.route + self.banner + self.abbrev
+
+    def name_no_abbrev(self):
+        """return a string for a human-readable route name in the
+        format that might be encountered for intersecting route
+        labels, where the abbrev field is often omitted"""
+        return self.route + self.banner
 
     def clinched_by_traveler(self,t):
         miles = 0.0
@@ -956,7 +1054,8 @@ class DatacheckEntry:
     LABEL_UNDERSCORES, VISIBLE_DISTANCE, LABEL_PARENS, LACKS_GENERIC,
     EXIT0, EXIT999, BUS_WITH_I, NONTERMINAL_UNDERSCORE,
     LONG_UNDERSCORE, LABEL_SLASHES, US_BANNER, VISIBLE_HIDDEN_COLOC,
-    HIDDEN_JUNCTION, LABEL_LOOKS_HIDDEN, ROUTE_NOT_IN_CONNECTED
+    HIDDEN_JUNCTION, LABEL_LOOKS_HIDDEN, ROUTE_NOT_IN_CONNECTED,
+    DUPLICATE_LIST_NAME
 
     info is additional information, at this time either a distance (in
     miles) for a long segment error, an angle (in degrees) for a sharp
@@ -1651,6 +1750,21 @@ def format_clinched_mi(clinched,total):
     return "{0:.2f}".format(clinched) + " of {0:.2f}".format(total) + \
         " mi " + percentage
 
+class GraphListEntry:
+    """This class encapsulates information about generated graphs for
+    inclusion in the DB table.  Field names here match column names
+    in the "graphs" DB table.
+    """
+
+    def __init__(self,filename,descr,vertices,edges,format,category):
+        self.filename = filename
+        self.descr = descr
+        self.vertices = vertices
+        self.edges = edges
+        self.format = format
+        self.category = category
+    
+# 
 # Execution code starts here
 #
 # start a timer for including elapsed time reports in messages
@@ -1672,6 +1786,7 @@ parser.add_argument("-g", "--graphfilepath", default=".", help="Path to write gr
 parser.add_argument("-k", "--skipgraphs", action="store_true", help="Turn off generation of graph files")
 parser.add_argument("-n", "--nmpmergepath", default="", help="Path to write data with NMPs merged (generated only if specified)")
 parser.add_argument("-U", "--userlist", default=None, nargs="+", help="For Development: list of users to use in dataset")
+parser.add_argument("-t", "--numthreads", default="4", help="Number of threads to use for concurrent tasks")
 args = parser.parse_args()
 
 #
@@ -1679,6 +1794,9 @@ args = parser.parse_args()
 traveler_ids = args.userlist
 traveler_ids = os.listdir(args.userlistfilepath) if traveler_ids is None else (id + ".list" for id in traveler_ids)
 print(traveler_ids)
+
+# number of threads to use
+num_threads = int(args.numthreads)
 
 # read region, country, continent descriptions
 print(et.et() + "Reading region, country, and continent descriptions.")
@@ -1764,14 +1882,22 @@ datacheckerrors = []
 
 # check for duplicate root entries among Route and ConnectedRoute
 # data in all highway systems
-print(et.et() + "Checking for duplicate root in routes and connected routes.", flush=True)
+print(et.et() + "Checking for duplicate list names in routes, roots in routes and connected routes.", flush=True)
 roots = []
+list_names = []
+duplicate_list_names = set()
 for h in highway_systems:
     for r in h.route_list:
         if r.root in roots:
             print("ERROR: Duplicate root in route lists: " + r.root)
         else:
             roots.append(r.root)
+        list_name = r.region + ' ' + r.list_entry_name()
+        if list_name in list_names:
+            duplicate_list_names.add(list_name)
+        else:
+            list_names.append(list_name)
+            
 con_roots = []
 for h in highway_systems:
     for r in h.con_route_list:
@@ -1800,6 +1926,19 @@ else:
                     break
     print("Added " + str(num_found) + " ROUTE_NOT_IN_CONNECTED datacheck entries.")
 
+# report any duplicate list names as a datacheck error
+if len(duplicate_list_names) > 0:
+    print("Found " + str(len(duplicate_list_names)) + " DUPLICATE_LIST_NAME cases.")
+    num_found = 0
+    for h in highway_systems:
+        for r in h.route_list:
+            if r.region + ' ' + r.list_entry_name() in duplicate_list_names:
+                datacheckerrors.append(DatacheckEntry(r,[],"DUPLICATE_LIST_NAME", r.region + ' ' + r.list_entry_name()))
+                num_found += 1
+    print("Added " + str(num_found) + " DUPLICATE_LIST_NAME datacheck entries.")
+else:
+    print("No duplicate list names found.")
+
 # write file mapping CHM datacheck route lists to root (commented out,
 # unlikely needed now)
 #print(et.et() + "Writing CHM datacheck to TravelMapping route pairings.")
@@ -1823,23 +1962,68 @@ print(str(len(all_wpt_files)) + " files found.")
 # For finding colocated Waypoints and concurrent segments, we have
 # quadtree of all Waypoints in existence to find them efficiently
 all_waypoints = WaypointQuadtree(-180,-90,180,90)
+all_waypoints_lock = threading.Lock()
 
 print(et.et() + "Reading waypoints for all routes.")
 # Next, read all of the .wpt files for each HighwaySystem
-for h in highway_systems:
+def read_wpts_for_highway_system(h):
     print(h.systemname,end="",flush=True)
     for r in h.route_list:
         # get full path to remove from all_wpt_files list
         wpt_path = args.highwaydatapath+"/hwy_data"+"/"+r.region + "/" + r.system.systemname+"/"+r.root+".wpt"
         if wpt_path in all_wpt_files:
             all_wpt_files.remove(wpt_path)
-        r.read_wpt(all_waypoints,datacheckerrors,args.highwaydatapath+"/hwy_data")
+        r.read_wpt(all_waypoints,all_waypoints_lock,datacheckerrors,args.highwaydatapath+"/hwy_data")
         if len(r.point_list) < 2:
             print("ERROR: Route contains fewer than 2 points: " + str(r))
         print(".", end="",flush=True)
         #print(str(r))
         #r.print_route()
     print("!", flush=True)
+
+# set up for threaded processing of highway systems
+class ReadWptThread(threading.Thread):
+
+    def __init__(self, id, hs_list, lock):
+        threading.Thread.__init__(self)
+        self.id = id
+        self.hs_list = hs_list
+        self.lock = lock
+
+    def run(self):
+        #print("Starting ReadWptThread " + str(self.id) + " lock is " + str(self.lock))
+        while True:
+            self.lock.acquire(True)
+            #print("Thread " + str(self.id) + " with len(self.hs_list)=" + str(len(self.hs_list)))
+            if len(self.hs_list) == 0:
+                self.lock.release()
+                break
+            h = self.hs_list.pop()
+            self.lock.release()
+            #print("Thread " + str(self.id) + " assigned " + str(h))
+            read_wpts_for_highway_system(h)
+                
+        #print("Exiting ReadWptThread " + str(self.id))
+        
+hs_lock = threading.Lock()
+#print("Created lock: " + str(hs_lock))
+hs = highway_systems[:]
+hs.reverse()
+thread_list = []
+# create threads
+for i in range(num_threads):
+    thread_list.append(ReadWptThread(i, hs, hs_lock))
+
+# start threads
+for t in thread_list:
+    t.start()
+
+# wait for threads
+for t in thread_list:
+    t.join()
+
+#for h in highway_systems:
+#    read_wpts_for_highway_system(h)
 
 print(et.et() + "Finding unprocessed wpt files.", flush=True)
 unprocessedfile = open(args.logfilepath+'/unprocessedwpts.log','w',encoding='utf-8')
@@ -2744,6 +2928,9 @@ academic use.  Other use prohibited.
 <tr><th>Download Link</th><th>(|V|,|E|)</th><th>Download Link</th><th>(|V|,|E|)</th></tr></thead>
 """
 
+    # create list of graph information for the DB
+    graph_list = []
+    
     # start generating graphs and writing tables of graph data
     graphindexfile.write('<p class="subheading">Graphs of All TM Data</p>\n')
 
@@ -2751,8 +2938,10 @@ academic use.  Other use prohibited.
 
     print(et.et() + "Writing master TM simple graph file, tm-master-simple.tmg", flush=True)
     (sv, se) = graph_data.write_master_tmg_simple(args.graphfilepath+'/tm-master-simple.tmg')
+    graph_list.append(GraphListEntry('tm-master-simple.tmg', 'Master Travel Mapping Data', sv, se, 'simple', 'master'))
     print(et.et() + "Writing master TM collapsed graph file, tm-master.tmg.", flush=True)
     (cv, ce) = graph_data.write_master_tmg_collapsed(args.graphfilepath+'/tm-master.tmg')
+    graph_list.append(GraphListEntry('tm-master.tmg', 'Master Travel Mapping Data', cv, ce, 'collapsed', 'master'))
     graphindexfile.write("<tr><td>Master Travel Mapping Data</td><td><a href=\"tm-master.tmg\">tm-master.tmg</a></td><td>(" + str(cv) + "," + str(ce) + ")</td><td><a href=\"tm-master-simple.tmg\">tm-master-simple.tmg</a></td><td>(" + str(sv) + "," + str(se) + ")</td></tr>\n")
 
     graphindexfile.write("</table>\n")
@@ -2773,6 +2962,8 @@ academic use.  Other use prohibited.
         print(region_code + ' ', end="",flush=True)
         (sv, se) = graph_data.write_subgraph_tmg_simple(args.graphfilepath + '/' + region_code + '-all-simple.tmg', [ region_code ], None)
         (cv, ce) = graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/' + region_code + '-all.tmg', [ region_code ], None)
+        graph_list.append(GraphListEntry(region_code + '-all-simple.tmg', '(' + region_name + ') All Routes', sv, se, 'simple', 'region'))
+        graph_list.append(GraphListEntry(region_code + '-all.tmg', '(' + region_name + ') All Routes', cv, ce, 'collapsed', 'region'))
         graphindexfile.write("<tr><td>" + region_code + " (" + region_name + ") All Routes</td><td><a href=\"" + region_code + "-all.tmg\">" + region_code + "-all.tmg</a></td><td>(" + str(cv) + "," + str(ce) + ")</td><td><a href=\"" + region_code + "-all-simple.tmg\">" + region_code + "-all-simple.tmg</a></td><td>(" + str(sv) + "," + str(se) + ")</td></tr>\n")
         print("!")
 
@@ -2790,6 +2981,8 @@ academic use.  Other use prohibited.
         print(h.systemname + ' ', end="",flush=True)
         (sv, se) = graph_data.write_subgraph_tmg_simple(args.graphfilepath + '/' + h.systemname + '-simple.tmg', None, [ h ])
         (cv, ce) = graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/' + h.systemname + '.tmg', None, [ h ])
+        graph_list.append(GraphListEntry(h.systemname + '-simple.tmg', h.systemname + ' (' + h.fullname + ')', sv, se, 'simple', 'system'))
+        graph_list.append(GraphListEntry(h.systemname + '.tmg', h.systemname + ' (' + h.fullname + ')', cv, ce, 'collapsed', 'system'))
         graphindexfile.write("<tr><td>" + h.systemname + " (" + h.fullname + ")</td><td><a href=\"" + h.systemname + ".tmg\">" + h.systemname + ".tmg</a></td><td>(" + str(cv) + "," + str(ce) + ")</td><td><a href=\"" + h.systemname + "-simple.tmg\">" + h.systemname + "-simple.tmg</a></td><td>(" + str(sv) + "," + str(se) + ")</td></tr>\n")
     print("!")
 
@@ -2807,6 +3000,8 @@ academic use.  Other use prohibited.
             systems.append(h)
     (sv, se) = graph_data.write_subgraph_tmg_simple(args.graphfilepath + '/usa-national-simple.tmg', None, systems)
     (cv, ce) = graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/usa-national.tmg', None, systems)
+    graph_list.append(GraphListEntry('usa-national-simple.tmg', 'United States National Routes', sv, se, 'simple', 'country'))
+    graph_list.append(GraphListEntry('usa-national.tmg', 'United States National Routes', cv, ce, 'collapsed', 'country'))
     graphindexfile.write("<tr><td>United States National Routes</td><td><a href=\"usa-national.tmg\">usa-national.tmg</a></td><td>(" + str(cv) + "," + str(ce) + ")</td><td><a href=\"usa-national-simple.tmg\">usa-national-simple.tmg</a></td><td>(" + str(sv) + "," + str(se) + ")</td></tr>\n")
 
 #print("by region ", end="", flush=True)
@@ -2825,6 +3020,8 @@ academic use.  Other use prohibited.
             systems.append(h)
     (sv, se) = graph_data.write_subgraph_tmg_simple(args.graphfilepath + '/usa-all-simple.tmg', None, systems)
     (cv, ce) = graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/usa-all.tmg', None, systems)
+    graph_list.append(GraphListEntry('usa-all-simple.tmg', 'United States All Routes', sv, se, 'simple', 'country'))
+    graph_list.append(GraphListEntry('usa-all.tmg', 'United States All Routes', cv, ce, 'collapsed', 'country'))
     graphindexfile.write("<tr><td>United States All Routes</td><td><a href=\"usa-all.tmg\">usa-all.tmg</a></td><td>(" + str(cv) + "," + str(ce) + ")</td><td><a href=\"usa-all-simple.tmg\">usa-all-simple.tmg</a></td><td>(" + str(sv) + "," + str(se) + ")</td></tr>\n")
     print("!")
 
@@ -2836,6 +3033,8 @@ academic use.  Other use prohibited.
             systems.append(h)
     (sv, se) = graph_data.write_subgraph_tmg_simple(args.graphfilepath + '/canada-all-simple.tmg', None, systems)
     (cv, ce) = graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/canada-all.tmg', None, systems)
+    graph_list.append(GraphListEntry('canada-all-simple.tmg', 'Canada All Routes', sv, se, 'simple', 'country'))
+    graph_list.append(GraphListEntry('canada-all.tmg', 'Canada All Routes', cv, ce, 'collapsed', 'country'))
     graphindexfile.write("<tr><td>Canada All Routes</td><td><a href=\"canada-all.tmg\">canada-all.tmg</a></td><td>(" + str(cv) + "," + str(ce) + ")</td><td><a href=\"canada-all-simple.tmg\">canada-all-simple.tmg</a></td><td>(" + str(sv) + "," + str(se) + ")</td></tr>\n")
     print("!")
 
@@ -3157,6 +3356,20 @@ if len(datacheckerrors) > 0:
             fp = '0'
         sqlfile.write("'"+d.code+"','"+d.info+"','"+fp+"')\n")
 sqlfile.write(";\n")
+
+# update graph info in DB if graphs were generated
+if not args.skipgraphs:
+    sqlfile.write('DROP TABLE IF EXISTS graphs;\n')
+    sqlfile.write('CREATE TABLE graphs (filename VARCHAR(32), descr VARCHAR(100), vertices INTEGER, edges INTEGER, format VARCHAR(10), category VARCHAR(10));\n')
+    if len(graph_list) > 0:
+        sqlfile.write('INSERT INTO graphs VALUES\n')
+        first = True
+        for g in graph_list:
+            if not first:
+                sqlfile.write(',')
+            first = False
+            sqlfile.write("('" + g.filename + "','" + g.descr.replace("'","''") + "','" + str(g.vertices) + "','" + str(g.edges) + "','" + g.format + "','" + g.category + "')\n")
+        sqlfile.write(";\n")
 
 sqlfile.close()
 
