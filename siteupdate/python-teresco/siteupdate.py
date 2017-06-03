@@ -452,9 +452,9 @@ class Waypoint:
                 log.append("3+ intersection: " + name + " -> " + label)
                 return label
 
-        # TODO: I-90@47B(94)&I-94@47B
-        # should become I-90/I-94@47B
-        # complication: I-39@171C(90)&I-90@171C&US14@I-39/90
+        # Exit number simplification: I-90@47B(94)&I-94@47B
+        # becomes I-90/I-94@47B, with many other cases also matched
+        # Still TODO: I-39@171C(90)&I-90@171C&US14@I-39/90
         # try each as a possible route@exit type situation and look
         # for matches
         for try_as_exit in range(len(colocated)):
@@ -474,6 +474,10 @@ class Waypoint:
                 if try_as_exit == try_as_match:
                     continue
                 this_match = False
+                # check for any of the patterns that make sense as a match:
+                # exact match, match without abbrev field, match with exit
+                # number in parens, match concurrency exit number format
+                # nn(rr), match with _ suffix (like _N)
                 if (colocated[try_as_match].label == colocated[try_as_exit].route.list_entry_name()
                     or colocated[try_as_match].label == colocated[try_as_exit].route.name_no_abbrev()
                     or colocated[try_as_match].label == colocated[try_as_exit].route.list_entry_name() + "(" + colocated[try_as_exit].label + ")"
@@ -499,9 +503,6 @@ class Waypoint:
         # should become I-20/I-77 or maybe I-20(76)/I-77(16)
         # not shorter, so maybe who cares about this one?
 
-        # TODO: I-90@175&I-90BLAus@I-90_W
-        # should probably become something like I-90(175)/I-90BLAus
-
         # TODO: US83@FM1263_S&US380@FM1263
         # should probably end up as US83/US280@FM1263 or @FM1263_S
 
@@ -509,6 +510,12 @@ class Waypoint:
         # I-581@4&US220@I-581(4)&US460@I-581&US11AltRoa@I-581&US220AltRoa@US220_S&VA116@I-581(4)
         # INVESTIGATE: VA262@US11&US11@VA262&VA262@US11_S
         # should be 2 colocated, shows up as 3?
+
+        # TODO: I-610@TX288&I-610@38&TX288@I-610
+        # this is the overlap point of a loop
+
+        # TODO: boundaries where order is reversed on colocated points
+        # Vt4@FIN/NOR&E75@NOR/FIN&E75@NOR/FIN
 
         log.append("Keep failsafe: " + name)
         return name
