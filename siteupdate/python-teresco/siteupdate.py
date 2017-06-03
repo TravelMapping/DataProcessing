@@ -477,13 +477,15 @@ class Waypoint:
                 # check for any of the patterns that make sense as a match:
                 # exact match, match without abbrev field, match with exit
                 # number in parens, match concurrency exit number format
-                # nn(rr), match with _ suffix (like _N), match with exit
-                # number only
+                # nn(rr), match with _ suffix (like _N), match with a slash
+                # match with exit number only
                 if (colocated[try_as_match].label == colocated[try_as_exit].route.list_entry_name()
                     or colocated[try_as_match].label == colocated[try_as_exit].route.name_no_abbrev()
                     or colocated[try_as_match].label == colocated[try_as_exit].route.list_entry_name() + "(" + colocated[try_as_exit].label + ")"
                     or colocated[try_as_match].label == colocated[try_as_exit].label + "(" + route_number_only + ")"
+                    or colocated[try_as_match].label == colocated[try_as_exit].label + "(" + colocated[try_as_exit].route.name_no_abbrev() + ")"
                     or colocated[try_as_match].label.startswith(colocated[try_as_exit].route.name_no_abbrev() + "_")
+                    or colocated[try_as_match].label.startswith(colocated[try_as_exit].route.name_no_abbrev() + "/")
                     or colocated[try_as_match].label == colocated[try_as_exit].label):
                     this_match = True
                 if not this_match:
