@@ -455,6 +455,45 @@ class Waypoint:
         # TODO: I-90@47B(94)&I-94@47B
         # should become I-90/I-94@47B
         # complication: I-39@171C(90)&I-90@171C&US14@I-39/90
+        # try each as a possible route@exit type situation and look
+        # for matches
+        for try_as_exit in range(len(colocated)):
+            # see if all colocated points are potential matches
+            # when considering the one at try_as_exit as a primary
+            # exit number
+            if not colocated[try_as_exit].label[0].isdigit():
+                continue
+            all_match = True
+            # get the route number only version for one of the checks below
+            route_number_only = colocated[try_as_exit].route.name_no_abbrev()
+            for pos in range(len(route_number_only)):
+                if route_number_only[pos].isdigit():
+                    route_number_only = route_number_only[pos:]
+                    break
+            for try_as_match in range(len(colocated)):
+                if try_as_exit == try_as_match:
+                    continue
+                this_match = False
+                if (colocated[try_as_match].label == colocated[try_as_exit].route.list_entry_name()
+                    or colocated[try_as_match].label == colocated[try_as_exit].route.name_no_abbrev()
+                    or colocated[try_as_match].label == colocated[try_as_exit].route.list_entry_name() + "(" + colocated[try_as_exit].label + ")"
+                    or colocated[try_as_match].label == colocated[try_as_exit].label + "(" + route_number_only + ")"
+                    or colocated[try_as_match].label.startswith(colocated[try_as_exit].route.name_no_abbrev() + "_")):
+                    this_match = True
+                if not this_match:
+                    all_match = False
+
+            if all_match:
+                label = ""
+                for pos in range(len(colocated)):
+                    if pos == try_as_exit:
+                        label += colocated[pos].route.list_entry_name() + "(" + colocated[pos].label + ")"
+                    else:
+                        label += colocated[pos].route.list_entry_name()
+                    if pos < len(colocated) - 1:
+                        label += "/"
+                log.append("Exit number: " + name + " -> " + label)
+                return label
 
         # TODO: I-20@76&I-77@16
         # should become I-20/I-77 or maybe I-20(76)/I-77(16)
