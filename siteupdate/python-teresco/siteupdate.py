@@ -683,6 +683,7 @@ class Route:
         self.alt_route_names = fields[7].split(",")
         self.point_list = []
         self.labels_in_use = set()
+        self.unused_alt_labels = set()
         self.segment_list = []
         self.mileage = 0.0
 
@@ -702,6 +703,9 @@ class Route:
                 previous_point = w
                 w = Waypoint(line.rstrip('\n'),self)
                 self.point_list.append(w)
+                # populate unused alt labels
+                for label in w.alt_labels:
+                    self.unused_alt_labels.add(label.upper().strip("+"))
                 # look for colocated points
                 all_waypoints_lock.acquire()
                 other_w = all_waypoints.waypoint_at_same_point(w)
@@ -970,6 +974,10 @@ class TravelerList:
                                         canonical_waypoints.append(w)
                                         canonical_waypoint_indices.append(checking_index)
                                         r.labels_in_use.add(lower_label.upper())
+                                        # if we have not yet used this alt label, remove it from the unused list
+                                        if lower_label.upper() in r.unused_alt_labels:
+                                            r.unused_alt_labels.remove(lower_label.upper())
+                                            
                             checking_index += 1
                         if len(canonical_waypoints) != 2:
                             self.log_entries.append("Waypoint label(s) not found in line: " + line)
@@ -2396,6 +2404,20 @@ for h in highway_systems:
                 inusefile.write(" " + label)
             inusefile.write("\n")
 inusefile.close()
+
+# write log file for alt labels not in use
+print(et.et() + "Writing unused alt labels log.")
+unusedfile = open(args.logfilepath+'/unusedaltlabels.log','w',encoding='UTF-8')
+unusedfile.write("Log file created at: " + str(datetime.datetime.now()) + "\n")
+for h in highway_systems:
+    for r in h.route_list:
+        if len(r.unused_alt_labels) > 0:
+            unusedfile.write(r.root + ":")
+            for label in r.unused_alt_labels:
+                unusedfile.write(" " + label)
+            unusedfile.write("\n")
+unusedfile.close()
+
 
 # concurrency detection -- will augment our structure with list of concurrent
 # segments with each segment (that has a concurrency)
