@@ -2409,13 +2409,16 @@ inusefile.close()
 print(et.et() + "Writing unused alt labels log.")
 unusedfile = open(args.logfilepath+'/unusedaltlabels.log','w',encoding='UTF-8')
 unusedfile.write("Log file created at: " + str(datetime.datetime.now()) + "\n")
+total_unused_alt_labels = 0
 for h in highway_systems:
     for r in h.route_list:
         if len(r.unused_alt_labels) > 0:
-            unusedfile.write(r.root + ":")
+            total_unused_alt_labels += len(r.unused_alt_labels)
+            unusedfile.write(r.root + "(" + str(len(r.unused_alt_labels)) + "):")
             for label in r.unused_alt_labels:
                 unusedfile.write(" " + label)
             unusedfile.write("\n")
+unusedfile.write("Total: " + str(total_unused_alt_labels) + "\n")
 unusedfile.close()
 
 
