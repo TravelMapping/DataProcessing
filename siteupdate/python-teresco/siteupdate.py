@@ -1801,7 +1801,6 @@ args = parser.parse_args()
 # Get list of travelers in the system
 traveler_ids = args.userlist
 traveler_ids = os.listdir(args.userlistfilepath) if traveler_ids is None else (id + ".list" for id in traveler_ids)
-print(traveler_ids)
 
 # number of threads to use
 num_threads = int(args.numthreads)
