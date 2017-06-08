@@ -2885,10 +2885,10 @@ else:
 
     print(et.et() + "Writing master TM simple graph file, tm-master-simple.tmg", flush=True)
     (sv, se) = graph_data.write_master_tmg_simple(args.graphfilepath+'/tm-master-simple.tmg')
-    graph_list.append(GraphListEntry('tm-master-simple.tmg', 'Master Travel Mapping Data', sv, se, 'simple', 'master'))
+    graph_list.append(GraphListEntry('tm-master-simple.tmg', 'All Travel Mapping Data', sv, se, 'simple', 'master'))
     print(et.et() + "Writing master TM collapsed graph file, tm-master.tmg.", flush=True)
     (cv, ce) = graph_data.write_master_tmg_collapsed(args.graphfilepath+'/tm-master.tmg')
-    graph_list.append(GraphListEntry('tm-master.tmg', 'Master Travel Mapping Data', cv, ce, 'collapsed', 'master'))
+    graph_list.append(GraphListEntry('tm-master.tmg', 'All Travel Mapping Data', cv, ce, 'collapsed', 'master'))
 
     # Graphs restricted by region
     print(et.et() + "Creating regional data graphs.", flush=True)
@@ -2901,11 +2901,11 @@ else:
             continue
         region_name = r[1]
         print(region_code + ' ', end="",flush=True)
-        (sv, se) = graph_data.write_subgraph_tmg_simple(args.graphfilepath + '/' + region_code + '-all-simple.tmg', [ region_code ], None)
-        (cv, ce) = graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/' + region_code + '-all.tmg', [ region_code ], None)
-        graph_list.append(GraphListEntry(region_code + '-all-simple.tmg', '(' + region_name + ') All Routes', sv, se, 'simple', 'region'))
-        graph_list.append(GraphListEntry(region_code + '-all.tmg', '(' + region_name + ') All Routes', cv, ce, 'collapsed', 'region'))
-        print("!")
+        (sv, se) = graph_data.write_subgraph_tmg_simple(args.graphfilepath + '/' + region_code + '-region-simple.tmg', [ region_code ], None)
+        (cv, ce) = graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/' + region_code + '-region.tmg', [ region_code ], None)
+        graph_list.append(GraphListEntry(region_code + '-region-simple.tmg', '(' + region_name + ') All Routes in Region', sv, se, 'simple', 'region'))
+        graph_list.append(GraphListEntry(region_code + '-region.tmg', '(' + region_name + ') All Routes in Region', cv, ce, 'collapsed', 'region'))
+    print("!")
 
     # Graphs restricted by system
     print(et.et() + "Creating system data graphs.", flush=True)
@@ -2919,10 +2919,10 @@ else:
                 h = hs
                 break
         print(h.systemname + ' ', end="",flush=True)
-        (sv, se) = graph_data.write_subgraph_tmg_simple(args.graphfilepath + '/' + h.systemname + '-simple.tmg', None, [ h ])
-        (cv, ce) = graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/' + h.systemname + '.tmg', None, [ h ])
-        graph_list.append(GraphListEntry(h.systemname + '-simple.tmg', h.systemname + ' (' + h.fullname + ')', sv, se, 'simple', 'system'))
-        graph_list.append(GraphListEntry(h.systemname + '.tmg', h.systemname + ' (' + h.fullname + ')', cv, ce, 'collapsed', 'system'))
+        (sv, se) = graph_data.write_subgraph_tmg_simple(args.graphfilepath + '/' + h.systemname + '-system-simple.tmg', None, [ h ])
+        (cv, ce) = graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/' + h.systemname + '-system.tmg', None, [ h ])
+        graph_list.append(GraphListEntry(h.systemname + '-system-simple.tmg', h.systemname + ' (' + h.fullname + ')', sv, se, 'simple', 'system'))
+        graph_list.append(GraphListEntry(h.systemname + '-system.tmg', h.systemname + ' (' + h.fullname + ')', cv, ce, 'collapsed', 'system'))
     print("!")
 
     # Some additional interesting graphs
@@ -2934,10 +2934,10 @@ else:
     for h in highway_systems:
         if h.systemname in [ 'usai', 'usaus', 'usaif', 'usaib', 'usausb', 'usansf', 'usasf' ]:
             systems.append(h)
-    (sv, se) = graph_data.write_subgraph_tmg_simple(args.graphfilepath + '/usa-national-simple.tmg', None, systems)
-    (cv, ce) = graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/usa-national.tmg', None, systems)
-    graph_list.append(GraphListEntry('usa-national-simple.tmg', 'United States National Routes', sv, se, 'simple', 'country'))
-    graph_list.append(GraphListEntry('usa-national.tmg', 'United States National Routes', cv, ce, 'collapsed', 'country'))
+    (sv, se) = graph_data.write_subgraph_tmg_simple(args.graphfilepath + '/USA-national-simple.tmg', None, systems)
+    (cv, ce) = graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/USA-national.tmg', None, systems)
+    graph_list.append(GraphListEntry('USA-national-simple.tmg', 'United States National Routes', sv, se, 'simple', 'country'))
+    graph_list.append(GraphListEntry('USA-national.tmg', 'United States National Routes', cv, ce, 'collapsed', 'country'))
 
 #print("by region ", end="", flush=True)
 #for r in all_regions:
@@ -2947,30 +2947,43 @@ else:
 #        graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/' + r[0]# + '-usa-national.tmg', [ r[0] ], systems)
     print("!")
 
-    # U.S. all routes
-    print("usa-all ", end="", flush=True)
-    systems = []
-    for h in highway_systems:
-        if h.country == 'USA':
-            systems.append(h)
-    (sv, se) = graph_data.write_subgraph_tmg_simple(args.graphfilepath + '/usa-all-simple.tmg', None, systems)
-    (cv, ce) = graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/usa-all.tmg', None, systems)
-    graph_list.append(GraphListEntry('usa-all-simple.tmg', 'United States All Routes', sv, se, 'simple', 'country'))
-    graph_list.append(GraphListEntry('usa-all.tmg', 'United States All Routes', cv, ce, 'collapsed', 'country'))
+    # country graphs - we find countries that have regions
+    # that have routes with active or preview mileage
+    print(et.et() + "Creating country graphs.", flush=True)
+    for c in countries:
+        region_list = []
+        for r in all_regions:
+            # does it match this country and have routes?
+            if c[0] == r[2] and r[0] in active_preview_mileage_by_region:
+                region_list.append(r[0])
+        # does it have at least two?  if none, no data, if 1 we already
+        # generated a graph for that one region
+        if len(region_list) >= 2:
+            print(c[0] + " ", end="", flush=True)
+            (sv, se) = graph_data.write_subgraph_tmg_simple(args.graphfilepath + '/' + c[0] + '-country-simple.tmg', region_list, None)
+            (cv, ce) = graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/' + c[0] + '-country.tmg', region_list, None)
+            graph_list.append(GraphListEntry(c[0] + '-country-simple.tmg', c[1] + ' All Routes in Country', sv, se, 'simple', 'country'))
+            graph_list.append(GraphListEntry(c[0] + '-country.tmg', c[1] + ' All Routes in Country', cv, ce, 'collapsed', 'country'))
     print("!")
 
-    # Canada all routes
-    print("canada-all ", end="", flush=True)
-    systems = []
-    for h in highway_systems:
-        if h.country == 'CAN':
-            systems.append(h)
-    (sv, se) = graph_data.write_subgraph_tmg_simple(args.graphfilepath + '/canada-all-simple.tmg', None, systems)
-    (cv, ce) = graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/canada-all.tmg', None, systems)
-    graph_list.append(GraphListEntry('canada-all-simple.tmg', 'Canada All Routes', sv, se, 'simple', 'country'))
-    graph_list.append(GraphListEntry('canada-all.tmg', 'Canada All Routes', cv, ce, 'collapsed', 'country'))
-    print("!");
-
+    # continent graphs -- any continent with data will be created
+    print(et.et() + "Creating continent graphs.", flush=True)
+    for c in continents:
+        region_list = []
+        for r in all_regions:
+            # does it match this continent and have routes?
+            if c[0] == r[3] and r[0] in active_preview_mileage_by_region:
+                region_list.append(r[0])
+        # generate for any continent with at least 1 region with mileage
+        if len(region_list) >= 1:
+            print(c[0] + " ", end="", flush=True)
+            (sv, se) = graph_data.write_subgraph_tmg_simple(args.graphfilepath + '/' + c[0] + '-continent-simple.tmg', region_list, None)
+            (cv, ce) = graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/' + c[0] + '-continent.tmg', region_list, None)
+            graph_list.append(GraphListEntry(c[0] + '-continent-simple.tmg', c[1] + ' All Routes on Continent', sv, se, 'simple', 'continent'))
+            graph_list.append(GraphListEntry(c[0] + '-continent.tmg', c[1] + ' All Routes on Continent', cv, ce, 'collapsed', 'continent'))
+    print("!")
+    
+    
 print(et.et() + "Writing database file " + args.databasename + ".sql.")
 # Once all data is read in and processed, create a .sql file that will
 # create all of the DB tables to be used by other parts of the project
