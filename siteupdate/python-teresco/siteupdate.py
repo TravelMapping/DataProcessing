@@ -726,7 +726,7 @@ class Route:
                 #print("DEBUG: START search for nmps for waypoint " + str(w) + " in quadtree of size " + str(all_waypoints.size()))
                 #if not all_waypoints.is_valid():
                 #    sys.exit()
-                nmps = all_waypoints.near_miss_waypoints(w, 0.0001)
+                nmps = all_waypoints.near_miss_waypoints(w, 0.0005)
                 #print("DEBUG: for waypoint " + str(w) + " got " + str(len(nmps)) + " nmps: ", end="")
                 #for dbg_w in nmps:
                 #    print(str(dbg_w) + " ", end="")
