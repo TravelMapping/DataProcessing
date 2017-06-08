@@ -2904,11 +2904,14 @@ else:
     # Graphs restricted by system
     print(et.et() + "Creating system data graphs.", flush=True)
 
-    # We will create graph data and a graph file for each active or
-    # preview system
-    for h in highway_systems:
-        if h.devel():
-            continue
+    # We will create graph data and a graph file for only a few interesting
+    # systems, as many are not useful on their own
+    for hname in ['usai', 'usaus', 'cantch', 'eure']:
+        h = None
+        for hs in highway_systems:
+            if hs.systemname == hname:
+                h = hs
+                break
         print(h.systemname + ' ', end="",flush=True)
         (sv, se) = graph_data.write_subgraph_tmg_simple(args.graphfilepath + '/' + h.systemname + '-simple.tmg', None, [ h ])
         (cv, ce) = graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/' + h.systemname + '.tmg', None, [ h ])
