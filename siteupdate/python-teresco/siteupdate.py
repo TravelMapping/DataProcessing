@@ -2973,7 +2973,6 @@ print(et.et() + "Writing database file " + args.databasename + ".sql.")
 # Once all data is read in and processed, create a .sql file that will
 # create all of the DB tables to be used by other parts of the project
 sqlfile = open(args.databasename+'.sql','w',encoding='UTF-8')
-sqlfile.write('SET @@global.sql_mode= \'NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION\';\n')
 sqlfile.write('USE '+args.databasename+';\n')
 
 # we have to drop tables in the right order to avoid foreign key errors
