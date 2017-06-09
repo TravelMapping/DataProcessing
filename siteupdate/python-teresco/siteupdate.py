@@ -2910,7 +2910,7 @@ else:
         graph_list.append(GraphListEntry(region_code + '-region-simple.tmg', region_name + ' (' + region_type + ')', sv, se, 'simple', 'region'))
         graph_list.append(GraphListEntry(region_code + '-region.tmg', region_name + ' (' + region_type + ')', cv, ce, 'collapsed', 'region'))
     graph_types.append(['region', 'Routes Within a Single Region',
-                        'These graphs contain all routes in any system currently plotted within the given region.'])
+                        'These graphs contain all routes currently plotted within the given region.'])
     print("!")
 
     # Graphs restricted by system
@@ -2929,6 +2929,8 @@ else:
         (cv, ce) = graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/' + h.systemname + '-system.tmg', None, [ h ])
         graph_list.append(GraphListEntry(h.systemname + '-system-simple.tmg', h.systemname + ' (' + h.fullname + ')', sv, se, 'simple', 'system'))
         graph_list.append(GraphListEntry(h.systemname + '-system.tmg', h.systemname + ' (' + h.fullname + ')', cv, ce, 'collapsed', 'system'))
+    graph_types.append(['system', 'Routes Within a Single Highway System',
+                        'These graphs contain the routes within a single highway system and are not restricted by region.'])
     print("!")
 
     # Some additional interesting graphs
@@ -2970,6 +2972,8 @@ else:
             (cv, ce) = graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/' + c[0] + '-country.tmg', region_list, None)
             graph_list.append(GraphListEntry(c[0] + '-country-simple.tmg', c[1] + ' All Routes in Country', sv, se, 'simple', 'country'))
             graph_list.append(GraphListEntry(c[0] + '-country.tmg', c[1] + ' All Routes in Country', cv, ce, 'collapsed', 'country'))
+    graph_types.append(['country', 'Routes Within a Single Multi-Region Country',
+                        'These graphs contain the routes within a single country that is composed of multiple regions that contain plotted routes.  Countries consisting of a single region are represented by their regional graph.'])
     print("!")
 
     # continent graphs -- any continent with data will be created
@@ -2987,6 +2991,8 @@ else:
             (cv, ce) = graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/' + c[0] + '-continent.tmg', region_list, None)
             graph_list.append(GraphListEntry(c[0] + '-continent-simple.tmg', c[1] + ' All Routes on Continent', sv, se, 'simple', 'continent'))
             graph_list.append(GraphListEntry(c[0] + '-continent.tmg', c[1] + ' All Routes on Continent', cv, ce, 'collapsed', 'continent'))
+    graph_types.append(['continent', 'Routes Within a Continent',
+                        'These graphs contain the routes on a continent.'])
     print("!")
     
     
@@ -3295,7 +3301,19 @@ sqlfile.write(";\n")
 # update graph info in DB if graphs were generated
 if not args.skipgraphs:
     sqlfile.write('DROP TABLE IF EXISTS graphs;\n')
-    sqlfile.write('CREATE TABLE graphs (filename VARCHAR(32), descr VARCHAR(100), vertices INTEGER, edges INTEGER, format VARCHAR(10), category VARCHAR(10));\n')
+    sqlfile.write('DROP TABLE IF EXISTS graphTypes;\n')
+    sqlfile.write('CREATE TABLE graphTypes (category VARCHAR(10), descr VARCHAR(100), longDescr TEXT, PRIMARY KEY(category));\n')
+    if len(graph_types) > 0:
+        sqlfile.write('INSERT INTO graphTypes VALUES\n')
+        first = True
+        for g in graph_types:
+            if not first:
+                sqlfile.write(',')
+            first = False
+            sqlfile.write("('" + g[0] + "','" + g[1] + "','" + g[2] + "')\n")
+        sqlfile.write(";\n")
+
+    sqlfile.write('CREATE TABLE graphs (filename VARCHAR(32), descr VARCHAR(100), vertices INTEGER, edges INTEGER, format VARCHAR(10), category VARCHAR(10), FOREIGN KEY (category) REFERENCES graphTypes(category));\n')
     if len(graph_list) > 0:
         sqlfile.write('INSERT INTO graphs VALUES\n')
         first = True
@@ -3305,6 +3323,7 @@ if not args.skipgraphs:
             first = False
             sqlfile.write("('" + g.filename + "','" + g.descr.replace("'","''") + "','" + str(g.vertices) + "','" + str(g.edges) + "','" + g.format + "','" + g.category + "')\n")
         sqlfile.write(";\n")
+
 
 sqlfile.close()
 
