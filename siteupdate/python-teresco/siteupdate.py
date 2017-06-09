@@ -1365,6 +1365,50 @@ class HighwayGraphCollapsedEdgeInfo:
             line += " [" + intermediate.unique_name + "] " + str(intermediate.lat) + " " + str(intermediate.lng)
         return line
 
+class PlaceRadius:
+    """This class encapsulates a place name, file base name, latitude,
+    longitude, and radius (in miles) to define the area to which our
+    place-based graphs are restricted.
+    """
+
+    def __init__(self, place, base, lat, lng, r):
+        self.place = place
+        self.base = base
+        self.lat = lat
+        self.lng = lng
+        self.r = r
+
+    def contains_vertex_info(self, vinfo):
+        """return whether vinfo's coordinates are within this area"""
+        # convert to radians to compte distance
+        rlat1 = math.radians(self.lat)
+        rlng1 = math.radians(self.lng)
+        rlat2 = math.radians(vinfo.lat)
+        rlng2 = math.radians(vinfo.lng)
+
+        ans = math.acos(math.cos(rlat1)*math.cos(rlng1)*math.cos(rlat2)*math.cos(rlng2) +\
+                        math.cos(rlat1)*math.sin(rlng1)*math.cos(rlat2)*math.sin(rlng2) +\
+                        math.sin(rlat1)*math.sin(rlat2)) * 3963.1 # EARTH_RADIUS;
+        return ans <= self.r
+
+    def contains_waypoint(self, w):
+        """return whether w is within this area"""
+        # convert to radians to compte distance
+        rlat1 = math.radians(self.lat)
+        rlng1 = math.radians(self.lng)
+        rlat2 = math.radians(w.lat)
+        rlng2 = math.radians(w.lng)
+
+        ans = math.acos(math.cos(rlat1)*math.cos(rlng1)*math.cos(rlat2)*math.cos(rlng2) +\
+                        math.cos(rlat1)*math.sin(rlng1)*math.cos(rlat2)*math.sin(rlng2) +\
+                        math.sin(rlat1)*math.sin(rlat2)) * 3963.1 # EARTH_RADIUS;
+        return ans <= self.r
+
+    def contains_edge(self, e):
+        """return whether both endpoints of edge e are within this area"""
+        return (self.contains_waypoint(e.vertex1) and
+                self.contains_waypoint(e.vertex2))
+        
 class HighwayGraph:
     """This class implements the capability to create graph
     data structures representing the highway data.
@@ -1544,10 +1588,15 @@ class HighwayGraph:
                 edges += len(v.incident_collapsed_edges)
         return edges//2
 
-    def matching_waypoint(self, label, vinfo, regions=None, systems=None):
+    def matching_waypoint(self, label, vinfo, regions=None, systems=None,
+                          placeradius=None):
         # determine if the vertex list entry given in label and vinfo
         # belongs in the subset restricted by the listed regions and/or
-        # systems
+        # systems, or within the given placeradius area
+        if (placeradius is not None and
+            not placeradius.contains_vertex_info(vinfo)):
+            return False
+        
         region_match = regions is None
         if not region_match:
             for r in regions:
@@ -1561,50 +1610,56 @@ class HighwayGraph:
         return region_match and system_match
 
 
-    def num_matching_waypoints(self, regions=None, systems=None, visible_only=False):
+    def num_matching_waypoints(self, regions=None, systems=None,
+                               placeradius=None, visible_only=False):
         # count up the waypoints in or colocated in the system(s)
-        # and/or regions(s)
+        # and/or regions(s) and/or within the given area
         matching_waypoints = 0
         for label, vinfo in self.vertices.items():
             if not visible_only or not vinfo.is_hidden:
-                if self.matching_waypoint(label, vinfo, regions, systems):
+                if self.matching_waypoint(label, vinfo, regions, systems,
+                                          placeradius):
                     matching_waypoints += 1
 
         return matching_waypoints
 
-    def matching_edges(self, regions=None, systems=None):
+    def matching_edges(self, regions=None, systems=None, placeradius=None):
         # return a set of edges from the graph, optionally
-        # restricted by region or system
+        # restricted by region or system or placeradius area
         edge_set = set()
         for v in self.vertices.values():
             for e in v.incident_edges:
-                if regions is None or e.region in regions:
-                    system_match = systems is None
-                    if not system_match:
-                        for (r, s) in e.route_names_and_systems:
-                            if s in systems:
-                                system_match = True
-                    if system_match:
-                        edge_set.add(e)
+                if placeradius is None or placeradius.contains_edge(e):
+                    if regions is None or e.region in regions:
+                        system_match = systems is None
+                        if not system_match:
+                            for (r, s) in e.route_names_and_systems:
+                                if s in systems:
+                                    system_match = True
+                        if system_match:
+                            edge_set.add(e)
 
         return edge_set
 
-    def matching_collapsed_edges(self, regions=None, systems=None):
+    def matching_collapsed_edges(self, regions=None, systems=None,
+                                 placeradius=None):
         # return a set of edges from the graph edges for the collapsed
-        # edge format, optionally restricted by region or system
+        # edge format, optionally restricted by region or system or
+        # placeradius area
         edge_set = set()
         for v in self.vertices.values():
             if v.is_hidden:
                 continue
             for e in v.incident_collapsed_edges:
-                if regions is None or e.region in regions:
-                    system_match = systems is None
-                    if not system_match:
-                        for (r, s) in e.route_names_and_systems:
-                            if s in systems:
-                                system_match = True
-                    if system_match:
-                        edge_set.add(e)
+                if placeradius is None or placeradius.contains_edge(e):
+                    if regions is None or e.region in regions:
+                        system_match = systems is None
+                        if not system_match:
+                            for (r, s) in e.route_names_and_systems:
+                                if s in systems:
+                                    system_match = True
+                        if system_match:
+                            edge_set.add(e)
 
         return edge_set
 
@@ -1654,15 +1709,18 @@ class HighwayGraph:
         tmgfile.close()
         return (len(self.vertices), self.edge_count())
 
-    # write a subset of the data in the original gra format,
+    # write a subset of the data in the original graph format,
     # restricted by regions in the list if given, by system in the
-    # list if given
-    def write_subgraph_tmg_simple(self,filename,regions,systems):
+    # list if given, or to within a given area if placeradius is
+    # given
+    def write_subgraph_tmg_simple(self,filename,regions,systems,
+                                  placeradius):
 
         tmgfile = open(filename, 'w')
         tmgfile.write("TMG 1.0 simple\n")
-        matching_edges = self.matching_edges(regions, systems)
-        matching_waypoints = self.num_matching_waypoints(regions, systems)
+        matching_edges = self.matching_edges(regions, systems, placeradius)
+        matching_waypoints = self.num_matching_waypoints(regions, systems,
+                                                         placeradius)
         print('(' + str(matching_waypoints) + ',' + str(len(matching_edges)) + ') ', end="", flush=True)
         # ready to write the header
         tmgfile.write(str(matching_waypoints) + ' ' + str(len(matching_edges)) + '\n')
@@ -1670,7 +1728,8 @@ class HighwayGraph:
         # write waypoints
         vertex_num = 0
         for label, vinfo in self.vertices.items():
-            if self.matching_waypoint(label, vinfo, regions, systems):
+            if self.matching_waypoint(label, vinfo, regions, systems,
+                                      placeradius):
                 tmgfile.write(label + ' ' + str(vinfo.lat) + ' ' + str(vinfo.lng) + '\n')
                 vinfo.vertex_num = vertex_num
                 vertex_num += 1
@@ -1719,14 +1778,18 @@ class HighwayGraph:
         return (self.num_visible_vertices(), self.collapsed_edge_count())
 
     # write a tmg-format collapsed edge file restricted by region
-    # and/or system
-    def write_subgraph_tmg_collapsed(self, filename, regions, systems):
+    # and/or system or within the given area defined by placeradius
+    def write_subgraph_tmg_collapsed(self, filename, regions, systems,
+                                     placeradius):
 
         tmgfile = open(filename, 'w')
         tmgfile.write("TMG 1.0 collapsed\n")
 
-        matching_edges = self.matching_collapsed_edges(regions, systems)
-        matching_waypoints = self.num_matching_waypoints(regions, systems, visible_only=True)
+        matching_edges = self.matching_collapsed_edges(regions, systems,
+                                                       placeradius)
+        matching_waypoints = self.num_matching_waypoints(regions, systems,
+                                                         placeradius,
+                                                         visible_only=True)
 
         print("(" + str(matching_waypoints) + "," + str(len(matching_edges)) + ") ", end="", flush=True)
         tmgfile.write(str(matching_waypoints) + " " + str(len(matching_edges)) + "\n")
@@ -1735,7 +1798,8 @@ class HighwayGraph:
         vertex_num = 0
         for label, vinfo in self.vertices.items():
             if not vinfo.is_hidden and \
-                    self.matching_waypoint(label, vinfo, regions, systems):
+                    self.matching_waypoint(label, vinfo, regions, systems,
+                                           placeradius):
                 vinfo.vertex_num = vertex_num
                 tmgfile.write(label + ' ' + str(vinfo.lat) + ' ' + str(vinfo.lng) + '\n')
                 vertex_num += 1
@@ -2893,6 +2957,22 @@ else:
     graph_types.append(['master', 'All Travel Mapping Data',
                         'These graphs contain all routes currently plotted in the Travel Mapping project.'])
 
+    # TESTING graphs restricted by place/area
+    print(et.et() + "Creating area data graphs.", flush=True)
+    area_list = [ PlaceRadius("Siena College", "siena", 42.719450, -73.752063, 25),
+                  PlaceRadius("Siena College", "siena", 42.719450, -73.752063, 100),
+                  PlaceRadius("University at Buffalo", "ubuffalo", 43.002811, -78.787251, 50) ]
+
+    for a in area_list:
+        print(a.base + '(' + str(a.r) + ') ', end="", flush=True)
+        (sv, se) = graph_data.write_subgraph_tmg_simple(args.graphfilepath + '/' + a.base + str(a.r) + '-area-simple.tmg', None, None, a)
+        (cv, ce) = graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/' + a.base + str(a.r) + '-area.tmg', None, None, a)
+        graph_list.append(GraphListEntry(a.base + str(a.r) + '-area-simple.tmg', a.place + ' (' + str(a.r) + ' mi radius)', sv, se, 'simple', 'area'))
+        graph_list.append(GraphListEntry(a.base + str(a.r) + '-area.tmg', a.place + ' (' + str(a.r) + ' mi radius)', cv, ce, 'collapsed', 'area'))
+    graph_types.append(['area', 'Routes Within a Given Radius of a Place',
+                        'These graphs contain all routes currently plotted within the given distance radius of the given place.'])
+    print("!")
+        
     # Graphs restricted by region
     print(et.et() + "Creating regional data graphs.", flush=True)
 
@@ -2905,8 +2985,8 @@ else:
         region_name = r[1]
         region_type = r[4]
         print(region_code + ' ', end="",flush=True)
-        (sv, se) = graph_data.write_subgraph_tmg_simple(args.graphfilepath + '/' + region_code + '-region-simple.tmg', [ region_code ], None)
-        (cv, ce) = graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/' + region_code + '-region.tmg', [ region_code ], None)
+        (sv, se) = graph_data.write_subgraph_tmg_simple(args.graphfilepath + '/' + region_code + '-region-simple.tmg', [ region_code ], None, None)
+        (cv, ce) = graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/' + region_code + '-region.tmg', [ region_code ], None, None)
         graph_list.append(GraphListEntry(region_code + '-region-simple.tmg', region_name + ' (' + region_type + ')', sv, se, 'simple', 'region'))
         graph_list.append(GraphListEntry(region_code + '-region.tmg', region_name + ' (' + region_type + ')', cv, ce, 'collapsed', 'region'))
     graph_types.append(['region', 'Routes Within a Single Region',
@@ -2925,8 +3005,8 @@ else:
                 h = hs
                 break
         print(h.systemname + ' ', end="",flush=True)
-        (sv, se) = graph_data.write_subgraph_tmg_simple(args.graphfilepath + '/' + h.systemname + '-system-simple.tmg', None, [ h ])
-        (cv, ce) = graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/' + h.systemname + '-system.tmg', None, [ h ])
+        (sv, se) = graph_data.write_subgraph_tmg_simple(args.graphfilepath + '/' + h.systemname + '-system-simple.tmg', None, [ h ], None)
+        (cv, ce) = graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/' + h.systemname + '-system.tmg', None, [ h ], None)
         graph_list.append(GraphListEntry(h.systemname + '-system-simple.tmg', h.systemname + ' (' + h.fullname + ')', sv, se, 'simple', 'system'))
         graph_list.append(GraphListEntry(h.systemname + '-system.tmg', h.systemname + ' (' + h.fullname + ')', cv, ce, 'collapsed', 'system'))
     graph_types.append(['system', 'Routes Within a Single Highway System',
@@ -2942,8 +3022,8 @@ else:
     for h in highway_systems:
         if h.systemname in [ 'usai', 'usaus', 'usaif', 'usaib', 'usausb', 'usansf', 'usasf' ]:
             systems.append(h)
-    (sv, se) = graph_data.write_subgraph_tmg_simple(args.graphfilepath + '/USA-national-simple.tmg', None, systems)
-    (cv, ce) = graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/USA-national.tmg', None, systems)
+    (sv, se) = graph_data.write_subgraph_tmg_simple(args.graphfilepath + '/USA-national-simple.tmg', None, systems, None)
+    (cv, ce) = graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/USA-national.tmg', None, systems, None)
     graph_list.append(GraphListEntry('USA-national-simple.tmg', 'United States National Routes', sv, se, 'simple', 'country'))
     graph_list.append(GraphListEntry('USA-national.tmg', 'United States National Routes', cv, ce, 'collapsed', 'country'))
 
@@ -2968,8 +3048,8 @@ else:
         # generated a graph for that one region
         if len(region_list) >= 2:
             print(c[0] + " ", end="", flush=True)
-            (sv, se) = graph_data.write_subgraph_tmg_simple(args.graphfilepath + '/' + c[0] + '-country-simple.tmg', region_list, None)
-            (cv, ce) = graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/' + c[0] + '-country.tmg', region_list, None)
+            (sv, se) = graph_data.write_subgraph_tmg_simple(args.graphfilepath + '/' + c[0] + '-country-simple.tmg', region_list, None, None)
+            (cv, ce) = graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/' + c[0] + '-country.tmg', region_list, None, None)
             graph_list.append(GraphListEntry(c[0] + '-country-simple.tmg', c[1] + ' All Routes in Country', sv, se, 'simple', 'country'))
             graph_list.append(GraphListEntry(c[0] + '-country.tmg', c[1] + ' All Routes in Country', cv, ce, 'collapsed', 'country'))
     graph_types.append(['country', 'Routes Within a Single Multi-Region Country',
@@ -2987,8 +3067,8 @@ else:
         # generate for any continent with at least 1 region with mileage
         if len(region_list) >= 1:
             print(c[0] + " ", end="", flush=True)
-            (sv, se) = graph_data.write_subgraph_tmg_simple(args.graphfilepath + '/' + c[0] + '-continent-simple.tmg', region_list, None)
-            (cv, ce) = graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/' + c[0] + '-continent.tmg', region_list, None)
+            (sv, se) = graph_data.write_subgraph_tmg_simple(args.graphfilepath + '/' + c[0] + '-continent-simple.tmg', region_list, None, None)
+            (cv, ce) = graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/' + c[0] + '-continent.tmg', region_list, None, None)
             graph_list.append(GraphListEntry(c[0] + '-continent-simple.tmg', c[1] + ' All Routes on Continent', sv, se, 'simple', 'continent'))
             graph_list.append(GraphListEntry(c[0] + '-continent.tmg', c[1] + ' All Routes on Continent', cv, ce, 'collapsed', 'continent'))
     graph_types.append(['continent', 'Routes Within a Continent',
