@@ -1836,7 +1836,7 @@ all_regions = []
 lines.pop(0)  # ignore header line
 for line in lines:
     fields = line.rstrip('\n').split(";")
-    if len(fields) != 4:
+    if len(fields) != 5:
         print("ERROR: Could not parse regions.csv line: " + line)
         continue
     # look up country and continent, add index into those arrays
@@ -1846,7 +1846,7 @@ for line in lines:
         if country == fields[2]:
             fields.append(i)
             break
-    if len(fields) != 5:
+    if len(fields) != 6:
         print("ERROR: Could not find country matching regions.csv line: " + line)
         continue
     for i in range(len(continents)):
@@ -1854,7 +1854,7 @@ for line in lines:
         if continent == fields[3]:
             fields.append(i)
             break
-    if len(fields) != 6:
+    if len(fields) != 7:
         print("ERROR: Could not find continent matching regions.csv line: " + line)
         continue
     all_regions.append(fields)
@@ -2880,6 +2880,7 @@ else:
 
     # create list of graph information for the DB
     graph_list = []
+    graph_types = []
     
     # start generating graphs and making entries for graph DB table
 
@@ -2889,6 +2890,8 @@ else:
     print(et.et() + "Writing master TM collapsed graph file, tm-master.tmg.", flush=True)
     (cv, ce) = graph_data.write_master_tmg_collapsed(args.graphfilepath+'/tm-master.tmg')
     graph_list.append(GraphListEntry('tm-master.tmg', 'All Travel Mapping Data', cv, ce, 'collapsed', 'master'))
+    graph_types.append(['master', 'All Travel Mapping Data',
+                        'These graphs contain all routes currently plotted in the Travel Mapping project.'])
 
     # Graphs restricted by region
     print(et.et() + "Creating regional data graphs.", flush=True)
@@ -2900,11 +2903,14 @@ else:
         if region_code not in active_preview_mileage_by_region:
             continue
         region_name = r[1]
+        region_type = r[4]
         print(region_code + ' ', end="",flush=True)
         (sv, se) = graph_data.write_subgraph_tmg_simple(args.graphfilepath + '/' + region_code + '-region-simple.tmg', [ region_code ], None)
         (cv, ce) = graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/' + region_code + '-region.tmg', [ region_code ], None)
-        graph_list.append(GraphListEntry(region_code + '-region-simple.tmg', '(' + region_name + ') All Routes in Region', sv, se, 'simple', 'region'))
-        graph_list.append(GraphListEntry(region_code + '-region.tmg', '(' + region_name + ') All Routes in Region', cv, ce, 'collapsed', 'region'))
+        graph_list.append(GraphListEntry(region_code + '-region-simple.tmg', region_name + ' (' + region_type + ')', sv, se, 'simple', 'region'))
+        graph_list.append(GraphListEntry(region_code + '-region.tmg', region_name + ' (' + region_type + ')', cv, ce, 'collapsed', 'region'))
+    graph_types.append(['region', 'Routes Within a Single Region',
+                        'These graphs contain all routes in any system currently plotted within the given region.'])
     print("!")
 
     # Graphs restricted by system
@@ -3032,14 +3038,14 @@ for c in countries:
     sqlfile.write("('" + c[0] + "','" + c[1].replace("'","''") + "')\n")
 sqlfile.write(";\n")
 
-sqlfile.write('CREATE TABLE regions (code VARCHAR(8), name VARCHAR(32), country VARCHAR(3), continent VARCHAR(3), PRIMARY KEY(code), FOREIGN KEY (country) REFERENCES countries(code), FOREIGN KEY (continent) REFERENCES continents(code));\n')
+sqlfile.write('CREATE TABLE regions (code VARCHAR(8), name VARCHAR(32), country VARCHAR(3), continent VARCHAR(3), regiontype VARCHAR(20), PRIMARY KEY(code), FOREIGN KEY (country) REFERENCES countries(code), FOREIGN KEY (continent) REFERENCES continents(code));\n')
 sqlfile.write('INSERT INTO regions VALUES\n')
 first = True
 for r in all_regions:
     if not first:
         sqlfile.write(",")
     first = False
-    sqlfile.write("('" + r[0] + "','" + r[1].replace("'","''") + "','" + r[2] + "','" + r[3] + "')\n")
+    sqlfile.write("('" + r[0] + "','" + r[1].replace("'","''") + "','" + r[2] + "','" + r[3] + "','" + r[4] + "')\n")
 sqlfile.write(";\n")
 
 # next, a table of the systems, consisting of the system name in the
