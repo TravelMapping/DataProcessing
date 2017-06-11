@@ -2957,10 +2957,22 @@ else:
     graph_types.append(['master', 'All Travel Mapping Data',
                         'These graphs contain all routes currently plotted in the Travel Mapping project.'])
 
-    # TESTING graphs restricted by place/area
+    # TESTING graphs restricted by place/area - should be in a csv
+    # file probably
     print(et.et() + "Creating area data graphs.", flush=True)
     area_list = [ PlaceRadius("Siena College", "siena", 42.719450, -73.752063, 25),
-                  PlaceRadius("Siena College", "siena", 42.719450, -73.752063, 100),
+                  PlaceRadius("Siena College", "siena", 42.719450, -73.752063, 50),
+                  PlaceRadius("New York City", "nyc", 40.752459, -73.985367, 20),
+                  PlaceRadius("Boston", "boston", 42.362096, -71.057510, 20),
+                  PlaceRadius("Washington, D.C.", "dc", 38.899851, -77.03578, 20),
+                  PlaceRadius("Naples, FL", "naples", 26.141878, -81.794586, 25),
+                  PlaceRadius("Albuquerque, NM", "albuquerque", 35.104181, -106.627121, 50),
+                  PlaceRadius("Wolf Creek Pass, CO", "wolfcreek", 37.474586, -106.792603, 50),
+                  PlaceRadius("Seattle", "seattle", 47.594588, -122.335167, 25),
+                  PlaceRadius("Montreal", "montreal", 45.522646, -73.546343, 25),
+                  PlaceRadius("Innsbruck", "innsbruck", 47.266985, 11.393638, 25),
+                  PlaceRadius("London", "london", 51.507323, -0.127672, 25),
+                  PlaceRadius("Copenhagen", "copenhagen", 55.683488, 12.572136, 25),
                   PlaceRadius("University at Buffalo", "ubuffalo", 43.002811, -78.787251, 50) ]
 
     for a in area_list:
@@ -3017,7 +3029,7 @@ else:
     print(et.et() + "Creating additional graphs.", flush=True)
 
     # U.S. national systems
-    print("usa-national ", end="", flush=True)
+    print("USA-national ", end="", flush=True)
     systems = []
     for h in highway_systems:
         if h.systemname in [ 'usai', 'usaus', 'usaif', 'usaib', 'usausb', 'usansf', 'usasf' ]:
@@ -3026,6 +3038,16 @@ else:
     (cv, ce) = graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/USA-national.tmg', None, systems, None)
     graph_list.append(GraphListEntry('USA-national-simple.tmg', 'United States National Routes', sv, se, 'simple', 'country'))
     graph_list.append(GraphListEntry('USA-national.tmg', 'United States National Routes', cv, ce, 'collapsed', 'country'))
+    
+    print("EUR-freeways ", end="", flush=True)
+    systems = []
+    for h in highway_systems:
+        if h.systemname in [ 'alba', 'auta', 'bela', 'bgra', 'biha', 'chea', 'cypa', 'czed', 'deua', 'espa', 'fraa', 'gbnam', 'gbnm', 'grca', 'hrva', 'hunm', 'irlm', 'itaa', 'luxa', 'niram', 'nirm', 'nlda', 'pola', 'prta', 'rksr', 'roua', 'srba', 'svkd', 'svna', 'turo', 'auts', 'belb', 'eursf', 'luxb', 'pols', 'svkr', 'svnh' ]:
+            systems.append(h)
+    (sv, se) = graph_data.write_subgraph_tmg_simple(args.graphfilepath + '/EUR-freeways-simple.tmg', None, systems, None)
+    (cv, ce) = graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/EUR-freeways.tmg', None, systems, None)
+    graph_list.append(GraphListEntry('EUR-freeways-simple.tmg', 'Europen Freeway Routes', sv, se, 'simple', 'country'))
+    graph_list.append(GraphListEntry('EUR-freeways.tmg', 'European Freeway Routes', cv, ce, 'collapsed', 'continent'))
 
 #print("by region ", end="", flush=True)
 #for r in all_regions:
