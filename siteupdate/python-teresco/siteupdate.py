@@ -3029,7 +3029,7 @@ else:
     for line in lines:
         fields = line.rstrip('\n').split(";")
         if len(fields) != 3:
-            print("Could not parse areagraphs.csv line: " + line)
+            print("Could not parse multisystem.csv line: " + line)
             continue
         print(fields[1] + ' ', end="", flush=True)
         systems = []
@@ -3038,11 +3038,36 @@ else:
             if h.systemname in selected_systems:
                 systems.append(h)
         (sv, se) = graph_data.write_subgraph_tmg_simple(args.graphfilepath + '/' + fields[1] + '-simple.tmg', None, systems, None)
-        (cv, ce) = graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/' + '.tmg', None, systems, None)
+        (cv, ce) = graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/' + fields[1] + '.tmg', None, systems, None)
         graph_list.append(GraphListEntry(fields[1] + '-simple.tmg', fields[0], sv, se, 'simple', 'multisystem'))
         graph_list.append(GraphListEntry(fields[1] + '.tmg', fields[0], cv, ce, 'collapsed', 'multisystem'))
     graph_types.append(['multisystem', 'Routes Within Multiple Highway Systems',
                         'These graphs contain the routes within a set of highway systems.'])
+    print("!")
+
+    # Some additional interesting graphs, the "multiregion" graphs
+    print(et.et() + "Creating multiregion graphs.", flush=True)
+
+    with open(args.highwaydatapath+"/graphs/multiregion.csv", "rt",encoding='utf-8') as file:
+        lines = file.readlines()
+    lines.pop(0);  # ignore header line
+    for line in lines:
+        fields = line.rstrip('\n').split(";")
+        if len(fields) != 3:
+            print("Could not parse multiregion.csv line: " + line)
+            continue
+        print(fields[1] + ' ', end="", flush=True)
+        region_list = []
+        selected_regions = fields[2].split(",")
+        for r in all_regions:
+            if r[0] in selected_regions and r[0] in active_preview_mileage_by_region:
+                region_list.append(r[0])
+        (sv, se) = graph_data.write_subgraph_tmg_simple(args.graphfilepath + '/' + fields[1] + '-simple.tmg', region_list, None, None)
+        (cv, ce) = graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/' + fields[1] + '.tmg', region_list, None, None)
+        graph_list.append(GraphListEntry(fields[1] + '-simple.tmg', fields[0], sv, se, 'simple', 'multiregion'))
+        graph_list.append(GraphListEntry(fields[1] + '.tmg', fields[0], cv, ce, 'collapsed', 'multiregion'))
+    graph_types.append(['multiregion', 'Routes Within Multiple Regions',
+                        'These graphs contain the routes within a set of regions.'])
     print("!")
 
     # country graphs - we find countries that have regions
