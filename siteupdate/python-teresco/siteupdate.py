@@ -1374,9 +1374,9 @@ class PlaceRadius:
     def __init__(self, place, base, lat, lng, r):
         self.place = place
         self.base = base
-        self.lat = lat
-        self.lng = lng
-        self.r = r
+        self.lat = float(lat)
+        self.lng = float(lng)
+        self.r = int(r)
 
     def contains_vertex_info(self, vinfo):
         """return whether vinfo's coordinates are within this area"""
@@ -2957,23 +2957,18 @@ else:
     graph_types.append(['master', 'All Travel Mapping Data',
                         'These graphs contain all routes currently plotted in the Travel Mapping project.'])
 
-    # TESTING graphs restricted by place/area - should be in a csv
-    # file probably
+    # graphs restricted by place/area - from areagraphs.csv file
     print(et.et() + "Creating area data graphs.", flush=True)
-    area_list = [ PlaceRadius("Siena College", "siena", 42.719450, -73.752063, 25),
-                  PlaceRadius("Siena College", "siena", 42.719450, -73.752063, 50),
-                  PlaceRadius("New York City", "nyc", 40.752459, -73.985367, 20),
-                  PlaceRadius("Boston", "boston", 42.362096, -71.057510, 20),
-                  PlaceRadius("Washington, D.C.", "dc", 38.899851, -77.03578, 20),
-                  PlaceRadius("Naples, FL", "naples", 26.141878, -81.794586, 25),
-                  PlaceRadius("Albuquerque, NM", "albuquerque", 35.104181, -106.627121, 50),
-                  PlaceRadius("Wolf Creek Pass, CO", "wolfcreek", 37.474586, -106.792603, 50),
-                  PlaceRadius("Seattle", "seattle", 47.594588, -122.335167, 25),
-                  PlaceRadius("Montreal", "montreal", 45.522646, -73.546343, 25),
-                  PlaceRadius("Innsbruck", "innsbruck", 47.266985, 11.393638, 25),
-                  PlaceRadius("London", "london", 51.507323, -0.127672, 25),
-                  PlaceRadius("Copenhagen", "copenhagen", 55.683488, 12.572136, 25),
-                  PlaceRadius("University at Buffalo", "ubuffalo", 43.002811, -78.787251, 50) ]
+    with open(args.highwaydatapath+"/graphs/areagraphs.csv", "rt",encoding='utf-8') as file:
+        lines = file.readlines()
+    lines.pop(0);  # ignore header line
+    area_list = []
+    for line in lines:
+        fields = line.rstrip('\n').split(";")
+        if len(fields) != 5:
+            print("Could not parse areagraphs.csv line: " + line)
+            continue
+        area_list.append(PlaceRadius(*fields))
 
     for a in area_list:
         print(a.base + '(' + str(a.r) + ') ', end="", flush=True)
@@ -3025,36 +3020,29 @@ else:
                         'These graphs contain the routes within a single highway system and are not restricted by region.'])
     print("!")
 
-    # Some additional interesting graphs
-    print(et.et() + "Creating additional graphs.", flush=True)
+    # Some additional interesting graphs, the "multisystem" graphs
+    print(et.et() + "Creating multisystem graphs.", flush=True)
 
-    # U.S. national systems
-    print("USA-national ", end="", flush=True)
-    systems = []
-    for h in highway_systems:
-        if h.systemname in [ 'usai', 'usaus', 'usaif', 'usaib', 'usausb', 'usansf', 'usasf' ]:
-            systems.append(h)
-    (sv, se) = graph_data.write_subgraph_tmg_simple(args.graphfilepath + '/USA-national-simple.tmg', None, systems, None)
-    (cv, ce) = graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/USA-national.tmg', None, systems, None)
-    graph_list.append(GraphListEntry('USA-national-simple.tmg', 'United States National Routes', sv, se, 'simple', 'country'))
-    graph_list.append(GraphListEntry('USA-national.tmg', 'United States National Routes', cv, ce, 'collapsed', 'country'))
-    
-    print("EUR-freeways ", end="", flush=True)
-    systems = []
-    for h in highway_systems:
-        if h.systemname in [ 'alba', 'auta', 'bela', 'bgra', 'biha', 'chea', 'cypa', 'czed', 'deua', 'espa', 'fraa', 'gbnam', 'gbnm', 'grca', 'hrva', 'hunm', 'irlm', 'itaa', 'luxa', 'niram', 'nirm', 'nlda', 'pola', 'prta', 'rksr', 'roua', 'srba', 'svkd', 'svna', 'turo', 'auts', 'belb', 'eursf', 'luxb', 'pols', 'svkr', 'svnh' ]:
-            systems.append(h)
-    (sv, se) = graph_data.write_subgraph_tmg_simple(args.graphfilepath + '/EUR-freeways-simple.tmg', None, systems, None)
-    (cv, ce) = graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/EUR-freeways.tmg', None, systems, None)
-    graph_list.append(GraphListEntry('EUR-freeways-simple.tmg', 'Europen Freeway Routes', sv, se, 'simple', 'country'))
-    graph_list.append(GraphListEntry('EUR-freeways.tmg', 'European Freeway Routes', cv, ce, 'collapsed', 'continent'))
-
-#print("by region ", end="", flush=True)
-#for r in all_regions:
-#    if r[2] == 'USA':
-#        print(r[0] + ' ', end="", flush=True)
-#        graph_data.write_subgraph_tmg_simple(args.graphfilepath + '/' + r[0] + '-usa-n#ational.gra', [ r[0] ], systems)
-#        graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/' + r[0]# + '-usa-national.tmg', [ r[0] ], systems)
+    with open(args.highwaydatapath+"/graphs/multisystem.csv", "rt",encoding='utf-8') as file:
+        lines = file.readlines()
+    lines.pop(0);  # ignore header line
+    for line in lines:
+        fields = line.rstrip('\n').split(";")
+        if len(fields) != 3:
+            print("Could not parse areagraphs.csv line: " + line)
+            continue
+        print(fields[1] + ' ', end="", flush=True)
+        systems = []
+        selected_systems = fields[2].split(",")
+        for h in highway_systems:
+            if h.systemname in selected_systems:
+                systems.append(h)
+        (sv, se) = graph_data.write_subgraph_tmg_simple(args.graphfilepath + '/' + fields[1] + '-simple.tmg', None, systems, None)
+        (cv, ce) = graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/' + '.tmg', None, systems, None)
+        graph_list.append(GraphListEntry(fields[1] + '-simple.tmg', fields[0], sv, se, 'simple', 'multisystem'))
+        graph_list.append(GraphListEntry(fields[1] + '.tmg', fields[0], cv, ce, 'collapsed', 'multisystem'))
+    graph_types.append(['multisystem', 'Routes Within Multiple Highway Systems',
+                        'These graphs contain the routes within a set of highway systems.'])
     print("!")
 
     # country graphs - we find countries that have regions
