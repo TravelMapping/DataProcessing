@@ -6,18 +6,22 @@ logdir=testlogs
 statdir=teststats
 graphdir=testgraphs
 nmpmerged=nmp_merged
+graphflag=
 mkdir -p $logdir $statdir $graphdir
 date
 if [ $# -eq 1 ]; then
   if [ "$1" == "--noread" ]; then
      read_data=0
   fi
+  if [ "$1" == "--nographs" ]; then
+      graphflag="-k"
+  fi
 fi
 if [ "$read_data" == "1" ]; then
   echo "testsiteupdate.sh: launching siteupdate.py"
   #./siteupdate.py -w ../../../../HighwayData -d TravelMappingTest -s smallsystems.csv -u a_few_lists -l $logdir -c $statdir | tee $logdir/testsiteupdate.log 2>&1
   #./siteupdate.py -k -w ../../../../HighwayData -s systems.csv -d TravelMappingTest -g $graphdir -u . -l $logdir -c $statdir | tee $logdir/testsiteupdate.log 2>&1
-  ./siteupdate.py -k -s cypa-only.csv -d TravelMappingTest -g $graphdir -l $logdir -c $statdir | tee $logdir/testsiteupdate.log 2>&1
+  ./siteupdate.py $graphflag -w ../../../si404/HighwayData -s esp-area.csv -d TravelMappingTest -g $graphdir -l $logdir -c $statdir -U si404 michih peperodriguez2710 | tee $logdir/testsiteupdate.log 2>&1
   #./siteupdate.py -w ../../../../HighwayData -d TravelMappingTest -u ../../../../UserData/list_files -l $logdir -c $statdir | tee $logdir/testsiteupdate.log 2>&1
 else
   echo "testsiteupdate.sh: SKIPPING siteupdate.py"
