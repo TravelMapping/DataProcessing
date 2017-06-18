@@ -677,7 +677,7 @@ class Route:
             print("Expected 8 fields, found " + str(len(fields)))
         self.system = system
         if system.systemname != fields[0]:
-            print("ERROR: System mismatch parsing line [" + "], expected " + system.systemname)
+            print("ERROR: System mismatch parsing line [" + line + "], expected " + system.systemname)
         self.region = fields[1]
         self.route = fields[2]
         self.banner = fields[3]
