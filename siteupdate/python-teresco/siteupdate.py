@@ -27,6 +27,13 @@ class ElapsedTime:
     def et(self):
         return "[{0:.1f}] ".format(time.time()-self.start_time)
 
+class ErrorTracker:
+    """Track potentially fatal errors"""
+
+    def __init__(self):
+        this.lock = threading.lock()
+        this.error_list = []
+
 class WaypointQuadtree:
     """This class defines a recursive quadtree structure to store
     Waypoint objects for efficient geometric searching.
