@@ -27,12 +27,18 @@ class ElapsedTime:
     def et(self):
         return "[{0:.1f}] ".format(time.time()-self.start_time)
 
-class ErrorTracker:
-    """Track potentially fatal errors"""
+class ErrorList:
+    """Track a list of potentially fatal errors"""
 
     def __init__(self):
-        this.lock = threading.lock()
-        this.error_list = []
+        self.lock = threading.Lock()
+        self.error_list = []
+
+    def add_error(self, e):
+        self.lock.acquire()
+        print("ERROR: " + e)
+        self.error_list.append(e)
+        self.lock.release()
 
 class WaypointQuadtree:
     """This class defines a recursive quadtree structure to store
@@ -702,59 +708,64 @@ class Route:
         """printable version of the object"""
         return self.root + " (" + str(len(self.point_list)) + " total points)"
 
-    def read_wpt(self,all_waypoints,all_waypoints_lock,datacheckerrors,path="../../../HighwayData/hwy_data"):
+    def read_wpt(self,all_waypoints,all_waypoints_lock,datacheckerrors,el,path="../../../HighwayData/hwy_data"):
         """read data into the Route's waypoint list from a .wpt file"""
         #print("read_wpt on " + str(self))
         self.point_list = []
-        with open(path+"/"+self.region + "/" + self.system.systemname+"/"+self.root+".wpt", "rt",encoding='utf-8') as file:
+        try:
+            file = open(path+"/"+self.region + "/" + self.system.systemname+"/"+self.root+".wpt", "rt",encoding='utf-8')
+        except OSError as e:
+            el.add_error(str(e))
+        else:
             lines = file.readlines()
-        w = None
-        for line in lines:
-            if len(line.rstrip('\n')) > 0:
-                previous_point = w
-                w = Waypoint(line.rstrip('\n'),self)
-                self.point_list.append(w)
-                # populate unused alt labels
-                for label in w.alt_labels:
-                    self.unused_alt_labels.add(label.upper().strip("+"))
-                # look for colocated points
-                all_waypoints_lock.acquire()
-                other_w = all_waypoints.waypoint_at_same_point(w)
-                if other_w is not None:
-                    # see if this is the first point colocated with other_w
-                    if other_w.colocated is None:
-                        other_w.colocated = [ other_w ]
-                    other_w.colocated.append(w)
-                    w.colocated = other_w.colocated
-                    if w.is_hidden != other_w.is_hidden:
-                        datacheckerrors.append(DatacheckEntry(self,[w.label],"VISIBLE_HIDDEN_COLOC",other_w.route.root + "@" + other_w.label))
+            file.close()
+            w = None
+            for line in lines:
+                if len(line.rstrip('\n')) > 0:
+                    previous_point = w
+                    w = Waypoint(line.rstrip('\n'),self)
+                    self.point_list.append(w)
+                    # populate unused alt labels
+                    for label in w.alt_labels:
+                        self.unused_alt_labels.add(label.upper().strip("+"))
+                    # look for colocated points
+                    all_waypoints_lock.acquire()
+                    other_w = all_waypoints.waypoint_at_same_point(w)
+                    if other_w is not None:
+                        # see if this is the first point colocated with other_w
+                        if other_w.colocated is None:
+                            other_w.colocated = [ other_w ]
+                        other_w.colocated.append(w)
+                        w.colocated = other_w.colocated
+                        if w.is_hidden != other_w.is_hidden:
+                            datacheckerrors.append(DatacheckEntry(self,[w.label],"VISIBLE_HIDDEN_COLOC",other_w.route.root + "@" + other_w.label))
 
-                # look for near-miss points (before we add this one in)
-                #print("DEBUG: START search for nmps for waypoint " + str(w) + " in quadtree of size " + str(all_waypoints.size()))
-                #if not all_waypoints.is_valid():
-                #    sys.exit()
-                nmps = all_waypoints.near_miss_waypoints(w, 0.0005)
-                #print("DEBUG: for waypoint " + str(w) + " got " + str(len(nmps)) + " nmps: ", end="")
-                #for dbg_w in nmps:
-                #    print(str(dbg_w) + " ", end="")
-                #print()
-                if len(nmps) > 0:
-                    if w.near_miss_points is None:
-                        w.near_miss_points = nmps
-                    else:
-                        w.near_miss_points.extend(nmps)
-
-                    for other_w in nmps:
-                        if other_w.near_miss_points is None:
-                            other_w.near_miss_points = [ w ]
+                    # look for near-miss points (before we add this one in)
+                    #print("DEBUG: START search for nmps for waypoint " + str(w) + " in quadtree of size " + str(all_waypoints.size()))
+                    #if not all_waypoints.is_valid():
+                    #    sys.exit()
+                    nmps = all_waypoints.near_miss_waypoints(w, 0.0005)
+                    #print("DEBUG: for waypoint " + str(w) + " got " + str(len(nmps)) + " nmps: ", end="")
+                    #for dbg_w in nmps:
+                    #    print(str(dbg_w) + " ", end="")
+                    #print()
+                    if len(nmps) > 0:
+                        if w.near_miss_points is None:
+                            w.near_miss_points = nmps
                         else:
-                            other_w.near_miss_points.append(w)
-
-                all_waypoints.insert(w)
-                all_waypoints_lock.release()
-                # add HighwaySegment, if not first point
-                if previous_point is not None:
-                    self.segment_list.append(HighwaySegment(previous_point, w, self))
+                            w.near_miss_points.extend(nmps)
+    
+                        for other_w in nmps:
+                            if other_w.near_miss_points is None:
+                                other_w.near_miss_points = [ w ]
+                            else:
+                                other_w.near_miss_points.append(w)
+    
+                    all_waypoints.insert(w)
+                    all_waypoints_lock.release()
+                    # add HighwaySegment, if not first point
+                    if previous_point is not None:
+                        self.segment_list.append(HighwaySegment(previous_point, w, self))
 
     def print_route(self):
         for point in self.point_list:
@@ -864,7 +875,8 @@ class HighwaySystem:
     a designation within the same system crosses region boundaries,
     a connected route defines the entirety of the route.
     """
-    def __init__(self,systemname,country,fullname,color,tier,level,path="../../../HighwayData/hwy_data/_systems"):
+    def __init__(self,systemname,country,fullname,color,tier,level,el,
+                 path="../../../HighwayData/hwy_data/_systems"):
         self.route_list = []
         self.con_route_list = []
         self.systemname = systemname
@@ -874,25 +886,28 @@ class HighwaySystem:
         self.tier = tier
         self.level = level
         self.mileage_by_region = dict()
-        with open(path+"/"+systemname+".csv","rt",encoding='utf-8') as file:
+        try:
+            file = open(path+"/"+systemname+".csv","rt",encoding='utf-8')
+        except OSError as e:
+            el.add_error(str(e))
+        else:
             lines = file.readlines()
-        file.close()
-        # ignore the first line of field names
-        lines.pop(0)
-        roots = []  # not needed or used?
-        for line in lines:
-            self.route_list.append(Route(line.rstrip('\n'),self))
+            file.close()
+            # ignore the first line of field names
+            lines.pop(0)
+            for line in lines:
+                self.route_list.append(Route(line.rstrip('\n'),self))
         try:
             file = open(path+"/"+systemname+"_con.csv","rt",encoding='utf-8')
+        except OSError as e:
+            el.add_error(str(e))
+        else:
             lines = file.readlines()
             file.close()
             # again, ignore first line with field names
             lines.pop(0)
             for line in lines:
                 self.con_route_list.append(ConnectedRoute(line.rstrip('\n'),self))
-        except IOError:
-            print("ERROR: Could not open " + path+"/"+systemname+"_con.csv," \
-                      " assuming no connected routes")
 
     """Return whether this is an active system"""
     def active(self):
@@ -1848,6 +1863,10 @@ class GraphListEntry:
 #
 # start a timer for including elapsed time reports in messages
 et = ElapsedTime()
+
+# create a ErrorList
+el = ErrorList()
+
 # argument parsing
 #
 parser = argparse.ArgumentParser(description="Create SQL, stats, graphs, and log files from highway and user data for the Travel Mapping project.")
@@ -1879,81 +1898,102 @@ num_threads = int(args.numthreads)
 # read region, country, continent descriptions
 print(et.et() + "Reading region, country, and continent descriptions.")
 
-with open(args.highwaydatapath+"/continents.csv", "rt",encoding='utf-8') as file:
-    lines = file.readlines()
 continents = []
-lines.pop(0)  # ignore header line
-for line in lines:
-    fields = line.rstrip('\n').split(";")
-    if len(fields) != 2:
-        print("Could not parse continents.csv line: " + line)
-        continue
-    continents.append(fields)
-
-with open(args.highwaydatapath+"/countries.csv", "rt",encoding='utf-8') as file:
+try:
+    file = open(args.highwaydatapath+"/continents.csv", "rt",encoding='utf-8')
+except OSError as e:
+    el.add_error(str(e))
+else:
     lines = file.readlines()
+    file.close()
+    lines.pop(0)  # ignore header line
+    for line in lines:
+        fields = line.rstrip('\n').split(";")
+        if len(fields) != 2:
+            el.add_error("Could not parse continents.csv line: " + line)
+            continue
+        continents.append(fields)
+
 countries = []
-lines.pop(0)  # ignore header line
-for line in lines:
-    fields = line.rstrip('\n').split(";")
-    if len(fields) != 2:
-        print("ERROR: Could not parse countries.csv line: " + line)
-        continue
-    countries.append(fields)
-
-with open(args.highwaydatapath+"/regions.csv", "rt",encoding='utf-8') as file:
+try:
+    file = open(args.highwaydatapath+"/countries.csv", "rt",encoding='utf-8')
+except OSError as e:
+    el.add_error(str(e))
+else:
     lines = file.readlines()
+    file.close()
+    lines.pop(0)  # ignore header line
+    for line in lines:
+        fields = line.rstrip('\n').split(";")
+        if len(fields) != 2:
+            el.add_error("Could not parse countries.csv line: " + line)
+            continue
+        countries.append(fields)
+
 all_regions = []
-lines.pop(0)  # ignore header line
-for line in lines:
-    fields = line.rstrip('\n').split(";")
-    if len(fields) != 5:
-        print("ERROR: Could not parse regions.csv line: " + line)
-        continue
-    # look up country and continent, add index into those arrays
-    # in case they're needed for lookups later (not needed for DB)
-    for i in range(len(countries)):
-        country = countries[i][0]
-        if country == fields[2]:
-            fields.append(i)
-            break
-    if len(fields) != 6:
-        print("ERROR: Could not find country matching regions.csv line: " + line)
-        continue
-    for i in range(len(continents)):
-        continent = continents[i][0]
-        if continent == fields[3]:
-            fields.append(i)
-            break
-    if len(fields) != 7:
-        print("ERROR: Could not find continent matching regions.csv line: " + line)
-        continue
-    all_regions.append(fields)
+try:
+    file = open(args.highwaydatapath+"/regions.csv", "rt",encoding='utf-8')
+except OSError as e:
+    el.add_error(str(e))
+else:
+    lines = file.readlines()
+    file.close()
+    lines.pop(0)  # ignore header line
+    for line in lines:
+        fields = line.rstrip('\n').split(";")
+        if len(fields) != 5:
+            el.add_error("Could not parse regions.csv line: " + line)
+            continue
+        # look up country and continent, add index into those arrays
+        # in case they're needed for lookups later (not needed for DB)
+        for i in range(len(countries)):
+            country = countries[i][0]
+            if country == fields[2]:
+                fields.append(i)
+                break
+        if len(fields) != 6:
+            el.add_error("Could not find country matching regions.csv line: " + line)
+            continue
+        for i in range(len(continents)):
+            continent = continents[i][0]
+            if continent == fields[3]:
+                fields.append(i)
+                break
+        if len(fields) != 7:
+            el.add_error("Could not find continent matching regions.csv line: " + line)
+            continue
+        all_regions.append(fields)
 
 # Create a list of HighwaySystem objects, one per system in systems.csv file
 highway_systems = []
 print(et.et() + "Reading systems list in " + args.highwaydatapath+"/"+args.systemsfile + ".  ",end="",flush=True)
-with open(args.highwaydatapath+"/"+args.systemsfile, "rt",encoding='utf-8') as file:
+try:
+    file = open(args.highwaydatapath+"/"+args.systemsfile, "rt",encoding='utf-8')
+except OSError as e:
+    el.add_error(str(e))
+else:
     lines = file.readlines()
-
-lines.pop(0)  # ignore header line for now
-ignoring = []
-for line in lines:
-    if line.startswith('#'):
-        ignoring.append("Ignored comment in " + args.systemsfile + ": " + line.rstrip('\n'))
-        continue
-    fields = line.rstrip('\n').split(";")
-    if len(fields) != 6:
-        print("ERROR: Could not parse " + args.systemsfile + " line: " + line)
-        continue
-    print(fields[0] + ".",end="",flush=True)
-    highway_systems.append(HighwaySystem(fields[0], fields[1], fields[2].replace("'","''"),\
-                                         fields[3], fields[4], fields[5],\
-                                         args.highwaydatapath+"/hwy_data/_systems"))
-print("")
-# print at the end the lines ignored
-for line in ignoring:
-    print(line)
+    file.close()
+    lines.pop(0)  # ignore header line for now
+    ignoring = []
+    for line in lines:
+        if line.startswith('#'):
+            ignoring.append("Ignored comment in " + args.systemsfile + ": " + line.rstrip('\n'))
+            continue
+        fields = line.rstrip('\n').split(";")
+        if len(fields) != 6:
+            el.add_error("Could not parse " + args.systemsfile + " line: " + line)
+            continue
+        print(fields[0] + ".",end="",flush=True)
+        hs = HighwaySystem(fields[0], fields[1],
+                           fields[2].replace("'","''"),
+                           fields[3], fields[4], fields[5], el,
+                           args.highwaydatapath+"/hwy_data/_systems")
+        highway_systems.append(hs)
+    print("")
+    # print at the end the lines ignored
+    for line in ignoring:
+        print(line)
 
 # list for datacheck errors that we will need later
 datacheckerrors = []
@@ -1967,7 +2007,7 @@ duplicate_list_names = set()
 for h in highway_systems:
     for r in h.route_list:
         if r.root in roots:
-            print("ERROR: Duplicate root in route lists: " + r.root)
+            el.add_error("Duplicate root in route lists: " + r.root)
         else:
             roots.append(r.root)
         list_name = r.region + ' ' + r.list_entry_name()
@@ -1981,39 +2021,40 @@ for h in highway_systems:
     for r in h.con_route_list:
         for cr in r.roots:
             if cr.root in con_roots:
-                print("ERROR: Duplicate root in con_route lists: " + cr.root)
+                el.add_error("Duplicate root in con_route lists: " + cr.root)
             else:
                 con_roots.append(cr.root)
 # Make sure every route was listed as a part of some connected route
 if len(roots) == len(con_roots):
     print("Check passed: same number of routes as connected route roots. " + str(len(roots)))
 else:
-    print("Check FAILED: " + str(len(roots)) + " routes != " + str(len(con_roots)) + " connected route roots, see datacheck.")
+    el.add_error("Check FAILED: " + str(len(roots)) + " routes != " + str(len(con_roots)) + " connected route roots, see datacheck.")
     for r in con_roots:
         roots.remove(r)
     # there will be some leftovers, let's look up their routes to make
-    # a datacheck entry
+    # an error report entry
     num_found = 0
     for h in highway_systems:
         for r in h.route_list:
             for lr in roots:
-                #print("ERROR: route " + lr + " not matched by any connected route root.")
                 if lr == r.root:
-                    datacheckerrors.append(DatacheckEntry(r,[],"ROUTE_NOT_IN_CONNECTED"))
+                    el.add_error("route " + lr + " not matched by any connected route root.")
+                    #datacheckerrors.append(DatacheckEntry(r,[],"ROUTE_NOT_IN_CONNECTED"))
                     num_found += 1
                     break
-    print("Added " + str(num_found) + " ROUTE_NOT_IN_CONNECTED datacheck entries.")
+    print("Added " + str(num_found) + " ROUTE_NOT_IN_CONNECTED error entries.")
 
-# report any duplicate list names as a datacheck error
+# report any duplicate list names as errors
 if len(duplicate_list_names) > 0:
     print("Found " + str(len(duplicate_list_names)) + " DUPLICATE_LIST_NAME cases.")
     num_found = 0
     for h in highway_systems:
         for r in h.route_list:
             if r.region + ' ' + r.list_entry_name() in duplicate_list_names:
-                datacheckerrors.append(DatacheckEntry(r,[],"DUPLICATE_LIST_NAME", r.region + ' ' + r.list_entry_name()))
+                el.add_error("Duplicate list name: " + r.region + ' ' + r.list_entry_name())
+                #datacheckerrors.append(DatacheckEntry(r,[],"DUPLICATE_LIST_NAME", r.region + ' ' + r.list_entry_name()))
                 num_found += 1
-    print("Added " + str(num_found) + " DUPLICATE_LIST_NAME datacheck entries.")
+    print("Added " + str(num_found) + " DUPLICATE_LIST_NAME error entries.")
 else:
     print("No duplicate list names found.")
 
@@ -2051,9 +2092,10 @@ def read_wpts_for_highway_system(h):
         wpt_path = args.highwaydatapath+"/hwy_data"+"/"+r.region + "/" + r.system.systemname+"/"+r.root+".wpt"
         if wpt_path in all_wpt_files:
             all_wpt_files.remove(wpt_path)
-        r.read_wpt(all_waypoints,all_waypoints_lock,datacheckerrors,args.highwaydatapath+"/hwy_data")
+        r.read_wpt(all_waypoints,all_waypoints_lock,datacheckerrors,
+                   el,args.highwaydatapath+"/hwy_data")
         if len(r.point_list) < 2:
-            print("ERROR: Route contains fewer than 2 points: " + str(r))
+            el.add_error("Route contains fewer than 2 points: " + str(r))
         print(".", end="",flush=True)
         #print(str(r))
         #r.print_route()
