@@ -681,17 +681,17 @@ class Route:
     AltRouteNames: (optional) comma-separated list former or other
     alternate route names that might appear in user list files.
     """
-    def __init__(self,line,system):
+    def __init__(self,line,system,el):
         """initialize object from a .csv file line, but do not
         yet read in waypoint file"""
         self.line = line
         fields = line.split(";")
         if len(fields) != 8:
-            print("ERROR: Could not parse csv line: " + line)
-            print("Expected 8 fields, found " + str(len(fields)))
+            el.add_error("Could not parse csv line: [" + line +
+                         "], expected 8 fields, found " + str(len(fields)))
         self.system = system
         if system.systemname != fields[0]:
-            print("ERROR: System mismatch parsing line [" + line + "], expected " + system.systemname)
+            el.add_error("System mismatch parsing line [" + line + "], expected " + system.systemname)
         self.region = fields[1]
         self.route = fields[2]
         self.banner = fields[3]
@@ -817,15 +817,16 @@ class ConnectedRoute:
     by a single line of a _con.csv file
     """
 
-    def __init__(self,line,system):
+    def __init__(self,line,system,el):
         """initialize the object from the _con.csv line given"""
         self.line = line
         fields = line.split(";")
         if len(fields) != 5:
-            print("ERROR: Could not parse _con.csv line: " + line)
+            el.add_error("Could not parse _con.csv line: [" + line +
+                         "] expected 5 fields, found " + str(len(fields)))
         self.system = system
         if system.systemname != fields[0]:
-            print("ERROR: System mismatch parsing line [" + line + "], expected " + system.systemname)
+            el.add_error("System mismatch parsing line [" + line + "], expected " + system.systemname)
         self.route = fields[1]
         self.banner = fields[2]
         self.groupname = fields[3].replace("'","''")
@@ -840,12 +841,12 @@ class ConnectedRoute:
                     route = check_route
                     break
             if route is None:
-                print("ERROR: Could not find Route matching root " + root + \
-                          " in system " + system.systemname + '.')
+                el.add_error("Could not find Route matching root " + root +
+                             " in system " + system.systemname + '.')
             else:
                 self.roots.append(route)
         if len(self.roots) < 1:
-            print("ERROR: No roots in _con.csv line [" + line + "]")
+            el.add_error("No roots in _con.csv line [" + line + "]")
         # will be computed for routes in active systems later
         self.mileage = 0.0
 
@@ -897,7 +898,7 @@ class HighwaySystem:
             # ignore the first line of field names
             lines.pop(0)
             for line in lines:
-                self.route_list.append(Route(line.rstrip('\n'),self))
+                self.route_list.append(Route(line.rstrip('\n'),self,el))
         try:
             file = open(path+"/"+systemname+"_con.csv","rt",encoding='utf-8')
         except OSError as e:
@@ -908,7 +909,8 @@ class HighwaySystem:
             # again, ignore first line with field names
             lines.pop(0)
             for line in lines:
-                self.con_route_list.append(ConnectedRoute(line.rstrip('\n'),self))
+                self.con_route_list.append(ConnectedRoute(line.rstrip('\n'),
+                                                          self,el))
 
     """Return whether this is an active system"""
     def active(self):
@@ -2029,7 +2031,7 @@ for h in highway_systems:
 if len(roots) == len(con_roots):
     print("Check passed: same number of routes as connected route roots. " + str(len(roots)))
 else:
-    el.add_error("Check FAILED: " + str(len(roots)) + " routes != " + str(len(con_roots)) + " connected route roots, see datacheck.")
+    el.add_error("Check FAILED: " + str(len(roots)) + " routes != " + str(len(con_roots)) + " connected route roots.")
     for r in con_roots:
         roots.remove(r)
     # there will be some leftovers, let's look up their routes to make
@@ -2146,13 +2148,6 @@ for t in thread_list:
 #for h in highway_systems:
 #    read_wpts_for_highway_system(h)
 
-# See if we have any errors that should be fatal to the site update process
-if len(el.error_list) > 0:
-    print("ABORTING due to " + str(len(el.error_list)) + " errors:")
-    for i in range(len(el.error_list)):
-        print(str(i+1) + ": " + el.error_list[i])
-    sys.exit(1)
-
 print(et.et() + "Finding unprocessed wpt files.", flush=True)
 unprocessedfile = open(args.logfilepath+'/unprocessedwpts.log','w',encoding='utf-8')
 if len(all_wpt_files) > 0:
@@ -2251,9 +2246,16 @@ datacheckfps = []
 for line in lines:
     fields = line.rstrip('\n').split(';')
     if len(fields) != 6:
-        print("ERROR: Could not parse datacheckfps.csv line: " + line)
+        el.add_error("Could not parse datacheckfps.csv line: " + line)
         continue
     datacheckfps.append(fields)
+
+# See if we have any errors that should be fatal to the site update process
+if len(el.error_list) > 0:
+    print("ABORTING due to " + str(len(el.error_list)) + " errors:")
+    for i in range(len(el.error_list)):
+        print(str(i+1) + ": " + el.error_list[i])
+    sys.exit(1)
 
 # perform most datachecks here (list initialized above)
 for h in highway_systems:
