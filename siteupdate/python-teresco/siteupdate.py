@@ -1087,8 +1087,7 @@ class DatacheckEntry:
     LABEL_UNDERSCORES, VISIBLE_DISTANCE, LABEL_PARENS, LACKS_GENERIC,
     EXIT0, EXIT999, BUS_WITH_I, NONTERMINAL_UNDERSCORE,
     LONG_UNDERSCORE, LABEL_SLASHES, US_BANNER, VISIBLE_HIDDEN_COLOC,
-    HIDDEN_JUNCTION, LABEL_LOOKS_HIDDEN, ROUTE_NOT_IN_CONNECTED,
-    DUPLICATE_LIST_NAME
+    HIDDEN_JUNCTION, LABEL_LOOKS_HIDDEN
 
     info is additional information, at this time either a distance (in
     miles) for a long segment error, an angle (in degrees) for a sharp
@@ -2042,7 +2041,6 @@ else:
             for lr in roots:
                 if lr == r.root:
                     el.add_error("route " + lr + " not matched by any connected route root.")
-                    #datacheckerrors.append(DatacheckEntry(r,[],"ROUTE_NOT_IN_CONNECTED"))
                     num_found += 1
                     break
     print("Added " + str(num_found) + " ROUTE_NOT_IN_CONNECTED error entries.")
@@ -2055,7 +2053,6 @@ if len(duplicate_list_names) > 0:
         for r in h.route_list:
             if r.region + ' ' + r.list_entry_name() in duplicate_list_names:
                 el.add_error("Duplicate list name: " + r.region + ' ' + r.list_entry_name())
-                #datacheckerrors.append(DatacheckEntry(r,[],"DUPLICATE_LIST_NAME", r.region + ' ' + r.list_entry_name()))
                 num_found += 1
     print("Added " + str(num_found) + " DUPLICATE_LIST_NAME error entries.")
 else:
