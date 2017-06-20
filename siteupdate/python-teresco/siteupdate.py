@@ -15,6 +15,7 @@ import datetime
 import math
 import os
 import re
+import sys
 import time
 import threading
 
@@ -2144,6 +2145,13 @@ for t in thread_list:
 
 #for h in highway_systems:
 #    read_wpts_for_highway_system(h)
+
+# See if we have any errors that should be fatal to the site update process
+if len(el.error_list) > 0:
+    print("ABORTING due to " + str(len(el.error_list)) + " errors:")
+    for i in range(len(el.error_list)):
+        print(str(i+1) + ": " + el.error_list[i])
+    sys.exit(1)
 
 print(et.et() + "Finding unprocessed wpt files.", flush=True)
 unprocessedfile = open(args.logfilepath+'/unprocessedwpts.log','w',encoding='utf-8')
