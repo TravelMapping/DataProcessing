@@ -3215,7 +3215,7 @@ for c in countries:
     sqlfile.write("('" + c[0] + "','" + c[1].replace("'","''") + "')\n")
 sqlfile.write(";\n")
 
-sqlfile.write('CREATE TABLE regions (code VARCHAR(8), name VARCHAR(32), country VARCHAR(3), continent VARCHAR(3), regiontype VARCHAR(20), PRIMARY KEY(code), FOREIGN KEY (country) REFERENCES countries(code), FOREIGN KEY (continent) REFERENCES continents(code));\n')
+sqlfile.write('CREATE TABLE regions (code VARCHAR(8), name VARCHAR(48), country VARCHAR(3), continent VARCHAR(3), regiontype VARCHAR(32), PRIMARY KEY(code), FOREIGN KEY (country) REFERENCES countries(code), FOREIGN KEY (continent) REFERENCES continents(code));\n')
 sqlfile.write('INSERT INTO regions VALUES\n')
 first = True
 for r in all_regions:
@@ -3230,7 +3230,7 @@ sqlfile.write(";\n")
 # color for its mapping, a level (one of active, preview, devel), and
 # a boolean indicating if the system is active for mapping in the
 # project in the field 'active'
-sqlfile.write('CREATE TABLE systems (systemName VARCHAR(10), countryCode CHAR(3), fullName VARCHAR(50), color VARCHAR(10), level VARCHAR(10), tier INTEGER, PRIMARY KEY(systemName));\n')
+sqlfile.write('CREATE TABLE systems (systemName VARCHAR(10), countryCode CHAR(3), fullName VARCHAR(60), color VARCHAR(16), level VARCHAR(10), tier INTEGER, PRIMARY KEY(systemName));\n')
 sqlfile.write('INSERT INTO systems VALUES\n')
 first = True
 for h in highway_systems:
@@ -3243,7 +3243,7 @@ for h in highway_systems:
 sqlfile.write(";\n")
 
 # next, a table of highways, with the same fields as in the first line
-sqlfile.write('CREATE TABLE routes (systemName VARCHAR(10), region VARCHAR(8), route VARCHAR(16), banner VARCHAR(3), abbrev VARCHAR(3), city VARCHAR(48), root VARCHAR(32), mileage FLOAT, PRIMARY KEY(root), FOREIGN KEY (systemName) REFERENCES systems(systemName));\n')
+sqlfile.write('CREATE TABLE routes (systemName VARCHAR(10), region VARCHAR(8), route VARCHAR(16), banner VARCHAR(3), abbrev VARCHAR(3), city VARCHAR(100), root VARCHAR(32), mileage FLOAT, PRIMARY KEY(root), FOREIGN KEY (systemName) REFERENCES systems(systemName));\n')
 sqlfile.write('INSERT INTO routes VALUES\n')
 first = True
 for h in highway_systems:
@@ -3255,7 +3255,7 @@ for h in highway_systems:
 sqlfile.write(";\n")
 
 # connected routes table, but only first "root" in each in this table
-sqlfile.write('CREATE TABLE connectedRoutes (systemName VARCHAR(10), route VARCHAR(16), banner VARCHAR(3), groupName VARCHAR(32), firstRoot VARCHAR(32), mileage FLOAT, PRIMARY KEY(firstRoot), FOREIGN KEY (firstRoot) REFERENCES routes(root));\n')
+sqlfile.write('CREATE TABLE connectedRoutes (systemName VARCHAR(10), route VARCHAR(16), banner VARCHAR(3), groupName VARCHAR(100), firstRoot VARCHAR(32), mileage FLOAT, PRIMARY KEY(firstRoot), FOREIGN KEY (firstRoot) REFERENCES routes(root));\n')
 sqlfile.write('INSERT INTO connectedRoutes VALUES\n')
 first = True
 for h in highway_systems:
@@ -3423,7 +3423,7 @@ for start in range(0, len(cr_values), 10000):
     sqlfile.write(";\n")
 
 # updates entries
-sqlfile.write('CREATE TABLE updates (date VARCHAR(10), region VARCHAR(32), route VARCHAR(64), root VARCHAR(16), description VARCHAR(512));\n')
+sqlfile.write('CREATE TABLE updates (date VARCHAR(10), region VARCHAR(60), route VARCHAR(80), root VARCHAR(32), description VARCHAR(512));\n')
 sqlfile.write('INSERT INTO updates VALUES\n')
 first = True
 for update in updates:
@@ -3434,7 +3434,7 @@ for update in updates:
 sqlfile.write(";\n")
 
 # systemUpdates entries
-sqlfile.write('CREATE TABLE systemUpdates (date VARCHAR(10), region VARCHAR(32), systemName VARCHAR(10), description VARCHAR(50), statusChange VARCHAR(16));\n')
+sqlfile.write('CREATE TABLE systemUpdates (date VARCHAR(10), region VARCHAR(48), systemName VARCHAR(10), description VARCHAR(50), statusChange VARCHAR(16));\n')
 sqlfile.write('INSERT INTO systemUpdates VALUES\n')
 first = True
 for systemupdate in systemupdates:
