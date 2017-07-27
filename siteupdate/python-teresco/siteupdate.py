@@ -3473,7 +3473,7 @@ sqlfile.write(";\n")
 if not args.skipgraphs:
     sqlfile.write('DROP TABLE IF EXISTS graphs;\n')
     sqlfile.write('DROP TABLE IF EXISTS graphTypes;\n')
-    sqlfile.write('CREATE TABLE graphTypes (category VARCHAR(10), descr VARCHAR(100), longDescr TEXT, PRIMARY KEY(category));\n')
+    sqlfile.write('CREATE TABLE graphTypes (category VARCHAR(12), descr VARCHAR(100), longDescr TEXT, PRIMARY KEY(category));\n')
     if len(graph_types) > 0:
         sqlfile.write('INSERT INTO graphTypes VALUES\n')
         first = True
