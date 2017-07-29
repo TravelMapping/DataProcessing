@@ -2306,8 +2306,9 @@ for h in highway_systems:
                                                           "{0:.2f}".format(last_distance)))
 
             if not w.is_hidden:
-                # complete visible distance check
-                if visible_distance > 10.0:
+                # complete visible distance check, omit report for active
+                # systems to reduce clutter
+                if visible_distance > 10.0 and not h.active():
                     labels = []
                     labels.append(last_visible.label)
                     labels.append(w.label)
