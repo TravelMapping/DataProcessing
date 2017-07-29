@@ -3485,7 +3485,7 @@ if not args.skipgraphs:
             sqlfile.write("('" + g[0] + "','" + g[1] + "','" + g[2] + "')\n")
         sqlfile.write(";\n")
 
-    sqlfile.write('CREATE TABLE graphs (filename VARCHAR(32), descr VARCHAR(100), vertices INTEGER, edges INTEGER, format VARCHAR(10), category VARCHAR(10), FOREIGN KEY (category) REFERENCES graphTypes(category));\n')
+    sqlfile.write('CREATE TABLE graphs (filename VARCHAR(32), descr VARCHAR(100), vertices INTEGER, edges INTEGER, format VARCHAR(10), category VARCHAR(12), FOREIGN KEY (category) REFERENCES graphTypes(category));\n')
     if len(graph_list) > 0:
         sqlfile.write('INSERT INTO graphs VALUES\n')
         first = True
