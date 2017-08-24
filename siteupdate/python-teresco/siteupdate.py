@@ -1085,7 +1085,7 @@ class DatacheckEntry:
     DUPLICATE_LABELS, DUPLICATE_COORDS, LABEL_SELFREF,
     LABEL_INVALID_CHAR, LONG_SEGMENT, LABEL_NO_VALID,
     LABEL_UNDERSCORES, VISIBLE_DISTANCE, LABEL_PARENS, LACKS_GENERIC,
-    EXIT0, EXIT999, BUS_WITH_I, NONTERMINAL_UNDERSCORE,
+    BUS_WITH_I, NONTERMINAL_UNDERSCORE,
     LONG_UNDERSCORE, LABEL_SLASHES, US_BANNER, VISIBLE_HIDDEN_COLOC,
     HIDDEN_JUNCTION, LABEL_LOOKS_HIDDEN
 
@@ -2347,13 +2347,6 @@ for h in highway_systems:
                     labels = []
                     labels.append(w.label)
                     datacheckerrors.append(DatacheckEntry(r,labels,'LABEL_SELFREF'))
-
-                # look for old "0" or "999" labels
-                for num in ['0','999']:
-                    if w.label.startswith(num) or '('+num+')' in w.label or '('+num+'A)' in w.label:
-                        labels = []
-                        labels.append(w.label)
-                        datacheckerrors.append(DatacheckEntry(r,labels,'EXIT'+str(num)))
 
                 # look for too many underscores in label
                 if w.label.count('_') > 1:
