@@ -25,6 +25,7 @@ if [ "$read_data" == "1" ]; then
 else
   echo "siteupdate.sh: SKIPPING siteupdate.py"
 fi
+date
 echo "siteupdate.sh: Bzipping TravelMapping.sql file"
 bzip2 -9f TravelMapping.sql
 echo "siteupdate.sh: Transferring TravelMapping.sql.bz2 to blizzard"
@@ -36,6 +37,7 @@ sh xfernmpwpts.sh $nmpmerged &
 echo "siteupdate.sh: sending bunzip to run on blizzard"
 ssh blizzard.teresco.org bunzip2 -f /tmp/TravelMapping.sql.bz2
 echo "siteupdate.sh: sending mysql update to run on blizzard"
+date
 ssh blizzard.teresco.org "touch /home/www/tm/dbupdating; mysql --defaults-group-suffix=tmapadmin -u travmapadmin TravelMapping < /tmp/TravelMapping.sql; /bin/rm /home/www/tm/dbupdating"
 echo "siteupdate.sh: complete"
 echo "siteupdate.sh: sending email notification"
