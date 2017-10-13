@@ -2240,10 +2240,16 @@ with open(args.highwaydatapath+"/datacheckfps.csv", "rt",encoding='utf-8') as fi
 
 lines.pop(0)  # ignore header line
 datacheckfps = []
+datacheck_always_error = [ 'DUPLICATE_LABEL', 'LABEL_INVALID_CHAR',
+                           'LABEL_SLASHES', 'LONG_UNDERSCORE',
+                           'NONTERMINAL_UNDERSCORE' ]
 for line in lines:
     fields = line.rstrip('\n').split(';')
     if len(fields) != 6:
         el.add_error("Could not parse datacheckfps.csv line: " + line)
+        continue
+    if fields[4] in datacheck_always_error:
+        print("datacheckfps.csv line not allowed (always error): " + line)
         continue
     datacheckfps.append(fields)
 
