@@ -18,10 +18,12 @@ if [ $# -eq 1 ]; then
   fi
 fi
 if [ "$read_data" == "1" ]; then
+  echo "testsiteupdate.sh: cleaning $logdir and $statdir"
+  /bin/rm -f $logdir/*.log $statdir/*.csv  
   echo "testsiteupdate.sh: launching siteupdate.py"
   #./siteupdate.py -w ../../../../HighwayData -d TravelMappingTest -s smallsystems.csv -u a_few_lists -l $logdir -c $statdir | tee $logdir/testsiteupdate.log 2>&1
   #./siteupdate.py -k -w ../../../../HighwayData -s systems.csv -d TravelMappingTest -g $graphdir -u . -l $logdir -c $statdir | tee $logdir/testsiteupdate.log 2>&1
-  ./siteupdate.py $graphflag -t 1 -s railsystems.csv -d TravelMappingTest -g $graphdir -l $logdir -c $statdir -U si404 michih peperodriguez2710 cinx panda80 | tee $logdir/testsiteupdate.log 2>&1
+  ./siteupdate.py $graphflag -t 1 -s railsystems.csv -d TravelMappingTest -g $graphdir -l $logdir -c $statdir -U si404 peperodriguez2710 | tee $logdir/testsiteupdate.log 2>&1
   #./siteupdate.py -w ../../../../HighwayData -d TravelMappingTest -u ../../../../UserData/list_files -l $logdir -c $statdir | tee $logdir/testsiteupdate.log 2>&1
 else
   echo "testsiteupdate.sh: SKIPPING siteupdate.py"
