@@ -34,9 +34,9 @@ int main(int argc, char *argv[])
 	if (argc != 4) { cout << "usage: ./fpcull CullFile FullFile OutputFile\n"; return 0; }
 	// init ifstreams
 	ifstream cFile(argv[1], ios::in);
-	if (!cFile.is_open())	{ cout << argv[1] << " file not found!" << endl; return 0; }
+	if (!cFile.is_open())	{ cout << argv[1] << " file not found!\n"; return 0; }
 	ifstream fFile(argv[2], ios::in);
-	if (!fFile.is_open())	{ cout << argv[2] << " file not found!" << endl; return 0; }
+	if (!fFile.is_open())	{ cout << argv[2] << " file not found!\n"; return 0; }
 
 	// create cull list
 	cFile >> cList->text; //TODO: enclose in an IF in case hell breaks loose (IE, no text in cFile) //FIXME: see below
