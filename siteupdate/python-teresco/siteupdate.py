@@ -666,7 +666,7 @@ class Route:
     Route: the route name as would be specified in user lists
 
     Banner: the (optional) banner on the route such as 'Alt',
-    'Bus', or 'Trk'.
+    'Bus', or 'Trk'.  Now allowed up to 6 characters
 
     Abbrev: (optional) for bannered routes or routes in multiple
     sections, the 3-letter abbrevation for the city or other place
@@ -3243,7 +3243,7 @@ for h in highway_systems:
 sqlfile.write(";\n")
 
 # next, a table of highways, with the same fields as in the first line
-sqlfile.write('CREATE TABLE routes (systemName VARCHAR(10), region VARCHAR(8), route VARCHAR(16), banner VARCHAR(3), abbrev VARCHAR(3), city VARCHAR(100), root VARCHAR(32), mileage FLOAT, PRIMARY KEY(root), FOREIGN KEY (systemName) REFERENCES systems(systemName));\n')
+sqlfile.write('CREATE TABLE routes (systemName VARCHAR(10), region VARCHAR(8), route VARCHAR(16), banner VARCHAR(6), abbrev VARCHAR(3), city VARCHAR(100), root VARCHAR(32), mileage FLOAT, PRIMARY KEY(root), FOREIGN KEY (systemName) REFERENCES systems(systemName));\n')
 sqlfile.write('INSERT INTO routes VALUES\n')
 first = True
 for h in highway_systems:
@@ -3255,7 +3255,7 @@ for h in highway_systems:
 sqlfile.write(";\n")
 
 # connected routes table, but only first "root" in each in this table
-sqlfile.write('CREATE TABLE connectedRoutes (systemName VARCHAR(10), route VARCHAR(16), banner VARCHAR(3), groupName VARCHAR(100), firstRoot VARCHAR(32), mileage FLOAT, PRIMARY KEY(firstRoot), FOREIGN KEY (firstRoot) REFERENCES routes(root));\n')
+sqlfile.write('CREATE TABLE connectedRoutes (systemName VARCHAR(10), route VARCHAR(16), banner VARCHAR(6), groupName VARCHAR(100), firstRoot VARCHAR(32), mileage FLOAT, PRIMARY KEY(firstRoot), FOREIGN KEY (firstRoot) REFERENCES routes(root));\n')
 sqlfile.write('INSERT INTO connectedRoutes VALUES\n')
 first = True
 for h in highway_systems:
