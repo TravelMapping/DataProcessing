@@ -978,7 +978,7 @@ class TravelerList:
 
                 if r.system.devel():
                     self.log_entries.append("Ignoring line matching highway in system in development: " + line)
-                    break
+                    continue
                 # r is a route match, r.root is our root, and we need to find
                 # canonical waypoint labels, ignoring case and leading
                 # "+" or "*" when matching
