@@ -944,7 +944,7 @@ class TravelerList:
     start_waypoint end_waypoint
     """
 
-    def __init__(self,travelername,systems,path="../../../UserData/list_files"):
+    def __init__(self,travelername,systems,route_hash,path="../../../UserData/list_files"):
         self.list_entries = []
         self.clinched_segments = set()
         self.traveler_name = travelername[:-5]
@@ -965,72 +965,65 @@ class TravelerList:
                 continue
 
             # find the root that matches in some system and when we do, match labels
-            lineDone = False
-            for h in systems:
-                for r in h.route_list:
-                    if r.region.lower() != fields[0].lower():
-                        continue
-                    route_entry = fields[1].lower()
-                    route_match = False
-                    for a in r.alt_route_names:
-                        if route_entry == a.lower():
-                            self.log_entries.append("Note: replacing deprecated route name " + fields[1] + " with canonical name " + r.list_entry_name() + " in line " + line)
-                            route_match = True
-                            break
-                    if route_match or (r.list_entry_name().lower() == route_entry):
-                        lineDone = True  # we'll either have success or failure here
-                        if h.devel():
-                            self.log_entries.append("Ignoring line matching highway in system in development: " + line)
-                            break
-                        #print("Route match with " + str(r))
-                        # r is a route match, r.root is our root, and we need to find
-                        # canonical waypoint labels, ignoring case and leading "+" or "*" when matching
-                        canonical_waypoints = []
-                        canonical_waypoint_indices = []
-                        checking_index = 0;
-                        for w in r.point_list:
-                            lower_label = w.label.lower().strip("+*")
-                            list_label_1 = fields[2].lower().strip("*")
-                            list_label_2 = fields[3].lower().strip("*")
+            route_entry = fields[1].lower()
+            lookup = fields[0].lower() + ' ' + route_entry
+            if lookup not in route_hash:
+                self.log_entries.append("Unknown region/highway combo in line: " + line)
+            else:
+                r = route_hash[lookup]
+                for a in r.alt_route_names:
+                    if route_entry == a.lower():
+                        self.log_entries.append("Note: deprecated route name " + fields[1] + " -> canonical name " + r.list_entry_name() + " in line " + line)
+                        break
+
+                if r.system.devel():
+                    self.log_entries.append("Ignoring line matching highway in system in development: " + line)
+                    break
+                # r is a route match, r.root is our root, and we need to find
+                # canonical waypoint labels, ignoring case and leading
+                # "+" or "*" when matching
+                canonical_waypoints = []
+                canonical_waypoint_indices = []
+                checking_index = 0;
+                for w in r.point_list:
+                    lower_label = w.label.lower().strip("+*")
+                    list_label_1 = fields[2].lower().strip("*")
+                    list_label_2 = fields[3].lower().strip("*")
+                    if list_label_1 == lower_label or list_label_2 == lower_label:
+                        canonical_waypoints.append(w)
+                        canonical_waypoint_indices.append(checking_index)
+                        r.labels_in_use.add(lower_label.upper())
+                    else:
+                        for alt in w.alt_labels:
+                            lower_label = alt.lower().strip("+")
                             if list_label_1 == lower_label or list_label_2 == lower_label:
                                 canonical_waypoints.append(w)
                                 canonical_waypoint_indices.append(checking_index)
                                 r.labels_in_use.add(lower_label.upper())
-                            else:
-                                for alt in w.alt_labels:
-                                    lower_label = alt.lower().strip("+")
-                                    if list_label_1 == lower_label or list_label_2 == lower_label:
-                                        canonical_waypoints.append(w)
-                                        canonical_waypoint_indices.append(checking_index)
-                                        r.labels_in_use.add(lower_label.upper())
-                                        # if we have not yet used this alt label, remove it from the unused list
-                                        if lower_label.upper() in r.unused_alt_labels:
-                                            r.unused_alt_labels.remove(lower_label.upper())
+                                # if we have not yet used this alt label, remove it from the unused list
+                                if lower_label.upper() in r.unused_alt_labels:
+                                    r.unused_alt_labels.remove(lower_label.upper())
                                             
-                            checking_index += 1
-                        if len(canonical_waypoints) != 2:
-                            self.log_entries.append("Waypoint label(s) not found in line: " + line)
-                        else:
-                            self.list_entries.append(ClinchedSegmentEntry(line, r.root, \
-                                                                          canonical_waypoints[0].label, \
-                                                                          canonical_waypoints[1].label))
-                            # find the segments we just matched and store this traveler with the
-                            # segments and the segments with the traveler (might not need both
-                            # ultimately)
-                            #start = r.point_list.index(canonical_waypoints[0])
-                            #end = r.point_list.index(canonical_waypoints[1])
-                            start = canonical_waypoint_indices[0]
-                            end = canonical_waypoint_indices[1]
-                            for wp_pos in range(start,end):
-                                hs = r.segment_list[wp_pos] #r.get_segment(r.point_list[wp_pos], r.point_list[wp_pos+1])
-                                hs.add_clinched_by(self)
-                                if hs not in self.clinched_segments:
-                                    self.clinched_segments.add(hs)
+                    checking_index += 1
+                if len(canonical_waypoints) != 2:
+                    self.log_entries.append("Waypoint label(s) not found in line: " + line)
+                else:
+                    self.list_entries.append(ClinchedSegmentEntry(line, r.root, \
+                                                                  canonical_waypoints[0].label, \
+                                                                  canonical_waypoints[1].label))
+                    # find the segments we just matched and store this traveler with the
+                    # segments and the segments with the traveler (might not need both
+                    # ultimately)
+                    #start = r.point_list.index(canonical_waypoints[0])
+                    #end = r.point_list.index(canonical_waypoints[1])
+                    start = canonical_waypoint_indices[0]
+                    end = canonical_waypoint_indices[1]
+                    for wp_pos in range(start,end):
+                        hs = r.segment_list[wp_pos] #r.get_segment(r.point_list[wp_pos], r.point_list[wp_pos+1])
+                        hs.add_clinched_by(self)
+                        if hs not in self.clinched_segments:
+                            self.clinched_segments.add(hs)
 
-                if lineDone:
-                    break
-            if not lineDone:
-                self.log_entries.append("Unknown region/highway combo in line: " + line)
         self.log_entries.append("Processed " + str(len(self.list_entries)) + \
                                     " good lines marking " +str(len(self.clinched_segments)) + \
                                     " segments traveled.")
@@ -2473,6 +2466,14 @@ else:
     fpfile.write("No unmatched FP entries.")
 fpfile.close()
 
+# Create hash table for faster lookup of routes by list file name
+print(et.et() + "Creating route hash table for list processing:",flush=True)
+route_hash = dict()
+for h in highway_systems:
+    for r in h.route_list:
+        route_hash[(r.region + ' ' + r.list_entry_name()).lower()] = r
+        for a in r.alt_route_names:
+            route_hash[(r.region + ' ' + a).lower()] = r
 
 # Create a list of TravelerList objects, one per person
 traveler_lists = []
@@ -2481,7 +2482,7 @@ print(et.et() + "Processing traveler list files:",end="",flush=True)
 for t in traveler_ids:
     if t.endswith('.list'):
         print(" " + t,end="",flush=True)
-        traveler_lists.append(TravelerList(t,highway_systems,args.userlistfilepath))
+        traveler_lists.append(TravelerList(t,highway_systems,route_hash,args.userlistfilepath))
 print(" processed " + str(len(traveler_lists)) + " traveler list files.")
 
 # Read updates.csv file, just keep in the fields array for now since we're
