@@ -2,6 +2,7 @@
 #
 set -e
 read_data=1
+transfer=1
 logdir=logs
 statdir=stats
 graphdir=graphs
@@ -16,6 +17,9 @@ if [ $# -eq 1 ]; then
   if [ "$1" == "--nographs" ]; then
       graphflag="-k"
   fi
+  if [ "$1" == "--noxfer" ]; then
+      transfer=0
+  fi
 fi
 if [ "$read_data" == "1" ]; then
   echo "siteupdate.sh: launching siteupdate.py"
@@ -28,6 +32,10 @@ else
   echo "siteupdate.sh: SKIPPING siteupdate.py"
 fi
 date
+if [ "$transfer" == "0" ]; then
+    echo "siteupdate.sh: SKIPPING file transfers and DB update"
+    exit 0
+fi
 echo "siteupdate.sh: Bzipping TravelMapping.sql file"
 bzip2 -9f TravelMapping.sql
 echo "siteupdate.sh: Transferring TravelMapping.sql.bz2 to blizzard"
