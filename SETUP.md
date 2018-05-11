@@ -16,9 +16,17 @@ Information from three repositories is needed to run the site update process:
 
 These should be cloned into the same parent directory.  Typically, this might be called "travelmapping" and sit off the user's home directory.  Below, we will assume that directory is in an environment variable TMBASE, so we refer to it as $(TMBASE).
 
-Once all repositories have been updated to match the latest versions on GitHub (using "git pull"), the site update program can be run.  To run the basic site update:
+Once all repositories have been updated to match the latest versions on GitHub (using "git pull"), the site update program can be run.  To run the basic data processing to ensure that all data can be loaded correcly and that no other errors are encountered:
 
 ```
 cd $(TMBASE)/DataProcessing/siteupdate/python-teresco
 python3 siteupdate.py
 ```
+
+There is also a collection of bash scripts that run this program, typically launched with
+
+```
+sh siteupdate.sh
+```
+
+that also transfers files to the DB and web servers and reloads the DB.
