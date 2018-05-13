@@ -32,6 +32,8 @@ git clone https://github.com/TravelMapping/UserData.git
 git clone https://github.com/TravelMapping/DataProcessing.git
 ```
 
+Don't forget to replace "jcool" with your GitHub username into which you have forked the HighwayData repository.
+
 If all were successful, you should now have copies of each of the repositories in your account on the server.
 
 ### Running the site update code
