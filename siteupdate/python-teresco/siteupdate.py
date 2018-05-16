@@ -1872,7 +1872,7 @@ parser.add_argument("-s", "--systemsfile", default="systems.csv", \
 parser.add_argument("-u", "--userlistfilepath", default="../../../UserData/list_files",\
                         help="path to the user list file data")
 parser.add_argument("-d", "--databasename", default="TravelMapping", \
-                        help="Database name for mysql 'USE' statement and .sql file name")
+                        help="Database name for .sql file name")
 parser.add_argument("-l", "--logfilepath", default=".", help="Path to write log files")
 parser.add_argument("-c", "--csvstatfilepath", default=".", help="Path to write csv statistics files")
 parser.add_argument("-g", "--graphfilepath", default=".", help="Path to write graph format data files")
@@ -3172,7 +3172,7 @@ print(et.et() + "Writing database file " + args.databasename + ".sql.")
 # Once all data is read in and processed, create a .sql file that will
 # create all of the DB tables to be used by other parts of the project
 sqlfile = open(args.databasename+'.sql','w',encoding='UTF-8')
-sqlfile.write('USE '+args.databasename+';\n')
+# Note: removed "USE" line, DB name must be specified on the mysql command line
 
 # we have to drop tables in the right order to avoid foreign key errors
 sqlfile.write('DROP TABLE IF EXISTS datacheckErrors;\n')
@@ -3424,7 +3424,7 @@ for start in range(0, len(cr_values), 10000):
     sqlfile.write(";\n")
 
 # updates entries
-sqlfile.write('CREATE TABLE updates (date VARCHAR(10), region VARCHAR(60), route VARCHAR(80), root VARCHAR(32), description VARCHAR(512));\n')
+sqlfile.write('CREATE TABLE updates (date VARCHAR(10), region VARCHAR(60), route VARCHAR(80), root VARCHAR(32), description VARCHAR(1024));\n')
 sqlfile.write('INSERT INTO updates VALUES\n')
 first = True
 for update in updates:
@@ -3435,7 +3435,7 @@ for update in updates:
 sqlfile.write(";\n")
 
 # systemUpdates entries
-sqlfile.write('CREATE TABLE systemUpdates (date VARCHAR(10), region VARCHAR(48), systemName VARCHAR(10), description VARCHAR(50), statusChange VARCHAR(16));\n')
+sqlfile.write('CREATE TABLE systemUpdates (date VARCHAR(10), region VARCHAR(48), systemName VARCHAR(10), description VARCHAR(128), statusChange VARCHAR(16));\n')
 sqlfile.write('INSERT INTO systemUpdates VALUES\n')
 first = True
 for systemupdate in systemupdates:
