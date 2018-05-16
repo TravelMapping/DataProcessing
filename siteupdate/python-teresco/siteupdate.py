@@ -1328,7 +1328,7 @@ class HighwayGraphCollapsedEdgeInfo:
                 self.vertex2.incident_collapsed_edges.remove(edge1)
                 removed += 1
             if removed != 1:
-                print("ERROR: edge1 " + str(edge1) + " removed from " + removed + " adjacency lists instead of 1.")
+                print("ERROR: edge1 " + str(edge1) + " removed from " + str(removed) + " adjacency lists instead of 1.")
             removed = 0
             if edge2 in self.vertex1.incident_collapsed_edges:
                 self.vertex1.incident_collapsed_edges.remove(edge2)
@@ -1337,7 +1337,7 @@ class HighwayGraphCollapsedEdgeInfo:
                 self.vertex2.incident_collapsed_edges.remove(edge2)
                 removed += 1
             if removed != 1:
-                print("ERROR: edge2 " + str(edge2) + " removed from " + removed + " adjacency lists instead of 1.")
+                print("ERROR: edge2 " + str(edge2) + " removed from " + str(removed) + " adjacency lists instead of 1.")
             self.vertex1.incident_collapsed_edges.append(self)
             self.vertex2.incident_collapsed_edges.append(self)
 
