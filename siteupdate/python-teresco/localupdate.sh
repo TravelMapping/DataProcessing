@@ -18,7 +18,6 @@ graphflag=
 date
 # process command line args
 for arg in "$@"; do
-    echo "$arg"
     if [ "$arg" == "--nographs" ]; then
 	# -k to siteupdate.py supresses graph generation
 	graphflag="-k"
@@ -38,10 +37,11 @@ if [ "$pull" == "1" ]; then
 fi
 
 echo "$0: creating directories"
-mkdir -p $datestr/$logdir $datestr/$statdir $datestr/$nmpmdir
-if [ "$graphflag" != "-k" ]; then
-    mkdir -p $datestr/$graphdir
-fi
+mkdir -p $datestr/$logdir $datestr/$statdir $datestr/$nmpmdir $datestr/$graphdir
+# put this back later: need to put tm-master.nmp somewhere else
+#if [ "$graphflag" != "-k" ]; then
+#    mkdir -p $datestr/$graphdir
+#fi
 
 echo "$0: launching siteupdate.py"
 PYTHONIOENCODING='utf-8' ./siteupdate.py -d TravelMapping-$datestr $graphflag -l $datestr/$logdir -c $datestr/$statdir -g $datestr/$graphdir -n $datestr/$nmpmdir | tee $datestr/$logdir/siteupdate.log 2>&1 || exit 1
