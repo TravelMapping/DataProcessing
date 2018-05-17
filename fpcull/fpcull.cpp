@@ -1,7 +1,7 @@
-// Travel Mapping Project, Eric Bryant, 2017
-using namespace std;
+// Travel Mapping Project, Eric Bryant, 2017, 2018
 #include <fstream>
 #include <iostream>
+using namespace std;
 
 class entry
 {	public:
