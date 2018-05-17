@@ -2270,11 +2270,11 @@ for h in highway_systems:
         # look for hidden termini
         if r.point_list[0].is_hidden:
             labels = []
-            labels.append(r.point_list[0])
+            labels.append(r.point_list[0].label)
             datacheckerrors.append(DatacheckEntry(r,labels,'HIDDEN_TERMINUS'))
         if r.point_list[len(r.point_list)-1].is_hidden:
             labels = []
-            labels.append(r.point_list[len(r.point_list)-1])
+            labels.append(r.point_list[len(r.point_list)-1].label)
             datacheckerrors.append(DatacheckEntry(r,labels,'HIDDEN_TERMINUS'))
 
         for w in r.point_list:
