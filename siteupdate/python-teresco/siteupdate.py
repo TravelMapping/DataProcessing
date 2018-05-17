@@ -2233,9 +2233,9 @@ with open(args.highwaydatapath+"/datacheckfps.csv", "rt",encoding='utf-8') as fi
 
 lines.pop(0)  # ignore header line
 datacheckfps = []
-datacheck_always_error = [ 'DUPLICATE_LABEL', 'LABEL_INVALID_CHAR',
-                           'LABEL_SLASHES', 'LONG_UNDERSCORE',
-                           'NONTERMINAL_UNDERSCORE' ]
+datacheck_always_error = [ 'DUPLICATE_LABEL', 'HIDDEN_TERMINUS',
+                           'LABEL_INVALID_CHAR', 'LABEL_SLASHES',
+                           'LONG_UNDERSCORE', 'NONTERMINAL_UNDERSCORE' ]
 for line in lines:
     fields = line.rstrip('\n').split(';')
     if len(fields) != 6:
@@ -2266,6 +2266,17 @@ for h in highway_systems:
         # so the following is simply a placeholder
         last_visible = None
         prev_w = None
+
+        # look for hidden termini
+        if r.point_list[0].is_hidden:
+            labels = []
+            labels.append(r.point_list[0])
+            datacheckerrors.append(DatacheckEntry(r,labels,'HIDDEN_TERMINUS'))
+        if r.point_list[len(r.point_list)-1].is_hidden:
+            labels = []
+            labels.append(r.point_list[len(r.point_list)-1])
+            datacheckerrors.append(DatacheckEntry(r,labels,'HIDDEN_TERMINUS'))
+
         for w in r.point_list:
             # duplicate labels
             label_list = w.alt_labels.copy()
