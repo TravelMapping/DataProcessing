@@ -666,7 +666,7 @@ class Route:
     Route: the route name as would be specified in user lists
 
     Banner: the (optional) banner on the route such as 'Alt',
-    'Bus', or 'Trk'.
+    'Bus', or 'Trk'.  Now allowed up to 6 characters
 
     Abbrev: (optional) for bannered routes or routes in multiple
     sections, the 3-letter abbrevation for the city or other place
@@ -944,7 +944,7 @@ class TravelerList:
     start_waypoint end_waypoint
     """
 
-    def __init__(self,travelername,systems,path="../../../UserData/list_files"):
+    def __init__(self,travelername,systems,route_hash,path="../../../UserData/list_files"):
         self.list_entries = []
         self.clinched_segments = set()
         self.traveler_name = travelername[:-5]
@@ -965,72 +965,65 @@ class TravelerList:
                 continue
 
             # find the root that matches in some system and when we do, match labels
-            lineDone = False
-            for h in systems:
-                for r in h.route_list:
-                    if r.region.lower() != fields[0].lower():
-                        continue
-                    route_entry = fields[1].lower()
-                    route_match = False
-                    for a in r.alt_route_names:
-                        if route_entry == a.lower():
-                            self.log_entries.append("Note: replacing deprecated route name " + fields[1] + " with canonical name " + r.list_entry_name() + " in line " + line)
-                            route_match = True
-                            break
-                    if route_match or (r.list_entry_name().lower() == route_entry):
-                        lineDone = True  # we'll either have success or failure here
-                        if h.devel():
-                            self.log_entries.append("Ignoring line matching highway in system in development: " + line)
-                            break
-                        #print("Route match with " + str(r))
-                        # r is a route match, r.root is our root, and we need to find
-                        # canonical waypoint labels, ignoring case and leading "+" or "*" when matching
-                        canonical_waypoints = []
-                        canonical_waypoint_indices = []
-                        checking_index = 0;
-                        for w in r.point_list:
-                            lower_label = w.label.lower().strip("+*")
-                            list_label_1 = fields[2].lower().strip("*")
-                            list_label_2 = fields[3].lower().strip("*")
+            route_entry = fields[1].lower()
+            lookup = fields[0].lower() + ' ' + route_entry
+            if lookup not in route_hash:
+                self.log_entries.append("Unknown region/highway combo in line: " + line)
+            else:
+                r = route_hash[lookup]
+                for a in r.alt_route_names:
+                    if route_entry == a.lower():
+                        self.log_entries.append("Note: deprecated route name " + fields[1] + " -> canonical name " + r.list_entry_name() + " in line " + line)
+                        break
+
+                if r.system.devel():
+                    self.log_entries.append("Ignoring line matching highway in system in development: " + line)
+                    continue
+                # r is a route match, r.root is our root, and we need to find
+                # canonical waypoint labels, ignoring case and leading
+                # "+" or "*" when matching
+                canonical_waypoints = []
+                canonical_waypoint_indices = []
+                checking_index = 0;
+                for w in r.point_list:
+                    lower_label = w.label.lower().strip("+*")
+                    list_label_1 = fields[2].lower().strip("*")
+                    list_label_2 = fields[3].lower().strip("*")
+                    if list_label_1 == lower_label or list_label_2 == lower_label:
+                        canonical_waypoints.append(w)
+                        canonical_waypoint_indices.append(checking_index)
+                        r.labels_in_use.add(lower_label.upper())
+                    else:
+                        for alt in w.alt_labels:
+                            lower_label = alt.lower().strip("+")
                             if list_label_1 == lower_label or list_label_2 == lower_label:
                                 canonical_waypoints.append(w)
                                 canonical_waypoint_indices.append(checking_index)
                                 r.labels_in_use.add(lower_label.upper())
-                            else:
-                                for alt in w.alt_labels:
-                                    lower_label = alt.lower().strip("+")
-                                    if list_label_1 == lower_label or list_label_2 == lower_label:
-                                        canonical_waypoints.append(w)
-                                        canonical_waypoint_indices.append(checking_index)
-                                        r.labels_in_use.add(lower_label.upper())
-                                        # if we have not yet used this alt label, remove it from the unused list
-                                        if lower_label.upper() in r.unused_alt_labels:
-                                            r.unused_alt_labels.remove(lower_label.upper())
+                                # if we have not yet used this alt label, remove it from the unused list
+                                if lower_label.upper() in r.unused_alt_labels:
+                                    r.unused_alt_labels.remove(lower_label.upper())
                                             
-                            checking_index += 1
-                        if len(canonical_waypoints) != 2:
-                            self.log_entries.append("Waypoint label(s) not found in line: " + line)
-                        else:
-                            self.list_entries.append(ClinchedSegmentEntry(line, r.root, \
-                                                                          canonical_waypoints[0].label, \
-                                                                          canonical_waypoints[1].label))
-                            # find the segments we just matched and store this traveler with the
-                            # segments and the segments with the traveler (might not need both
-                            # ultimately)
-                            #start = r.point_list.index(canonical_waypoints[0])
-                            #end = r.point_list.index(canonical_waypoints[1])
-                            start = canonical_waypoint_indices[0]
-                            end = canonical_waypoint_indices[1]
-                            for wp_pos in range(start,end):
-                                hs = r.segment_list[wp_pos] #r.get_segment(r.point_list[wp_pos], r.point_list[wp_pos+1])
-                                hs.add_clinched_by(self)
-                                if hs not in self.clinched_segments:
-                                    self.clinched_segments.add(hs)
+                    checking_index += 1
+                if len(canonical_waypoints) != 2:
+                    self.log_entries.append("Waypoint label(s) not found in line: " + line)
+                else:
+                    self.list_entries.append(ClinchedSegmentEntry(line, r.root, \
+                                                                  canonical_waypoints[0].label, \
+                                                                  canonical_waypoints[1].label))
+                    # find the segments we just matched and store this traveler with the
+                    # segments and the segments with the traveler (might not need both
+                    # ultimately)
+                    #start = r.point_list.index(canonical_waypoints[0])
+                    #end = r.point_list.index(canonical_waypoints[1])
+                    start = canonical_waypoint_indices[0]
+                    end = canonical_waypoint_indices[1]
+                    for wp_pos in range(start,end):
+                        hs = r.segment_list[wp_pos] #r.get_segment(r.point_list[wp_pos], r.point_list[wp_pos+1])
+                        hs.add_clinched_by(self)
+                        if hs not in self.clinched_segments:
+                            self.clinched_segments.add(hs)
 
-                if lineDone:
-                    break
-            if not lineDone:
-                self.log_entries.append("Unknown region/highway combo in line: " + line)
         self.log_entries.append("Processed " + str(len(self.list_entries)) + \
                                     " good lines marking " +str(len(self.clinched_segments)) + \
                                     " segments traveled.")
@@ -1335,7 +1328,7 @@ class HighwayGraphCollapsedEdgeInfo:
                 self.vertex2.incident_collapsed_edges.remove(edge1)
                 removed += 1
             if removed != 1:
-                print("ERROR: edge1 " + str(edge1) + " removed from " + removed + " adjacency lists instead of 1.")
+                print("ERROR: edge1 " + str(edge1) + " removed from " + str(removed) + " adjacency lists instead of 1.")
             removed = 0
             if edge2 in self.vertex1.incident_collapsed_edges:
                 self.vertex1.incident_collapsed_edges.remove(edge2)
@@ -1344,7 +1337,7 @@ class HighwayGraphCollapsedEdgeInfo:
                 self.vertex2.incident_collapsed_edges.remove(edge2)
                 removed += 1
             if removed != 1:
-                print("ERROR: edge2 " + str(edge2) + " removed from " + removed + " adjacency lists instead of 1.")
+                print("ERROR: edge2 " + str(edge2) + " removed from " + str(removed) + " adjacency lists instead of 1.")
             self.vertex1.incident_collapsed_edges.append(self)
             self.vertex2.incident_collapsed_edges.append(self)
 
@@ -1879,7 +1872,7 @@ parser.add_argument("-s", "--systemsfile", default="systems.csv", \
 parser.add_argument("-u", "--userlistfilepath", default="../../../UserData/list_files",\
                         help="path to the user list file data")
 parser.add_argument("-d", "--databasename", default="TravelMapping", \
-                        help="Database name for mysql 'USE' statement and .sql file name")
+                        help="Database name for .sql file name")
 parser.add_argument("-l", "--logfilepath", default=".", help="Path to write log files")
 parser.add_argument("-c", "--csvstatfilepath", default=".", help="Path to write csv statistics files")
 parser.add_argument("-g", "--graphfilepath", default=".", help="Path to write graph format data files")
@@ -2473,6 +2466,14 @@ else:
     fpfile.write("No unmatched FP entries.")
 fpfile.close()
 
+# Create hash table for faster lookup of routes by list file name
+print(et.et() + "Creating route hash table for list processing:",flush=True)
+route_hash = dict()
+for h in highway_systems:
+    for r in h.route_list:
+        route_hash[(r.region + ' ' + r.list_entry_name()).lower()] = r
+        for a in r.alt_route_names:
+            route_hash[(r.region + ' ' + a).lower()] = r
 
 # Create a list of TravelerList objects, one per person
 traveler_lists = []
@@ -2481,7 +2482,7 @@ print(et.et() + "Processing traveler list files:",end="",flush=True)
 for t in traveler_ids:
     if t.endswith('.list'):
         print(" " + t,end="",flush=True)
-        traveler_lists.append(TravelerList(t,highway_systems,args.userlistfilepath))
+        traveler_lists.append(TravelerList(t,highway_systems,route_hash,args.userlistfilepath))
 print(" processed " + str(len(traveler_lists)) + " traveler list files.")
 
 # Read updates.csv file, just keep in the fields array for now since we're
@@ -3171,7 +3172,7 @@ print(et.et() + "Writing database file " + args.databasename + ".sql.")
 # Once all data is read in and processed, create a .sql file that will
 # create all of the DB tables to be used by other parts of the project
 sqlfile = open(args.databasename+'.sql','w',encoding='UTF-8')
-sqlfile.write('USE '+args.databasename+';\n')
+# Note: removed "USE" line, DB name must be specified on the mysql command line
 
 # we have to drop tables in the right order to avoid foreign key errors
 sqlfile.write('DROP TABLE IF EXISTS datacheckErrors;\n')
@@ -3243,7 +3244,7 @@ for h in highway_systems:
 sqlfile.write(";\n")
 
 # next, a table of highways, with the same fields as in the first line
-sqlfile.write('CREATE TABLE routes (systemName VARCHAR(10), region VARCHAR(8), route VARCHAR(16), banner VARCHAR(3), abbrev VARCHAR(3), city VARCHAR(100), root VARCHAR(32), mileage FLOAT, PRIMARY KEY(root), FOREIGN KEY (systemName) REFERENCES systems(systemName));\n')
+sqlfile.write('CREATE TABLE routes (systemName VARCHAR(10), region VARCHAR(8), route VARCHAR(16), banner VARCHAR(6), abbrev VARCHAR(3), city VARCHAR(100), root VARCHAR(32), mileage FLOAT, PRIMARY KEY(root), FOREIGN KEY (systemName) REFERENCES systems(systemName));\n')
 sqlfile.write('INSERT INTO routes VALUES\n')
 first = True
 for h in highway_systems:
@@ -3255,7 +3256,7 @@ for h in highway_systems:
 sqlfile.write(";\n")
 
 # connected routes table, but only first "root" in each in this table
-sqlfile.write('CREATE TABLE connectedRoutes (systemName VARCHAR(10), route VARCHAR(16), banner VARCHAR(3), groupName VARCHAR(100), firstRoot VARCHAR(32), mileage FLOAT, PRIMARY KEY(firstRoot), FOREIGN KEY (firstRoot) REFERENCES routes(root));\n')
+sqlfile.write('CREATE TABLE connectedRoutes (systemName VARCHAR(10), route VARCHAR(16), banner VARCHAR(6), groupName VARCHAR(100), firstRoot VARCHAR(32), mileage FLOAT, PRIMARY KEY(firstRoot), FOREIGN KEY (firstRoot) REFERENCES routes(root));\n')
 sqlfile.write('INSERT INTO connectedRoutes VALUES\n')
 first = True
 for h in highway_systems:
@@ -3423,7 +3424,7 @@ for start in range(0, len(cr_values), 10000):
     sqlfile.write(";\n")
 
 # updates entries
-sqlfile.write('CREATE TABLE updates (date VARCHAR(10), region VARCHAR(60), route VARCHAR(80), root VARCHAR(32), description VARCHAR(512));\n')
+sqlfile.write('CREATE TABLE updates (date VARCHAR(10), region VARCHAR(60), route VARCHAR(80), root VARCHAR(32), description VARCHAR(1024));\n')
 sqlfile.write('INSERT INTO updates VALUES\n')
 first = True
 for update in updates:
@@ -3434,7 +3435,7 @@ for update in updates:
 sqlfile.write(";\n")
 
 # systemUpdates entries
-sqlfile.write('CREATE TABLE systemUpdates (date VARCHAR(10), region VARCHAR(48), systemName VARCHAR(10), description VARCHAR(50), statusChange VARCHAR(16));\n')
+sqlfile.write('CREATE TABLE systemUpdates (date VARCHAR(10), region VARCHAR(48), systemName VARCHAR(10), description VARCHAR(128), statusChange VARCHAR(16));\n')
 sqlfile.write('INSERT INTO systemUpdates VALUES\n')
 first = True
 for systemupdate in systemupdates:

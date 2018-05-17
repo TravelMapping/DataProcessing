@@ -1,2 +1,2 @@
 # DataProcessing
-Data Processing Scripts and Programs for Travel Mapping Project
+Data Processing Scripts and Programs for the Travel Mapping Project.
