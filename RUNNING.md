@@ -47,9 +47,9 @@ cd ~/DataProcessing/siteupdate/python-teresco
 PYTHONIOENCODING='utf-8' python3 siteupdate.py -k
 ```
 
-The process that launches will likely run for several minutes.  The "-k" omits graph generation, which is one of the slowest parts of the process.  You can leave it out if you want to generate graphs.
+The process that launches will likely run for several minutes.  The "-k" omits graph generation, which is one of the slowest parts of the process.  You can leave it out if you want to generate graphs.  
 
-If the program runs to completion without reporting errors, you are likely in good shape to make your pull request with your highway data changes.  If not, you have things to fix.
+If the process gets to the point of reading in user list files, your csv and wpt files are likely good and you might hit "ctrl-c" to kill the process.  However, you might wish to let it continue if you have made changes to updates.csv or systemupdates.csv, as those are processed later.  Once you are satisfied that your changes do not cause errors, you are in good shape to make your pull request with your highway data changes.  If not, you have things to fix.
 
 ### Updating before subsequent runs
 
