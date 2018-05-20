@@ -44,7 +44,7 @@ To do this, you will enter the following at your $ prompt:
 
 ```
 cd ~/DataProcessing/siteupdate/python-teresco
-python3 siteupdate.py -k
+PYTHONIOENCODING='utf-8' python3 siteupdate.py -k
 ```
 
 The process that launches will likely run for several minutes.  The "-k" omits graph generation, which is one of the slowest parts of the process.  You can leave it out if you want to generate graphs.
