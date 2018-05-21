@@ -3233,7 +3233,7 @@ else:
         if not first:
             sqlfile.write(",")
         first = False
-    sqlfile.write("('" + c[0] + "','" + c[1] + "')\n")
+        sqlfile.write("('" + c[0] + "','" + c[1] + "')\n")
     sqlfile.write(";\n")
 
     sqlfile.write('CREATE TABLE countries (code VARCHAR(3), name VARCHAR(32), PRIMARY KEY(code));\n')
@@ -3243,7 +3243,7 @@ else:
         if not first:
             sqlfile.write(",")
         first = False
-    sqlfile.write("('" + c[0] + "','" + c[1].replace("'","''") + "')\n")
+        sqlfile.write("('" + c[0] + "','" + c[1].replace("'","''") + "')\n")
     sqlfile.write(";\n")
 
     sqlfile.write('CREATE TABLE regions (code VARCHAR(8), name VARCHAR(48), country VARCHAR(3), continent VARCHAR(3), regiontype VARCHAR(32), PRIMARY KEY(code), FOREIGN KEY (country) REFERENCES countries(code), FOREIGN KEY (continent) REFERENCES continents(code));\n')
@@ -3348,8 +3348,8 @@ else:
                 sqlfile.write("(" + s.csv_line(segment_num) + ")\n")
                 for t in s.clinched_by:
                     clinched_list.append("'" + str(segment_num) + "','" + t.traveler_name + "'")
-            segment_num += 1
-        sqlfile.write(";\n")
+                segment_num += 1
+            sqlfile.write(";\n")
 
     # maybe a separate traveler table will make sense but for now, I'll just use
     # the name from the .list name
