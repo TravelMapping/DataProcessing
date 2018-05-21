@@ -1996,11 +1996,12 @@ datacheckerrors = []
 
 # check for duplicate root entries among Route and ConnectedRoute
 # data in all highway systems
-print(et.et() + "Checking for duplicate list names in routes, roots in routes and connected routes.", flush=True)
+print(et.et() + "Checking for duplicate list names in routes, roots in routes and connected routes.",end="",flush=True)
 roots = []
 list_names = []
 duplicate_list_names = set()
 for h in highway_systems:
+    print(".", end="",flush=True)
     for r in h.route_list:
         if r.root in roots:
             el.add_error("Duplicate root in route lists: " + r.root)
@@ -2014,12 +2015,15 @@ for h in highway_systems:
             
 con_roots = []
 for h in highway_systems:
+    print(".", end="",flush=True)
     for r in h.con_route_list:
         for cr in r.roots:
             if cr.root in con_roots:
                 el.add_error("Duplicate root in con_route lists: " + cr.root)
             else:
                 con_roots.append(cr.root)
+print("!", flush=True)
+
 # Make sure every route was listed as a part of some connected route
 if len(roots) == len(con_roots):
     print("Check passed: same number of routes as connected route roots. " + str(len(roots)))
@@ -2227,7 +2231,7 @@ if args.nmpmergepath != "" and not args.errorcheck:
     print()
 
 # data check: visit each system and route and check for various problems
-print(et.et() + "Performing data checks.", flush=True)
+print(et.et() + "Performing data checks.",end="",flush=True)
 # first, read in the false positives list
 with open(args.highwaydatapath+"/datacheckfps.csv", "rt",encoding='utf-8') as file:
     lines = file.readlines()
@@ -2256,6 +2260,7 @@ if len(el.error_list) > 0:
 
 # perform most datachecks here (list initialized above)
 for h in highway_systems:
+    print(".",end="",flush=True)
     for r in h.route_list:
         # set to be used per-route to find label duplicates
         all_route_labels = set()
@@ -2439,14 +2444,20 @@ for h in highway_systems:
                     labels.append(r.point_list[i+1].label)
                     datacheckerrors.append(DatacheckEntry(r,labels,'SHARP_ANGLE',
                                                           "{0:.2f}".format(angle)))
+print("!", flush=True)
+print(et.et() + "Found " + str(len(datacheckerrors)) + " datacheck errors.")
 
 # now mark false positives
-print(et.et() + "Marking datacheck false positives.", flush=True)
+print(et.et() + "Marking datacheck false positives.",end="",flush=True)
 fpfile = open(args.logfilepath+'/nearmatchfps.log','w',encoding='utf-8')
 fpfile.write("Log file created at: " + str(datetime.datetime.now()) + "\n")
 toremove = []
+counter = 0
 for d in datacheckerrors:
     #print("Checking: " + str(d))
+    counter += 1
+    if counter % 1000 == 0:
+        print(".", end="",flush=True)
     for fp in datacheckfps:
         #print("Comparing: " + str(d) + " to " + str(fp))
         if d.match(fp):
@@ -2462,10 +2473,14 @@ for d in datacheckerrors:
 fpfile.close()
 # now remove the ones we matched from the list
 for fp in toremove:
+    counter += 1
+    if counter % 1000 == 0:
+        print(".", end="",flush=True)
     if fp in datacheckfps:
         datacheckfps.remove(fp)
     else:
         print("Matched FP entry not in list!: " + str(fp))
+print("!", flush=True)
 
 # write log of unmatched false positives from the datacheckfps.csv
 print(et.et() + "Writing log of unmatched datacheck FP entries.")
@@ -2608,7 +2623,7 @@ concurrencyfile.close()
 
 # compute lots of stats, first total mileage by route, system, overall, where
 # system and overall are stored in dictionaries by region
-print(et.et() + "Computing stats.")
+print(et.et() + "Computing stats.",end="",flush=True)
 # now also keeping separate totals for active only, active+preview,
 # and all for overall (not needed for system, as a system falls into just
 # one of these categories)
@@ -2616,6 +2631,7 @@ active_only_mileage_by_region = dict()
 active_preview_mileage_by_region = dict()
 overall_mileage_by_region = dict()
 for h in highway_systems:
+    print(".",end="",flush=True)
     for r in h.route_list:
         for s in r.segment_list:
             segment_length = s.length()
@@ -2711,8 +2727,9 @@ for h in highway_systems:
                         segment_length/system_concurrency_count
                     else:
                         t_system_dict[r.region] = segment_length/system_concurrency_count
+print("!", flush=True)
 
-print(et.et() + "Writing highway data stats log file (highwaydatastats.log).")
+print(et.et() + "Writing highway data stats log file (highwaydatastats.log).",flush=True)
 hdstatsfile = open(args.logfilepath+"/highwaydatastats.log","wt",encoding='UTF-8')
 hdstatsfile.write("Travel Mapping highway mileage as of " + str(datetime.datetime.now()) + '\n')
 active_only_miles = math.fsum(list(active_only_mileage_by_region.values()))
@@ -2778,7 +2795,7 @@ csmbr_values = []
 ccr_values = []
 cr_values = []
 # now add user clinched stats to their log entries
-print(et.et() + "Creating per-traveler stats log entries and augmenting data structure.")
+print(et.et() + "Creating per-traveler stats log entries and augmenting data structure.",flush=True)
 for t in traveler_lists:
     t.log_entries.append("Clinched Highway Statistics")
     t_active_only_miles = math.fsum(list(t.active_only_mileage_by_region.values()))
@@ -2922,12 +2939,12 @@ for t in traveler_lists:
                          " preview systems")
 
 # write log files for traveler lists
-print(et.et() + "Writing traveler list logs.")
+print(et.et() + "Writing traveler list logs.",flush=True)
 for t in traveler_lists:
     t.write_log(args.logfilepath)
 
 # write stats csv files
-print(et.et() + "Writing stats csv files.")
+print(et.et() + "Writing stats csv files.",flush=True)
 # first, overall per traveler by region, both active only and active+preview
 allfile = open(args.csvstatfilepath + "/allbyregionactiveonly.csv","w",encoding='UTF-8')
 allfile.write("Traveler")
@@ -3184,13 +3201,20 @@ print(et.et() + "Writing datacheck.log")
 logfile = open(args.logfilepath + '/datacheck.log', 'w')
 logfile.write("Log file created at: " + str(datetime.datetime.now()) + "\n")
 logfile.write("Datacheck errors that have been flagged as false positives are not included.\n")
+logfile.write("These entries should be in a format ready to paste into datacheckfps.csv.\n")
 if len(datacheckerrors) > 0:
     for d in datacheckerrors:
         if not d.fp:
-            logfile.write(str(d.route.root))
-            for l in d.labels:
-                logfile.write(" " + l)
-            logfile.write(" "+d.code+" "+d.info+"\n")
+            logfile.write(str(d.route.root)+";")
+            if len(d.labels) == 0:
+                logfile.write(";;;;")
+            elif len(d.labels) == 1:
+                logfile.write(d.labels[0]+";;;")
+            elif len(d.labels) == 2:
+                logfile.write(d.labels[0]+";"+d.labels[1]+";;")
+            else:
+                logfile.write(d.labels[0]+";"+d.labels[1]+";"+d.labels[2]+";")
+            logfile.write(d.code+";"+d.info+"\n")
 else:
     logfile.write("No datacheck errors found.")
 logfile.close()
@@ -3543,36 +3567,41 @@ print("Processed " + str(routes) + " routes with a total of " + \
           str(points) + " points and " + str(segments) + " segments.")
 if points != all_waypoints.size():
     print("MISMATCH: all_waypoints contains " + str(all_waypoints.size()) + " waypoints!")
-# compute colocation of waypoints stats
-print(et.et() + "Computing waypoint colocation stats, reporting all with 8 or more colocations:")
-colocate_counts = [0]*50
-largest_colocate_count = 1
-big_colocate_locations = dict()
-for w in all_waypoints.point_list():
-    c = w.num_colocated()
-    if c >= 8:
-        point = (w.lat, w.lng)
-        entry = w.route.root + " " + w.label
-        if point in big_colocate_locations:
-            the_list = big_colocate_locations[point]
-            the_list.append(entry)
-            big_colocate_locations[point] = the_list
-        else:
-            the_list = []
-            the_list.append(entry)
-            big_colocate_locations[point] = the_list
-        #print(str(w) + " with " + str(c) + " other points.")
-    colocate_counts[c] += 1
-    if c > largest_colocate_count:
-        largest_colocate_count = c
-for place in big_colocate_locations:
-    the_list = big_colocate_locations[place]
-    print(str(place) + " is occupied by " + str(len(the_list)) + " waypoints: " + str(the_list))
-print("Waypoint colocation counts:")
-unique_locations = 0
-for c in range(1,largest_colocate_count+1):
-    unique_locations += colocate_counts[c]//c
-    print("{0:6d} are each occupied by {1:2d} waypoints.".format(colocate_counts[c]//c, c))
-print("Unique locations: " + str(unique_locations))
+
+if not args.errorcheck:
+    # compute colocation of waypoints stats
+    print(et.et() + "Computing waypoint colocation stats, reporting all with 8 or more colocations:")
+    colocate_counts = [0]*50
+    largest_colocate_count = 1
+    big_colocate_locations = dict()
+    for w in all_waypoints.point_list():
+        c = w.num_colocated()
+        if c >= 8:
+            point = (w.lat, w.lng)
+            entry = w.route.root + " " + w.label
+            if point in big_colocate_locations:
+                the_list = big_colocate_locations[point]
+                the_list.append(entry)
+                big_colocate_locations[point] = the_list
+            else:
+                the_list = []
+                the_list.append(entry)
+                big_colocate_locations[point] = the_list
+            #print(str(w) + " with " + str(c) + " other points.")
+        colocate_counts[c] += 1
+        if c > largest_colocate_count:
+            largest_colocate_count = c
+    for place in big_colocate_locations:
+        the_list = big_colocate_locations[place]
+        print(str(place) + " is occupied by " + str(len(the_list)) + " waypoints: " + str(the_list))
+    print("Waypoint colocation counts:")
+    unique_locations = 0
+    for c in range(1,largest_colocate_count+1):
+        unique_locations += colocate_counts[c]//c
+        print("{0:6d} are each occupied by {1:2d} waypoints.".format(colocate_counts[c]//c, c))
+    print("Unique locations: " + str(unique_locations))
+
+if args.errorcheck:
+    print("Data check successful!")
 
 print("Total run time: " + et.et())
