@@ -2163,7 +2163,7 @@ for line in nmpfilelines:
 nmpfpfile.close()
 
 nmpfile = open(args.logfilepath+'/nearmisspoints.log','w')
-nmpnmp = open(args.graphfilepath+'/tm-master.nmp','w')
+nmpnmp = open(args.logfilepath+'/tm-master.nmp','w')
 for w in all_waypoints.point_list():
     if w.near_miss_points is not None:
         nmpline = str(w) + " NMP "

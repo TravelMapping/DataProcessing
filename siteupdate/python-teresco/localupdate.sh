@@ -18,7 +18,6 @@ graphflag=
 date
 # process command line args
 for arg in "$@"; do
-    echo "$arg"
     if [ "$arg" == "--nographs" ]; then
 	# -k to siteupdate.py supresses graph generation
 	graphflag="-k"
