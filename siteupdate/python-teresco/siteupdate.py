@@ -2797,6 +2797,7 @@ cr_values = []
 # now add user clinched stats to their log entries
 print(et.et() + "Creating per-traveler stats log entries and augmenting data structure.",flush=True)
 for t in traveler_lists:
+    print(".",end="",flush=True)
     t.log_entries.append("Clinched Highway Statistics")
     t_active_only_miles = math.fsum(list(t.active_only_mileage_by_region.values()))
     t.log_entries.append("Overall in active systems: " + format_clinched_mi(t_active_only_miles,active_only_miles))
@@ -2937,6 +2938,7 @@ for t in traveler_lists:
                          ", Clinched " + str(t.preview_systems_clinched) + " of " + str(preview_systems) +
                          " ({0:.1f}%)".format(100*t.preview_systems_clinched/preview_systems) +
                          " preview systems")
+print("!", flush=True)
 
 # write log files for traveler lists
 print(et.et() + "Writing traveler list logs.",flush=True)
