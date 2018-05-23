@@ -2795,7 +2795,7 @@ csmbr_values = []
 ccr_values = []
 cr_values = []
 # now add user clinched stats to their log entries
-print(et.et() + "Creating per-traveler stats log entries and augmenting data structure.",flush=True)
+print(et.et() + "Creating per-traveler stats log entries and augmenting data structure.",end="",flush=True)
 for t in traveler_lists:
     print(".",end="",flush=True)
     t.log_entries.append("Clinched Highway Statistics")
