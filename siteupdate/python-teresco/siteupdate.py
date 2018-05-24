@@ -2240,7 +2240,8 @@ lines.pop(0)  # ignore header line
 datacheckfps = []
 datacheck_always_error = [ 'DUPLICATE_LABEL', 'HIDDEN_TERMINUS',
                            'LABEL_INVALID_CHAR', 'LABEL_SLASHES',
-                           'LONG_UNDERSCORE', 'NONTERMINAL_UNDERSCORE' ]
+                           'LONG_UNDERSCORE', 'NONTERMINAL_UNDERSCORE',
+                           'OUT_OF_BOUNDS' ]
 for line in lines:
     fields = line.rstrip('\n').split(';')
     if len(fields) != 6:
@@ -2295,6 +2296,14 @@ for h in highway_systems:
                     datacheckerrors.append(DatacheckEntry(r,labels,"DUPLICATE_LABEL"))
                 else:
                     all_route_labels.add(lower_label)
+
+            # out-of-bounds coords
+            if w.lat > 90 or w.lat < -90 or w.lng > 180 or w.lng < -180:
+                labels = []
+                labels.append(w.label)
+                datacheckerrors.append(DatacheckEntry(r,labels,'OUT_OF_BOUNDS',
+                                                      "("+str(w.lat)+","+str(w.lng)+")"))
+
             # duplicate coordinates
             latlng = w.lat, w.lng
             if latlng in coords_used:
@@ -3204,6 +3213,7 @@ logfile = open(args.logfilepath + '/datacheck.log', 'w')
 logfile.write("Log file created at: " + str(datetime.datetime.now()) + "\n")
 logfile.write("Datacheck errors that have been flagged as false positives are not included.\n")
 logfile.write("These entries should be in a format ready to paste into datacheckfps.csv.\n")
+logfile.write("Root;Waypoint1;Waypoint2;Waypoint3;Error;Info\n")
 if len(datacheckerrors) > 0:
     for d in datacheckerrors:
         if not d.fp:
