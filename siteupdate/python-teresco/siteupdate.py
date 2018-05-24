@@ -1880,6 +1880,7 @@ parser.add_argument("-k", "--skipgraphs", action="store_true", help="Turn off ge
 parser.add_argument("-n", "--nmpmergepath", default="", help="Path to write data with NMPs merged (generated only if specified)")
 parser.add_argument("-U", "--userlist", default=None, nargs="+", help="For Development: list of users to use in dataset")
 parser.add_argument("-t", "--numthreads", default="4", help="Number of threads to use for concurrent tasks")
+parser.add_argument("-e", "--errorcheck", action="store_true", help="Run only the subset of the process needed to verify highway data changes")
 args = parser.parse_args()
 
 #
@@ -1995,11 +1996,12 @@ datacheckerrors = []
 
 # check for duplicate root entries among Route and ConnectedRoute
 # data in all highway systems
-print(et.et() + "Checking for duplicate list names in routes, roots in routes and connected routes.", flush=True)
+print(et.et() + "Checking for duplicate list names in routes, roots in routes and connected routes.",end="",flush=True)
 roots = []
 list_names = []
 duplicate_list_names = set()
 for h in highway_systems:
+    print(".", end="",flush=True)
     for r in h.route_list:
         if r.root in roots:
             el.add_error("Duplicate root in route lists: " + r.root)
@@ -2013,12 +2015,15 @@ for h in highway_systems:
             
 con_roots = []
 for h in highway_systems:
+    print(".", end="",flush=True)
     for r in h.con_route_list:
         for cr in r.roots:
             if cr.root in con_roots:
                 el.add_error("Duplicate root in con_route lists: " + cr.root)
             else:
                 con_roots.append(cr.root)
+print("!", flush=True)
+
 # Make sure every route was listed as a part of some connected route
 if len(roots) == len(con_roots):
     print("Check passed: same number of routes as connected route roots. " + str(len(roots)))
@@ -2163,7 +2168,7 @@ for line in nmpfilelines:
 nmpfpfile.close()
 
 nmpfile = open(args.logfilepath+'/nearmisspoints.log','w')
-nmpnmp = open(args.graphfilepath+'/tm-master.nmp','w')
+nmpnmp = open(args.logfilepath+'/tm-master.nmp','w')
 for w in all_waypoints.point_list():
     if w.near_miss_points is not None:
         nmpline = str(w) + " NMP "
@@ -2194,7 +2199,7 @@ nmpfile.close()
 nmpnmp.close()
 
 # if requested, rewrite data with near-miss points merged in
-if args.nmpmergepath != "":
+if args.nmpmergepath != "" and not args.errorcheck:
     print(et.et() + "Writing near-miss point merged wpt files.", flush=True)
     for h in highway_systems:
         print(h.systemname, end="", flush=True)
@@ -2226,16 +2231,16 @@ if args.nmpmergepath != "":
     print()
 
 # data check: visit each system and route and check for various problems
-print(et.et() + "Performing data checks.", flush=True)
+print(et.et() + "Performing data checks.",end="",flush=True)
 # first, read in the false positives list
 with open(args.highwaydatapath+"/datacheckfps.csv", "rt",encoding='utf-8') as file:
     lines = file.readlines()
 
 lines.pop(0)  # ignore header line
 datacheckfps = []
-datacheck_always_error = [ 'DUPLICATE_LABEL', 'LABEL_INVALID_CHAR',
-                           'LABEL_SLASHES', 'LONG_UNDERSCORE',
-                           'NONTERMINAL_UNDERSCORE' ]
+datacheck_always_error = [ 'DUPLICATE_LABEL', 'HIDDEN_TERMINUS',
+                           'LABEL_INVALID_CHAR', 'LABEL_SLASHES',
+                           'LONG_UNDERSCORE', 'NONTERMINAL_UNDERSCORE' ]
 for line in lines:
     fields = line.rstrip('\n').split(';')
     if len(fields) != 6:
@@ -2255,6 +2260,7 @@ if len(el.error_list) > 0:
 
 # perform most datachecks here (list initialized above)
 for h in highway_systems:
+    print(".",end="",flush=True)
     for r in h.route_list:
         # set to be used per-route to find label duplicates
         all_route_labels = set()
@@ -2266,6 +2272,17 @@ for h in highway_systems:
         # so the following is simply a placeholder
         last_visible = None
         prev_w = None
+
+        # look for hidden termini
+        if r.point_list[0].is_hidden:
+            labels = []
+            labels.append(r.point_list[0].label)
+            datacheckerrors.append(DatacheckEntry(r,labels,'HIDDEN_TERMINUS'))
+        if r.point_list[len(r.point_list)-1].is_hidden:
+            labels = []
+            labels.append(r.point_list[len(r.point_list)-1].label)
+            datacheckerrors.append(DatacheckEntry(r,labels,'HIDDEN_TERMINUS'))
+
         for w in r.point_list:
             # duplicate labels
             label_list = w.alt_labels.copy()
@@ -2427,14 +2444,20 @@ for h in highway_systems:
                     labels.append(r.point_list[i+1].label)
                     datacheckerrors.append(DatacheckEntry(r,labels,'SHARP_ANGLE',
                                                           "{0:.2f}".format(angle)))
+print("!", flush=True)
+print(et.et() + "Found " + str(len(datacheckerrors)) + " datacheck errors.")
 
 # now mark false positives
-print(et.et() + "Marking datacheck false positives.", flush=True)
+print(et.et() + "Marking datacheck false positives.",end="",flush=True)
 fpfile = open(args.logfilepath+'/nearmatchfps.log','w',encoding='utf-8')
 fpfile.write("Log file created at: " + str(datetime.datetime.now()) + "\n")
 toremove = []
+counter = 0
 for d in datacheckerrors:
     #print("Checking: " + str(d))
+    counter += 1
+    if counter % 1000 == 0:
+        print(".", end="",flush=True)
     for fp in datacheckfps:
         #print("Comparing: " + str(d) + " to " + str(fp))
         if d.match(fp):
@@ -2450,10 +2473,14 @@ for d in datacheckerrors:
 fpfile.close()
 # now remove the ones we matched from the list
 for fp in toremove:
+    counter += 1
+    if counter % 1000 == 0:
+        print(".", end="",flush=True)
     if fp in datacheckfps:
         datacheckfps.remove(fp)
     else:
         print("Matched FP entry not in list!: " + str(fp))
+print("!", flush=True)
 
 # write log of unmatched false positives from the datacheckfps.csv
 print(et.et() + "Writing log of unmatched datacheck FP entries.")
@@ -2596,7 +2623,7 @@ concurrencyfile.close()
 
 # compute lots of stats, first total mileage by route, system, overall, where
 # system and overall are stored in dictionaries by region
-print(et.et() + "Computing stats.")
+print(et.et() + "Computing stats.",end="",flush=True)
 # now also keeping separate totals for active only, active+preview,
 # and all for overall (not needed for system, as a system falls into just
 # one of these categories)
@@ -2604,6 +2631,7 @@ active_only_mileage_by_region = dict()
 active_preview_mileage_by_region = dict()
 overall_mileage_by_region = dict()
 for h in highway_systems:
+    print(".",end="",flush=True)
     for r in h.route_list:
         for s in r.segment_list:
             segment_length = s.length()
@@ -2699,8 +2727,9 @@ for h in highway_systems:
                         segment_length/system_concurrency_count
                     else:
                         t_system_dict[r.region] = segment_length/system_concurrency_count
+print("!", flush=True)
 
-print(et.et() + "Writing highway data stats log file (highwaydatastats.log).")
+print(et.et() + "Writing highway data stats log file (highwaydatastats.log).",flush=True)
 hdstatsfile = open(args.logfilepath+"/highwaydatastats.log","wt",encoding='UTF-8')
 hdstatsfile.write("Travel Mapping highway mileage as of " + str(datetime.datetime.now()) + '\n')
 active_only_miles = math.fsum(list(active_only_mileage_by_region.values()))
@@ -2766,8 +2795,9 @@ csmbr_values = []
 ccr_values = []
 cr_values = []
 # now add user clinched stats to their log entries
-print(et.et() + "Creating per-traveler stats log entries and augmenting data structure.")
+print(et.et() + "Creating per-traveler stats log entries and augmenting data structure.",end="",flush=True)
 for t in traveler_lists:
+    print(".",end="",flush=True)
     t.log_entries.append("Clinched Highway Statistics")
     t_active_only_miles = math.fsum(list(t.active_only_mileage_by_region.values()))
     t.log_entries.append("Overall in active systems: " + format_clinched_mi(t_active_only_miles,active_only_miles))
@@ -2908,14 +2938,15 @@ for t in traveler_lists:
                          ", Clinched " + str(t.preview_systems_clinched) + " of " + str(preview_systems) +
                          " ({0:.1f}%)".format(100*t.preview_systems_clinched/preview_systems) +
                          " preview systems")
+print("!", flush=True)
 
 # write log files for traveler lists
-print(et.et() + "Writing traveler list logs.")
+print(et.et() + "Writing traveler list logs.",flush=True)
 for t in traveler_lists:
     t.write_log(args.logfilepath)
 
 # write stats csv files
-print(et.et() + "Writing stats csv files.")
+print(et.et() + "Writing stats csv files.",flush=True)
 # first, overall per traveler by region, both active only and active+preview
 allfile = open(args.csvstatfilepath + "/allbyregionactiveonly.csv","w",encoding='UTF-8')
 allfile.write("Traveler")
@@ -2987,7 +3018,7 @@ for h in highway_systems:
 
 # Build a graph structure out of all highway data in active and
 # preview systems
-if args.skipgraphs:
+if args.skipgraphs or args.errorcheck:
     print(et.et() + "SKIPPING generation of graphs.", flush=True)
 else:
     print(et.et() + "Setting up for graphs of highway data.", flush=True)
@@ -3166,338 +3197,363 @@ else:
     graph_types.append(['continent', 'Routes Within a Continent',
                         'These graphs contain the routes on a continent.'])
     print("!")
+
+# datacheck.log file
+print(et.et() + "Writing datacheck.log")
+logfile = open(args.logfilepath + '/datacheck.log', 'w')
+logfile.write("Log file created at: " + str(datetime.datetime.now()) + "\n")
+logfile.write("Datacheck errors that have been flagged as false positives are not included.\n")
+logfile.write("These entries should be in a format ready to paste into datacheckfps.csv.\n")
+if len(datacheckerrors) > 0:
+    for d in datacheckerrors:
+        if not d.fp:
+            logfile.write(str(d.route.root)+";")
+            if len(d.labels) == 0:
+                logfile.write(";;;;")
+            elif len(d.labels) == 1:
+                logfile.write(d.labels[0]+";;;")
+            elif len(d.labels) == 2:
+                logfile.write(d.labels[0]+";"+d.labels[1]+";;")
+            else:
+                logfile.write(d.labels[0]+";"+d.labels[1]+";"+d.labels[2]+";")
+            logfile.write(d.code+";"+d.info+"\n")
+else:
+    logfile.write("No datacheck errors found.")
+logfile.close()
     
+if args.errorcheck:
+    print(et.et() + "SKIPPING database file.")
+else:
+    print(et.et() + "Writing database file " + args.databasename + ".sql.")
+    # Once all data is read in and processed, create a .sql file that will
+    # create all of the DB tables to be used by other parts of the project
+    sqlfile = open(args.databasename+'.sql','w',encoding='UTF-8')
+    # Note: removed "USE" line, DB name must be specified on the mysql command line
     
-print(et.et() + "Writing database file " + args.databasename + ".sql.")
-# Once all data is read in and processed, create a .sql file that will
-# create all of the DB tables to be used by other parts of the project
-sqlfile = open(args.databasename+'.sql','w',encoding='UTF-8')
-# Note: removed "USE" line, DB name must be specified on the mysql command line
-
-# we have to drop tables in the right order to avoid foreign key errors
-sqlfile.write('DROP TABLE IF EXISTS datacheckErrors;\n')
-sqlfile.write('DROP TABLE IF EXISTS clinchedConnectedRoutes;\n')
-sqlfile.write('DROP TABLE IF EXISTS clinchedRoutes;\n')
-sqlfile.write('DROP TABLE IF EXISTS clinchedOverallMileageByRegion;\n')
-sqlfile.write('DROP TABLE IF EXISTS clinchedSystemMileageByRegion;\n')
-sqlfile.write('DROP TABLE IF EXISTS overallMileageByRegion;\n')
-sqlfile.write('DROP TABLE IF EXISTS systemMileageByRegion;\n')
-sqlfile.write('DROP TABLE IF EXISTS clinched;\n')
-sqlfile.write('DROP TABLE IF EXISTS segments;\n')
-sqlfile.write('DROP TABLE IF EXISTS waypoints;\n')
-sqlfile.write('DROP TABLE IF EXISTS connectedRouteRoots;\n')
-sqlfile.write('DROP TABLE IF EXISTS connectedRoutes;\n')
-sqlfile.write('DROP TABLE IF EXISTS routes;\n')
-sqlfile.write('DROP TABLE IF EXISTS systems;\n')
-sqlfile.write('DROP TABLE IF EXISTS updates;\n')
-sqlfile.write('DROP TABLE IF EXISTS systemUpdates;\n')
-sqlfile.write('DROP TABLE IF EXISTS regions;\n')
-sqlfile.write('DROP TABLE IF EXISTS countries;\n')
-sqlfile.write('DROP TABLE IF EXISTS continents;\n')
-
-# first, continents, countries, and regions
-sqlfile.write('CREATE TABLE continents (code VARCHAR(3), name VARCHAR(15), PRIMARY KEY(code));\n')
-sqlfile.write('INSERT INTO continents VALUES\n')
-first = True
-for c in continents:
-    if not first:
-        sqlfile.write(",")
-    first = False
-    sqlfile.write("('" + c[0] + "','" + c[1] + "')\n")
-sqlfile.write(";\n")
-
-sqlfile.write('CREATE TABLE countries (code VARCHAR(3), name VARCHAR(32), PRIMARY KEY(code));\n')
-sqlfile.write('INSERT INTO countries VALUES\n')
-first = True
-for c in countries:
-    if not first:
-        sqlfile.write(",")
-    first = False
-    sqlfile.write("('" + c[0] + "','" + c[1].replace("'","''") + "')\n")
-sqlfile.write(";\n")
-
-sqlfile.write('CREATE TABLE regions (code VARCHAR(8), name VARCHAR(48), country VARCHAR(3), continent VARCHAR(3), regiontype VARCHAR(32), PRIMARY KEY(code), FOREIGN KEY (country) REFERENCES countries(code), FOREIGN KEY (continent) REFERENCES continents(code));\n')
-sqlfile.write('INSERT INTO regions VALUES\n')
-first = True
-for r in all_regions:
-    if not first:
-        sqlfile.write(",")
-    first = False
-    sqlfile.write("('" + r[0] + "','" + r[1].replace("'","''") + "','" + r[2] + "','" + r[3] + "','" + r[4] + "')\n")
-sqlfile.write(";\n")
-
-# next, a table of the systems, consisting of the system name in the
-# field 'name', the system's country code, its full name, the default
-# color for its mapping, a level (one of active, preview, devel), and
-# a boolean indicating if the system is active for mapping in the
-# project in the field 'active'
-sqlfile.write('CREATE TABLE systems (systemName VARCHAR(10), countryCode CHAR(3), fullName VARCHAR(60), color VARCHAR(16), level VARCHAR(10), tier INTEGER, PRIMARY KEY(systemName));\n')
-sqlfile.write('INSERT INTO systems VALUES\n')
-first = True
-for h in highway_systems:
-    if not first:
-        sqlfile.write(",")
-    first = False
-    sqlfile.write("('" + h.systemname + "','" +  h.country + "','" +
-                  h.fullname + "','" + h.color + "','" + h.level +
-                  "','" + str(h.tier) + "')\n")
-sqlfile.write(";\n")
-
-# next, a table of highways, with the same fields as in the first line
-sqlfile.write('CREATE TABLE routes (systemName VARCHAR(10), region VARCHAR(8), route VARCHAR(16), banner VARCHAR(6), abbrev VARCHAR(3), city VARCHAR(100), root VARCHAR(32), mileage FLOAT, PRIMARY KEY(root), FOREIGN KEY (systemName) REFERENCES systems(systemName));\n')
-sqlfile.write('INSERT INTO routes VALUES\n')
-first = True
-for h in highway_systems:
-    for r in h.route_list:
+    # we have to drop tables in the right order to avoid foreign key errors
+    sqlfile.write('DROP TABLE IF EXISTS datacheckErrors;\n')
+    sqlfile.write('DROP TABLE IF EXISTS clinchedConnectedRoutes;\n')
+    sqlfile.write('DROP TABLE IF EXISTS clinchedRoutes;\n')
+    sqlfile.write('DROP TABLE IF EXISTS clinchedOverallMileageByRegion;\n')
+    sqlfile.write('DROP TABLE IF EXISTS clinchedSystemMileageByRegion;\n')
+    sqlfile.write('DROP TABLE IF EXISTS overallMileageByRegion;\n')
+    sqlfile.write('DROP TABLE IF EXISTS systemMileageByRegion;\n')
+    sqlfile.write('DROP TABLE IF EXISTS clinched;\n')
+    sqlfile.write('DROP TABLE IF EXISTS segments;\n')
+    sqlfile.write('DROP TABLE IF EXISTS waypoints;\n')
+    sqlfile.write('DROP TABLE IF EXISTS connectedRouteRoots;\n')
+    sqlfile.write('DROP TABLE IF EXISTS connectedRoutes;\n')
+    sqlfile.write('DROP TABLE IF EXISTS routes;\n')
+    sqlfile.write('DROP TABLE IF EXISTS systems;\n')
+    sqlfile.write('DROP TABLE IF EXISTS updates;\n')
+    sqlfile.write('DROP TABLE IF EXISTS systemUpdates;\n')
+    sqlfile.write('DROP TABLE IF EXISTS regions;\n')
+    sqlfile.write('DROP TABLE IF EXISTS countries;\n')
+    sqlfile.write('DROP TABLE IF EXISTS continents;\n')
+    
+    # first, continents, countries, and regions
+    sqlfile.write('CREATE TABLE continents (code VARCHAR(3), name VARCHAR(15), PRIMARY KEY(code));\n')
+    sqlfile.write('INSERT INTO continents VALUES\n')
+    first = True
+    for c in continents:
         if not first:
             sqlfile.write(",")
         first = False
-        sqlfile.write("(" + r.csv_line() + ")\n")
-sqlfile.write(";\n")
+        sqlfile.write("('" + c[0] + "','" + c[1] + "')\n")
+    sqlfile.write(";\n")
 
-# connected routes table, but only first "root" in each in this table
-sqlfile.write('CREATE TABLE connectedRoutes (systemName VARCHAR(10), route VARCHAR(16), banner VARCHAR(6), groupName VARCHAR(100), firstRoot VARCHAR(32), mileage FLOAT, PRIMARY KEY(firstRoot), FOREIGN KEY (firstRoot) REFERENCES routes(root));\n')
-sqlfile.write('INSERT INTO connectedRoutes VALUES\n')
-first = True
-for h in highway_systems:
-    for cr in h.con_route_list:
+    sqlfile.write('CREATE TABLE countries (code VARCHAR(3), name VARCHAR(32), PRIMARY KEY(code));\n')
+    sqlfile.write('INSERT INTO countries VALUES\n')
+    first = True
+    for c in countries:
         if not first:
             sqlfile.write(",")
         first = False
-        sqlfile.write("(" + cr.csv_line() + ")\n")
-sqlfile.write(";\n")
+        sqlfile.write("('" + c[0] + "','" + c[1].replace("'","''") + "')\n")
+    sqlfile.write(";\n")
 
-# This table has remaining roots for any connected route
-# that connects multiple routes/roots
-sqlfile.write('CREATE TABLE connectedRouteRoots (firstRoot VARCHAR(32), root VARCHAR(32), FOREIGN KEY (firstRoot) REFERENCES connectedRoutes(firstRoot));\n')
-first = True
-for h in highway_systems:
-    for cr in h.con_route_list:
-        if len(cr.roots) > 1:
-            for i in range(1,len(cr.roots)):
-                if first:
-                    sqlfile.write('INSERT INTO connectedRouteRoots VALUES\n')
+    sqlfile.write('CREATE TABLE regions (code VARCHAR(8), name VARCHAR(48), country VARCHAR(3), continent VARCHAR(3), regiontype VARCHAR(32), PRIMARY KEY(code), FOREIGN KEY (country) REFERENCES countries(code), FOREIGN KEY (continent) REFERENCES continents(code));\n')
+    sqlfile.write('INSERT INTO regions VALUES\n')
+    first = True
+    for r in all_regions:
+        if not first:
+            sqlfile.write(",")
+        first = False
+        sqlfile.write("('" + r[0] + "','" + r[1].replace("'","''") + "','" + r[2] + "','" + r[3] + "','" + r[4] + "')\n")
+    sqlfile.write(";\n")
+
+    # next, a table of the systems, consisting of the system name in the
+    # field 'name', the system's country code, its full name, the default
+    # color for its mapping, a level (one of active, preview, devel), and
+    # a boolean indicating if the system is active for mapping in the
+    # project in the field 'active'
+    sqlfile.write('CREATE TABLE systems (systemName VARCHAR(10), countryCode CHAR(3), fullName VARCHAR(60), color VARCHAR(16), level VARCHAR(10), tier INTEGER, PRIMARY KEY(systemName));\n')
+    sqlfile.write('INSERT INTO systems VALUES\n')
+    first = True
+    for h in highway_systems:
+        if not first:
+            sqlfile.write(",")
+        first = False
+        sqlfile.write("('" + h.systemname + "','" +  h.country + "','" +
+                      h.fullname + "','" + h.color + "','" + h.level +
+                      "','" + str(h.tier) + "')\n")
+    sqlfile.write(";\n")
+
+    # next, a table of highways, with the same fields as in the first line
+    sqlfile.write('CREATE TABLE routes (systemName VARCHAR(10), region VARCHAR(8), route VARCHAR(16), banner VARCHAR(6), abbrev VARCHAR(3), city VARCHAR(100), root VARCHAR(32), mileage FLOAT, PRIMARY KEY(root), FOREIGN KEY (systemName) REFERENCES systems(systemName));\n')
+    sqlfile.write('INSERT INTO routes VALUES\n')
+    first = True
+    for h in highway_systems:
+        for r in h.route_list:
+            if not first:
+                sqlfile.write(",")
+            first = False
+            sqlfile.write("(" + r.csv_line() + ")\n")
+    sqlfile.write(";\n")
+
+    # connected routes table, but only first "root" in each in this table
+    sqlfile.write('CREATE TABLE connectedRoutes (systemName VARCHAR(10), route VARCHAR(16), banner VARCHAR(6), groupName VARCHAR(100), firstRoot VARCHAR(32), mileage FLOAT, PRIMARY KEY(firstRoot), FOREIGN KEY (firstRoot) REFERENCES routes(root));\n')
+    sqlfile.write('INSERT INTO connectedRoutes VALUES\n')
+    first = True
+    for h in highway_systems:
+        for cr in h.con_route_list:
+            if not first:
+                sqlfile.write(",")
+            first = False
+            sqlfile.write("(" + cr.csv_line() + ")\n")
+    sqlfile.write(";\n")
+
+    # This table has remaining roots for any connected route
+    # that connects multiple routes/roots
+    sqlfile.write('CREATE TABLE connectedRouteRoots (firstRoot VARCHAR(32), root VARCHAR(32), FOREIGN KEY (firstRoot) REFERENCES connectedRoutes(firstRoot));\n')
+    first = True
+    for h in highway_systems:
+        for cr in h.con_route_list:
+            if len(cr.roots) > 1:
+                for i in range(1,len(cr.roots)):
+                    if first:
+                        sqlfile.write('INSERT INTO connectedRouteRoots VALUES\n')
+                    if not first:
+                        sqlfile.write(",")
+                    first = False
+                    sqlfile.write("('" + cr.roots[0].root + "','" + cr.roots[i].root + "')\n")
+    sqlfile.write(";\n")
+
+    # Now, a table with raw highway route data: list of points, in order, that define the route
+    sqlfile.write('CREATE TABLE waypoints (pointId INTEGER, pointName VARCHAR(20), latitude DOUBLE, longitude DOUBLE, root VARCHAR(32), PRIMARY KEY(pointId), FOREIGN KEY (root) REFERENCES routes(root));\n')
+    point_num = 0
+    for h in highway_systems:
+        for r in h.route_list:
+            sqlfile.write('INSERT INTO waypoints VALUES\n')
+            first = True
+            for w in r.point_list:
                 if not first:
                     sqlfile.write(",")
                 first = False
-                sqlfile.write("('" + cr.roots[0].root + "','" + cr.roots[i].root + "')\n")
-sqlfile.write(";\n")
+                w.point_num = point_num
+                sqlfile.write("(" + w.csv_line(point_num) + ")\n")
+                point_num+=1
+            sqlfile.write(";\n")
 
-# Now, a table with raw highway route data: list of points, in order, that define the route
-sqlfile.write('CREATE TABLE waypoints (pointId INTEGER, pointName VARCHAR(20), latitude DOUBLE, longitude DOUBLE, root VARCHAR(32), PRIMARY KEY(pointId), FOREIGN KEY (root) REFERENCES routes(root));\n')
-point_num = 0
-for h in highway_systems:
-    for r in h.route_list:
-        sqlfile.write('INSERT INTO waypoints VALUES\n')
+    # Build indices to speed latitude/longitude joins for intersecting highway queries
+    sqlfile.write('CREATE INDEX `latitude` ON waypoints(`latitude`);\n')
+    sqlfile.write('CREATE INDEX `longitude` ON waypoints(`longitude`);\n')
+
+    # Table of all HighwaySegments.
+    sqlfile.write('CREATE TABLE segments (segmentId INTEGER, waypoint1 INTEGER, waypoint2 INTEGER, root VARCHAR(32), PRIMARY KEY (segmentId), FOREIGN KEY (waypoint1) REFERENCES waypoints(pointId), FOREIGN KEY (waypoint2) REFERENCES waypoints(pointId), FOREIGN KEY (root) REFERENCES routes(root));\n')
+    segment_num = 0
+    clinched_list = []
+    for h in highway_systems:
+        for r in h.route_list:
+            sqlfile.write('INSERT INTO segments VALUES\n')
+            first = True
+            for s in r.segment_list:
+                if not first:
+                    sqlfile.write(",")
+                first = False
+                sqlfile.write("(" + s.csv_line(segment_num) + ")\n")
+                for t in s.clinched_by:
+                    clinched_list.append("'" + str(segment_num) + "','" + t.traveler_name + "'")
+                segment_num += 1
+            sqlfile.write(";\n")
+
+    # maybe a separate traveler table will make sense but for now, I'll just use
+    # the name from the .list name
+    sqlfile.write('CREATE TABLE clinched (segmentId INTEGER, traveler VARCHAR(48), FOREIGN KEY (segmentId) REFERENCES segments(segmentId));\n')
+    for start in range(0, len(clinched_list), 10000):
+        sqlfile.write('INSERT INTO clinched VALUES\n')
         first = True
-        for w in r.point_list:
+        for c in clinched_list[start:start+10000]:
             if not first:
                 sqlfile.write(",")
             first = False
-            w.point_num = point_num
-            sqlfile.write("(" + w.csv_line(point_num) + ")\n")
-            point_num+=1
+            sqlfile.write("(" + c + ")\n")
         sqlfile.write(";\n")
-
-# Build indices to speed latitude/longitude joins for intersecting highway queries
-sqlfile.write('CREATE INDEX `latitude` ON waypoints(`latitude`);\n')
-sqlfile.write('CREATE INDEX `longitude` ON waypoints(`longitude`);\n')
-
-# Table of all HighwaySegments.
-sqlfile.write('CREATE TABLE segments (segmentId INTEGER, waypoint1 INTEGER, waypoint2 INTEGER, root VARCHAR(32), PRIMARY KEY (segmentId), FOREIGN KEY (waypoint1) REFERENCES waypoints(pointId), FOREIGN KEY (waypoint2) REFERENCES waypoints(pointId), FOREIGN KEY (root) REFERENCES routes(root));\n')
-segment_num = 0
-clinched_list = []
-for h in highway_systems:
-    for r in h.route_list:
-        sqlfile.write('INSERT INTO segments VALUES\n')
-        first = True
-        for s in r.segment_list:
-            if not first:
-                sqlfile.write(",")
-            first = False
-            sqlfile.write("(" + s.csv_line(segment_num) + ")\n")
-            for t in s.clinched_by:
-                clinched_list.append("'" + str(segment_num) + "','" + t.traveler_name + "'")
-            segment_num += 1
-        sqlfile.write(";\n")
-
-# maybe a separate traveler table will make sense but for now, I'll just use
-# the name from the .list name
-sqlfile.write('CREATE TABLE clinched (segmentId INTEGER, traveler VARCHAR(48), FOREIGN KEY (segmentId) REFERENCES segments(segmentId));\n')
-for start in range(0, len(clinched_list), 10000):
-    sqlfile.write('INSERT INTO clinched VALUES\n')
+        
+    # overall mileage by region data (with concurrencies accounted for,
+    # active systems only then active+preview)
+    sqlfile.write('CREATE TABLE overallMileageByRegion (region VARCHAR(8), activeMileage FLOAT, activePreviewMileage FLOAT);\n')
+    sqlfile.write('INSERT INTO overallMileageByRegion VALUES\n')
     first = True
-    for c in clinched_list[start:start+10000]:
+    for region in list(active_preview_mileage_by_region.keys()):
         if not first:
             sqlfile.write(",")
         first = False
-        sqlfile.write("(" + c + ")\n")
+        active_only_mileage = 0.0
+        active_preview_mileage = 0.0
+        if region in list(active_only_mileage_by_region.keys()):
+            active_only_mileage = active_only_mileage_by_region[region]
+        if region in list(active_preview_mileage_by_region.keys()):
+            active_preview_mileage = active_preview_mileage_by_region[region]
+        sqlfile.write("('" + region + "','" +
+                      str(active_only_mileage) + "','" +
+                      str(active_preview_mileage) + "')\n")
     sqlfile.write(";\n")
 
-# overall mileage by region data (with concurrencies accounted for,
-# active systems only then active+preview)
-sqlfile.write('CREATE TABLE overallMileageByRegion (region VARCHAR(8), activeMileage FLOAT, activePreviewMileage FLOAT);\n')
-sqlfile.write('INSERT INTO overallMileageByRegion VALUES\n')
-first = True
-for region in list(active_preview_mileage_by_region.keys()):
-    if not first:
-        sqlfile.write(",")
-    first = False
-    active_only_mileage = 0.0
-    active_preview_mileage = 0.0
-    if region in list(active_only_mileage_by_region.keys()):
-        active_only_mileage = active_only_mileage_by_region[region]
-    if region in list(active_preview_mileage_by_region.keys()):
-        active_preview_mileage = active_preview_mileage_by_region[region]
-    sqlfile.write("('" + region + "','" +
-                  str(active_only_mileage) + "','" +
-                  str(active_preview_mileage) + "')\n")
-sqlfile.write(";\n")
+    # system mileage by region data (with concurrencies accounted for,
+    # active systems and preview systems only)
+    sqlfile.write('CREATE TABLE systemMileageByRegion (systemName VARCHAR(10), region VARCHAR(8), mileage FLOAT, FOREIGN KEY (systemName) REFERENCES systems(systemName));\n')
+    sqlfile.write('INSERT INTO systemMileageByRegion VALUES\n')
+    first = True
+    for h in highway_systems:
+        if h.active_or_preview():
+            for region in list(h.mileage_by_region.keys()):
+                if not first:
+                    sqlfile.write(",")
+                first = False
+                sqlfile.write("('" + h.systemname + "','" + region + "','" + str(h.mileage_by_region[region]) + "')\n")
+    sqlfile.write(";\n")
 
-# system mileage by region data (with concurrencies accounted for,
-# active systems and preview systems only)
-sqlfile.write('CREATE TABLE systemMileageByRegion (systemName VARCHAR(10), region VARCHAR(8), mileage FLOAT, FOREIGN KEY (systemName) REFERENCES systems(systemName));\n')
-sqlfile.write('INSERT INTO systemMileageByRegion VALUES\n')
-first = True
-for h in highway_systems:
-    if h.active_or_preview():
-        for region in list(h.mileage_by_region.keys()):
+    # clinched overall mileage by region data (with concurrencies
+    # accounted for, active systems and preview systems only)
+    sqlfile.write('CREATE TABLE clinchedOverallMileageByRegion (region VARCHAR(8), traveler VARCHAR(48), activeMileage FLOAT, activePreviewMileage FLOAT);\n')
+    sqlfile.write('INSERT INTO clinchedOverallMileageByRegion VALUES\n')
+    first = True
+    for t in traveler_lists:
+        for region in list(t.active_preview_mileage_by_region.keys()):
             if not first:
                 sqlfile.write(",")
             first = False
-            sqlfile.write("('" + h.systemname + "','" + region + "','" + str(h.mileage_by_region[region]) + "')\n")
-sqlfile.write(";\n")
+            active_miles = 0.0
+            if region in list(t.active_only_mileage_by_region.keys()):
+                active_miles = t.active_only_mileage_by_region[region]
+            sqlfile.write("('" + region + "','" + t.traveler_name + "','" +
+                          str(active_miles) + "','" +
+                          str(t.active_preview_mileage_by_region[region]) + "')\n")
+    sqlfile.write(";\n")
 
-# clinched overall mileage by region data (with concurrencies
-# accounted for, active systems and preview systems only)
-sqlfile.write('CREATE TABLE clinchedOverallMileageByRegion (region VARCHAR(8), traveler VARCHAR(48), activeMileage FLOAT, activePreviewMileage FLOAT);\n')
-sqlfile.write('INSERT INTO clinchedOverallMileageByRegion VALUES\n')
-first = True
-for t in traveler_lists:
-    for region in list(t.active_preview_mileage_by_region.keys()):
-        if not first:
-            sqlfile.write(",")
-        first = False
-        active_miles = 0.0
-        if region in list(t.active_only_mileage_by_region.keys()):
-            active_miles = t.active_only_mileage_by_region[region]
-        sqlfile.write("('" + region + "','" + t.traveler_name + "','" +
-                      str(active_miles) + "','" +
-                      str(t.active_preview_mileage_by_region[region]) + "')\n")
-sqlfile.write(";\n")
-
-# clinched system mileage by region data (with concurrencies accounted
-# for, active systems and preview systems only)
-sqlfile.write('CREATE TABLE clinchedSystemMileageByRegion (systemName VARCHAR(10), region VARCHAR(8), traveler VARCHAR(48), mileage FLOAT, FOREIGN KEY (systemName) REFERENCES systems(systemName));\n')
-sqlfile.write('INSERT INTO clinchedSystemMileageByRegion VALUES\n')
-first = True
-for line in csmbr_values:
-    if not first:
-        sqlfile.write(",")
-    first = False
-    sqlfile.write(line + "\n")
-sqlfile.write(";\n")
-
-# clinched mileage by connected route, active systems and preview
-# systems only
-sqlfile.write('CREATE TABLE clinchedConnectedRoutes (route VARCHAR(32), traveler VARCHAR(48), mileage FLOAT, clinched BOOLEAN, FOREIGN KEY (route) REFERENCES connectedRoutes(firstRoot));\n')
-for start in range(0, len(ccr_values), 10000):
-    sqlfile.write('INSERT INTO clinchedConnectedRoutes VALUES\n')
+    # clinched system mileage by region data (with concurrencies accounted
+    # for, active systems and preview systems only)
+    sqlfile.write('CREATE TABLE clinchedSystemMileageByRegion (systemName VARCHAR(10), region VARCHAR(8), traveler VARCHAR(48), mileage FLOAT, FOREIGN KEY (systemName) REFERENCES systems(systemName));\n')
+    sqlfile.write('INSERT INTO clinchedSystemMileageByRegion VALUES\n')
     first = True
-    for line in ccr_values[start:start+10000]:
+    for line in csmbr_values:
         if not first:
             sqlfile.write(",")
         first = False
         sqlfile.write(line + "\n")
     sqlfile.write(";\n")
 
-# clinched mileage by route, active systems and preview systems only
-sqlfile.write('CREATE TABLE clinchedRoutes (route VARCHAR(32), traveler VARCHAR(48), mileage FLOAT, clinched BOOLEAN, FOREIGN KEY (route) REFERENCES routes(root));\n')
-for start in range(0, len(cr_values), 10000):
-    sqlfile.write('INSERT INTO clinchedRoutes VALUES\n')
+    # clinched mileage by connected route, active systems and preview
+    # systems only
+    sqlfile.write('CREATE TABLE clinchedConnectedRoutes (route VARCHAR(32), traveler VARCHAR(48), mileage FLOAT, clinched BOOLEAN, FOREIGN KEY (route) REFERENCES connectedRoutes(firstRoot));\n')
+    for start in range(0, len(ccr_values), 10000):
+        sqlfile.write('INSERT INTO clinchedConnectedRoutes VALUES\n')
+        first = True
+        for line in ccr_values[start:start+10000]:
+            if not first:
+                sqlfile.write(",")
+            first = False
+            sqlfile.write(line + "\n")
+        sqlfile.write(";\n")
+
+    # clinched mileage by route, active systems and preview systems only
+    sqlfile.write('CREATE TABLE clinchedRoutes (route VARCHAR(32), traveler VARCHAR(48), mileage FLOAT, clinched BOOLEAN, FOREIGN KEY (route) REFERENCES routes(root));\n')
+    for start in range(0, len(cr_values), 10000):
+        sqlfile.write('INSERT INTO clinchedRoutes VALUES\n')
+        first = True
+        for line in cr_values[start:start+10000]:
+            if not first:
+                sqlfile.write(",")
+            first = False
+            sqlfile.write(line + "\n")
+        sqlfile.write(";\n")
+
+    # updates entries
+    sqlfile.write('CREATE TABLE updates (date VARCHAR(10), region VARCHAR(60), route VARCHAR(80), root VARCHAR(32), description VARCHAR(1024));\n')
+    sqlfile.write('INSERT INTO updates VALUES\n')
     first = True
-    for line in cr_values[start:start+10000]:
+    for update in updates:
         if not first:
             sqlfile.write(",")
         first = False
-        sqlfile.write(line + "\n")
+        sqlfile.write("('"+update[0]+"','"+update[1].replace("'","''")+"','"+update[2].replace("'","''")+"','"+update[3]+"','"+update[4].replace("'","''")+"')\n")
     sqlfile.write(";\n")
 
-# updates entries
-sqlfile.write('CREATE TABLE updates (date VARCHAR(10), region VARCHAR(60), route VARCHAR(80), root VARCHAR(32), description VARCHAR(1024));\n')
-sqlfile.write('INSERT INTO updates VALUES\n')
-first = True
-for update in updates:
-    if not first:
-        sqlfile.write(",")
-    first = False
-    sqlfile.write("('"+update[0]+"','"+update[1].replace("'","''")+"','"+update[2].replace("'","''")+"','"+update[3]+"','"+update[4].replace("'","''")+"')\n")
-sqlfile.write(";\n")
-
-# systemUpdates entries
-sqlfile.write('CREATE TABLE systemUpdates (date VARCHAR(10), region VARCHAR(48), systemName VARCHAR(10), description VARCHAR(128), statusChange VARCHAR(16));\n')
-sqlfile.write('INSERT INTO systemUpdates VALUES\n')
-first = True
-for systemupdate in systemupdates:
-    if not first:
-        sqlfile.write(",")
-    first = False
-    sqlfile.write("('"+systemupdate[0]+"','"+systemupdate[1].replace("'","''")+"','"+systemupdate[2]+"','"+systemupdate[3].replace("'","''")+"','"+systemupdate[4]+"')\n")
-sqlfile.write(";\n")
-
-# datacheck errors into the db
-sqlfile.write('CREATE TABLE datacheckErrors (route VARCHAR(32), label1 VARCHAR(50), label2 VARCHAR(20), label3 VARCHAR(20), code VARCHAR(20), value VARCHAR(32), falsePositive BOOLEAN, FOREIGN KEY (route) REFERENCES routes(root));\n')
-if len(datacheckerrors) > 0:
-    sqlfile.write('INSERT INTO datacheckErrors VALUES\n')
+    # systemUpdates entries
+    sqlfile.write('CREATE TABLE systemUpdates (date VARCHAR(10), region VARCHAR(48), systemName VARCHAR(10), description VARCHAR(128), statusChange VARCHAR(16));\n')
+    sqlfile.write('INSERT INTO systemUpdates VALUES\n')
     first = True
-    for d in datacheckerrors:
+    for systemupdate in systemupdates:
         if not first:
-            sqlfile.write(',')
+            sqlfile.write(",")
         first = False
-        sqlfile.write("('"+str(d.route.root)+"',")
-        if len(d.labels) == 0:
-            sqlfile.write("'','','',")
-        elif len(d.labels) == 1:
-            sqlfile.write("'"+d.labels[0]+"','','',")
-        elif len(d.labels) == 2:
-            sqlfile.write("'"+d.labels[0]+"','"+d.labels[1]+"','',")
-        else:
-            sqlfile.write("'"+d.labels[0]+"','"+d.labels[1]+"','"+d.labels[2]+"',")
-        if d.fp:
-            fp = '1'
-        else:
-            fp = '0'
-        sqlfile.write("'"+d.code+"','"+d.info+"','"+fp+"')\n")
-sqlfile.write(";\n")
+        sqlfile.write("('"+systemupdate[0]+"','"+systemupdate[1].replace("'","''")+"','"+systemupdate[2]+"','"+systemupdate[3].replace("'","''")+"','"+systemupdate[4]+"')\n")
+    sqlfile.write(";\n")
 
-# update graph info in DB if graphs were generated
-if not args.skipgraphs:
-    sqlfile.write('DROP TABLE IF EXISTS graphs;\n')
-    sqlfile.write('DROP TABLE IF EXISTS graphTypes;\n')
-    sqlfile.write('CREATE TABLE graphTypes (category VARCHAR(12), descr VARCHAR(100), longDescr TEXT, PRIMARY KEY(category));\n')
-    if len(graph_types) > 0:
-        sqlfile.write('INSERT INTO graphTypes VALUES\n')
+    # datacheck errors into the db
+    sqlfile.write('CREATE TABLE datacheckErrors (route VARCHAR(32), label1 VARCHAR(50), label2 VARCHAR(20), label3 VARCHAR(20), code VARCHAR(20), value VARCHAR(32), falsePositive BOOLEAN, FOREIGN KEY (route) REFERENCES routes(root));\n')
+    if len(datacheckerrors) > 0:
+        sqlfile.write('INSERT INTO datacheckErrors VALUES\n')
         first = True
-        for g in graph_types:
+        for d in datacheckerrors:
             if not first:
                 sqlfile.write(',')
             first = False
-            sqlfile.write("('" + g[0] + "','" + g[1] + "','" + g[2] + "')\n")
-        sqlfile.write(";\n")
+            sqlfile.write("('"+str(d.route.root)+"',")
+            if len(d.labels) == 0:
+                sqlfile.write("'','','',")
+            elif len(d.labels) == 1:
+                sqlfile.write("'"+d.labels[0]+"','','',")
+            elif len(d.labels) == 2:
+                sqlfile.write("'"+d.labels[0]+"','"+d.labels[1]+"','',")
+            else:
+                sqlfile.write("'"+d.labels[0]+"','"+d.labels[1]+"','"+d.labels[2]+"',")
+            if d.fp:
+                fp = '1'
+            else:
+                fp = '0'
+            sqlfile.write("'"+d.code+"','"+d.info+"','"+fp+"')\n")
+    sqlfile.write(";\n")
 
-    sqlfile.write('CREATE TABLE graphs (filename VARCHAR(32), descr VARCHAR(100), vertices INTEGER, edges INTEGER, format VARCHAR(10), category VARCHAR(12), FOREIGN KEY (category) REFERENCES graphTypes(category));\n')
-    if len(graph_list) > 0:
-        sqlfile.write('INSERT INTO graphs VALUES\n')
-        first = True
-        for g in graph_list:
-            if not first:
-                sqlfile.write(',')
-            first = False
-            sqlfile.write("('" + g.filename + "','" + g.descr.replace("'","''") + "','" + str(g.vertices) + "','" + str(g.edges) + "','" + g.format + "','" + g.category + "')\n")
-        sqlfile.write(";\n")
+    # update graph info in DB if graphs were generated
+    if not args.skipgraphs:
+        sqlfile.write('DROP TABLE IF EXISTS graphs;\n')
+        sqlfile.write('DROP TABLE IF EXISTS graphTypes;\n')
+        sqlfile.write('CREATE TABLE graphTypes (category VARCHAR(12), descr VARCHAR(100), longDescr TEXT, PRIMARY KEY(category));\n')
+        if len(graph_types) > 0:
+            sqlfile.write('INSERT INTO graphTypes VALUES\n')
+            first = True
+            for g in graph_types:
+                if not first:
+                    sqlfile.write(',')
+                first = False
+                sqlfile.write("('" + g[0] + "','" + g[1] + "','" + g[2] + "')\n")
+            sqlfile.write(";\n")
+
+        sqlfile.write('CREATE TABLE graphs (filename VARCHAR(32), descr VARCHAR(100), vertices INTEGER, edges INTEGER, format VARCHAR(10), category VARCHAR(12), FOREIGN KEY (category) REFERENCES graphTypes(category));\n')
+        if len(graph_list) > 0:
+            sqlfile.write('INSERT INTO graphs VALUES\n')
+            first = True
+            for g in graph_list:
+                if not first:
+                    sqlfile.write(',')
+                first = False
+                sqlfile.write("('" + g.filename + "','" + g.descr.replace("'","''") + "','" + str(g.vertices) + "','" + str(g.edges) + "','" + g.format + "','" + g.category + "')\n")
+            sqlfile.write(";\n")
 
 
-sqlfile.close()
+    sqlfile.close()
 
 # print some statistics
 print(et.et() + "Processed " + str(len(highway_systems)) + " highway systems.")
@@ -3513,36 +3569,41 @@ print("Processed " + str(routes) + " routes with a total of " + \
           str(points) + " points and " + str(segments) + " segments.")
 if points != all_waypoints.size():
     print("MISMATCH: all_waypoints contains " + str(all_waypoints.size()) + " waypoints!")
-# compute colocation of waypoints stats
-print(et.et() + "Computing waypoint colocation stats, reporting all with 8 or more colocations:")
-colocate_counts = [0]*50
-largest_colocate_count = 1
-big_colocate_locations = dict()
-for w in all_waypoints.point_list():
-    c = w.num_colocated()
-    if c >= 8:
-        point = (w.lat, w.lng)
-        entry = w.route.root + " " + w.label
-        if point in big_colocate_locations:
-            the_list = big_colocate_locations[point]
-            the_list.append(entry)
-            big_colocate_locations[point] = the_list
-        else:
-            the_list = []
-            the_list.append(entry)
-            big_colocate_locations[point] = the_list
-        #print(str(w) + " with " + str(c) + " other points.")
-    colocate_counts[c] += 1
-    if c > largest_colocate_count:
-        largest_colocate_count = c
-for place in big_colocate_locations:
-    the_list = big_colocate_locations[place]
-    print(str(place) + " is occupied by " + str(len(the_list)) + " waypoints: " + str(the_list))
-print("Waypoint colocation counts:")
-unique_locations = 0
-for c in range(1,largest_colocate_count+1):
-    unique_locations += colocate_counts[c]//c
-    print("{0:6d} are each occupied by {1:2d} waypoints.".format(colocate_counts[c]//c, c))
-print("Unique locations: " + str(unique_locations))
+
+if not args.errorcheck:
+    # compute colocation of waypoints stats
+    print(et.et() + "Computing waypoint colocation stats, reporting all with 8 or more colocations:")
+    colocate_counts = [0]*50
+    largest_colocate_count = 1
+    big_colocate_locations = dict()
+    for w in all_waypoints.point_list():
+        c = w.num_colocated()
+        if c >= 8:
+            point = (w.lat, w.lng)
+            entry = w.route.root + " " + w.label
+            if point in big_colocate_locations:
+                the_list = big_colocate_locations[point]
+                the_list.append(entry)
+                big_colocate_locations[point] = the_list
+            else:
+                the_list = []
+                the_list.append(entry)
+                big_colocate_locations[point] = the_list
+            #print(str(w) + " with " + str(c) + " other points.")
+        colocate_counts[c] += 1
+        if c > largest_colocate_count:
+            largest_colocate_count = c
+    for place in big_colocate_locations:
+        the_list = big_colocate_locations[place]
+        print(str(place) + " is occupied by " + str(len(the_list)) + " waypoints: " + str(the_list))
+    print("Waypoint colocation counts:")
+    unique_locations = 0
+    for c in range(1,largest_colocate_count+1):
+        unique_locations += colocate_counts[c]//c
+        print("{0:6d} are each occupied by {1:2d} waypoints.".format(colocate_counts[c]//c, c))
+    print("Unique locations: " + str(unique_locations))
+
+if args.errorcheck:
+    print("Data check successful!")
 
 print("Total run time: " + et.et())
