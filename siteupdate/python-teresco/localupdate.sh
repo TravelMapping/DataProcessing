@@ -12,7 +12,7 @@ tmwebbase=/home/www/tm
 datestr=`date '+%Y-%m-%d@%H:%M:%S'`
 logdir=logs
 statdir=stats
-graphdir=graphs
+graphdir=graphdata
 nmpmdir=nmp_merged
 graphflag=
 date

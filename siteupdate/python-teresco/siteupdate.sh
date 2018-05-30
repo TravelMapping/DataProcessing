@@ -5,7 +5,7 @@ read_data=1
 transfer=1
 logdir=logs
 statdir=stats
-graphdir=graphs
+graphdir=graphdata
 nmpmerged=nmp_merged
 graphflag=
 mkdir -p $logdir $statdir $graphdir

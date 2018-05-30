@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python3 -O
 # Travel Mapping Project, Jim Teresco, 2015, 2016, 2017
 """Python code to read .csv and .wpt files and prepare for
 adding to the Travel Mapping Project database.
