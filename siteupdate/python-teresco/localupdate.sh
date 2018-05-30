@@ -37,7 +37,7 @@ if [ "$pull" == "1" ]; then
 fi
 
 echo "$0: creating directories"
-mkdir -p $datestr/$logdir $datestr/$statdir $datestr/$nmpmdir $datestr/$graphdir
+mkdir -p $datestr/$logdir/users $datestr/$statdir $datestr/$nmpmdir $datestr/$graphdir
 # put this back later: need to put tm-master.nmp somewhere else
 #if [ "$graphflag" != "-k" ]; then
 #    mkdir -p $datestr/$graphdir

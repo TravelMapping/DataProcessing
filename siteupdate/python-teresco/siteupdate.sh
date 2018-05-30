@@ -8,7 +8,7 @@ statdir=stats
 graphdir=graphdata
 nmpmerged=nmp_merged
 graphflag=
-mkdir -p $logdir $statdir $graphdir
+mkdir -p $logdir/users $statdir $graphdir
 date
 if [ $# -eq 1 ]; then
   if [ "$1" == "--noread" ]; then

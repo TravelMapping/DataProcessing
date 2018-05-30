@@ -1873,7 +1873,7 @@ parser.add_argument("-u", "--userlistfilepath", default="../../../UserData/list_
                         help="path to the user list file data")
 parser.add_argument("-d", "--databasename", default="TravelMapping", \
                         help="Database name for .sql file name")
-parser.add_argument("-l", "--logfilepath", default=".", help="Path to write log files")
+parser.add_argument("-l", "--logfilepath", default=".", help="Path to write log files, which should have a \"users\" subdirectory")
 parser.add_argument("-c", "--csvstatfilepath", default=".", help="Path to write csv statistics files")
 parser.add_argument("-g", "--graphfilepath", default=".", help="Path to write graph format data files")
 parser.add_argument("-k", "--skipgraphs", action="store_true", help="Turn off generation of graph files")
@@ -2952,7 +2952,7 @@ print("!", flush=True)
 # write log files for traveler lists
 print(et.et() + "Writing traveler list logs.",flush=True)
 for t in traveler_lists:
-    t.write_log(args.logfilepath)
+    t.write_log(args.logfilepath+"/users")
 
 # write stats csv files
 print(et.et() + "Writing stats csv files.",flush=True)
