@@ -24,7 +24,7 @@ fi
 if [ "$read_data" == "1" ]; then
   echo "siteupdate.sh: launching siteupdate.py"
   echo "siteupdate.sh: cleaning $logdir and $statdir"
-  /bin/rm -f $logdir/*.log $statdir/*.csv  
+  /bin/rm -f $logdir/*.log $logdir/users/*.log $statdir/*.csv  
   # Add -k to prevent generation of new version of graphs
   # Remove -k to generate new version of graphs
   PYTHONIOENCODING='utf-8' ./siteupdate.py $graphflag -l $logdir -c $statdir -g $graphdir -n $nmpmerged | tee $logdir/siteupdate.log 2>&1 || exit 1
