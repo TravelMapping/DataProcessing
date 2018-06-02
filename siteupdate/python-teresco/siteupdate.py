@@ -1996,43 +1996,40 @@ datacheckerrors = []
 
 # check for duplicate root entries among Route and ConnectedRoute
 # data in all highway systems
-print(et.et() + "Checking for duplicate list names in routes, roots in routes and connected routes.",end="",flush=True)
-roots = []
-list_names = []
+print(et.et() + "Checking for duplicate list names in routes, roots in routes and connected routes.",flush=True)
+roots = set()
+list_names = set()
 duplicate_list_names = set()
 for h in highway_systems:
-    print(".", end="",flush=True)
     for r in h.route_list:
         if r.root in roots:
             el.add_error("Duplicate root in route lists: " + r.root)
         else:
-            roots.append(r.root)
+            roots.add(r.root)
         list_name = r.region + ' ' + r.list_entry_name()
         if list_name in list_names:
             duplicate_list_names.add(list_name)
         else:
-            list_names.append(list_name)
+            list_names.add(list_name)
             
-con_roots = []
+con_roots = set()
 for h in highway_systems:
-    print(".", end="",flush=True)
     for r in h.con_route_list:
         for cr in r.roots:
             if cr.root in con_roots:
                 el.add_error("Duplicate root in con_route lists: " + cr.root)
             else:
-                con_roots.append(cr.root)
-print("!", flush=True)
+                con_roots.add(cr.root)
 
 # Make sure every route was listed as a part of some connected route
 if len(roots) == len(con_roots):
     print("Check passed: same number of routes as connected route roots. " + str(len(roots)))
 else:
     el.add_error("Check FAILED: " + str(len(roots)) + " routes != " + str(len(con_roots)) + " connected route roots.")
-    for r in con_roots:
-        roots.remove(r)
+    roots = roots - con_roots
     # there will be some leftovers, let's look up their routes to make
-    # an error report entry
+    # an error report entry (not worried about efficiency as there would
+    # only be a few in reasonable cases)
     num_found = 0
     for h in highway_systems:
         for r in h.route_list:
