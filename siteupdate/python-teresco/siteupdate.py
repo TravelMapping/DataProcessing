@@ -3294,40 +3294,46 @@ else:
     # color for its mapping, a level (one of active, preview, devel), and
     # a boolean indicating if the system is active for mapping in the
     # project in the field 'active'
-    sqlfile.write('CREATE TABLE systems (systemName VARCHAR(10), countryCode CHAR(3), fullName VARCHAR(60), color VARCHAR(16), level VARCHAR(10), tier INTEGER, PRIMARY KEY(systemName));\n')
+    sqlfile.write('CREATE TABLE systems (systemName VARCHAR(10), countryCode CHAR(3), fullName VARCHAR(60), color VARCHAR(16), level VARCHAR(10), tier INTEGER, csvOrder INTEGER, PRIMARY KEY(systemName));\n')
     sqlfile.write('INSERT INTO systems VALUES\n')
     first = True
+    csvOrder = 0
     for h in highway_systems:
         if not first:
             sqlfile.write(",")
         first = False
         sqlfile.write("('" + h.systemname + "','" +  h.country + "','" +
                       h.fullname + "','" + h.color + "','" + h.level +
-                      "','" + str(h.tier) + "')\n")
+                      "','" + str(h.tier) + "','" + str(csvOrder) + "')\n")
+        csvOrder += 1
     sqlfile.write(";\n")
 
     # next, a table of highways, with the same fields as in the first line
-    sqlfile.write('CREATE TABLE routes (systemName VARCHAR(10), region VARCHAR(8), route VARCHAR(16), banner VARCHAR(6), abbrev VARCHAR(3), city VARCHAR(100), root VARCHAR(32), mileage FLOAT, PRIMARY KEY(root), FOREIGN KEY (systemName) REFERENCES systems(systemName));\n')
+    sqlfile.write('CREATE TABLE routes (systemName VARCHAR(10), region VARCHAR(8), route VARCHAR(16), banner VARCHAR(6), abbrev VARCHAR(3), city VARCHAR(100), root VARCHAR(32), mileage FLOAT, csvOrder INTEGER, PRIMARY KEY(root), FOREIGN KEY (systemName) REFERENCES systems(systemName));\n')
     sqlfile.write('INSERT INTO routes VALUES\n')
     first = True
+    csvOrder = 0
     for h in highway_systems:
         for r in h.route_list:
             if not first:
                 sqlfile.write(",")
             first = False
-            sqlfile.write("(" + r.csv_line() + ")\n")
+            sqlfile.write("(" + r.csv_line() + ",'" + str(csvOrder) + "')\n")
+            csvOrder += 1
     sqlfile.write(";\n")
 
     # connected routes table, but only first "root" in each in this table
-    sqlfile.write('CREATE TABLE connectedRoutes (systemName VARCHAR(10), route VARCHAR(16), banner VARCHAR(6), groupName VARCHAR(100), firstRoot VARCHAR(32), mileage FLOAT, PRIMARY KEY(firstRoot), FOREIGN KEY (firstRoot) REFERENCES routes(root));\n')
+    sqlfile.write('CREATE TABLE connectedRoutes (systemName VARCHAR(10), route VARCHAR(16), banner VARCHAR(6), groupName VARCHAR(100), firstRoot VARCHAR(32), mileage FLOAT, csvOrder INTEGER, PRIMARY KEY(firstRoot), FOREIGN KEY (firstRoot) REFERENCES routes(root));\n')
     sqlfile.write('INSERT INTO connectedRoutes VALUES\n')
     first = True
+    csvOrder = 0
     for h in highway_systems:
         for cr in h.con_route_list:
             if not first:
                 sqlfile.write(",")
             first = False
-            sqlfile.write("(" + cr.csv_line() + ")\n")
+            sqlfile.write("(" + cr.csv_line() + ",'" + str(csvOrder) + "')\n")
+            csvOrder += 1
     sqlfile.write(";\n")
 
     # This table has remaining roots for any connected route
