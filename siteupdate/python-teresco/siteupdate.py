@@ -254,10 +254,6 @@ class Waypoint:
         ans = ans + " (" + str(self.lat) + "," + str(self.lng) + ")"
         return ans
 
-    def sql_insert_command(self,tablename,id):
-        """return sql command to insert into a table"""
-        return "INSERT INTO " + tablename + " VALUES ('" + str(id) + "','" + self.label + "','" + str(self.lat) + "','" + str(self.lng) + "','" + self.route.root + "');"
-
     def csv_line(self,id):
         """return csv line to insert into a table"""
         return "'" + str(id) + "','" + self.label + "','" + str(self.lat) + "','" + str(self.lng) + "','" + self.route.root + "'"
@@ -587,10 +583,6 @@ class HighwaySegment:
         else:
             return False
 
-    def sql_insert_command(self,tablename,id):
-        """return sql command to insert into a table"""
-        return "INSERT INTO " + tablename + " VALUES ('" + str(id) + "','" + str(self.waypoint1.point_num) + "','" + str(self.waypoint2.point_num) + "','" + self.route.root + "');"
-
     def csv_line(self,id):
         """return csv line to insert into a table"""
         return "'" + str(id) + "','" + str(self.waypoint1.point_num) + "','" + str(self.waypoint2.point_num) + "','" + self.route.root + "'"
@@ -704,6 +696,7 @@ class Route:
         self.unused_alt_labels = set()
         self.segment_list = []
         self.mileage = 0.0
+        self.rootOrder = -1  # order within connected route
 
     def __str__(self):
         """printable version of the object"""
@@ -778,17 +771,11 @@ class Route:
                 return s
         return None
 
-    def sql_insert_command(self,tablename):
-        """return sql command to insert into a table"""
-        # note: alt_route_names does not need to be in the db since
-        # list preprocessing uses alt or canonical and no longer cares
-        return "INSERT INTO " + tablename + " VALUES ('" + self.system.systemname + "','" + self.region + "','" + self.route + "','" + self.banner + "','" + self.abbrev + "','" + self.city + "','" + self.root + "');";
-
     def csv_line(self):
         """return csv line to insert into a table"""
         # note: alt_route_names does not need to be in the db since
         # list preprocessing uses alt or canonical and no longer cares
-        return "'" + self.system.systemname + "','" + self.region + "','" + self.route + "','" + self.banner + "','" + self.abbrev + "','" + self.city + "','" + self.root + "','" + str(self.mileage) + "'";
+        return "'" + self.system.systemname + "','" + self.region + "','" + self.route + "','" + self.banner + "','" + self.abbrev + "','" + self.city + "','" + self.root + "','" + str(self.mileage) + "','" + str(self.rootOrder) + "'";
 
     def readable_name(self):
         """return a string for a human-readable route name"""
@@ -834,6 +821,7 @@ class ConnectedRoute:
         # of Route objects already in the system
         self.roots = []
         roots = fields[4].split(",")
+        rootOrder = 0
         for root in roots:
             route = None
             for check_route in system.route_list:
@@ -845,6 +833,9 @@ class ConnectedRoute:
                              " in system " + system.systemname + '.')
             else:
                 self.roots.append(route)
+                # save order of route in connected route
+                route.rootOrder = rootOrder
+            rootOrder += 1
         if len(self.roots) < 1:
             el.add_error("No roots in _con.csv line [" + line + "]")
         # will be computed for routes in active systems later
@@ -3309,7 +3300,7 @@ else:
     sqlfile.write(";\n")
 
     # next, a table of highways, with the same fields as in the first line
-    sqlfile.write('CREATE TABLE routes (systemName VARCHAR(10), region VARCHAR(8), route VARCHAR(16), banner VARCHAR(6), abbrev VARCHAR(3), city VARCHAR(100), root VARCHAR(32), mileage FLOAT, csvOrder INTEGER, PRIMARY KEY(root), FOREIGN KEY (systemName) REFERENCES systems(systemName));\n')
+    sqlfile.write('CREATE TABLE routes (systemName VARCHAR(10), region VARCHAR(8), route VARCHAR(16), banner VARCHAR(6), abbrev VARCHAR(3), city VARCHAR(100), root VARCHAR(32), mileage FLOAT, rootOrder INTEGER, csvOrder INTEGER, PRIMARY KEY(root), FOREIGN KEY (systemName) REFERENCES systems(systemName));\n')
     sqlfile.write('INSERT INTO routes VALUES\n')
     first = True
     csvOrder = 0
