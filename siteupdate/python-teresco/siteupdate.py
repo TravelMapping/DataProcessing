@@ -952,8 +952,10 @@ class TravelerList:
                 continue
             fields = re.split(' +',line)
             if len(fields) != 4:
-                self.log_entries.append("Incorrect format line: " + line)
-                continue
+                # OK if 5th field exists and starts with #
+                if len(fields) < 5 or not fields[4].startswith("#"):
+                    self.log_entries.append("Incorrect format line: " + line)
+                    continue
 
             # find the root that matches in some system and when we do, match labels
             route_entry = fields[1].lower()
