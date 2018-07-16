@@ -254,10 +254,6 @@ class Waypoint:
         ans = ans + " (" + str(self.lat) + "," + str(self.lng) + ")"
         return ans
 
-    def sql_insert_command(self,tablename,id):
-        """return sql command to insert into a table"""
-        return "INSERT INTO " + tablename + " VALUES ('" + str(id) + "','" + self.label + "','" + str(self.lat) + "','" + str(self.lng) + "','" + self.route.root + "');"
-
     def csv_line(self,id):
         """return csv line to insert into a table"""
         return "'" + str(id) + "','" + self.label + "','" + str(self.lat) + "','" + str(self.lng) + "','" + self.route.root + "'"
@@ -587,10 +583,6 @@ class HighwaySegment:
         else:
             return False
 
-    def sql_insert_command(self,tablename,id):
-        """return sql command to insert into a table"""
-        return "INSERT INTO " + tablename + " VALUES ('" + str(id) + "','" + str(self.waypoint1.point_num) + "','" + str(self.waypoint2.point_num) + "','" + self.route.root + "');"
-
     def csv_line(self,id):
         """return csv line to insert into a table"""
         return "'" + str(id) + "','" + str(self.waypoint1.point_num) + "','" + str(self.waypoint2.point_num) + "','" + self.route.root + "'"
@@ -704,6 +696,7 @@ class Route:
         self.unused_alt_labels = set()
         self.segment_list = []
         self.mileage = 0.0
+        self.rootOrder = -1  # order within connected route
 
     def __str__(self):
         """printable version of the object"""
@@ -778,17 +771,11 @@ class Route:
                 return s
         return None
 
-    def sql_insert_command(self,tablename):
-        """return sql command to insert into a table"""
-        # note: alt_route_names does not need to be in the db since
-        # list preprocessing uses alt or canonical and no longer cares
-        return "INSERT INTO " + tablename + " VALUES ('" + self.system.systemname + "','" + self.region + "','" + self.route + "','" + self.banner + "','" + self.abbrev + "','" + self.city + "','" + self.root + "');";
-
     def csv_line(self):
         """return csv line to insert into a table"""
         # note: alt_route_names does not need to be in the db since
         # list preprocessing uses alt or canonical and no longer cares
-        return "'" + self.system.systemname + "','" + self.region + "','" + self.route + "','" + self.banner + "','" + self.abbrev + "','" + self.city + "','" + self.root + "','" + str(self.mileage) + "'";
+        return "'" + self.system.systemname + "','" + self.region + "','" + self.route + "','" + self.banner + "','" + self.abbrev + "','" + self.city + "','" + self.root + "','" + str(self.mileage) + "','" + str(self.rootOrder) + "'";
 
     def readable_name(self):
         """return a string for a human-readable route name"""
@@ -834,6 +821,7 @@ class ConnectedRoute:
         # of Route objects already in the system
         self.roots = []
         roots = fields[4].split(",")
+        rootOrder = 0
         for root in roots:
             route = None
             for check_route in system.route_list:
@@ -845,6 +833,9 @@ class ConnectedRoute:
                              " in system " + system.systemname + '.')
             else:
                 self.roots.append(route)
+                # save order of route in connected route
+                route.rootOrder = rootOrder
+            rootOrder += 1
         if len(self.roots) < 1:
             el.add_error("No roots in _con.csv line [" + line + "]")
         # will be computed for routes in active systems later
@@ -961,8 +952,10 @@ class TravelerList:
                 continue
             fields = re.split(' +',line)
             if len(fields) != 4:
-                self.log_entries.append("Incorrect format line: " + line)
-                continue
+                # OK if 5th field exists and starts with #
+                if len(fields) < 5 or not fields[4].startswith("#"):
+                    self.log_entries.append("Incorrect format line: " + line)
+                    continue
 
             # find the root that matches in some system and when we do, match labels
             route_entry = fields[1].lower()
@@ -1873,7 +1866,7 @@ parser.add_argument("-u", "--userlistfilepath", default="../../../UserData/list_
                         help="path to the user list file data")
 parser.add_argument("-d", "--databasename", default="TravelMapping", \
                         help="Database name for .sql file name")
-parser.add_argument("-l", "--logfilepath", default=".", help="Path to write log files")
+parser.add_argument("-l", "--logfilepath", default=".", help="Path to write log files, which should have a \"users\" subdirectory")
 parser.add_argument("-c", "--csvstatfilepath", default=".", help="Path to write csv statistics files")
 parser.add_argument("-g", "--graphfilepath", default=".", help="Path to write graph format data files")
 parser.add_argument("-k", "--skipgraphs", action="store_true", help="Turn off generation of graph files")
@@ -1996,43 +1989,40 @@ datacheckerrors = []
 
 # check for duplicate root entries among Route and ConnectedRoute
 # data in all highway systems
-print(et.et() + "Checking for duplicate list names in routes, roots in routes and connected routes.",end="",flush=True)
-roots = []
-list_names = []
+print(et.et() + "Checking for duplicate list names in routes, roots in routes and connected routes.",flush=True)
+roots = set()
+list_names = set()
 duplicate_list_names = set()
 for h in highway_systems:
-    print(".", end="",flush=True)
     for r in h.route_list:
         if r.root in roots:
             el.add_error("Duplicate root in route lists: " + r.root)
         else:
-            roots.append(r.root)
+            roots.add(r.root)
         list_name = r.region + ' ' + r.list_entry_name()
         if list_name in list_names:
             duplicate_list_names.add(list_name)
         else:
-            list_names.append(list_name)
+            list_names.add(list_name)
             
-con_roots = []
+con_roots = set()
 for h in highway_systems:
-    print(".", end="",flush=True)
     for r in h.con_route_list:
         for cr in r.roots:
             if cr.root in con_roots:
                 el.add_error("Duplicate root in con_route lists: " + cr.root)
             else:
-                con_roots.append(cr.root)
-print("!", flush=True)
+                con_roots.add(cr.root)
 
 # Make sure every route was listed as a part of some connected route
 if len(roots) == len(con_roots):
     print("Check passed: same number of routes as connected route roots. " + str(len(roots)))
 else:
     el.add_error("Check FAILED: " + str(len(roots)) + " routes != " + str(len(con_roots)) + " connected route roots.")
-    for r in con_roots:
-        roots.remove(r)
+    roots = roots - con_roots
     # there will be some leftovers, let's look up their routes to make
-    # an error report entry
+    # an error report entry (not worried about efficiency as there would
+    # only be a few in reasonable cases)
     num_found = 0
     for h in highway_systems:
         for r in h.route_list:
@@ -2952,7 +2942,7 @@ print("!", flush=True)
 # write log files for traveler lists
 print(et.et() + "Writing traveler list logs.",flush=True)
 for t in traveler_lists:
-    t.write_log(args.logfilepath)
+    t.write_log(args.logfilepath+"/users")
 
 # write stats csv files
 print(et.et() + "Writing stats csv files.",flush=True)
@@ -3297,40 +3287,46 @@ else:
     # color for its mapping, a level (one of active, preview, devel), and
     # a boolean indicating if the system is active for mapping in the
     # project in the field 'active'
-    sqlfile.write('CREATE TABLE systems (systemName VARCHAR(10), countryCode CHAR(3), fullName VARCHAR(60), color VARCHAR(16), level VARCHAR(10), tier INTEGER, PRIMARY KEY(systemName));\n')
+    sqlfile.write('CREATE TABLE systems (systemName VARCHAR(10), countryCode CHAR(3), fullName VARCHAR(60), color VARCHAR(16), level VARCHAR(10), tier INTEGER, csvOrder INTEGER, PRIMARY KEY(systemName));\n')
     sqlfile.write('INSERT INTO systems VALUES\n')
     first = True
+    csvOrder = 0
     for h in highway_systems:
         if not first:
             sqlfile.write(",")
         first = False
         sqlfile.write("('" + h.systemname + "','" +  h.country + "','" +
                       h.fullname + "','" + h.color + "','" + h.level +
-                      "','" + str(h.tier) + "')\n")
+                      "','" + str(h.tier) + "','" + str(csvOrder) + "')\n")
+        csvOrder += 1
     sqlfile.write(";\n")
 
     # next, a table of highways, with the same fields as in the first line
-    sqlfile.write('CREATE TABLE routes (systemName VARCHAR(10), region VARCHAR(8), route VARCHAR(16), banner VARCHAR(6), abbrev VARCHAR(3), city VARCHAR(100), root VARCHAR(32), mileage FLOAT, PRIMARY KEY(root), FOREIGN KEY (systemName) REFERENCES systems(systemName));\n')
+    sqlfile.write('CREATE TABLE routes (systemName VARCHAR(10), region VARCHAR(8), route VARCHAR(16), banner VARCHAR(6), abbrev VARCHAR(3), city VARCHAR(100), root VARCHAR(32), mileage FLOAT, rootOrder INTEGER, csvOrder INTEGER, PRIMARY KEY(root), FOREIGN KEY (systemName) REFERENCES systems(systemName));\n')
     sqlfile.write('INSERT INTO routes VALUES\n')
     first = True
+    csvOrder = 0
     for h in highway_systems:
         for r in h.route_list:
             if not first:
                 sqlfile.write(",")
             first = False
-            sqlfile.write("(" + r.csv_line() + ")\n")
+            sqlfile.write("(" + r.csv_line() + ",'" + str(csvOrder) + "')\n")
+            csvOrder += 1
     sqlfile.write(";\n")
 
     # connected routes table, but only first "root" in each in this table
-    sqlfile.write('CREATE TABLE connectedRoutes (systemName VARCHAR(10), route VARCHAR(16), banner VARCHAR(6), groupName VARCHAR(100), firstRoot VARCHAR(32), mileage FLOAT, PRIMARY KEY(firstRoot), FOREIGN KEY (firstRoot) REFERENCES routes(root));\n')
+    sqlfile.write('CREATE TABLE connectedRoutes (systemName VARCHAR(10), route VARCHAR(16), banner VARCHAR(6), groupName VARCHAR(100), firstRoot VARCHAR(32), mileage FLOAT, csvOrder INTEGER, PRIMARY KEY(firstRoot), FOREIGN KEY (firstRoot) REFERENCES routes(root));\n')
     sqlfile.write('INSERT INTO connectedRoutes VALUES\n')
     first = True
+    csvOrder = 0
     for h in highway_systems:
         for cr in h.con_route_list:
             if not first:
                 sqlfile.write(",")
             first = False
-            sqlfile.write("(" + cr.csv_line() + ")\n")
+            sqlfile.write("(" + cr.csv_line() + ",'" + str(csvOrder) + "')\n")
+            csvOrder += 1
     sqlfile.write(";\n")
 
     # This table has remaining roots for any connected route

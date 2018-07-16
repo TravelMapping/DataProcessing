@@ -32,7 +32,7 @@ if [ "$pull" == "1" ]; then
 fi
 
 echo "$0: creating directories"
-mkdir -p $logdir $statdir
+mkdir -p $logdir/users $statdir
 
 echo "$0: launching siteupdate.py"
 PYTHONIOENCODING='utf-8' ./siteupdate.py -e -l $logdir -c $statdir | tee $logdir/siteupdate.log 2>&1 || exit 1

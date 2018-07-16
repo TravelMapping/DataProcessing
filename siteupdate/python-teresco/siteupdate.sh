@@ -5,10 +5,10 @@ read_data=1
 transfer=1
 logdir=logs
 statdir=stats
-graphdir=graphs
+graphdir=graphdata
 nmpmerged=nmp_merged
 graphflag=
-mkdir -p $logdir $statdir $graphdir
+mkdir -p $logdir/users $statdir $graphdir
 date
 if [ $# -eq 1 ]; then
   if [ "$1" == "--noread" ]; then
@@ -24,7 +24,7 @@ fi
 if [ "$read_data" == "1" ]; then
   echo "siteupdate.sh: launching siteupdate.py"
   echo "siteupdate.sh: cleaning $logdir and $statdir"
-  /bin/rm -f $logdir/*.log $statdir/*.csv  
+  /bin/rm -f $logdir/*.log $logdir/users/*.log $statdir/*.csv  
   # Add -k to prevent generation of new version of graphs
   # Remove -k to generate new version of graphs
   PYTHONIOENCODING='utf-8' ./siteupdate.py $graphflag -l $logdir -c $statdir -g $graphdir -n $nmpmerged | tee $logdir/siteupdate.log 2>&1 || exit 1
