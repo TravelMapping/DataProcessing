@@ -2,6 +2,7 @@
 From yakra/tmtools/tmg2html.<br>
 The "official" version can be found at [this link](https://github.com/yakra/tmtools/tree/master/tmg2html).
 <hr>
+
 **Purpose:**<br>
 Converts a .tmg [graph](http://travelmapping.net/graphs/) file into a web page with a Javascript "HDX-Lite" implementation using the HTML5 \<canvas\> tag.<br>
 This can be used to check concurrencies and NMPs, without having to deal with the slowdown Leaflet experiences with larger datasets in the full [HDX](http://courses.teresco.org/metal/hdx/) implementation.
