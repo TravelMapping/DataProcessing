@@ -38,7 +38,9 @@ If all were successful, you should now have copies of each of the repositories i
 
 ### Running the site update code in "highway data check mode"
 
-At this time, will run the site update program in "highway data check mode".  Since for checking highway data updates, it is not necessary to complete a few parts of the process nor is it necessary to generate the large SQL file that would populate the database, the program should be run with the `-e` flag.  A script called `datacheck.sh` has been provided that will run this program with appropriate parameters, and it will make sure your `HighwayData` and `UserData` repositories are up to date as well.
+The above is only needed on the initial setup.  Everything from here on is what you'll do every time you want to perform a data check before issuing a pull request to bring your changes into the master.
+
+At this time, run the site update program in "highway data check mode".  Since for checking highway data updates, it is not necessary to complete a few parts of the process nor is it necessary to generate the large SQL file that would populate the database, the program should be run with the `-e` flag.  A script called `datacheck.sh` has been provided that will run this program with appropriate parameters, and it will make sure your `HighwayData` and `UserData` repositories are up to date as well.
 
 To run it, you will enter the following at your $ prompt:
 
