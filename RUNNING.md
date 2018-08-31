@@ -6,12 +6,11 @@ All you will need is an ssh client to connect to the FreeBSD server (currently n
 
 ### Obtaining an account and logging in
 
-Request an account by email to travmap@teresco.org.  We will select a username and you can set a password when you first log in.  
-
+Request an account by email to travmap@teresco.org.  We will select a username and you can set a password when you first log in.  You will also be given a port number to specify with your Secure Shell (ssh) connection.  We run `sshd` on a nonstandard port to enhance security, so please don't publicize it.
 
 #### For Windows users
 
-To connect with PuTTY from Windows, run the "PuTTY" program (not pscp or WinSCP).  You will create a new connection and enter `noreaster.teresco.org` in the host name, and the port number that you will be given with your account information (we run `sshd` on a nonstandard port to enhance security, so please don't publicize it).  You will be prompted for your username and password.  
+To connect with PuTTY from Windows, run the "PuTTY" program (not pscp or WinSCP).  You will create a new connection and enter `noreaster.teresco.org` in the host name, and the port number that you will be given with your account information.  You will be prompted for your username and password.  
 
 #### For Mac, Linux, and other Unix-like system users
 
@@ -21,7 +20,7 @@ From a Mac Terminal (which you can launch by searching for it by name with Spotl
 ssh -l username -p portnum noreaster.teresco.org
 ```
 
-Where you would replace "username" with your assigned username, and "portnum" with the number you are given with your account information.
+Where you would replace "username" with your assigned username, and "portnum" with the number you will be given with your account information.
 
 ### First time setup
 
