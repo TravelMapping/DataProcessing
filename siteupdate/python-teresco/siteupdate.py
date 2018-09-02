@@ -2153,8 +2153,8 @@ nmpfplist = []
 nmpfpfile = open(args.highwaydatapath+'/nmpfps.log','r')
 nmpfilelines = nmpfpfile.readlines()
 for line in nmpfilelines:
-    if len(line.rstrip('\n')) > 0:
-        nmpfplist.append(line.rstrip('\n'))
+    if len(line.rstrip('\n ')) > 0:
+        nmpfplist.append(line.rstrip('\n '))
 nmpfpfile.close()
 
 nmpfile = open(args.logfilepath+'/nearmisspoints.log','w')
@@ -2178,13 +2178,13 @@ for w in all_waypoints.point_list():
         # indicate if this was in the FP list or if it's off by exact amt
         # so looks like it's intentional, and detach near_miss_points list
         # so it doesn't get a rewrite
-        if nmpline in nmpfplist:
+        if nmpline.rstrip() in nmpfplist:
             nmpline += "[MARKED FP]"
             w.near_miss_points = None
         if nmplooksintentional:
             nmpline += "[LOOKS INTENTIONAL]"
             w.near_miss_points = None
-        nmpfile.write(nmpline + '\n')
+        nmpfile.write(nmpline.rstrip() + '\n')
 nmpfile.close()
 nmpnmp.close()
 
