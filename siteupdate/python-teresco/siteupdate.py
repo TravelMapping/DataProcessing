@@ -2164,7 +2164,11 @@ for w in all_waypoints.point_list():
         nmpline = str(w) + " NMP "
         nmplooksintentional = False
         nmpnmplines = []
-        for other_w in w.near_miss_points:
+        # sort the near miss points for consistent ordering to facilitate
+        # NMP FP marking
+        for other_w in sorted(w.near_miss_points,
+                              key=lambda waypoint:
+                              waypoint.route.root + "@" + waypoint.label):
             if (abs(w.lat - other_w.lat) < 0.0000015) and \
                (abs(w.lng - other_w.lng) < 0.0000015):
                 nmplooksintentional = True
