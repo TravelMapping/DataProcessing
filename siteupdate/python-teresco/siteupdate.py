@@ -2186,6 +2186,7 @@ for w in all_waypoints.point_list():
         # also set the extra field to mark FP/LI items in the .nmp file
         extra_field = ""
         if nmpline.rstrip() in nmpfplist:
+            nmpfplist.remove(nmpline.rstrip())
             nmpline += "[MARKED FP]"
             w.near_miss_points = None
             extra_field += "FP"
@@ -2203,6 +2204,12 @@ for w in all_waypoints.point_list():
             nmpnmp.write(nmpnmpline + extra_field + "\n")
 nmpfile.close()
 nmpnmp.close()
+
+# report any unmatched nmpfps.log entries
+nmpfpsunmatchedfile = open(args.logfilepath+'/nmpfpsunmatched.log','w')
+for line in nmpfplist:
+    nmpfpsunmatchedfile.write(line + '\n')
+nmpfpsunmatchedfile.close()
 
 # if requested, rewrite data with near-miss points merged in
 if args.nmpmergepath != "" and not args.errorcheck:
