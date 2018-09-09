@@ -38,7 +38,7 @@ if [ "$pull" == "1" ]; then
 fi
 
 echo "$0: creating directories"
-mkdir -p $datestr/$logdir/users $datestr/$statdir $datestr/$nmpmdir
+mkdir -p $datestr/$logdir/users $datestr/$statdir $datestr/$nmpmdir $datestr/$logdir/nmpbyregion
 if [ "$graphflag" != "-k" ]; then
     mkdir -p $datestr/$graphdir
 fi
@@ -46,6 +46,13 @@ fi
 echo "$0: launching siteupdate.py"
 PYTHONIOENCODING='utf-8' ./siteupdate.py -d TravelMapping-$datestr $graphflag -l $datestr/$logdir -c $datestr/$statdir -g $datestr/$graphdir -n $datestr/$nmpmdir | tee $datestr/$logdir/siteupdate.log 2>&1 || exit 1
 date
+
+if [ -x ../../nmpfilter/nmpfilter ]; then
+    echo "$0: running nmpfilter"
+    ../../nmpfilter/nmpfilter $tmbase/HighwayData/hwy_data  $datestr/$logdir/tm-master.nmp $datestr/$logdir/nmpbyregion/
+else
+    echo "$0: SKIPPING nmpfilter (../../nmpfilter/nmpfilter not executable)"
+fi
 
 if [ "$install" == "0" ]; then
     echo "$0: SKIPPING file copies and DB update"
