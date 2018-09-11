@@ -50,6 +50,10 @@ date
 if [ -x ../../nmpfilter/nmpfilter ]; then
     echo "$0: running nmpfilter"
     ../../nmpfilter/nmpfilter $tmbase/HighwayData/hwy_data  $datestr/$logdir/tm-master.nmp $datestr/$logdir/nmpbyregion/
+    echo "$0: creating zip archive of all nmp files created by nmpfilter"
+    cd $datestr/$logdir/nmpbyregion
+    zip nmpbyregion.zip *.nmp
+    cd -
 else
     echo "$0: SKIPPING nmpfilter (../../nmpfilter/nmpfilter not executable)"
 fi
@@ -58,6 +62,14 @@ if [ "$install" == "0" ]; then
     echo "$0: SKIPPING file copies and DB update"
     exit 0
 fi
+
+if [ "$graphflag" != "-k" ]; then
+    echo "$0: creating zip archive of all graphs"
+    cd $datestr/$graphdir
+    zip graphs.zip *.tmg
+    cd -
+fi
+
 echo "$0: installing logs, stats, nmp_merged, graphs, archiving old contents in $tmpdir/$datestr"
 mkdir -p $tmpdir/$datestr
 mv $tmwebbase/$logdir $tmpdir/$datestr
