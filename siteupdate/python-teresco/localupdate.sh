@@ -52,7 +52,7 @@ if [ -x ../../nmpfilter/nmpfilter ]; then
     ../../nmpfilter/nmpfilter $tmbase/HighwayData/hwy_data  $datestr/$logdir/tm-master.nmp $datestr/$logdir/nmpbyregion/
     echo "$0: creating zip archive of all nmp files created by nmpfilter"
     cd $datestr/$logdir/nmpbyregion
-    zip nmpbyregion.zip *.nmp
+    zip -q nmpbyregion.zip *.nmp
     cd -
 else
     echo "$0: SKIPPING nmpfilter (../../nmpfilter/nmpfilter not executable)"
@@ -66,7 +66,7 @@ fi
 if [ "$graphflag" != "-k" ]; then
     echo "$0: creating zip archive of all graphs"
     cd $datestr/$graphdir
-    zip graphs.zip *.tmg
+    zip -q graphs.zip *.tmg
     cd -
 fi
 
@@ -87,9 +87,11 @@ echo "$0: switching to DB copy"
 ln -sf $tmwebbase/lib/tm.conf.updating $tmwebbase/lib/tm.conf
 touch $tmwebbase/dbupdating
 echo "$0: loading primary DB"
+date
 mysql --defaults-group-suffix=tmapadmin -u travmapadmin TravelMapping < TravelMapping-$datestr.sql
 /bin/rm $tmwebbase/dbupdating
 echo "$0: switching to primary DB"
+date
 ln -sf $tmwebbase/lib/tm.conf.standard $tmwebbase/lib/tm.conf
 echo "$0: loading DB copy"
 mysql --defaults-group-suffix=tmapadmin -u travmapadmin TravelMappingCopy < TravelMapping-$datestr.sql
