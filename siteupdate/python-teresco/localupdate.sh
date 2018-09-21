@@ -47,15 +47,15 @@ echo "$0: launching siteupdate.py"
 PYTHONIOENCODING='utf-8' ./siteupdate.py -d TravelMapping-$datestr $graphflag -l $datestr/$logdir -c $datestr/$statdir -g $datestr/$graphdir -n $datestr/$nmpmdir | tee $datestr/$logdir/siteupdate.log 2>&1 || exit 1
 date
 
-if [ -x ../../nmpfilter/nmpfilter ]; then
-    echo "$0: running nmpfilter"
-    ../../nmpfilter/nmpfilter $tmbase/HighwayData/hwy_data  $datestr/$logdir/tm-master.nmp $datestr/$logdir/nmpbyregion/
-    echo "$0: creating zip archive of all nmp files created by nmpfilter"
+if [ -x ../../nmpfilter/nmpbyregion ]; then
+    echo "$0: running nmpbyregion"
+    ../../nmpfilter/nmpbyregion $tmbase/HighwayData/hwy_data  $datestr/$logdir/tm-master.nmp $datestr/$logdir/nmpbyregion/
+    echo "$0: creating zip archive of all nmp files created by nmpbyregion"
     cd $datestr/$logdir/nmpbyregion
     zip -q nmpbyregion.zip *.nmp
     cd -
 else
-    echo "$0: SKIPPING nmpfilter (../../nmpfilter/nmpfilter not executable)"
+    echo "$0: SKIPPING nmpbyregion (../../nmpfilter/nmpbyregion not executable)"
 fi
 
 if [ "$install" == "0" ]; then
