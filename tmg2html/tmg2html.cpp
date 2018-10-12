@@ -511,9 +511,9 @@ int main(int argc, char *argv[])
 	html << "		\"<hr><big>\" + vertex[vNum].label + \"</big>\" +\n";
 	html << "		\"<br><small>Vertex \" + vNum +\n";
 	html << "		\"<br><a href='http://www.openstreetmap.org/?lat=\" +\n";
-	html << "			vertex[vNum].lat + \"&lon=\" +\n";
-	html << "			vertex[vNum].lon + \"'>Coords:</a> \" +\n";
-	html << "		vertex[vNum].lat + \",\" + vertex[vNum].lon +\n";
+	html << "			vertex[vNum].lat.toFixed(6) + \"&lon=\" +\n";
+	html << "			vertex[vNum].lon.toFixed(6) + \"'>Coords:</a> \" +\n";
+	html << "		vertex[vNum].lat.toFixed(6) + \",\" + vertex[vNum].lon.toFixed(6) +\n";
 	html << "		\"</small>\";\n";
 	html << "	VertexMarker(vNum, \"#FF0000\");\n";
 	html << "	selectedV = vNum;\n";
