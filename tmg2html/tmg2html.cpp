@@ -111,6 +111,15 @@ int main(int argc, char *argv[])
 	html << "	{	background-color:#D0D0D0;\n";
 	html << "	}\n";
 	html << "\n";
+	html << "	#InfoBox\n";
+	html << "	{	background-color:#D0D0D0;\n";
+	html << "		position:fixed;\n";
+	html << "		left: 700px;\n";
+	html << "		right: 0px;\n";
+	html << "		height: 89px;\n";
+	html << "		overflow:auto;\n";
+	html << "	}\n";
+	html << "\n";
 	html << "	#vInfo\n";
 	html << "	{	position:fixed;\n";
 	html << "		left: 700px;\n";
@@ -147,10 +156,10 @@ int main(int argc, char *argv[])
 	html << "<br>\n";
 	html << "<!--<div id=\"bounds\"><br><br><br><br></div>-->\n";
 	html << "<br>\n";
-	html << "<table bgcolor=D0D0D0 width=200>\n";
+	html << "<table bgcolor=D0D0D0 width=60 border=1 cellspacing=0>\n";
 	html << "<tr><td align=center><b><big>Info</big></b>\n";
-	html << "    <a onclick=\"ClearInfo();\" class=\"button\" style=\"float:right\">X</a></td></tr>\n";
-	html << "<tr><td><div id=\"InfoBox\"></div></td></tr>\n";
+	html << "    <a onclick=\"ClearInfo();\" class=\"button\" style=\"float:left\">X</a></td></tr>\n";
+	html << "<tr><td id=\"InfoBox\"></td></tr>\n";
 	html << "</table>\n";
 	html << "<div id=\"vInfo\"></div>\n";
 	html << "\n";
@@ -359,7 +368,7 @@ int main(int argc, char *argv[])
 	html << "function EdgeSelect(eNum)\n";
 	html << "{	ClearInfo();\n";
 	html << "	document.getElementById(\"InfoBox\").innerHTML =\n";
-	html << "		\"<hr><big>\" + edge[eNum].label + \"</big>\" +\n";
+	html << "		\"<big>\" + edge[eNum].label + \"</big>\" +\n";
 	html << "		\"<br><small>Edge \" + eNum;\n";
 	html << "	EdgeHighlight(eNum);\n";
 	html << "	selectedE = eNum;\n";
@@ -508,7 +517,7 @@ int main(int argc, char *argv[])
 	html << "function VertexSelect(vNum)\n";
 	html << "{	ClearInfo();\n";
 	html << "	document.getElementById(\"InfoBox\").innerHTML =\n";
-	html << "		\"<hr><big>\" + vertex[vNum].label + \"</big>\" +\n";
+	html << "		\"<big>\" + vertex[vNum].label + \"</big>\" +\n";
 	html << "		\"<br><small>Vertex \" + vNum +\n";
 	html << "		\"<br><a href='http://www.openstreetmap.org/?lat=\" +\n";
 	html << "			vertex[vNum].lat.toFixed(6) + \"&lon=\" +\n";
