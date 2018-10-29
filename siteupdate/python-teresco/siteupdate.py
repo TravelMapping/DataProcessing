@@ -1577,8 +1577,11 @@ class HighwayGraph:
         # compress edges adjacent to hidden vertices
         for label, vinfo in self.vertices.items():
             if vinfo.is_hidden:
-                if len(vinfo.incident_collapsed_edges) != 2:
-                    datacheckerrors.append(DatacheckEntry(vinfo.first_waypoint.route,[vinfo.unique_name],"HIDDEN_JUNCTION",str(len(vinfo.incident_collapsed_edges))))
+                if len(vinfo.incident_collapsed_edges) < 2:
+                    continue
+                if len(vinfo.incident_collapsed_edges) > 2:
+                    dc_waypoint = sorted(vinfo.first_waypoint.colocated, key=lambda waypoint: waypoint.route.root + "@" + waypoint.label)[0]
+                    datacheckerrors.append(DatacheckEntry(dc_waypoint.route,[dc_waypoint.label],"HIDDEN_JUNCTION",str(len(vinfo.incident_collapsed_edges))))
                     vinfo.is_hidden = False
                     continue
                 # construct from vertex_info this time
