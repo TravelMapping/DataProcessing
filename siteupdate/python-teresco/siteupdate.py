@@ -731,8 +731,6 @@ class Route:
                             other_w.colocated = [ other_w ]
                         other_w.colocated.append(w)
                         w.colocated = other_w.colocated
-                        if w.is_hidden != other_w.is_hidden:
-                            datacheckerrors.append(DatacheckEntry(self,[w.label],"VISIBLE_HIDDEN_COLOC",other_w.route.root + "@" + other_w.label))
 
                     # look for near-miss points (before we add this one in)
                     #print("DEBUG: START search for nmps for waypoint " + str(w) + " in quadtree of size " + str(all_waypoints.size()))
@@ -1132,7 +1130,7 @@ class HighwayGraphVertexInfo:
     vertex.
     """
 
-    def __init__(self,waypoint_list):
+    def __init__(self,waypoint_list,datacheckerrors):
         self.lat = waypoint_list[0].lat
         self.lng = waypoint_list[0].lng
         self.unique_name = waypoint_list[0].unique_name
@@ -1150,10 +1148,21 @@ class HighwayGraphVertexInfo:
             self.systems.add(w.route.system)
         self.incident_edges = []
         self.incident_collapsed_edges = []
+        # VISIBLE_HIDDEN_COLOC datacheck
+        if self.visible_hidden_coloc(waypoint_list):
+            datacheckerrors.append(DatacheckEntry(waypoint_list[0].route,[waypoint_list[0].label],"VISIBLE_HIDDEN_COLOC",
+                                                  "("+str(waypoint_list[0].lat)+","+str(waypoint_list[0].lng)+")"))
 
     # printable string
     def __str__(self):
         return self.unique_name
+
+    @staticmethod
+    def visible_hidden_coloc(waypoint_list):
+        for w in range(len(waypoint_list)):
+            if waypoint_list[w].is_hidden != waypoint_list[0].is_hidden:
+                return True
+        return False
 
 class HighwayGraphEdgeInfo:
     """This class encapsulates information needed for a 'standard'
@@ -1538,7 +1547,7 @@ class HighwayGraph:
         # One copy of the vertices
         self.vertices = {}
         for label, pointlist in self.unique_waypoints.items():
-            self.vertices[label] = HighwayGraphVertexInfo(pointlist)
+            self.vertices[label] = HighwayGraphVertexInfo(pointlist,datacheckerrors)
 
         # add edges, which end up in vertex adjacency lists, first one
         # copy for the full graph
