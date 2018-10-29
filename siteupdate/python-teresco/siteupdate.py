@@ -1150,8 +1150,18 @@ class HighwayGraphVertexInfo:
         self.incident_collapsed_edges = []
         # VISIBLE_HIDDEN_COLOC datacheck
         if self.visible_hidden_coloc(waypoint_list):
-            datacheckerrors.append(DatacheckEntry(waypoint_list[0].route,[waypoint_list[0].label],"VISIBLE_HIDDEN_COLOC",
-                                                  "("+str(waypoint_list[0].lat)+","+str(waypoint_list[0].lng)+")"))
+            # determine which route, label, and info to use for this entry asciibetically
+            vis_list = []
+            hid_list = []
+            for w in waypoint_list:
+                if w.is_hidden:
+                    hid_list.append(w)
+                else:
+                    vis_list.append(w)
+            vis_list.sort(key=lambda waypoint: waypoint.route.root + "@" + waypoint.label)
+            hid_list.sort(key=lambda waypoint: waypoint.route.root + "@" + waypoint.label)
+            datacheckerrors.append(DatacheckEntry(vis_list[0].route,[vis_list[0].label],"VISIBLE_HIDDEN_COLOC",
+                                                  hid_list[0].route.root+"@"+hid_list[0].label))
 
     # printable string
     def __str__(self):
