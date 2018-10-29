@@ -1073,7 +1073,8 @@ class DatacheckEntry:
     LABEL_UNDERSCORES, VISIBLE_DISTANCE, LABEL_PARENS, LACKS_GENERIC,
     BUS_WITH_I, NONTERMINAL_UNDERSCORE,
     LONG_UNDERSCORE, LABEL_SLASHES, US_BANNER, VISIBLE_HIDDEN_COLOC,
-    HIDDEN_JUNCTION, LABEL_LOOKS_HIDDEN
+    HIDDEN_JUNCTION, LABEL_LOOKS_HIDDEN, HIDDEN_TERMINUS,
+    OUT_OF_BOUNDS
 
     info is additional information, at this time either a distance (in
     miles) for a long segment error, an angle (in degrees) for a sharp
