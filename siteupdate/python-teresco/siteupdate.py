@@ -2769,33 +2769,33 @@ for h in highway_systems:
 
 # Build a graph structure out of all highway data in active and
 # preview systems
-if args.skipgraphs or args.errorcheck:
-    print(et.et() + "SKIPPING generation of graphs.", flush=True)
-else:
-    print(et.et() + "Setting up for graphs of highway data.", flush=True)
-    graph_data = HighwayGraph(all_waypoints, highway_systems, datacheckerrors)
+print(et.et() + "Setting up for graphs of highway data.", flush=True)
+graph_data = HighwayGraph(all_waypoints, highway_systems, datacheckerrors)
 
-    print(et.et() + "Writing graph waypoint simplification log.", flush=True)
-    logfile = open(args.logfilepath + '/waypointsimplification.log', 'w')
-    for line in graph_data.waypoint_naming_log:
-        logfile.write(line + '\n')
-    logfile.close()
+print(et.et() + "Writing graph waypoint simplification log.", flush=True)
+logfile = open(args.logfilepath + '/waypointsimplification.log', 'w')
+for line in graph_data.waypoint_naming_log:
+    logfile.write(line + '\n')
+logfile.close()
 
-    # create list of graph information for the DB
-    graph_list = []
-    graph_types = []
+# create list of graph information for the DB
+graph_list = []
+graph_types = []
     
-    # start generating graphs and making entries for graph DB table
+# start generating graphs and making entries for graph DB table
 
-    print(et.et() + "Writing master TM simple graph file, tm-master-simple.tmg", flush=True)
-    (sv, se) = graph_data.write_master_tmg_simple(args.graphfilepath+'/tm-master-simple.tmg')
-    graph_list.append(GraphListEntry('tm-master-simple.tmg', 'All Travel Mapping Data', sv, se, 'simple', 'master'))
-    print(et.et() + "Writing master TM collapsed graph file, tm-master.tmg.", flush=True)
-    (cv, ce) = graph_data.write_master_tmg_collapsed(args.graphfilepath+'/tm-master.tmg')
-    graph_list.append(GraphListEntry('tm-master.tmg', 'All Travel Mapping Data', cv, ce, 'collapsed', 'master'))
-    graph_types.append(['master', 'All Travel Mapping Data',
-                        'These graphs contain all routes currently plotted in the Travel Mapping project.'])
+print(et.et() + "Writing master TM simple graph file, tm-master-simple.tmg", flush=True)
+(sv, se) = graph_data.write_master_tmg_simple(args.graphfilepath+'/tm-master-simple.tmg')
+graph_list.append(GraphListEntry('tm-master-simple.tmg', 'All Travel Mapping Data', sv, se, 'simple', 'master'))
+print(et.et() + "Writing master TM collapsed graph file, tm-master.tmg.", flush=True)
+(cv, ce) = graph_data.write_master_tmg_collapsed(args.graphfilepath+'/tm-master.tmg')
+graph_list.append(GraphListEntry('tm-master.tmg', 'All Travel Mapping Data', cv, ce, 'collapsed', 'master'))
+graph_types.append(['master', 'All Travel Mapping Data',
+                    'These graphs contain all routes currently plotted in the Travel Mapping project.'])
 
+if args.skipgraphs or args.errorcheck:
+    print(et.et() + "SKIPPING generation of subgraphs.", flush=True)
+else:
     # graphs restricted by place/area - from areagraphs.csv file
     print(et.et() + "Creating area data graphs.", flush=True)
     with open(args.highwaydatapath+"/graphs/areagraphs.csv", "rt",encoding='utf-8') as file:
