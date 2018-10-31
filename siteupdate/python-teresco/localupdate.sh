@@ -42,6 +42,18 @@ mkdir -p $datestr/$logdir/users $datestr/$statdir $datestr/$nmpmdir $datestr/$lo
 if [ "$graphflag" != "-k" ]; then
     mkdir -p $datestr/$graphdir
 fi
+echo "$0: switching to DB copy"
+ln -sf $tmwebbase/lib/tm.conf.updating $tmwebbase/lib/tm.conf
+touch $tmwebbase/dbupdating
+echo "**********************************************************************"
+echo "**********************************************************************"
+echo "*                                                                    *"
+echo "* CHECK FOR USER SLEEP MYSQL PROCESSES USING SHOW PROCESSLIST;       *"
+echo "* BEFORE THE SITE UPDATE SCRIPT FINISHES TO AVOID A POSSIBLE HANG    *"
+echo "* DURING INGESTION OF THE NEW .sql FILE.                             *"
+echo "*                                                                    *"
+echo "**********************************************************************"
+echo "**********************************************************************"
 
 echo "$0: launching siteupdate.py"
 PYTHONIOENCODING='utf-8' ./siteupdate.py -d TravelMapping-$datestr $graphflag -l $datestr/$logdir -c $datestr/$statdir -g $datestr/$graphdir -n $datestr/$nmpmdir | tee $datestr/$logdir/siteupdate.log 2>&1 || exit 1
@@ -83,9 +95,6 @@ if [ "$graphflag" != "-k" ]; then
     mv $datestr/$graphdir $tmwebbase
 fi
 rmdir $datestr
-echo "$0: switching to DB copy"
-ln -sf $tmwebbase/lib/tm.conf.updating $tmwebbase/lib/tm.conf
-touch $tmwebbase/dbupdating
 echo "$0: loading primary DB"
 date
 mysql --defaults-group-suffix=tmapadmin -u travmapadmin TravelMapping < TravelMapping-$datestr.sql
