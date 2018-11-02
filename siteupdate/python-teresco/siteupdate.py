@@ -1578,6 +1578,8 @@ class HighwayGraph:
         for label, vinfo in self.vertices.items():
             if vinfo.is_hidden:
                 if len(vinfo.incident_collapsed_edges) < 2:
+                    # these cases are flagged as HIDDEN_TERMINUS
+                    vinfo.is_hidden = False
                     continue
                 if len(vinfo.incident_collapsed_edges) > 2:
                     dc_waypoint = sorted(vinfo.first_waypoint.colocated, key=lambda waypoint: waypoint.route.root + "@" + waypoint.label)[0]
