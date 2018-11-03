@@ -2808,18 +2808,18 @@ graph_types = []
     
 # start generating graphs and making entries for graph DB table
 
-print(et.et() + "Writing master TM simple graph file, tm-master-simple.tmg", flush=True)
-(sv, se) = graph_data.write_master_tmg_simple(args.graphfilepath+'/tm-master-simple.tmg')
-graph_list.append(GraphListEntry('tm-master-simple.tmg', 'All Travel Mapping Data', sv, se, 'simple', 'master'))
-print(et.et() + "Writing master TM collapsed graph file, tm-master.tmg.", flush=True)
-(cv, ce) = graph_data.write_master_tmg_collapsed(args.graphfilepath+'/tm-master.tmg')
-graph_list.append(GraphListEntry('tm-master.tmg', 'All Travel Mapping Data', cv, ce, 'collapsed', 'master'))
-graph_types.append(['master', 'All Travel Mapping Data',
-                    'These graphs contain all routes currently plotted in the Travel Mapping project.'])
-
 if args.skipgraphs or args.errorcheck:
     print(et.et() + "SKIPPING generation of subgraphs.", flush=True)
 else:
+    print(et.et() + "Writing master TM simple graph file, tm-master-simple.tmg", flush=True)
+    (sv, se) = graph_data.write_master_tmg_simple(args.graphfilepath+'/tm-master-simple.tmg')
+    graph_list.append(GraphListEntry('tm-master-simple.tmg', 'All Travel Mapping Data', sv, se, 'simple', 'master'))
+    print(et.et() + "Writing master TM collapsed graph file, tm-master.tmg.", flush=True)
+    (cv, ce) = graph_data.write_master_tmg_collapsed(args.graphfilepath+'/tm-master.tmg')
+    graph_list.append(GraphListEntry('tm-master.tmg', 'All Travel Mapping Data', cv, ce, 'collapsed', 'master'))
+    graph_types.append(['master', 'All Travel Mapping Data',
+                        'These graphs contain all routes currently plotted in the Travel Mapping project.'])
+
     # graphs restricted by place/area - from areagraphs.csv file
     print(et.et() + "Creating area data graphs.", flush=True)
     with open(args.highwaydatapath+"/graphs/areagraphs.csv", "rt",encoding='utf-8') as file:
