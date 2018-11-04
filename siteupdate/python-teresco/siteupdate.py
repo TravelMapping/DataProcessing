@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-# Travel Mapping Project, Jim Teresco, 2015, 2016, 2017
+# Travel Mapping Project, Jim Teresco, 2015-2018
 """Python code to read .csv and .wpt files and prepare for
 adding to the Travel Mapping Project database.
 
-(c) 2015, 2016, 2017, Jim Teresco
+(c) 2015-2018, Jim Teresco
 
 This module defines classes to represent the contents of a
 .csv file that lists the highways within a system, and a
@@ -1035,7 +1035,7 @@ class DatacheckEntry:
     form a sharp angle)
 
     code is the error code string, one of SHARP_ANGLE, BAD_ANGLE,
-    DUPLICATE_LABELS, DUPLICATE_COORDS, LABEL_SELFREF,
+    DUPLICATE_LABEL, DUPLICATE_COORDS, LABEL_SELFREF,
     LABEL_INVALID_CHAR, LONG_SEGMENT, LABEL_NO_VALID,
     LABEL_UNDERSCORES, VISIBLE_DISTANCE, LABEL_PARENS, LACKS_GENERIC,
     BUS_WITH_I, NONTERMINAL_UNDERSCORE,
