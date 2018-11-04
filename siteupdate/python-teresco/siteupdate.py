@@ -605,37 +605,6 @@ class HighwaySegment:
                         self.segment_name += ","
                     self.segment_name += cs.route.list_entry_name()
 
-    def gra_line(self):
-        """compute the line that should represent this segment in a
-        .gra format graph file (2 waypoint numbers, edge label)"""
-        line = ""
-        if self.waypoint1.colocated is None:
-            line += str(self.waypoint1.vertex_num) + ' '
-        else:
-            line += str(self.waypoint1.colocated[0].vertex_num) + ' '
-        if self.waypoint2.colocated is None:
-            line += str(self.waypoint2.vertex_num) + ' '
-        else:
-            line += str(self.waypoint2.colocated[0].vertex_num) + ' '
-        line += self.segment_name
-        return line
-
-    def edge_line_with_labels(self):
-        """compute the line that should represent this segment in an
-        alternate format for a potential future graph file format
-        (2 waypoint labels, edge label)"""
-        line = ""
-        if self.waypoint1.colocated is None:
-            line += str(self.waypoint1.unique_name) + ' '
-        else:
-            line += str(self.waypoint1.colocated[0].unique_name) + ' '
-        if self.waypoint2.colocated is None:
-            line += str(self.waypoint2.unique_name) + ' '
-        else:
-            line += str(self.waypoint2.colocated[0].unique_name) + ' '
-        line += self.segment_name
-        return line
-
 class Route:
     """This class encapsulates the contents of one .csv file line
     that represents a highway within a system and the corresponding
