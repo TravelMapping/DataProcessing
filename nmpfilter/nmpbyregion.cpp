@@ -60,7 +60,7 @@ void filter(vector<string> &RgList, char *MasterNMP, char *OutputDir)
 
 int main(int argc, char *argv[])
 {	if (argc != 4)
-	{	cout << "usage: nmpfilter HwyDataDir MasterNMP OutputDir\n";
+	{	cout << "usage: nmpbyregion HwyDataDir MasterNMP OutputDir\n";
 		return 0;
 	}
 	vector<string> RgList;

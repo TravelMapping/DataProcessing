@@ -605,37 +605,6 @@ class HighwaySegment:
                         self.segment_name += ","
                     self.segment_name += cs.route.list_entry_name()
 
-    def gra_line(self):
-        """compute the line that should represent this segment in a
-        .gra format graph file (2 waypoint numbers, edge label)"""
-        line = ""
-        if self.waypoint1.colocated is None:
-            line += str(self.waypoint1.vertex_num) + ' '
-        else:
-            line += str(self.waypoint1.colocated[0].vertex_num) + ' '
-        if self.waypoint2.colocated is None:
-            line += str(self.waypoint2.vertex_num) + ' '
-        else:
-            line += str(self.waypoint2.colocated[0].vertex_num) + ' '
-        line += self.segment_name
-        return line
-
-    def edge_line_with_labels(self):
-        """compute the line that should represent this segment in an
-        alternate format for a potential future graph file format
-        (2 waypoint labels, edge label)"""
-        line = ""
-        if self.waypoint1.colocated is None:
-            line += str(self.waypoint1.unique_name) + ' '
-        else:
-            line += str(self.waypoint1.colocated[0].unique_name) + ' '
-        if self.waypoint2.colocated is None:
-            line += str(self.waypoint2.unique_name) + ' '
-        else:
-            line += str(self.waypoint2.colocated[0].unique_name) + ' '
-        line += self.segment_name
-        return line
-
 class Route:
     """This class encapsulates the contents of one .csv file line
     that represents a highway within a system and the corresponding
@@ -731,8 +700,6 @@ class Route:
                             other_w.colocated = [ other_w ]
                         other_w.colocated.append(w)
                         w.colocated = other_w.colocated
-                        if w.is_hidden != other_w.is_hidden:
-                            datacheckerrors.append(DatacheckEntry(self,[w.label],"VISIBLE_HIDDEN_COLOC",other_w.route.root + "@" + other_w.label))
 
                     # look for near-miss points (before we add this one in)
                     #print("DEBUG: START search for nmps for waypoint " + str(w) + " in quadtree of size " + str(all_waypoints.size()))
@@ -1073,7 +1040,8 @@ class DatacheckEntry:
     LABEL_UNDERSCORES, VISIBLE_DISTANCE, LABEL_PARENS, LACKS_GENERIC,
     BUS_WITH_I, NONTERMINAL_UNDERSCORE,
     LONG_UNDERSCORE, LABEL_SLASHES, US_BANNER, VISIBLE_HIDDEN_COLOC,
-    HIDDEN_JUNCTION, LABEL_LOOKS_HIDDEN
+    HIDDEN_JUNCTION, LABEL_LOOKS_HIDDEN, HIDDEN_TERMINUS,
+    OUT_OF_BOUNDS
 
     info is additional information, at this time either a distance (in
     miles) for a long segment error, an angle (in degrees) for a sharp
@@ -1131,7 +1099,7 @@ class HighwayGraphVertexInfo:
     vertex.
     """
 
-    def __init__(self,waypoint_list):
+    def __init__(self,waypoint_list,datacheckerrors):
         self.lat = waypoint_list[0].lat
         self.lng = waypoint_list[0].lng
         self.unique_name = waypoint_list[0].unique_name
@@ -1149,10 +1117,31 @@ class HighwayGraphVertexInfo:
             self.systems.add(w.route.system)
         self.incident_edges = []
         self.incident_collapsed_edges = []
+        # VISIBLE_HIDDEN_COLOC datacheck
+        if self.visible_hidden_coloc(waypoint_list):
+            # determine which route, label, and info to use for this entry asciibetically
+            vis_list = []
+            hid_list = []
+            for w in waypoint_list:
+                if w.is_hidden:
+                    hid_list.append(w)
+                else:
+                    vis_list.append(w)
+            vis_list.sort(key=lambda waypoint: waypoint.route.root + "@" + waypoint.label)
+            hid_list.sort(key=lambda waypoint: waypoint.route.root + "@" + waypoint.label)
+            datacheckerrors.append(DatacheckEntry(vis_list[0].route,[vis_list[0].label],"VISIBLE_HIDDEN_COLOC",
+                                                  hid_list[0].route.root+"@"+hid_list[0].label))
 
     # printable string
     def __str__(self):
         return self.unique_name
+
+    @staticmethod
+    def visible_hidden_coloc(waypoint_list):
+        for w in range(len(waypoint_list)):
+            if waypoint_list[w].is_hidden != waypoint_list[0].is_hidden:
+                return True
+        return False
 
 class HighwayGraphEdgeInfo:
     """This class encapsulates information needed for a 'standard'
@@ -1537,7 +1526,7 @@ class HighwayGraph:
         # One copy of the vertices
         self.vertices = {}
         for label, pointlist in self.unique_waypoints.items():
-            self.vertices[label] = HighwayGraphVertexInfo(pointlist)
+            self.vertices[label] = HighwayGraphVertexInfo(pointlist,datacheckerrors)
 
         # add edges, which end up in vertex adjacency lists, first one
         # copy for the full graph
@@ -1567,8 +1556,13 @@ class HighwayGraph:
         # compress edges adjacent to hidden vertices
         for label, vinfo in self.vertices.items():
             if vinfo.is_hidden:
-                if len(vinfo.incident_collapsed_edges) != 2:
-                    datacheckerrors.append(DatacheckEntry(vinfo.first_waypoint.route,[vinfo.unique_name],"HIDDEN_JUNCTION",str(len(vinfo.incident_collapsed_edges))))
+                if len(vinfo.incident_collapsed_edges) < 2:
+                    # these cases are flagged as HIDDEN_TERMINUS
+                    vinfo.is_hidden = False
+                    continue
+                if len(vinfo.incident_collapsed_edges) > 2:
+                    dc_waypoint = sorted(vinfo.first_waypoint.colocated, key=lambda waypoint: waypoint.route.root + "@" + waypoint.label)[0]
+                    datacheckerrors.append(DatacheckEntry(dc_waypoint.route,[dc_waypoint.label],"HIDDEN_JUNCTION",str(len(vinfo.incident_collapsed_edges))))
                     vinfo.is_hidden = False
                     continue
                 # construct from vertex_info this time
@@ -2243,278 +2237,6 @@ if args.nmpmergepath != "" and not args.errorcheck:
         print(".", end="", flush=True)
     print()
 
-# data check: visit each system and route and check for various problems
-print(et.et() + "Performing data checks.",end="",flush=True)
-# first, read in the false positives list
-with open(args.highwaydatapath+"/datacheckfps.csv", "rt",encoding='utf-8') as file:
-    lines = file.readlines()
-
-lines.pop(0)  # ignore header line
-datacheckfps = []
-datacheck_always_error = [ 'DUPLICATE_LABEL', 'HIDDEN_TERMINUS',
-                           'LABEL_INVALID_CHAR', 'LABEL_SLASHES',
-                           'LONG_UNDERSCORE', 'NONTERMINAL_UNDERSCORE',
-                           'OUT_OF_BOUNDS' ]
-for line in lines:
-    fields = line.rstrip('\n').split(';')
-    if len(fields) != 6:
-        el.add_error("Could not parse datacheckfps.csv line: " + line)
-        continue
-    if fields[4] in datacheck_always_error:
-        print("datacheckfps.csv line not allowed (always error): " + line)
-        continue
-    datacheckfps.append(fields)
-
-# See if we have any errors that should be fatal to the site update process
-if len(el.error_list) > 0:
-    print("ABORTING due to " + str(len(el.error_list)) + " errors:")
-    for i in range(len(el.error_list)):
-        print(str(i+1) + ": " + el.error_list[i])
-    sys.exit(1)
-
-# perform most datachecks here (list initialized above)
-for h in highway_systems:
-    print(".",end="",flush=True)
-    for r in h.route_list:
-        # set to be used per-route to find label duplicates
-        all_route_labels = set()
-        # set of tuples to be used for finding duplicate coordinates
-        coords_used = set()
-
-        visible_distance = 0.0
-        # note that we assume the first point will be visible in each route
-        # so the following is simply a placeholder
-        last_visible = None
-        prev_w = None
-
-        # look for hidden termini
-        if r.point_list[0].is_hidden:
-            labels = []
-            labels.append(r.point_list[0].label)
-            datacheckerrors.append(DatacheckEntry(r,labels,'HIDDEN_TERMINUS'))
-        if r.point_list[len(r.point_list)-1].is_hidden:
-            labels = []
-            labels.append(r.point_list[len(r.point_list)-1].label)
-            datacheckerrors.append(DatacheckEntry(r,labels,'HIDDEN_TERMINUS'))
-
-        for w in r.point_list:
-            # duplicate labels
-            label_list = w.alt_labels.copy()
-            label_list.append(w.label)
-            for label in label_list:
-                lower_label = label.lower().strip("+*")
-                if lower_label in all_route_labels:
-                    labels = []
-                    labels.append(lower_label)
-                    datacheckerrors.append(DatacheckEntry(r,labels,"DUPLICATE_LABEL"))
-                else:
-                    all_route_labels.add(lower_label)
-
-            # out-of-bounds coords
-            if w.lat > 90 or w.lat < -90 or w.lng > 180 or w.lng < -180:
-                labels = []
-                labels.append(w.label)
-                datacheckerrors.append(DatacheckEntry(r,labels,'OUT_OF_BOUNDS',
-                                                      "("+str(w.lat)+","+str(w.lng)+")"))
-
-            # duplicate coordinates
-            latlng = w.lat, w.lng
-            if latlng in coords_used:
-                for other_w in r.point_list:
-                    if w == other_w:
-                        break
-                    if w.lat == other_w.lat and w.lng == other_w.lng and w.label != other_w.label:
-                        labels = []
-                        labels.append(other_w.label)
-                        labels.append(w.label)
-                        datacheckerrors.append(DatacheckEntry(r,labels,"DUPLICATE_COORDS",
-                                                              "("+str(latlng[0])+","+str(latlng[1])+")"))
-            else:
-               coords_used.add(latlng)
-
-            # visible distance update, and last segment length check
-            if prev_w is not None:
-                last_distance = w.distance_to(prev_w)
-                visible_distance += last_distance
-                if last_distance > 20.0:
-                    labels = []
-                    labels.append(prev_w.label)
-                    labels.append(w.label)
-                    datacheckerrors.append(DatacheckEntry(r,labels,'LONG_SEGMENT',
-                                                          "{0:.2f}".format(last_distance)))
-
-            if not w.is_hidden:
-                # complete visible distance check, omit report for active
-                # systems to reduce clutter
-                if visible_distance > 10.0 and not h.active():
-                    labels = []
-                    labels.append(last_visible.label)
-                    labels.append(w.label)
-                    datacheckerrors.append(DatacheckEntry(r,labels,'VISIBLE_DISTANCE',
-                                                          "{0:.2f}".format(visible_distance)))
-                last_visible = w
-                visible_distance = 0.0
-
-                # looking for the route within the label
-                #match_start = w.label.find(r.route)
-                #if match_start >= 0:
-                    # we have a potential match, just need to make sure if the route
-                    # name ends with a number that the matched substring isn't followed
-                    # by more numbers (e.g., NY50 is an OK label in NY5)
-                #    if len(r.route) + match_start == len(w.label) or \
-                #            not w.label[len(r.route) + match_start].isdigit():
-                # partially complete "references own route" -- too many FP
-                #or re.fullmatch('.*/'+r.route+'.*',w.label[w.label) :
-                # first check for number match after a slash, if there is one
-                selfref_found = False
-                if '/' in w.label and r.route[-1].isdigit():
-                    digit_starts = len(r.route)-1
-                    while digit_starts >= 0 and r.route[digit_starts].isdigit():
-                        digit_starts-=1
-                    if w.label[w.label.index('/')+1:] == r.route[digit_starts+1:]:
-                        selfref_found = True
-                    if w.label[w.label.index('/')+1:] == r.route:
-                        selfref_found = True
-                    if '_' in w.label[w.label.index('/')+1:] and w.label[w.label.index('/')+1:w.label.rindex('_')] == r.route[digit_starts+1:]:
-                        selfref_found = True
-                    if '_' in w.label[w.label.index('/')+1:] and w.label[w.label.index('/')+1:w.label.rindex('_')] == r.route:
-                        selfref_found = True
-
-                # now the remaining checks
-                if selfref_found or r.route+r.banner == w.label or re.fullmatch(r.route+r.banner+'[_/].*',w.label):
-                    labels = []
-                    labels.append(w.label)
-                    datacheckerrors.append(DatacheckEntry(r,labels,'LABEL_SELFREF'))
-
-                # look for too many underscores in label
-                if w.label.count('_') > 1:
-                    labels = []
-                    labels.append(w.label)
-                    datacheckerrors.append(DatacheckEntry(r,labels,'LABEL_UNDERSCORES'))
-
-                # look for too many characters after underscore in label
-                if '_' in w.label:
-                    if w.label.index('_') < len(w.label) - 5:
-                        labels = []
-                        labels.append(w.label)
-                        datacheckerrors.append(DatacheckEntry(r,labels,'LONG_UNDERSCORE'))
-
-                # look for too many slashes in label
-                if w.label.count('/') > 1:
-                    labels = []
-                    labels.append(w.label)
-                    datacheckerrors.append(DatacheckEntry(r,labels,'LABEL_SLASHES'))
-
-                # look for parenthesis balance in label
-                if w.label.count('(') != w.label.count(')'):
-                    labels = []
-                    labels.append(w.label)
-                    datacheckerrors.append(DatacheckEntry(r,labels,'LABEL_PARENS'))
-
-                # look for labels with invalid characters
-                if not re.fullmatch('[a-zA-Z0-9()/\+\*_\-\.]+', w.label):
-                    labels = []
-                    labels.append(w.label)
-                    datacheckerrors.append(DatacheckEntry(r,labels,'LABEL_INVALID_CHAR'))
-
-                # look for labels with a slash after an underscore
-                if '_' in w.label and '/' in w.label and \
-                        w.label.index('/') > w.label.index('_'):
-                    labels = []
-                    labels.append(w.label)
-                    datacheckerrors.append(DatacheckEntry(r,labels,'NONTERMINAL_UNDERSCORE'))
-
-                # look for I-xx with Bus instead of BL or BS
-                if re.fullmatch('I\-[0-9]*Bus', w.label):
-                    labels = []
-                    labels.append(w.label)
-                    datacheckerrors.append(DatacheckEntry(r,labels,'BUS_WITH_I'))
-
-                # look for labels that look like hidden waypoints but
-                # which aren't hidden
-                if re.fullmatch('X[0-9][0-9][0-9][0-9][0-9][0-9]', w.label):
-                    labels = []
-                    labels.append(w.label)
-                    datacheckerrors.append(DatacheckEntry(r,labels,'LABEL_LOOKS_HIDDEN'))
-
-                # look for USxxxA but not USxxxAlt, B/Bus (others?)
-                ##if re.fullmatch('US[0-9]+A.*', w.label) and not re.fullmatch('US[0-9]+Alt.*', w.label) or \
-                ##   re.fullmatch('US[0-9]+B.*', w.label) and \
-                ##   not (re.fullmatch('US[0-9]+Bus.*', w.label) or re.fullmatch('US[0-9]+Byp.*', w.label)):
-                ##    labels = []
-                ##    labels.append(w.label)
-                ##    datacheckerrors.append(DatacheckEntry(r,labels,'US_BANNER'))
-
-            prev_w = w
-
-        # angle check is easier with a traditional for loop and array indices
-        for i in range(1, len(r.point_list)-1):
-            #print("computing angle for " + str(r.point_list[i-1]) + ' ' + str(r.point_list[i]) + ' ' + str(r.point_list[i+1]))
-            if r.point_list[i-1].same_coords(r.point_list[i]) or \
-               r.point_list[i+1].same_coords(r.point_list[i]):
-                labels = []
-                labels.append(r.point_list[i-1].label)
-                labels.append(r.point_list[i].label)
-                labels.append(r.point_list[i+1].label)
-                datacheckerrors.append(DatacheckEntry(r,labels,'BAD_ANGLE'))
-            else:
-                angle = r.point_list[i].angle(r.point_list[i-1],r.point_list[i+1])
-                if angle > 135:
-                    labels = []
-                    labels.append(r.point_list[i-1].label)
-                    labels.append(r.point_list[i].label)
-                    labels.append(r.point_list[i+1].label)
-                    datacheckerrors.append(DatacheckEntry(r,labels,'SHARP_ANGLE',
-                                                          "{0:.2f}".format(angle)))
-print("!", flush=True)
-print(et.et() + "Found " + str(len(datacheckerrors)) + " datacheck errors.")
-
-# now mark false positives
-print(et.et() + "Marking datacheck false positives.",end="",flush=True)
-fpfile = open(args.logfilepath+'/nearmatchfps.log','w',encoding='utf-8')
-fpfile.write("Log file created at: " + str(datetime.datetime.now()) + "\n")
-toremove = []
-counter = 0
-for d in datacheckerrors:
-    #print("Checking: " + str(d))
-    counter += 1
-    if counter % 1000 == 0:
-        print(".", end="",flush=True)
-    for fp in datacheckfps:
-        #print("Comparing: " + str(d) + " to " + str(fp))
-        if d.match(fp):
-            #print("Match!")
-            d.fp = True
-            toremove.append(fp)
-            break
-        if d.match_except_info(fp):
-            fpfile.write("DCERROR: " + str(d) + "\n")
-            fpfile.write("FPENTRY: " + fp[0] + ';' + fp[1] + ';' + fp[2] + ';' + fp[3] + ';' + fp[4] + ';' + fp[5] + '\n')
-            fpfile.write("REPLACEWITH: " + fp[0] + ';' + fp[1] + ';' + fp[2] + ';' + fp[3] + ';' + fp[4] + ';' + d.info + '\n')
-
-fpfile.close()
-# now remove the ones we matched from the list
-for fp in toremove:
-    counter += 1
-    if counter % 1000 == 0:
-        print(".", end="",flush=True)
-    if fp in datacheckfps:
-        datacheckfps.remove(fp)
-    else:
-        print("Matched FP entry not in list!: " + str(fp))
-print("!", flush=True)
-
-# write log of unmatched false positives from the datacheckfps.csv
-print(et.et() + "Writing log of unmatched datacheck FP entries.")
-fpfile = open(args.logfilepath+'/unmatchedfps.log','w',encoding='utf-8')
-fpfile.write("Log file created at: " + str(datetime.datetime.now()) + "\n")
-if len(datacheckfps) > 0:
-    for entry in datacheckfps:
-        fpfile.write(entry[0] + ';' + entry[1] + ';' + entry[2] + ';' + entry[3] + ';' + entry[4] + ';' + entry[5] + '\n')
-else:
-    fpfile.write("No unmatched FP entries.")
-fpfile.close()
-
 # Create hash table for faster lookup of routes by list file name
 print(et.et() + "Creating route hash table for list processing:",flush=True)
 route_hash = dict()
@@ -3040,24 +2762,24 @@ for h in highway_systems:
 
 # Build a graph structure out of all highway data in active and
 # preview systems
-if args.skipgraphs or args.errorcheck:
-    print(et.et() + "SKIPPING generation of graphs.", flush=True)
-else:
-    print(et.et() + "Setting up for graphs of highway data.", flush=True)
-    graph_data = HighwayGraph(all_waypoints, highway_systems, datacheckerrors)
+print(et.et() + "Setting up for graphs of highway data.", flush=True)
+graph_data = HighwayGraph(all_waypoints, highway_systems, datacheckerrors)
 
-    print(et.et() + "Writing graph waypoint simplification log.", flush=True)
-    logfile = open(args.logfilepath + '/waypointsimplification.log', 'w')
-    for line in graph_data.waypoint_naming_log:
-        logfile.write(line + '\n')
-    logfile.close()
+print(et.et() + "Writing graph waypoint simplification log.", flush=True)
+logfile = open(args.logfilepath + '/waypointsimplification.log', 'w')
+for line in graph_data.waypoint_naming_log:
+    logfile.write(line + '\n')
+logfile.close()
 
-    # create list of graph information for the DB
-    graph_list = []
-    graph_types = []
+# create list of graph information for the DB
+graph_list = []
+graph_types = []
     
-    # start generating graphs and making entries for graph DB table
+# start generating graphs and making entries for graph DB table
 
+if args.skipgraphs or args.errorcheck:
+    print(et.et() + "SKIPPING generation of subgraphs.", flush=True)
+else:
     print(et.et() + "Writing master TM simple graph file, tm-master-simple.tmg", flush=True)
     (sv, se) = graph_data.write_master_tmg_simple(args.graphfilepath+'/tm-master-simple.tmg')
     graph_list.append(GraphListEntry('tm-master-simple.tmg', 'All Travel Mapping Data', sv, se, 'simple', 'master'))
@@ -3219,6 +2941,278 @@ else:
     graph_types.append(['continent', 'Routes Within a Continent',
                         'These graphs contain the routes on a continent.'])
     print("!")
+
+# data check: visit each system and route and check for various problems
+print(et.et() + "Performing data checks.",end="",flush=True)
+# first, read in the false positives list
+with open(args.highwaydatapath+"/datacheckfps.csv", "rt",encoding='utf-8') as file:
+    lines = file.readlines()
+
+lines.pop(0)  # ignore header line
+datacheckfps = []
+datacheck_always_error = [ 'DUPLICATE_LABEL', 'HIDDEN_TERMINUS',
+                           'LABEL_INVALID_CHAR', 'LABEL_SLASHES',
+                           'LONG_UNDERSCORE', 'NONTERMINAL_UNDERSCORE',
+                           'OUT_OF_BOUNDS' ]
+for line in lines:
+    fields = line.rstrip('\n').split(';')
+    if len(fields) != 6:
+        el.add_error("Could not parse datacheckfps.csv line: " + line)
+        continue
+    if fields[4] in datacheck_always_error:
+        print("datacheckfps.csv line not allowed (always error): " + line)
+        continue
+    datacheckfps.append(fields)
+
+# See if we have any errors that should be fatal to the site update process
+if len(el.error_list) > 0:
+    print("ABORTING due to " + str(len(el.error_list)) + " errors:")
+    for i in range(len(el.error_list)):
+        print(str(i+1) + ": " + el.error_list[i])
+    sys.exit(1)
+
+# perform most datachecks here (list initialized above)
+for h in highway_systems:
+    print(".",end="",flush=True)
+    for r in h.route_list:
+        # set to be used per-route to find label duplicates
+        all_route_labels = set()
+        # set of tuples to be used for finding duplicate coordinates
+        coords_used = set()
+
+        visible_distance = 0.0
+        # note that we assume the first point will be visible in each route
+        # so the following is simply a placeholder
+        last_visible = None
+        prev_w = None
+
+        # look for hidden termini
+        if r.point_list[0].is_hidden:
+            labels = []
+            labels.append(r.point_list[0].label)
+            datacheckerrors.append(DatacheckEntry(r,labels,'HIDDEN_TERMINUS'))
+        if r.point_list[len(r.point_list)-1].is_hidden:
+            labels = []
+            labels.append(r.point_list[len(r.point_list)-1].label)
+            datacheckerrors.append(DatacheckEntry(r,labels,'HIDDEN_TERMINUS'))
+
+        for w in r.point_list:
+            # duplicate labels
+            label_list = w.alt_labels.copy()
+            label_list.append(w.label)
+            for label in label_list:
+                lower_label = label.lower().strip("+*")
+                if lower_label in all_route_labels:
+                    labels = []
+                    labels.append(lower_label)
+                    datacheckerrors.append(DatacheckEntry(r,labels,"DUPLICATE_LABEL"))
+                else:
+                    all_route_labels.add(lower_label)
+
+            # out-of-bounds coords
+            if w.lat > 90 or w.lat < -90 or w.lng > 180 or w.lng < -180:
+                labels = []
+                labels.append(w.label)
+                datacheckerrors.append(DatacheckEntry(r,labels,'OUT_OF_BOUNDS',
+                                                      "("+str(w.lat)+","+str(w.lng)+")"))
+
+            # duplicate coordinates
+            latlng = w.lat, w.lng
+            if latlng in coords_used:
+                for other_w in r.point_list:
+                    if w == other_w:
+                        break
+                    if w.lat == other_w.lat and w.lng == other_w.lng and w.label != other_w.label:
+                        labels = []
+                        labels.append(other_w.label)
+                        labels.append(w.label)
+                        datacheckerrors.append(DatacheckEntry(r,labels,"DUPLICATE_COORDS",
+                                                              "("+str(latlng[0])+","+str(latlng[1])+")"))
+            else:
+               coords_used.add(latlng)
+
+            # visible distance update, and last segment length check
+            if prev_w is not None:
+                last_distance = w.distance_to(prev_w)
+                visible_distance += last_distance
+                if last_distance > 20.0:
+                    labels = []
+                    labels.append(prev_w.label)
+                    labels.append(w.label)
+                    datacheckerrors.append(DatacheckEntry(r,labels,'LONG_SEGMENT',
+                                                          "{0:.2f}".format(last_distance)))
+
+            if not w.is_hidden:
+                # complete visible distance check, omit report for active
+                # systems to reduce clutter
+                if visible_distance > 10.0 and not h.active():
+                    labels = []
+                    labels.append(last_visible.label)
+                    labels.append(w.label)
+                    datacheckerrors.append(DatacheckEntry(r,labels,'VISIBLE_DISTANCE',
+                                                          "{0:.2f}".format(visible_distance)))
+                last_visible = w
+                visible_distance = 0.0
+
+                # looking for the route within the label
+                #match_start = w.label.find(r.route)
+                #if match_start >= 0:
+                    # we have a potential match, just need to make sure if the route
+                    # name ends with a number that the matched substring isn't followed
+                    # by more numbers (e.g., NY50 is an OK label in NY5)
+                #    if len(r.route) + match_start == len(w.label) or \
+                #            not w.label[len(r.route) + match_start].isdigit():
+                # partially complete "references own route" -- too many FP
+                #or re.fullmatch('.*/'+r.route+'.*',w.label[w.label) :
+                # first check for number match after a slash, if there is one
+                selfref_found = False
+                if '/' in w.label and r.route[-1].isdigit():
+                    digit_starts = len(r.route)-1
+                    while digit_starts >= 0 and r.route[digit_starts].isdigit():
+                        digit_starts-=1
+                    if w.label[w.label.index('/')+1:] == r.route[digit_starts+1:]:
+                        selfref_found = True
+                    if w.label[w.label.index('/')+1:] == r.route:
+                        selfref_found = True
+                    if '_' in w.label[w.label.index('/')+1:] and w.label[w.label.index('/')+1:w.label.rindex('_')] == r.route[digit_starts+1:]:
+                        selfref_found = True
+                    if '_' in w.label[w.label.index('/')+1:] and w.label[w.label.index('/')+1:w.label.rindex('_')] == r.route:
+                        selfref_found = True
+
+                # now the remaining checks
+                if selfref_found or r.route+r.banner == w.label or re.fullmatch(r.route+r.banner+'[_/].*',w.label):
+                    labels = []
+                    labels.append(w.label)
+                    datacheckerrors.append(DatacheckEntry(r,labels,'LABEL_SELFREF'))
+
+                # look for too many underscores in label
+                if w.label.count('_') > 1:
+                    labels = []
+                    labels.append(w.label)
+                    datacheckerrors.append(DatacheckEntry(r,labels,'LABEL_UNDERSCORES'))
+
+                # look for too many characters after underscore in label
+                if '_' in w.label:
+                    if w.label.index('_') < len(w.label) - 5:
+                        labels = []
+                        labels.append(w.label)
+                        datacheckerrors.append(DatacheckEntry(r,labels,'LONG_UNDERSCORE'))
+
+                # look for too many slashes in label
+                if w.label.count('/') > 1:
+                    labels = []
+                    labels.append(w.label)
+                    datacheckerrors.append(DatacheckEntry(r,labels,'LABEL_SLASHES'))
+
+                # look for parenthesis balance in label
+                if w.label.count('(') != w.label.count(')'):
+                    labels = []
+                    labels.append(w.label)
+                    datacheckerrors.append(DatacheckEntry(r,labels,'LABEL_PARENS'))
+
+                # look for labels with invalid characters
+                if not re.fullmatch('[a-zA-Z0-9()/\+\*_\-\.]+', w.label):
+                    labels = []
+                    labels.append(w.label)
+                    datacheckerrors.append(DatacheckEntry(r,labels,'LABEL_INVALID_CHAR'))
+
+                # look for labels with a slash after an underscore
+                if '_' in w.label and '/' in w.label and \
+                        w.label.index('/') > w.label.index('_'):
+                    labels = []
+                    labels.append(w.label)
+                    datacheckerrors.append(DatacheckEntry(r,labels,'NONTERMINAL_UNDERSCORE'))
+
+                # look for I-xx with Bus instead of BL or BS
+                if re.fullmatch('I\-[0-9]*Bus', w.label):
+                    labels = []
+                    labels.append(w.label)
+                    datacheckerrors.append(DatacheckEntry(r,labels,'BUS_WITH_I'))
+
+                # look for labels that look like hidden waypoints but
+                # which aren't hidden
+                if re.fullmatch('X[0-9][0-9][0-9][0-9][0-9][0-9]', w.label):
+                    labels = []
+                    labels.append(w.label)
+                    datacheckerrors.append(DatacheckEntry(r,labels,'LABEL_LOOKS_HIDDEN'))
+
+                # look for USxxxA but not USxxxAlt, B/Bus (others?)
+                ##if re.fullmatch('US[0-9]+A.*', w.label) and not re.fullmatch('US[0-9]+Alt.*', w.label) or \
+                ##   re.fullmatch('US[0-9]+B.*', w.label) and \
+                ##   not (re.fullmatch('US[0-9]+Bus.*', w.label) or re.fullmatch('US[0-9]+Byp.*', w.label)):
+                ##    labels = []
+                ##    labels.append(w.label)
+                ##    datacheckerrors.append(DatacheckEntry(r,labels,'US_BANNER'))
+
+            prev_w = w
+
+        # angle check is easier with a traditional for loop and array indices
+        for i in range(1, len(r.point_list)-1):
+            #print("computing angle for " + str(r.point_list[i-1]) + ' ' + str(r.point_list[i]) + ' ' + str(r.point_list[i+1]))
+            if r.point_list[i-1].same_coords(r.point_list[i]) or \
+               r.point_list[i+1].same_coords(r.point_list[i]):
+                labels = []
+                labels.append(r.point_list[i-1].label)
+                labels.append(r.point_list[i].label)
+                labels.append(r.point_list[i+1].label)
+                datacheckerrors.append(DatacheckEntry(r,labels,'BAD_ANGLE'))
+            else:
+                angle = r.point_list[i].angle(r.point_list[i-1],r.point_list[i+1])
+                if angle > 135:
+                    labels = []
+                    labels.append(r.point_list[i-1].label)
+                    labels.append(r.point_list[i].label)
+                    labels.append(r.point_list[i+1].label)
+                    datacheckerrors.append(DatacheckEntry(r,labels,'SHARP_ANGLE',
+                                                          "{0:.2f}".format(angle)))
+print("!", flush=True)
+print(et.et() + "Found " + str(len(datacheckerrors)) + " datacheck errors.")
+
+# now mark false positives
+print(et.et() + "Marking datacheck false positives.",end="",flush=True)
+fpfile = open(args.logfilepath+'/nearmatchfps.log','w',encoding='utf-8')
+fpfile.write("Log file created at: " + str(datetime.datetime.now()) + "\n")
+toremove = []
+counter = 0
+for d in datacheckerrors:
+    #print("Checking: " + str(d))
+    counter += 1
+    if counter % 1000 == 0:
+        print(".", end="",flush=True)
+    for fp in datacheckfps:
+        #print("Comparing: " + str(d) + " to " + str(fp))
+        if d.match(fp):
+            #print("Match!")
+            d.fp = True
+            toremove.append(fp)
+            break
+        if d.match_except_info(fp):
+            fpfile.write("DCERROR: " + str(d) + "\n")
+            fpfile.write("FPENTRY: " + fp[0] + ';' + fp[1] + ';' + fp[2] + ';' + fp[3] + ';' + fp[4] + ';' + fp[5] + '\n')
+            fpfile.write("REPLACEWITH: " + fp[0] + ';' + fp[1] + ';' + fp[2] + ';' + fp[3] + ';' + fp[4] + ';' + d.info + '\n')
+
+fpfile.close()
+# now remove the ones we matched from the list
+for fp in toremove:
+    counter += 1
+    if counter % 1000 == 0:
+        print(".", end="",flush=True)
+    if fp in datacheckfps:
+        datacheckfps.remove(fp)
+    else:
+        print("Matched FP entry not in list!: " + str(fp))
+print("!", flush=True)
+
+# write log of unmatched false positives from the datacheckfps.csv
+print(et.et() + "Writing log of unmatched datacheck FP entries.")
+fpfile = open(args.logfilepath+'/unmatchedfps.log','w',encoding='utf-8')
+fpfile.write("Log file created at: " + str(datetime.datetime.now()) + "\n")
+if len(datacheckfps) > 0:
+    for entry in datacheckfps:
+        fpfile.write(entry[0] + ';' + entry[1] + ';' + entry[2] + ';' + entry[3] + ';' + entry[4] + ';' + entry[5] + '\n')
+else:
+    fpfile.write("No unmatched FP entries.")
+fpfile.close()
 
 # datacheck.log file
 print(et.et() + "Writing datacheck.log")
