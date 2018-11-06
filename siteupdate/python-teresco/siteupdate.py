@@ -198,8 +198,8 @@ class WaypointQuadtree:
 
         else:
             # not refined, but should have no more than 50 points
-            if len(self.unique_locations) > 50:
-                print("ERROR: WaypointQuadtree.is_valid terminal quadrant has too many unique points (" + str(len(self.unique_locations)) + ")")
+            if self.unique_locations > 50:
+                print("ERROR: WaypointQuadtree.is_valid terminal quadrant has too many unique points (" + str(self.unique_locations) + ")")
                 return False
             # not refined, so should not have any children
             if self.nw_child is not None:
