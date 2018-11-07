@@ -2081,7 +2081,7 @@ print(str(len(all_wpt_files)) + " files found.")
 
 # For finding colocated Waypoints and concurrent segments, we have
 # quadtree of all Waypoints in existence to find them efficiently
-all_waypoints = WaypointQuadtree(-180,-90,180,90)
+all_waypoints = WaypointQuadtree(-90,-180,90,180)
 all_waypoints_lock = threading.Lock()
 
 print(et.et() + "Reading waypoints for all routes.")
