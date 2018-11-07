@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-# Travel Mapping Project, Jim Teresco, 2015, 2016, 2017
+# Travel Mapping Project, Jim Teresco, 2015-2018
 """Python code to read .csv and .wpt files and prepare for
 adding to the Travel Mapping Project database.
 
-(c) 2015, 2016, 2017, Jim Teresco
+(c) 2015-2018, Jim Teresco
 
 This module defines classes to represent the contents of a
 .csv file that lists the highways within a system, and a
@@ -58,6 +58,7 @@ class WaypointQuadtree:
         self.sw_child = None
         self.se_child = None
         self.points = []
+        self.unique_locations = 0
 
     def refine(self):
         """refine a quadtree into 4 sub-quadrants"""
@@ -71,13 +72,15 @@ class WaypointQuadtree:
         for p in points:
             self.insert(p)
 
-
     def insert(self,w):
         """insert Waypoint w into this quadtree node"""
         #print("QTDEBUG: " + str(self) + " insert " + str(w))
         if self.points is not None:
+            if self.waypoint_at_same_point(w) is None:
+                self.unique_locations += 1
+                #print("QTDEBUG: " + str(self) + " has " + str(self.unique_locations) + " unique locations")
             self.points.append(w)
-            if len(self.points) > 50:  # 50 points max per quadtree node
+            if self.unique_locations > 50:  # 50 unique points max per quadtree node
                 self.refine()
         else:
             if w.lat < self.mid_lat:
@@ -195,8 +198,8 @@ class WaypointQuadtree:
 
         else:
             # not refined, but should have no more than 50 points
-            if len(self.points) > 50:
-                print("ERROR: WaypointQuadtree.is_valid terminal quadrant has too many points (" + str(len(self.points)) + ")")
+            if self.unique_locations > 50:
+                print("ERROR: WaypointQuadtree.is_valid terminal quadrant has too many unique points (" + str(self.unique_locations) + ")")
                 return False
             # not refined, so should not have any children
             if self.nw_child is not None:
@@ -213,6 +216,22 @@ class WaypointQuadtree:
                 return False
 
         return True
+
+    def max_colocated(self):
+        """return the maximum number of waypoints colocated at any one location"""
+        max_col = 1
+        for p in self.point_list():
+            if max_col < p.num_colocated():
+                max_col = p.num_colocated()
+        print("Largest colocate count = " + str(max_col))
+        return max_col
+
+    def total_nodes(self):
+        if self.points is not None:
+            # not refined, no children, return 1 for self
+            return 1
+        else:
+            return 1 + self.nw_child.total_nodes() + self.ne_child.total_nodes() + self.sw_child.total_nodes() + self.se_child.total_nodes()
 
 class Waypoint:
     """This class encapsulates the information about a single waypoint
@@ -1035,8 +1054,8 @@ class DatacheckEntry:
     form a sharp angle)
 
     code is the error code string, one of SHARP_ANGLE, BAD_ANGLE,
-    DUPLICATE_LABELS, DUPLICATE_COORDS, LABEL_SELFREF,
-    LABEL_INVALID_CHAR, LONG_SEGMENT, LABEL_NO_VALID,
+    DUPLICATE_LABEL, DUPLICATE_COORDS, LABEL_SELFREF,
+    LABEL_INVALID_CHAR, LONG_SEGMENT,
     LABEL_UNDERSCORES, VISIBLE_DISTANCE, LABEL_PARENS, LACKS_GENERIC,
     BUS_WITH_I, NONTERMINAL_UNDERSCORE,
     LONG_UNDERSCORE, LABEL_SLASHES, US_BANNER, VISIBLE_HIDDEN_COLOC,
@@ -3592,12 +3611,13 @@ print("Processed " + str(routes) + " routes with a total of " + \
           str(points) + " points and " + str(segments) + " segments.")
 if points != all_waypoints.size():
     print("MISMATCH: all_waypoints contains " + str(all_waypoints.size()) + " waypoints!")
+print("WaypointQuadtree contains " + str(all_waypoints.total_nodes()) + " total nodes.")
 
 if not args.errorcheck:
     # compute colocation of waypoints stats
     print(et.et() + "Computing waypoint colocation stats, reporting all with 8 or more colocations:")
-    colocate_counts = [0]*50
-    largest_colocate_count = 1
+    largest_colocate_count = all_waypoints.max_colocated()
+    colocate_counts = [0]*(largest_colocate_count+1)
     big_colocate_locations = dict()
     for w in all_waypoints.point_list():
         c = w.num_colocated()
@@ -3614,8 +3634,6 @@ if not args.errorcheck:
                 big_colocate_locations[point] = the_list
             #print(str(w) + " with " + str(c) + " other points.")
         colocate_counts[c] += 1
-        if c > largest_colocate_count:
-            largest_colocate_count = c
     for place in big_colocate_locations:
         the_list = big_colocate_locations[place]
         print(str(place) + " is occupied by " + str(len(the_list)) + " waypoints: " + str(the_list))
