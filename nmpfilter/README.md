@@ -3,7 +3,11 @@
 **Purpose:**<br>
 Splits *tm-master.nmp* into smaller .nmp files filtered by country.
 
-**usage:**<br>
+**Compiling:**<br>
+C++11 support is required.<br>
+With GCC, I use the commandline `g++ nmpbycountry.cpp -std=c++11 -o nmpbycountry`
+
+**Usage:**<br>
 `nmpbycountry RgCsvFile MasterNMP OutputDir`, where
 * `RgCsvFile` is the path of *regions.csv*
 * `MasterNMP` is the path of *tm-master.nmp*
@@ -18,7 +22,7 @@ The output directory should be empty before running *nmpbycountry*. Files for co
 **Purpose:**<br>
 Splits *tm-master.nmp* into smaller .nmp files filtered by region.
 
-**usage:**<br>
+**Usage:**<br>
 `nmpbyregion HwyDataDir MasterNMP OutputDir`, where
 * `HwyDataDir` is the path of the *hwy_data* directory in the HighwayData repository, or equivalent
 * `MasterNMP` is the path of *tm-master.nmp*
@@ -31,7 +35,7 @@ Splits *tm-master.nmp* into smaller .nmp files filtered by region.
 **Purpose:**<br>
 Removes marked false-positive pairs from a specified .nmp file.
 
-**usage:**<br>
+**Usage:**<br>
 `nmpfpfilter InputFile OutputFile`
 
 ---
@@ -41,5 +45,5 @@ Removes marked false-positive pairs from a specified .nmp file.
 **Purpose:**<br>
 Removes all NMP pairs from a specified .nmp file except those that look intentional.
 
-**usage:**<br>
+**Usage:**<br>
 `nmplifilter InputFile OutputFile`

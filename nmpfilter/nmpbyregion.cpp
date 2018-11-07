@@ -1,4 +1,5 @@
 // Travel Mapping Project, Eric Bryant, 2018
+#include <ctime>
 #include <dirent.h>
 #include <fstream>
 #include <iostream>
@@ -63,6 +64,28 @@ int main(int argc, char *argv[])
 	{	cout << "usage: nmpbyregion HwyDataDir MasterNMP OutputDir\n";
 		return 0;
 	}
+
+	// Record execution start time
+	time_t StartTime = time(0);
+	char* LocalTime = ctime(&StartTime);
+
+	// Attempt to find most recent commit info
+	string MasterInfo;
+	string MasterPath = argv[1];
+	MasterPath += "../.git/refs/heads/master";
+	ifstream MasterFile(MasterPath.data());
+	if (MasterFile)
+		MasterFile >> MasterInfo;
+	else	MasterInfo = "unknown.";
+
+	// nmpbyregion.log
+	string LogPath = argv[3];
+	LogPath += "nmpbyregion.log";
+	ofstream LogFile(LogPath.data());
+	LogFile << "nmpbyregion executed " << LocalTime;
+	LogFile << "Most recent commit is " << MasterInfo << '\n';
+
+	// The actual filtering
 	vector<string> RgList;
 	GetRegions(argv[1], RgList);
 	filter(RgList, argv[2], argv[3]);

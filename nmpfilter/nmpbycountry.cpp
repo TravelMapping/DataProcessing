@@ -1,4 +1,5 @@
 // Travel Mapping Project, Eric Bryant, 2018
+#include <ctime>
 #include <fstream>
 #include <iostream>
 #include <list>
@@ -100,6 +101,29 @@ int main(int argc, char *argv[])
 	{	cout << "usage: nmpbycountry RgCsvFile MasterNMP OutputDir\n";
 		return 0;
 	}
+
+	// Record execution start time
+	time_t StartTime = time(0);
+	char* LocalTime = ctime(&StartTime);
+
+	// Attempt to find most recent commit info
+	string MasterInfo;
+	string MasterPath = argv[1];
+	MasterPath.erase(MasterPath.find_last_of("/\\")+1);
+	MasterPath += ".git/refs/heads/master";
+	ifstream MasterFile(MasterPath.data());
+	if (MasterFile)
+		MasterFile >> MasterInfo;
+	else	MasterInfo = "unknown.";
+
+	// nmpbyregion.log
+	string LogPath = argv[3];
+	LogPath += "nmpbycountry.log";
+	ofstream LogFile(LogPath.data());
+	LogFile << "nmpbycountry executed " << LocalTime;
+	LogFile << "Most recent commit is " << MasterInfo << '\n';
+
+	// The actual filtering
 	list<string> CoList;
 	vector<region> RgList;
 	vector<string> master;
