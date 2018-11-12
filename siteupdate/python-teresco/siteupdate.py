@@ -2856,19 +2856,22 @@ else:
 
     # We will create graph data and a graph file for only a few interesting
     # systems, as many are not useful on their own
+    h = None
     for hname in ['usai', 'usaus', 'cantch', 'eure']:
         h = None
         for hs in highway_systems:
             if hs.systemname == hname:
                 h = hs
                 break
-        print(h.systemname + ' ', end="",flush=True)
-        (sv, se) = graph_data.write_subgraph_tmg_simple(args.graphfilepath + '/' + h.systemname + '-system-simple.tmg', None, [ h ], None)
-        (cv, ce) = graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/' + h.systemname + '-system.tmg', None, [ h ], None)
-        graph_list.append(GraphListEntry(h.systemname + '-system-simple.tmg', h.systemname + ' (' + h.fullname + ')', sv, se, 'simple', 'system'))
-        graph_list.append(GraphListEntry(h.systemname + '-system.tmg', h.systemname + ' (' + h.fullname + ')', cv, ce, 'collapsed', 'system'))
-    graph_types.append(['system', 'Routes Within a Single Highway System',
-                        'These graphs contain the routes within a single highway system and are not restricted by region.'])
+        if h is not None:
+            print(h.systemname + ' ', end="",flush=True)
+            (sv, se) = graph_data.write_subgraph_tmg_simple(args.graphfilepath + '/' + h.systemname + '-system-simple.tmg', None, [ h ], None)
+            (cv, ce) = graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/' + h.systemname + '-system.tmg', None, [ h ], None)
+            graph_list.append(GraphListEntry(h.systemname + '-system-simple.tmg', h.systemname + ' (' + h.fullname + ')', sv, se, 'simple', 'system'))
+            graph_list.append(GraphListEntry(h.systemname + '-system.tmg', h.systemname + ' (' + h.fullname + ')', cv, ce, 'collapsed', 'system'))
+    if h is not None:
+        graph_types.append(['system', 'Routes Within a Single Highway System',
+                            'These graphs contain the routes within a single highway system and are not restricted by region.'])
     print("!")
 
     # Some additional interesting graphs, the "multisystem" graphs
