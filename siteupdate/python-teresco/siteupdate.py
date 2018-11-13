@@ -2971,8 +2971,7 @@ lines.pop(0)  # ignore header line
 datacheckfps = []
 datacheck_always_error = [ 'DUPLICATE_LABEL', 'HIDDEN_TERMINUS',
                            'LABEL_INVALID_CHAR', 'LABEL_SLASHES',
-                           'LONG_UNDERSCORE', 'NONTERMINAL_UNDERSCORE',
-                           'OUT_OF_BOUNDS' ]
+                           'LONG_UNDERSCORE', 'NONTERMINAL_UNDERSCORE' ]
 for line in lines:
     fields = line.rstrip('\n').split(';')
     if len(fields) != 6:
