@@ -2320,6 +2320,7 @@ for h in highway_systems:
             for label in sorted(r.labels_in_use):
                 inusefile.write(" " + label)
             inusefile.write("\n")
+            r.labels_in_use = None
 inusefile.close()
 
 # write log file for alt labels not in use
@@ -2335,6 +2336,7 @@ for h in highway_systems:
             for label in sorted(r.unused_alt_labels):
                 unusedfile.write(" " + label)
             unusedfile.write("\n")
+            r.unused_alt_labels = None
 unusedfile.write("Total: " + str(total_unused_alt_labels) + "\n")
 unusedfile.close()
 
