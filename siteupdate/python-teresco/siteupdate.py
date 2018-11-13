@@ -2317,7 +2317,7 @@ for h in highway_systems:
     for r in h.route_list:
         if len(r.labels_in_use) > 0:
             inusefile.write(r.root + "(" + str(len(r.point_list)) + "):")
-            for label in r.labels_in_use:
+            for label in sorted(r.labels_in_use):
                 inusefile.write(" " + label)
             inusefile.write("\n")
 inusefile.close()
