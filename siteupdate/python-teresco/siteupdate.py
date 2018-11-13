@@ -2332,7 +2332,7 @@ for h in highway_systems:
         if len(r.unused_alt_labels) > 0:
             total_unused_alt_labels += len(r.unused_alt_labels)
             unusedfile.write(r.root + "(" + str(len(r.unused_alt_labels)) + "):")
-            for label in r.unused_alt_labels:
+            for label in sorted(r.unused_alt_labels):
                 unusedfile.write(" " + label)
             unusedfile.write("\n")
 unusedfile.write("Total: " + str(total_unused_alt_labels) + "\n")
