@@ -1157,7 +1157,7 @@ class HighwayGraphVertexInfo:
 
     @staticmethod
     def visible_hidden_coloc(waypoint_list):
-        for w in range(len(waypoint_list)):
+        for w in range(1,len(waypoint_list)):
             if waypoint_list[w].is_hidden != waypoint_list[0].is_hidden:
                 return True
         return False
@@ -2317,9 +2317,10 @@ for h in highway_systems:
     for r in h.route_list:
         if len(r.labels_in_use) > 0:
             inusefile.write(r.root + "(" + str(len(r.point_list)) + "):")
-            for label in r.labels_in_use:
+            for label in sorted(r.labels_in_use):
                 inusefile.write(" " + label)
             inusefile.write("\n")
+            r.labels_in_use = None
 inusefile.close()
 
 # write log file for alt labels not in use
@@ -2332,9 +2333,10 @@ for h in highway_systems:
         if len(r.unused_alt_labels) > 0:
             total_unused_alt_labels += len(r.unused_alt_labels)
             unusedfile.write(r.root + "(" + str(len(r.unused_alt_labels)) + "):")
-            for label in r.unused_alt_labels:
+            for label in sorted(r.unused_alt_labels):
                 unusedfile.write(" " + label)
             unusedfile.write("\n")
+            r.unused_alt_labels = None
 unusedfile.write("Total: " + str(total_unused_alt_labels) + "\n")
 unusedfile.close()
 
@@ -2856,19 +2858,22 @@ else:
 
     # We will create graph data and a graph file for only a few interesting
     # systems, as many are not useful on their own
+    h = None
     for hname in ['usai', 'usaus', 'cantch', 'eure']:
         h = None
         for hs in highway_systems:
             if hs.systemname == hname:
                 h = hs
                 break
-        print(h.systemname + ' ', end="",flush=True)
-        (sv, se) = graph_data.write_subgraph_tmg_simple(args.graphfilepath + '/' + h.systemname + '-system-simple.tmg', None, [ h ], None)
-        (cv, ce) = graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/' + h.systemname + '-system.tmg', None, [ h ], None)
-        graph_list.append(GraphListEntry(h.systemname + '-system-simple.tmg', h.systemname + ' (' + h.fullname + ')', sv, se, 'simple', 'system'))
-        graph_list.append(GraphListEntry(h.systemname + '-system.tmg', h.systemname + ' (' + h.fullname + ')', cv, ce, 'collapsed', 'system'))
-    graph_types.append(['system', 'Routes Within a Single Highway System',
-                        'These graphs contain the routes within a single highway system and are not restricted by region.'])
+        if h is not None:
+            print(h.systemname + ' ', end="",flush=True)
+            (sv, se) = graph_data.write_subgraph_tmg_simple(args.graphfilepath + '/' + h.systemname + '-system-simple.tmg', None, [ h ], None)
+            (cv, ce) = graph_data.write_subgraph_tmg_collapsed(args.graphfilepath + '/' + h.systemname + '-system.tmg', None, [ h ], None)
+            graph_list.append(GraphListEntry(h.systemname + '-system-simple.tmg', h.systemname + ' (' + h.fullname + ')', sv, se, 'simple', 'system'))
+            graph_list.append(GraphListEntry(h.systemname + '-system.tmg', h.systemname + ' (' + h.fullname + ')', cv, ce, 'collapsed', 'system'))
+    if h is not None:
+        graph_types.append(['system', 'Routes Within a Single Highway System',
+                            'These graphs contain the routes within a single highway system and are not restricted by region.'])
     print("!")
 
     # Some additional interesting graphs, the "multisystem" graphs
@@ -2971,8 +2976,7 @@ lines.pop(0)  # ignore header line
 datacheckfps = []
 datacheck_always_error = [ 'DUPLICATE_LABEL', 'HIDDEN_TERMINUS',
                            'LABEL_INVALID_CHAR', 'LABEL_SLASHES',
-                           'LONG_UNDERSCORE', 'NONTERMINAL_UNDERSCORE',
-                           'OUT_OF_BOUNDS' ]
+                           'LONG_UNDERSCORE', 'NONTERMINAL_UNDERSCORE' ]
 for line in lines:
     fields = line.rstrip('\n').split(';')
     if len(fields) != 6:
@@ -3007,13 +3011,9 @@ for h in highway_systems:
 
         # look for hidden termini
         if r.point_list[0].is_hidden:
-            labels = []
-            labels.append(r.point_list[0].label)
-            datacheckerrors.append(DatacheckEntry(r,labels,'HIDDEN_TERMINUS'))
+            datacheckerrors.append(DatacheckEntry(r,[r.point_list[0].label],'HIDDEN_TERMINUS'))
         if r.point_list[len(r.point_list)-1].is_hidden:
-            labels = []
-            labels.append(r.point_list[len(r.point_list)-1].label)
-            datacheckerrors.append(DatacheckEntry(r,labels,'HIDDEN_TERMINUS'))
+            datacheckerrors.append(DatacheckEntry(r,[r.point_list[len(r.point_list)-1].label],'HIDDEN_TERMINUS'))
 
         for w in r.point_list:
             # duplicate labels
@@ -3022,17 +3022,13 @@ for h in highway_systems:
             for label in label_list:
                 lower_label = label.lower().strip("+*")
                 if lower_label in all_route_labels:
-                    labels = []
-                    labels.append(lower_label)
-                    datacheckerrors.append(DatacheckEntry(r,labels,"DUPLICATE_LABEL"))
+                    datacheckerrors.append(DatacheckEntry(r,[lower_label],"DUPLICATE_LABEL"))
                 else:
                     all_route_labels.add(lower_label)
 
             # out-of-bounds coords
             if w.lat > 90 or w.lat < -90 or w.lng > 180 or w.lng < -180:
-                labels = []
-                labels.append(w.label)
-                datacheckerrors.append(DatacheckEntry(r,labels,'OUT_OF_BOUNDS',
+                datacheckerrors.append(DatacheckEntry(r,[w.label],'OUT_OF_BOUNDS',
                                                       "("+str(w.lat)+","+str(w.lng)+")"))
 
             # duplicate coordinates
@@ -3100,68 +3096,48 @@ for h in highway_systems:
 
                 # now the remaining checks
                 if selfref_found or r.route+r.banner == w.label or re.fullmatch(r.route+r.banner+'[_/].*',w.label):
-                    labels = []
-                    labels.append(w.label)
-                    datacheckerrors.append(DatacheckEntry(r,labels,'LABEL_SELFREF'))
+                    datacheckerrors.append(DatacheckEntry(r,[w.label],'LABEL_SELFREF'))
 
                 # look for too many underscores in label
                 if w.label.count('_') > 1:
-                    labels = []
-                    labels.append(w.label)
-                    datacheckerrors.append(DatacheckEntry(r,labels,'LABEL_UNDERSCORES'))
+                    datacheckerrors.append(DatacheckEntry(r,[w.label],'LABEL_UNDERSCORES'))
 
                 # look for too many characters after underscore in label
                 if '_' in w.label:
                     if w.label.index('_') < len(w.label) - 5:
-                        labels = []
-                        labels.append(w.label)
-                        datacheckerrors.append(DatacheckEntry(r,labels,'LONG_UNDERSCORE'))
+                        datacheckerrors.append(DatacheckEntry(r,[w.label],'LONG_UNDERSCORE'))
 
                 # look for too many slashes in label
                 if w.label.count('/') > 1:
-                    labels = []
-                    labels.append(w.label)
-                    datacheckerrors.append(DatacheckEntry(r,labels,'LABEL_SLASHES'))
+                    datacheckerrors.append(DatacheckEntry(r,[w.label],'LABEL_SLASHES'))
 
                 # look for parenthesis balance in label
                 if w.label.count('(') != w.label.count(')'):
-                    labels = []
-                    labels.append(w.label)
-                    datacheckerrors.append(DatacheckEntry(r,labels,'LABEL_PARENS'))
+                    datacheckerrors.append(DatacheckEntry(r,[w.label],'LABEL_PARENS'))
 
                 # look for labels with invalid characters
                 if not re.fullmatch('[a-zA-Z0-9()/\+\*_\-\.]+', w.label):
-                    labels = []
-                    labels.append(w.label)
-                    datacheckerrors.append(DatacheckEntry(r,labels,'LABEL_INVALID_CHAR'))
+                    datacheckerrors.append(DatacheckEntry(r,[w.label],'LABEL_INVALID_CHAR'))
 
                 # look for labels with a slash after an underscore
                 if '_' in w.label and '/' in w.label and \
                         w.label.index('/') > w.label.index('_'):
-                    labels = []
-                    labels.append(w.label)
-                    datacheckerrors.append(DatacheckEntry(r,labels,'NONTERMINAL_UNDERSCORE'))
+                    datacheckerrors.append(DatacheckEntry(r,[w.label],'NONTERMINAL_UNDERSCORE'))
 
                 # look for I-xx with Bus instead of BL or BS
                 if re.fullmatch('I\-[0-9]*Bus', w.label):
-                    labels = []
-                    labels.append(w.label)
-                    datacheckerrors.append(DatacheckEntry(r,labels,'BUS_WITH_I'))
+                    datacheckerrors.append(DatacheckEntry(r,[w.label],'BUS_WITH_I'))
 
                 # look for labels that look like hidden waypoints but
                 # which aren't hidden
                 if re.fullmatch('X[0-9][0-9][0-9][0-9][0-9][0-9]', w.label):
-                    labels = []
-                    labels.append(w.label)
-                    datacheckerrors.append(DatacheckEntry(r,labels,'LABEL_LOOKS_HIDDEN'))
+                    datacheckerrors.append(DatacheckEntry(r,[w.label],'LABEL_LOOKS_HIDDEN'))
 
                 # look for USxxxA but not USxxxAlt, B/Bus (others?)
                 ##if re.fullmatch('US[0-9]+A.*', w.label) and not re.fullmatch('US[0-9]+Alt.*', w.label) or \
                 ##   re.fullmatch('US[0-9]+B.*', w.label) and \
                 ##   not (re.fullmatch('US[0-9]+Bus.*', w.label) or re.fullmatch('US[0-9]+Byp.*', w.label)):
-                ##    labels = []
-                ##    labels.append(w.label)
-                ##    datacheckerrors.append(DatacheckEntry(r,labels,'US_BANNER'))
+                ##    datacheckerrors.append(DatacheckEntry(r,[w.label],'US_BANNER'))
 
             prev_w = w
 
