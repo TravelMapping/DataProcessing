@@ -1157,7 +1157,7 @@ class HighwayGraphVertexInfo:
 
     @staticmethod
     def visible_hidden_coloc(waypoint_list):
-        for w in range(len(waypoint_list)):
+        for w in range(1,len(waypoint_list)):
             if waypoint_list[w].is_hidden != waypoint_list[0].is_hidden:
                 return True
         return False
