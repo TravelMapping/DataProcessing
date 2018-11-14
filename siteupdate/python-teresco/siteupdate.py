@@ -3163,6 +3163,8 @@ for h in highway_systems:
 print("!", flush=True)
 print(et.et() + "Found " + str(len(datacheckerrors)) + " datacheck errors.")
 
+datacheckerrors.sort(key=lambda DatacheckEntry: str(DatacheckEntry))
+
 # now mark false positives
 print(et.et() + "Marking datacheck false positives.",end="",flush=True)
 fpfile = open(args.logfilepath+'/nearmatchfps.log','w',encoding='utf-8')
