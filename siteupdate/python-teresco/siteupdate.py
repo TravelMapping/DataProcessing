@@ -2317,9 +2317,10 @@ for h in highway_systems:
     for r in h.route_list:
         if len(r.labels_in_use) > 0:
             inusefile.write(r.root + "(" + str(len(r.point_list)) + "):")
-            for label in r.labels_in_use:
+            for label in sorted(r.labels_in_use):
                 inusefile.write(" " + label)
             inusefile.write("\n")
+            r.labels_in_use = None
 inusefile.close()
 
 # write log file for alt labels not in use
@@ -2332,9 +2333,10 @@ for h in highway_systems:
         if len(r.unused_alt_labels) > 0:
             total_unused_alt_labels += len(r.unused_alt_labels)
             unusedfile.write(r.root + "(" + str(len(r.unused_alt_labels)) + "):")
-            for label in r.unused_alt_labels:
+            for label in sorted(r.unused_alt_labels):
                 unusedfile.write(" " + label)
             unusedfile.write("\n")
+            r.unused_alt_labels = None
 unusedfile.write("Total: " + str(total_unused_alt_labels) + "\n")
 unusedfile.close()
 
