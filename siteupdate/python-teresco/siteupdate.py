@@ -2791,6 +2791,7 @@ logfile = open(args.logfilepath + '/waypointsimplification.log', 'w')
 for line in graph_data.waypoint_naming_log:
     logfile.write(line + '\n')
 logfile.close()
+graph_data.waypoint_naming_log = None
 
 # create list of graph information for the DB
 graph_list = []
