@@ -2364,6 +2364,7 @@ for h in highway_systems:
                                         s.concurrent.append(other)
                                         concurrencyfile.write("New concurrency [" + str(s) + "][" + str(other) + "] (" + str(len(s.concurrent)) + ")\n")
                                     else:
+                                        other.concurrent = s.concurrent
                                         if other not in s.concurrent:
                                             s.concurrent.append(other)
                                             #concurrencyfile.write("Added concurrency [" + str(s) + "]-[" + str(other) + "] ("+ str(len(s.concurrent)) + ")\n")
