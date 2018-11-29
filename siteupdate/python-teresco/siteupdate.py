@@ -233,6 +233,15 @@ class WaypointQuadtree:
         else:
             return 1 + self.nw_child.total_nodes() + self.ne_child.total_nodes() + self.sw_child.total_nodes() + self.se_child.total_nodes()
 
+    def sort(self):
+        if self.points is None:
+            self.ne_child.sort()
+            self.nw_child.sort()
+            self.se_child.sort()
+            self.sw_child.sort()
+        else:
+            self.points.sort(key=lambda waypoint: waypoint.route.root + "@" + waypoint.label)
+
 class Waypoint:
     """This class encapsulates the information about a single waypoint
     from a .wpt file.
@@ -2145,6 +2154,9 @@ for t in thread_list:
 
 #for h in highway_systems:
 #    read_wpts_for_highway_system(h)
+
+print(et.et() + "Sorting waypoints in Quadtree.")
+all_waypoints.sort()
 
 print(et.et() + "Finding unprocessed wpt files.", flush=True)
 unprocessedfile = open(args.logfilepath+'/unprocessedwpts.log','w',encoding='utf-8')
