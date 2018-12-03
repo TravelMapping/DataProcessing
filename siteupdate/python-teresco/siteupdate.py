@@ -1155,8 +1155,6 @@ class HighwayGraphVertexInfo:
                     hid_list.append(w)
                 else:
                     vis_list.append(w)
-            vis_list.sort(key=lambda waypoint: waypoint.route.root + "@" + waypoint.label)
-            hid_list.sort(key=lambda waypoint: waypoint.route.root + "@" + waypoint.label)
             datacheckerrors.append(DatacheckEntry(vis_list[0].route,[vis_list[0].label],"VISIBLE_HIDDEN_COLOC",
                                                   hid_list[0].route.root+"@"+hid_list[0].label))
 
@@ -1589,8 +1587,9 @@ class HighwayGraph:
                     vinfo.is_hidden = False
                     continue
                 if len(vinfo.incident_collapsed_edges) > 2:
-                    dc_waypoint = sorted(vinfo.first_waypoint.colocated, key=lambda waypoint: waypoint.route.root + "@" + waypoint.label)[0]
-                    datacheckerrors.append(DatacheckEntry(dc_waypoint.route,[dc_waypoint.label],"HIDDEN_JUNCTION",str(len(vinfo.incident_collapsed_edges))))
+                    datacheckerrors.append(DatacheckEntry(vinfo.first_waypoint.colocated[0].route,
+                                           [vinfo.first_waypoint.colocated[0].label],
+                                           "HIDDEN_JUNCTION",str(len(vinfo.incident_collapsed_edges))))
                     vinfo.is_hidden = False
                     continue
                 # construct from vertex_info this time
@@ -2157,6 +2156,11 @@ for t in thread_list:
 
 print(et.et() + "Sorting waypoints in Quadtree.")
 all_waypoints.sort()
+
+print(et.et() + "Sorting colocated point lists.")
+for w in all_waypoints.point_list():
+    if w.colocated is not None:
+        w.colocated.sort(key=lambda waypoint: waypoint.route.root + "@" + waypoint.label)
 
 print(et.et() + "Finding unprocessed wpt files.", flush=True)
 unprocessedfile = open(args.logfilepath+'/unprocessedwpts.log','w',encoding='utf-8')
