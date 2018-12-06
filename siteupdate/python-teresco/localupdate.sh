@@ -82,6 +82,14 @@ if [ "$graphflag" != "-k" ]; then
     cd -
 fi
 
+echo "$0: loading primary DB"
+date
+mysql --defaults-group-suffix=tmapadmin -u travmapadmin TravelMapping < TravelMapping-$datestr.sql
+/bin/rm $tmwebbase/dbupdating
+echo "$0: switching to primary DB"
+date
+ln -sf $tmwebbase/lib/tm.conf.standard $tmwebbase/lib/tm.conf
+
 echo "$0: installing logs, stats, nmp_merged, graphs, archiving old contents in $tmpdir/$datestr"
 mkdir -p $tmpdir/$datestr
 mv $tmwebbase/$logdir $tmpdir/$datestr
@@ -95,13 +103,7 @@ if [ "$graphflag" != "-k" ]; then
     mv $datestr/$graphdir $tmwebbase
 fi
 rmdir $datestr
-echo "$0: loading primary DB"
-date
-mysql --defaults-group-suffix=tmapadmin -u travmapadmin TravelMapping < TravelMapping-$datestr.sql
-/bin/rm $tmwebbase/dbupdating
-echo "$0: switching to primary DB"
-date
-ln -sf $tmwebbase/lib/tm.conf.standard $tmwebbase/lib/tm.conf
+
 echo "$0: loading DB copy"
 mysql --defaults-group-suffix=tmapadmin -u travmapadmin TravelMappingCopy < TravelMapping-$datestr.sql
 echo "$0: moving sql file to archive"
