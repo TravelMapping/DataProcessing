@@ -26,7 +26,7 @@ python3 siteupdate.py
 There is also a collection of bash scripts that run this program, typically launched with
 
 ```
-sh siteupdate.sh
+sh localupdate.sh
 ```
 
-that also transfers files to the DB and web servers and reloads the DB.
+right on the main server.  In addition to running the siteupdate.py program, this also transfers files to the appropriate directories on the web servers and reloads the DB.
