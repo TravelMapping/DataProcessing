@@ -77,8 +77,8 @@ class WaypointQuadtree:
         #print("QTDEBUG: " + str(self) + " insert " + str(w))
         if self.points is not None:
             if self.waypoint_at_same_point(w) is None:
+                #print("QTDEBUG: " + str(self) + " at " + str(self.unique_locations) + " unique locations")
                 self.unique_locations += 1
-                #print("QTDEBUG: " + str(self) + " has " + str(self.unique_locations) + " unique locations")
             self.points.append(w)
             if self.unique_locations > 50:  # 50 unique points max per quadtree node
                 self.refine()
