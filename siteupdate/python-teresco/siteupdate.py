@@ -830,7 +830,7 @@ class ConnectedRoute:
             rootOrder += 1
         if len(self.roots) < 1:
             el.add_error("No roots in _con.csv line [" + line + "]")
-        # will be computed for routes in active systems later
+        # will be computed for routes in active & preview systems later
         self.mileage = 0.0
 
     def csv_line(self):
