@@ -672,7 +672,6 @@ class Route:
     def __init__(self,line,system,el):
         """initialize object from a .csv file line, but do not
         yet read in waypoint file"""
-        self.line = line
         fields = line.split(";")
         if len(fields) != 8:
             el.add_error("Could not parse csv line: [" + line +
@@ -800,7 +799,6 @@ class ConnectedRoute:
 
     def __init__(self,line,system,el):
         """initialize the object from the _con.csv line given"""
-        self.line = line
         fields = line.split(";")
         if len(fields) != 5:
             el.add_error("Could not parse _con.csv line: [" + line +
