@@ -2025,12 +2025,12 @@ for h in highway_systems:
             
 con_roots = set()
 for h in highway_systems:
-    for r in h.con_route_list:
-        for cr in r.roots:
-            if cr.root in con_roots:
-                el.add_error("Duplicate root in con_route lists: " + cr.root)
+    for cr in h.con_route_list:
+        for r in cr.roots:
+            if r.root in con_roots:
+                el.add_error("Duplicate root in con_route lists: " + r.root)
             else:
-                con_roots.add(cr.root)
+                con_roots.add(r.root)
 
 # Make sure every route was listed as a part of some connected route
 if len(roots) == len(con_roots):
