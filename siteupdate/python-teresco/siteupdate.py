@@ -3202,9 +3202,8 @@ for d in datacheckerrors:
             toremove.append(fp)
             break
         if d.match_except_info(fp):
-            fpfile.write("DCERROR: " + str(d) + "\n")
-            fpfile.write("FPENTRY: " + fp[0] + ';' + fp[1] + ';' + fp[2] + ';' + fp[3] + ';' + fp[4] + ';' + fp[5] + '\n')
-            fpfile.write("REPLACEWITH: " + fp[0] + ';' + fp[1] + ';' + fp[2] + ';' + fp[3] + ';' + fp[4] + ';' + d.info + '\n')
+            fpfile.write("FP_ENTRY: " + fp[0] + ';' + fp[1] + ';' + fp[2] + ';' + fp[3] + ';' + fp[4] + ';' + fp[5] + '\n')
+            fpfile.write("CHANGETO: " + fp[0] + ';' + fp[1] + ';' + fp[2] + ';' + fp[3] + ';' + fp[4] + ';' + d.info + '\n')
 
 fpfile.close()
 # now remove the ones we matched from the list
