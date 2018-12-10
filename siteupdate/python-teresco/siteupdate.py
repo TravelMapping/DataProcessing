@@ -2053,14 +2053,9 @@ else:
 
 # report any duplicate list names as errors
 if len(duplicate_list_names) > 0:
-    print("Found " + str(len(duplicate_list_names)) + " DUPLICATE_LIST_NAME cases.")
-    num_found = 0
-    for h in highway_systems:
-        for r in h.route_list:
-            if r.region + ' ' + r.list_entry_name() in duplicate_list_names:
-                el.add_error("Duplicate list name: " + r.region + ' ' + r.list_entry_name())
-                num_found += 1
-    print("Added " + str(num_found) + " DUPLICATE_LIST_NAME error entries.")
+    print("Found " + str(len(duplicate_list_names)) + " DUPLICATE_LIST_NAME case(s).")
+    for d in duplicate_list_names:
+        el.add_error("Duplicate list name: " + d)
 else:
     print("No duplicate list names found.")
 
