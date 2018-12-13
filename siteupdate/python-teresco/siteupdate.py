@@ -927,7 +927,7 @@ class TravelerList:
     start_waypoint end_waypoint
     """
 
-    def __init__(self,travelername,systems,route_hash,path="../../../UserData/list_files"):
+    def __init__(self,travelername,route_hash,path="../../../UserData/list_files"):
         self.list_entries = []
         self.clinched_segments = set()
         self.traveler_name = travelername[:-5]
@@ -2280,7 +2280,7 @@ print(et.et() + "Processing traveler list files:",end="",flush=True)
 for t in traveler_ids:
     if t.endswith('.list'):
         print(" " + t,end="",flush=True)
-        traveler_lists.append(TravelerList(t,highway_systems,route_hash,args.userlistfilepath))
+        traveler_lists.append(TravelerList(t,route_hash,args.userlistfilepath))
 print(" processed " + str(len(traveler_lists)) + " traveler list files.")
 
 # Read updates.csv file, just keep in the fields array for now since we're
