@@ -601,7 +601,7 @@ class HighwaySegment:
         self.segment_name = None
 
     def __str__(self):
-        return self.route.region + " " + self.route.route + " " + self.waypoint1.label + " " + self.waypoint2.label
+        return self.route.readable_name() + " " + self.waypoint1.label + " " + self.waypoint2.label
 
     def add_clinched_by(self,traveler):
         if traveler not in self.clinched_by:
