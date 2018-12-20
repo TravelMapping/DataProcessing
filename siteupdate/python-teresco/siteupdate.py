@@ -77,8 +77,8 @@ class WaypointQuadtree:
         #print("QTDEBUG: " + str(self) + " insert " + str(w))
         if self.points is not None:
             if self.waypoint_at_same_point(w) is None:
+                #print("QTDEBUG: " + str(self) + " at " + str(self.unique_locations) + " unique locations")
                 self.unique_locations += 1
-                #print("QTDEBUG: " + str(self) + " has " + str(self.unique_locations) + " unique locations")
             self.points.append(w)
             if self.unique_locations > 50:  # 50 unique points max per quadtree node
                 self.refine()
@@ -601,8 +601,7 @@ class HighwaySegment:
         self.segment_name = None
 
     def __str__(self):
-        return self.waypoint1.label + " to " + self.waypoint2.label + \
-            " via " + self.route.root
+        return self.route.readable_name() + " " + self.waypoint1.label + " " + self.waypoint2.label
 
     def add_clinched_by(self,traveler):
         if traveler not in self.clinched_by:
@@ -673,7 +672,6 @@ class Route:
     def __init__(self,line,system,el):
         """initialize object from a .csv file line, but do not
         yet read in waypoint file"""
-        self.line = line
         fields = line.split(";")
         if len(fields) != 8:
             el.add_error("Could not parse csv line: [" + line +
@@ -801,7 +799,6 @@ class ConnectedRoute:
 
     def __init__(self,line,system,el):
         """initialize the object from the _con.csv line given"""
-        self.line = line
         fields = line.split(";")
         if len(fields) != 5:
             el.add_error("Could not parse _con.csv line: [" + line +
@@ -833,7 +830,7 @@ class ConnectedRoute:
             rootOrder += 1
         if len(self.roots) < 1:
             el.add_error("No roots in _con.csv line [" + line + "]")
-        # will be computed for routes in active systems later
+        # will be computed for routes in active & preview systems later
         self.mileage = 0.0
 
     def csv_line(self):
@@ -930,7 +927,7 @@ class TravelerList:
     start_waypoint end_waypoint
     """
 
-    def __init__(self,travelername,systems,route_hash,path="../../../UserData/list_files"):
+    def __init__(self,travelername,route_hash,path="../../../UserData/list_files"):
         self.list_entries = []
         self.clinched_segments = set()
         self.traveler_name = travelername[:-5]
@@ -1155,8 +1152,6 @@ class HighwayGraphVertexInfo:
                     hid_list.append(w)
                 else:
                     vis_list.append(w)
-            vis_list.sort(key=lambda waypoint: waypoint.route.root + "@" + waypoint.label)
-            hid_list.sort(key=lambda waypoint: waypoint.route.root + "@" + waypoint.label)
             datacheckerrors.append(DatacheckEntry(vis_list[0].route,[vis_list[0].label],"VISIBLE_HIDDEN_COLOC",
                                                   hid_list[0].route.root+"@"+hid_list[0].label))
 
@@ -1589,8 +1584,9 @@ class HighwayGraph:
                     vinfo.is_hidden = False
                     continue
                 if len(vinfo.incident_collapsed_edges) > 2:
-                    dc_waypoint = sorted(vinfo.first_waypoint.colocated, key=lambda waypoint: waypoint.route.root + "@" + waypoint.label)[0]
-                    datacheckerrors.append(DatacheckEntry(dc_waypoint.route,[dc_waypoint.label],"HIDDEN_JUNCTION",str(len(vinfo.incident_collapsed_edges))))
+                    datacheckerrors.append(DatacheckEntry(vinfo.first_waypoint.colocated[0].route,
+                                           [vinfo.first_waypoint.colocated[0].label],
+                                           "HIDDEN_JUNCTION",str(len(vinfo.incident_collapsed_edges))))
                     vinfo.is_hidden = False
                     continue
                 # construct from vertex_info this time
@@ -2029,12 +2025,12 @@ for h in highway_systems:
             
 con_roots = set()
 for h in highway_systems:
-    for r in h.con_route_list:
-        for cr in r.roots:
-            if cr.root in con_roots:
-                el.add_error("Duplicate root in con_route lists: " + cr.root)
+    for cr in h.con_route_list:
+        for r in cr.roots:
+            if r.root in con_roots:
+                el.add_error("Duplicate root in con_route lists: " + r.root)
             else:
-                con_roots.add(cr.root)
+                con_roots.add(r.root)
 
 # Make sure every route was listed as a part of some connected route
 if len(roots) == len(con_roots):
@@ -2057,14 +2053,9 @@ else:
 
 # report any duplicate list names as errors
 if len(duplicate_list_names) > 0:
-    print("Found " + str(len(duplicate_list_names)) + " DUPLICATE_LIST_NAME cases.")
-    num_found = 0
-    for h in highway_systems:
-        for r in h.route_list:
-            if r.region + ' ' + r.list_entry_name() in duplicate_list_names:
-                el.add_error("Duplicate list name: " + r.region + ' ' + r.list_entry_name())
-                num_found += 1
-    print("Added " + str(num_found) + " DUPLICATE_LIST_NAME error entries.")
+    print("Found " + str(len(duplicate_list_names)) + " DUPLICATE_LIST_NAME case(s).")
+    for d in duplicate_list_names:
+        el.add_error("Duplicate list name: " + d)
 else:
     print("No duplicate list names found.")
 
@@ -2157,6 +2148,11 @@ for t in thread_list:
 
 print(et.et() + "Sorting waypoints in Quadtree.")
 all_waypoints.sort()
+
+print(et.et() + "Sorting colocated point lists.")
+for w in all_waypoints.point_list():
+    if w.colocated is not None:
+        w.colocated.sort(key=lambda waypoint: waypoint.route.root + "@" + waypoint.label)
 
 print(et.et() + "Finding unprocessed wpt files.", flush=True)
 unprocessedfile = open(args.logfilepath+'/unprocessedwpts.log','w',encoding='utf-8')
@@ -2284,7 +2280,7 @@ print(et.et() + "Processing traveler list files:",end="",flush=True)
 for t in traveler_ids:
     if t.endswith('.list'):
         print(" " + t,end="",flush=True)
-        traveler_lists.append(TravelerList(t,highway_systems,route_hash,args.userlistfilepath))
+        traveler_lists.append(TravelerList(t,route_hash,args.userlistfilepath))
 print(" processed " + str(len(traveler_lists)) + " traveler list files.")
 
 # Read updates.csv file, just keep in the fields array for now since we're
@@ -3198,9 +3194,8 @@ for d in datacheckerrors:
             toremove.append(fp)
             break
         if d.match_except_info(fp):
-            fpfile.write("DCERROR: " + str(d) + "\n")
-            fpfile.write("FPENTRY: " + fp[0] + ';' + fp[1] + ';' + fp[2] + ';' + fp[3] + ';' + fp[4] + ';' + fp[5] + '\n')
-            fpfile.write("REPLACEWITH: " + fp[0] + ';' + fp[1] + ';' + fp[2] + ';' + fp[3] + ';' + fp[4] + ';' + d.info + '\n')
+            fpfile.write("FP_ENTRY: " + fp[0] + ';' + fp[1] + ';' + fp[2] + ';' + fp[3] + ';' + fp[4] + ';' + fp[5] + '\n')
+            fpfile.write("CHANGETO: " + fp[0] + ';' + fp[1] + ';' + fp[2] + ';' + fp[3] + ';' + fp[4] + ';' + d.info + '\n')
 
 fpfile.close()
 # now remove the ones we matched from the list
