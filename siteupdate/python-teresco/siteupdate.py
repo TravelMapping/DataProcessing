@@ -253,7 +253,7 @@ class Waypoint:
     root is the unique identifier for the route in which this waypoint
     is defined
     """
-    def __init__(self,line,route):
+    def __init__(self,line,route,datacheckerrors):
         """initialize object from a .wpt file line"""
         self.route = route
         parts = line.split()
@@ -266,8 +266,61 @@ class Waypoint:
             self.alt_labels = []
         # last has the URL, which needs more work to get lat/lng
         url_parts = parts[-1].split('=')
+        if len(url_parts) < 3:
+            datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_URL', parts[-1]))
+            self.lat = 0
+            self.lng = 0
+            self.colocated = None
+            self.near_miss_points = None
+            return
         lat_string = url_parts[1].split("&")[0] # chop off "&lon"
         lng_string = url_parts[2].split("&")[0] # chop off possible "&zoom"
+
+        # make sure lat_string is valid
+        point_count = 0
+        for c in range(len(lat_string)):
+            # check for multiple decimal points
+            if lat_string[c] == '.':
+                point_count += 1
+                if point_count > 1:
+                    datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_URL', parts[-1]))
+                    lat_string = "0"
+                    lng_string = "0"
+                    break
+            # check for minus sign not at beginning
+            if lat_string[c] == '-' and c > 0:
+                datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_URL', parts[-1]))
+                lat_string = "0"
+                lng_string = "0"
+                break
+            # check for invalid characters
+            if lat_string[c] not in "-.0123456789":
+                datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_URL', parts[-1]))
+                lat_string = "0"
+                lng_string = "0"
+                break
+
+        # make sure lng_string is valid
+        point_count = 0
+        for c in range(len(lng_string)):
+            # check for multiple decimal points
+            if lng_string[c] == '.':
+                point_count += 1
+                if point_count > 1:
+                    datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_URL', parts[-1]))
+                    lng_string = "0"
+                    break
+            # check for minus sign not at beginning
+            if lng_string[c] == '-' and c > 0:
+                datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_URL', parts[-1]))
+                lng_string = "0"
+                break
+            # check for invalid characters
+            if lng_string[c] not in "-.0123456789":
+                datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_URL', parts[-1]))
+                lng_string = "0"
+                break
+
         self.lat = float(lat_string)
         self.lng = float(lng_string)
         # also keep track of a list of colocated waypoints, if any
@@ -710,9 +763,10 @@ class Route:
             file.close()
             w = None
             for line in lines:
-                if len(line.rstrip('\n')) > 0:
+                line = line.strip()
+                if len(line) > 0:
                     previous_point = w
-                    w = Waypoint(line.rstrip('\n'),self)
+                    w = Waypoint(line,self,datacheckerrors)
                     self.point_list.append(w)
                     # populate unused alt labels
                     for label in w.alt_labels:
@@ -1061,7 +1115,7 @@ class DatacheckEntry:
 
     code is the error code string, one of SHARP_ANGLE, BAD_ANGLE,
     DUPLICATE_LABEL, DUPLICATE_COORDS, LABEL_SELFREF,
-    LABEL_INVALID_CHAR, LONG_SEGMENT,
+    LABEL_INVALID_CHAR, LONG_SEGMENT, MALFORMED_URL,
     LABEL_UNDERSCORES, VISIBLE_DISTANCE, LABEL_PARENS, LACKS_GENERIC,
     BUS_WITH_I, NONTERMINAL_UNDERSCORE,
     LONG_UNDERSCORE, LABEL_SLASHES, US_BANNER, VISIBLE_HIDDEN_COLOC,
@@ -2986,7 +3040,8 @@ lines.pop(0)  # ignore header line
 datacheckfps = []
 datacheck_always_error = [ 'DUPLICATE_LABEL', 'HIDDEN_TERMINUS',
                            'LABEL_INVALID_CHAR', 'LABEL_SLASHES',
-                           'LONG_UNDERSCORE', 'NONTERMINAL_UNDERSCORE' ]
+                           'LONG_UNDERSCORE', 'MALFORMED_URL',
+                           'NONTERMINAL_UNDERSCORE' ]
 for line in lines:
     fields = line.rstrip('\n').split(';')
     if len(fields) != 6:
