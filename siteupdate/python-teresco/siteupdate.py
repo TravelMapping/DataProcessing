@@ -3690,6 +3690,6 @@ if not args.errorcheck:
     print("Unique locations: " + str(unique_locations))
 
 if args.errorcheck:
-    print("Data check successful!")
+    print("!!! DATA CHECK SUCCESSFUL !!!")
 
 print("Total run time: " + et.et())
