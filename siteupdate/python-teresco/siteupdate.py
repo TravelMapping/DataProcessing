@@ -308,16 +308,19 @@ class Waypoint:
                 point_count += 1
                 if point_count > 1:
                     datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_URL', parts[-1]))
+                    lat_string = "0"
                     lng_string = "0"
                     break
             # check for minus sign not at beginning
             if lng_string[c] == '-' and c > 0:
                 datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_URL', parts[-1]))
+                lat_string = "0"
                 lng_string = "0"
                 break
             # check for invalid characters
             if lng_string[c] not in "-.0123456789":
                 datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_URL', parts[-1]))
+                lat_string = "0"
                 lng_string = "0"
                 break
 
