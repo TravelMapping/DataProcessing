@@ -48,12 +48,13 @@ touch $tmwebbase/dbupdating
 echo "**********************************************************************"
 echo "**********************************************************************"
 echo "*                                                                    *"
-echo "* CHECK FOR USER SLEEP MYSQL PROCESSES USING SHOW PROCESSLIST;       *"
-echo "* BEFORE THE SITE UPDATE SCRIPT FINISHES TO AVOID A POSSIBLE HANG    *"
-echo "* DURING INGESTION OF THE NEW .sql FILE.                             *"
+echo "* CHECKING FOR USER SLEEP MYSQL PROCESSES USING SHOW PROCESSLIST;    *"
+echo "* REMOVE ANY ENTRIES BEFORE THE SITE UPDATE SCRIPT FINISHES TO AVOID *"
+echo "* A POSSIBLE HANG DURING INGESTION OF THE NEW .sql FILE.             *"
 echo "*                                                                    *"
 echo "**********************************************************************"
 echo "**********************************************************************"
+echo "show processlist;" | mysql --defaults-group-suffix=travmap -u travmap
 
 echo "$0: launching siteupdate.py"
 PYTHONIOENCODING='utf-8' ./siteupdate.py -d TravelMapping-$datestr $graphflag -l $datestr/$logdir -c $datestr/$statdir -g $datestr/$graphdir -n $datestr/$nmpmdir | tee $datestr/$logdir/siteupdate.log 2>&1 || exit 1
