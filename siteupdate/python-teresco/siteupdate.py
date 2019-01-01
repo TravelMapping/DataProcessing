@@ -77,8 +77,8 @@ class WaypointQuadtree:
         #print("QTDEBUG: " + str(self) + " insert " + str(w))
         if self.points is not None:
             if self.waypoint_at_same_point(w) is None:
+                #print("QTDEBUG: " + str(self) + " at " + str(self.unique_locations) + " unique locations")
                 self.unique_locations += 1
-                #print("QTDEBUG: " + str(self) + " has " + str(self.unique_locations) + " unique locations")
             self.points.append(w)
             if self.unique_locations > 50:  # 50 unique points max per quadtree node
                 self.refine()
@@ -233,6 +233,15 @@ class WaypointQuadtree:
         else:
             return 1 + self.nw_child.total_nodes() + self.ne_child.total_nodes() + self.sw_child.total_nodes() + self.se_child.total_nodes()
 
+    def sort(self):
+        if self.points is None:
+            self.ne_child.sort()
+            self.nw_child.sort()
+            self.se_child.sort()
+            self.sw_child.sort()
+        else:
+            self.points.sort(key=lambda waypoint: waypoint.route.root + "@" + waypoint.label)
+
 class Waypoint:
     """This class encapsulates the information about a single waypoint
     from a .wpt file.
@@ -244,7 +253,7 @@ class Waypoint:
     root is the unique identifier for the route in which this waypoint
     is defined
     """
-    def __init__(self,line,route):
+    def __init__(self,line,route,datacheckerrors):
         """initialize object from a .wpt file line"""
         self.route = route
         parts = line.split()
@@ -257,8 +266,64 @@ class Waypoint:
             self.alt_labels = []
         # last has the URL, which needs more work to get lat/lng
         url_parts = parts[-1].split('=')
+        if len(url_parts) < 3:
+            datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_URL', parts[-1]))
+            self.lat = 0
+            self.lng = 0
+            self.colocated = None
+            self.near_miss_points = None
+            return
         lat_string = url_parts[1].split("&")[0] # chop off "&lon"
         lng_string = url_parts[2].split("&")[0] # chop off possible "&zoom"
+
+        # make sure lat_string is valid
+        point_count = 0
+        for c in range(len(lat_string)):
+            # check for multiple decimal points
+            if lat_string[c] == '.':
+                point_count += 1
+                if point_count > 1:
+                    datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_URL', parts[-1]))
+                    lat_string = "0"
+                    lng_string = "0"
+                    break
+            # check for minus sign not at beginning
+            if lat_string[c] == '-' and c > 0:
+                datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_URL', parts[-1]))
+                lat_string = "0"
+                lng_string = "0"
+                break
+            # check for invalid characters
+            if lat_string[c] not in "-.0123456789":
+                datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_URL', parts[-1]))
+                lat_string = "0"
+                lng_string = "0"
+                break
+
+        # make sure lng_string is valid
+        point_count = 0
+        for c in range(len(lng_string)):
+            # check for multiple decimal points
+            if lng_string[c] == '.':
+                point_count += 1
+                if point_count > 1:
+                    datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_URL', parts[-1]))
+                    lat_string = "0"
+                    lng_string = "0"
+                    break
+            # check for minus sign not at beginning
+            if lng_string[c] == '-' and c > 0:
+                datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_URL', parts[-1]))
+                lat_string = "0"
+                lng_string = "0"
+                break
+            # check for invalid characters
+            if lng_string[c] not in "-.0123456789":
+                datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_URL', parts[-1]))
+                lat_string = "0"
+                lng_string = "0"
+                break
+
         self.lat = float(lat_string)
         self.lng = float(lng_string)
         # also keep track of a list of colocated waypoints, if any
@@ -592,8 +657,7 @@ class HighwaySegment:
         self.segment_name = None
 
     def __str__(self):
-        return self.waypoint1.label + " to " + self.waypoint2.label + \
-            " via " + self.route.root
+        return self.route.readable_name() + " " + self.waypoint1.label + " " + self.waypoint2.label
 
     def add_clinched_by(self,traveler):
         if traveler not in self.clinched_by:
@@ -664,7 +728,6 @@ class Route:
     def __init__(self,line,system,el):
         """initialize object from a .csv file line, but do not
         yet read in waypoint file"""
-        self.line = line
         fields = line.split(";")
         if len(fields) != 8:
             el.add_error("Could not parse csv line: [" + line +
@@ -703,9 +766,10 @@ class Route:
             file.close()
             w = None
             for line in lines:
-                if len(line.rstrip('\n')) > 0:
+                line = line.strip()
+                if len(line) > 0:
                     previous_point = w
-                    w = Waypoint(line.rstrip('\n'),self)
+                    w = Waypoint(line,self,datacheckerrors)
                     self.point_list.append(w)
                     # populate unused alt labels
                     for label in w.alt_labels:
@@ -792,7 +856,6 @@ class ConnectedRoute:
 
     def __init__(self,line,system,el):
         """initialize the object from the _con.csv line given"""
-        self.line = line
         fields = line.split(";")
         if len(fields) != 5:
             el.add_error("Could not parse _con.csv line: [" + line +
@@ -824,7 +887,7 @@ class ConnectedRoute:
             rootOrder += 1
         if len(self.roots) < 1:
             el.add_error("No roots in _con.csv line [" + line + "]")
-        # will be computed for routes in active systems later
+        # will be computed for routes in active & preview systems later
         self.mileage = 0.0
 
     def csv_line(self):
@@ -921,7 +984,7 @@ class TravelerList:
     start_waypoint end_waypoint
     """
 
-    def __init__(self,travelername,systems,route_hash,path="../../../UserData/list_files"):
+    def __init__(self,travelername,route_hash,path="../../../UserData/list_files"):
         self.list_entries = []
         self.clinched_segments = set()
         self.traveler_name = travelername[:-5]
@@ -1055,7 +1118,7 @@ class DatacheckEntry:
 
     code is the error code string, one of SHARP_ANGLE, BAD_ANGLE,
     DUPLICATE_LABEL, DUPLICATE_COORDS, LABEL_SELFREF,
-    LABEL_INVALID_CHAR, LONG_SEGMENT,
+    LABEL_INVALID_CHAR, LONG_SEGMENT, MALFORMED_URL,
     LABEL_UNDERSCORES, VISIBLE_DISTANCE, LABEL_PARENS, LACKS_GENERIC,
     BUS_WITH_I, NONTERMINAL_UNDERSCORE,
     LONG_UNDERSCORE, LABEL_SLASHES, US_BANNER, VISIBLE_HIDDEN_COLOC,
@@ -1146,8 +1209,6 @@ class HighwayGraphVertexInfo:
                     hid_list.append(w)
                 else:
                     vis_list.append(w)
-            vis_list.sort(key=lambda waypoint: waypoint.route.root + "@" + waypoint.label)
-            hid_list.sort(key=lambda waypoint: waypoint.route.root + "@" + waypoint.label)
             datacheckerrors.append(DatacheckEntry(vis_list[0].route,[vis_list[0].label],"VISIBLE_HIDDEN_COLOC",
                                                   hid_list[0].route.root+"@"+hid_list[0].label))
 
@@ -1580,8 +1641,9 @@ class HighwayGraph:
                     vinfo.is_hidden = False
                     continue
                 if len(vinfo.incident_collapsed_edges) > 2:
-                    dc_waypoint = sorted(vinfo.first_waypoint.colocated, key=lambda waypoint: waypoint.route.root + "@" + waypoint.label)[0]
-                    datacheckerrors.append(DatacheckEntry(dc_waypoint.route,[dc_waypoint.label],"HIDDEN_JUNCTION",str(len(vinfo.incident_collapsed_edges))))
+                    datacheckerrors.append(DatacheckEntry(vinfo.first_waypoint.colocated[0].route,
+                                           [vinfo.first_waypoint.colocated[0].label],
+                                           "HIDDEN_JUNCTION",str(len(vinfo.incident_collapsed_edges))))
                     vinfo.is_hidden = False
                     continue
                 # construct from vertex_info this time
@@ -2020,12 +2082,12 @@ for h in highway_systems:
             
 con_roots = set()
 for h in highway_systems:
-    for r in h.con_route_list:
-        for cr in r.roots:
-            if cr.root in con_roots:
-                el.add_error("Duplicate root in con_route lists: " + cr.root)
+    for cr in h.con_route_list:
+        for r in cr.roots:
+            if r.root in con_roots:
+                el.add_error("Duplicate root in con_route lists: " + r.root)
             else:
-                con_roots.add(cr.root)
+                con_roots.add(r.root)
 
 # Make sure every route was listed as a part of some connected route
 if len(roots) == len(con_roots):
@@ -2048,14 +2110,9 @@ else:
 
 # report any duplicate list names as errors
 if len(duplicate_list_names) > 0:
-    print("Found " + str(len(duplicate_list_names)) + " DUPLICATE_LIST_NAME cases.")
-    num_found = 0
-    for h in highway_systems:
-        for r in h.route_list:
-            if r.region + ' ' + r.list_entry_name() in duplicate_list_names:
-                el.add_error("Duplicate list name: " + r.region + ' ' + r.list_entry_name())
-                num_found += 1
-    print("Added " + str(num_found) + " DUPLICATE_LIST_NAME error entries.")
+    print("Found " + str(len(duplicate_list_names)) + " DUPLICATE_LIST_NAME case(s).")
+    for d in duplicate_list_names:
+        el.add_error("Duplicate list name: " + d)
 else:
     print("No duplicate list names found.")
 
@@ -2145,6 +2202,14 @@ for t in thread_list:
 
 #for h in highway_systems:
 #    read_wpts_for_highway_system(h)
+
+print(et.et() + "Sorting waypoints in Quadtree.")
+all_waypoints.sort()
+
+print(et.et() + "Sorting colocated point lists.")
+for w in all_waypoints.point_list():
+    if w.colocated is not None:
+        w.colocated.sort(key=lambda waypoint: waypoint.route.root + "@" + waypoint.label)
 
 print(et.et() + "Finding unprocessed wpt files.", flush=True)
 unprocessedfile = open(args.logfilepath+'/unprocessedwpts.log','w',encoding='utf-8')
@@ -2272,7 +2337,7 @@ print(et.et() + "Processing traveler list files:",end="",flush=True)
 for t in traveler_ids:
     if t.endswith('.list'):
         print(" " + t,end="",flush=True)
-        traveler_lists.append(TravelerList(t,highway_systems,route_hash,args.userlistfilepath))
+        traveler_lists.append(TravelerList(t,route_hash,args.userlistfilepath))
 print(" processed " + str(len(traveler_lists)) + " traveler list files.")
 
 # Read updates.csv file, just keep in the fields array for now since we're
@@ -2364,6 +2429,7 @@ for h in highway_systems:
                                         s.concurrent.append(other)
                                         concurrencyfile.write("New concurrency [" + str(s) + "][" + str(other) + "] (" + str(len(s.concurrent)) + ")\n")
                                     else:
+                                        other.concurrent = s.concurrent
                                         if other not in s.concurrent:
                                             s.concurrent.append(other)
                                             #concurrencyfile.write("Added concurrency [" + str(s) + "]-[" + str(other) + "] ("+ str(len(s.concurrent)) + ")\n")
@@ -2791,6 +2857,7 @@ logfile = open(args.logfilepath + '/waypointsimplification.log', 'w')
 for line in graph_data.waypoint_naming_log:
     logfile.write(line + '\n')
 logfile.close()
+graph_data.waypoint_naming_log = None
 
 # create list of graph information for the DB
 graph_list = []
@@ -2976,7 +3043,8 @@ lines.pop(0)  # ignore header line
 datacheckfps = []
 datacheck_always_error = [ 'DUPLICATE_LABEL', 'HIDDEN_TERMINUS',
                            'LABEL_INVALID_CHAR', 'LABEL_SLASHES',
-                           'LONG_UNDERSCORE', 'NONTERMINAL_UNDERSCORE' ]
+                           'LONG_UNDERSCORE', 'MALFORMED_URL',
+                           'NONTERMINAL_UNDERSCORE' ]
 for line in lines:
     fields = line.rstrip('\n').split(';')
     if len(fields) != 6:
@@ -3163,6 +3231,8 @@ for h in highway_systems:
 print("!", flush=True)
 print(et.et() + "Found " + str(len(datacheckerrors)) + " datacheck errors.")
 
+datacheckerrors.sort(key=lambda DatacheckEntry: str(DatacheckEntry))
+
 # now mark false positives
 print(et.et() + "Marking datacheck false positives.",end="",flush=True)
 fpfile = open(args.logfilepath+'/nearmatchfps.log','w',encoding='utf-8')
@@ -3182,9 +3252,8 @@ for d in datacheckerrors:
             toremove.append(fp)
             break
         if d.match_except_info(fp):
-            fpfile.write("DCERROR: " + str(d) + "\n")
-            fpfile.write("FPENTRY: " + fp[0] + ';' + fp[1] + ';' + fp[2] + ';' + fp[3] + ';' + fp[4] + ';' + fp[5] + '\n')
-            fpfile.write("REPLACEWITH: " + fp[0] + ';' + fp[1] + ';' + fp[2] + ';' + fp[3] + ';' + fp[4] + ';' + d.info + '\n')
+            fpfile.write("FP_ENTRY: " + fp[0] + ';' + fp[1] + ';' + fp[2] + ';' + fp[3] + ';' + fp[4] + ';' + fp[5] + '\n')
+            fpfile.write("CHANGETO: " + fp[0] + ';' + fp[1] + ';' + fp[2] + ';' + fp[3] + ';' + fp[4] + ';' + d.info + '\n')
 
 fpfile.close()
 # now remove the ones we matched from the list
@@ -3621,6 +3690,6 @@ if not args.errorcheck:
     print("Unique locations: " + str(unique_locations))
 
 if args.errorcheck:
-    print("Data check successful!")
+    print("!!! DATA CHECK SUCCESSFUL !!!")
 
 print("Total run time: " + et.et())

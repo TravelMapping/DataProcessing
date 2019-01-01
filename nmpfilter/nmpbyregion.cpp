@@ -72,6 +72,7 @@ int main(int argc, char *argv[])
 	// Attempt to find most recent commit info
 	string MasterInfo;
 	string MasterPath = argv[1];
+	if (MasterPath.back() != '/') MasterPath += '/';
 	MasterPath += "../.git/refs/heads/master";
 	ifstream MasterFile(MasterPath.data());
 	if (MasterFile)
