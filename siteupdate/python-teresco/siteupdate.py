@@ -2891,7 +2891,7 @@ else:
                         'These graphs contain all routes currently plotted in the Travel Mapping project.'])
 
     # graphs restricted by place/area - from areagraphs.csv file
-    print(et.et() + "Creating area data graphs.", flush=True)
+    print(et.et() + "\nCreating area data graphs.", flush=True)
     with open(args.highwaydatapath+"/graphs/areagraphs.csv", "rt",encoding='utf-8') as file:
         lines = file.readlines()
     lines.pop(0);  # ignore header line
@@ -2933,16 +2933,19 @@ else:
                         'These graphs contain all routes currently plotted within the given region.'])
     print("!")
 
-    # Graphs restricted by system
+    # Graphs restricted by system - from systemgraphs.csv file
     print(et.et() + "Creating system data graphs.", flush=True)
 
     # We will create graph data and a graph file for only a few interesting
     # systems, as many are not useful on their own
     h = None
-    for hname in ['usai', 'usaus', 'cantch', 'eure']:
+    with open(args.highwaydatapath+"/graphs/systemgraphs.csv", "rt",encoding='utf-8') as file:
+        lines = file.readlines()
+    lines.pop(0);  # ignore header line
+    for hname in lines:
         h = None
         for hs in highway_systems:
-            if hs.systemname == hname:
+            if hs.systemname == hname.strip():
                 h = hs
                 break
         if h is not None:
