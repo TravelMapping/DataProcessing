@@ -1042,8 +1042,8 @@ class TravelerList:
                 checking_index = 0;
                 for w in r.point_list:
                     lower_label = w.label.lower().strip("+*")
-                    list_label_1 = fields[2].lower().strip("*")
-                    list_label_2 = fields[3].lower().strip("*")
+                    list_label_1 = fields[2].lower().strip("+*")
+                    list_label_2 = fields[3].lower().strip("+*")
                     if list_label_1 == lower_label or list_label_2 == lower_label:
                         canonical_waypoints.append(w)
                         canonical_waypoint_indices.append(checking_index)
