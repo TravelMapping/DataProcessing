@@ -3202,6 +3202,9 @@ for h in highway_systems:
                 # look for labels with invalid characters
                 if not re.fullmatch('[a-zA-Z0-9()/\+\*_\-\.]+', w.label):
                     datacheckerrors.append(DatacheckEntry(r,[w.label],'LABEL_INVALID_CHAR'))
+                for a in w.alt_labels:
+                    if not re.fullmatch('[a-zA-Z0-9()/\+\*_\-\.]+', a):
+                        datacheckerrors.append(DatacheckEntry(r,[a],'LABEL_INVALID_CHAR'))
 
                 # look for labels with a slash after an underscore
                 if '_' in w.label and '/' in w.label and \
