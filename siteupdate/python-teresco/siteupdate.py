@@ -2891,7 +2891,7 @@ else:
                         'These graphs contain all routes currently plotted in the Travel Mapping project.'])
 
     # graphs restricted by place/area - from areagraphs.csv file
-    print(et.et() + "\nCreating area data graphs.", flush=True)
+    print("\n" + et.et() + "Creating area data graphs.", flush=True)
     with open(args.highwaydatapath+"/graphs/areagraphs.csv", "rt",encoding='utf-8') as file:
         lines = file.readlines()
     lines.pop(0);  # ignore header line
