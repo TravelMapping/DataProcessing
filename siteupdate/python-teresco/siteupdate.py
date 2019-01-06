@@ -1042,8 +1042,8 @@ class TravelerList:
                 checking_index = 0;
                 for w in r.point_list:
                     lower_label = w.label.lower().strip("+*")
-                    list_label_1 = fields[2].lower().strip("*")
-                    list_label_2 = fields[3].lower().strip("*")
+                    list_label_1 = fields[2].lower().strip("+*")
+                    list_label_2 = fields[3].lower().strip("+*")
                     if list_label_1 == lower_label or list_label_2 == lower_label:
                         canonical_waypoints.append(w)
                         canonical_waypoint_indices.append(checking_index)
@@ -2891,7 +2891,7 @@ else:
                         'These graphs contain all routes currently plotted in the Travel Mapping project.'])
 
     # graphs restricted by place/area - from areagraphs.csv file
-    print(et.et() + "\nCreating area data graphs.", flush=True)
+    print("\n" + et.et() + "Creating area data graphs.", flush=True)
     with open(args.highwaydatapath+"/graphs/areagraphs.csv", "rt",encoding='utf-8') as file:
         lines = file.readlines()
     lines.pop(0);  # ignore header line
@@ -3202,6 +3202,9 @@ for h in highway_systems:
                 # look for labels with invalid characters
                 if not re.fullmatch('[a-zA-Z0-9()/\+\*_\-\.]+', w.label):
                     datacheckerrors.append(DatacheckEntry(r,[w.label],'LABEL_INVALID_CHAR'))
+                for a in w.alt_labels:
+                    if not re.fullmatch('[a-zA-Z0-9()/\+\*_\-\.]+', a):
+                        datacheckerrors.append(DatacheckEntry(r,[a],'LABEL_INVALID_CHAR'))
 
                 # look for labels with a slash after an underscore
                 if '_' in w.label and '/' in w.label and \
