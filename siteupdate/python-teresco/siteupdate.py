@@ -2860,6 +2860,34 @@ for h in highway_systems:
     sysfile.write('\n')
     sysfile.close()
 
+# read in the datacheck false positives list
+print(et.et() + "Reading datacheckfps.csv.",flush=True)
+with open(args.highwaydatapath+"/datacheckfps.csv", "rt",encoding='utf-8') as file:
+    lines = file.readlines()
+
+lines.pop(0)  # ignore header line
+datacheckfps = []
+datacheck_always_error = [ 'DUPLICATE_LABEL', 'HIDDEN_TERMINUS',
+                           'LABEL_INVALID_CHAR', 'LABEL_SLASHES',
+                           'LONG_UNDERSCORE', 'MALFORMED_URL',
+                           'NONTERMINAL_UNDERSCORE' ]
+for line in lines:
+    fields = line.rstrip('\n').split(';')
+    if len(fields) != 6:
+        el.add_error("Could not parse datacheckfps.csv line: " + line)
+        continue
+    if fields[4] in datacheck_always_error:
+        print("datacheckfps.csv line not allowed (always error): " + line)
+        continue
+    datacheckfps.append(fields)
+
+# See if we have any errors that should be fatal to the site update process
+if len(el.error_list) > 0:
+    print("ABORTING due to " + str(len(el.error_list)) + " errors:")
+    for i in range(len(el.error_list)):
+        print(str(i+1) + ": " + el.error_list[i])
+    sys.exit(1)
+
 # Build a graph structure out of all highway data in active and
 # preview systems
 print(et.et() + "Setting up for graphs of highway data.", flush=True)
@@ -3051,33 +3079,6 @@ else:
 
 # data check: visit each system and route and check for various problems
 print(et.et() + "Performing data checks.",end="",flush=True)
-# first, read in the false positives list
-with open(args.highwaydatapath+"/datacheckfps.csv", "rt",encoding='utf-8') as file:
-    lines = file.readlines()
-
-lines.pop(0)  # ignore header line
-datacheckfps = []
-datacheck_always_error = [ 'DUPLICATE_LABEL', 'HIDDEN_TERMINUS',
-                           'LABEL_INVALID_CHAR', 'LABEL_SLASHES',
-                           'LONG_UNDERSCORE', 'MALFORMED_URL',
-                           'NONTERMINAL_UNDERSCORE' ]
-for line in lines:
-    fields = line.rstrip('\n').split(';')
-    if len(fields) != 6:
-        el.add_error("Could not parse datacheckfps.csv line: " + line)
-        continue
-    if fields[4] in datacheck_always_error:
-        print("datacheckfps.csv line not allowed (always error): " + line)
-        continue
-    datacheckfps.append(fields)
-
-# See if we have any errors that should be fatal to the site update process
-if len(el.error_list) > 0:
-    print("ABORTING due to " + str(len(el.error_list)) + " errors:")
-    for i in range(len(el.error_list)):
-        print(str(i+1) + ": " + el.error_list[i])
-    sys.exit(1)
-
 # perform most datachecks here (list initialized above)
 for h in highway_systems:
     print(".",end="",flush=True)
