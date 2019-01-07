@@ -2359,6 +2359,7 @@ updates = []
 print(et.et() + "Reading updates file.  ",end="",flush=True)
 with open(args.highwaydatapath+"/updates.csv", "rt", encoding='UTF-8') as file:
     lines = file.readlines()
+file.close()
 
 lines.pop(0)  # ignore header line
 for line in lines:
@@ -2376,6 +2377,7 @@ systemupdates = []
 print(et.et() + "Reading systemupdates file.  ",end="",flush=True)
 with open(args.highwaydatapath+"/systemupdates.csv", "rt", encoding='UTF-8') as file:
     lines = file.readlines()
+file.close()
 
 lines.pop(0)  # ignore header line
 for line in lines:
@@ -2864,6 +2866,7 @@ for h in highway_systems:
 print(et.et() + "Reading datacheckfps.csv.",flush=True)
 with open(args.highwaydatapath+"/datacheckfps.csv", "rt",encoding='utf-8') as file:
     lines = file.readlines()
+file.close()
 
 lines.pop(0)  # ignore header line
 datacheckfps = []
@@ -2922,6 +2925,7 @@ else:
     print("\n" + et.et() + "Creating area data graphs.", flush=True)
     with open(args.highwaydatapath+"/graphs/areagraphs.csv", "rt",encoding='utf-8') as file:
         lines = file.readlines()
+    file.close()
     lines.pop(0);  # ignore header line
     area_list = []
     for line in lines:
@@ -2969,6 +2973,7 @@ else:
     h = None
     with open(args.highwaydatapath+"/graphs/systemgraphs.csv", "rt",encoding='utf-8') as file:
         lines = file.readlines()
+    file.close()
     lines.pop(0);  # ignore header line
     for hname in lines:
         h = None
@@ -2992,6 +2997,7 @@ else:
 
     with open(args.highwaydatapath+"/graphs/multisystem.csv", "rt",encoding='utf-8') as file:
         lines = file.readlines()
+    file.close()
     lines.pop(0);  # ignore header line
     for line in lines:
         fields = line.rstrip('\n').split(";")
@@ -3017,6 +3023,7 @@ else:
 
     with open(args.highwaydatapath+"/graphs/multiregion.csv", "rt",encoding='utf-8') as file:
         lines = file.readlines()
+    file.close()
     lines.pop(0);  # ignore header line
     for line in lines:
         fields = line.rstrip('\n').split(";")
