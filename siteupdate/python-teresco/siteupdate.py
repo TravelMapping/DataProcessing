@@ -2242,13 +2242,14 @@ print(et.et() + "Near-miss point log and tm-master.nmp file.", flush=True)
 # read in fp file
 nmpfplist = []
 nmpfpfile = open(args.highwaydatapath+'/nmpfps.log','r')
-nmpfilelines = nmpfpfile.readlines()
-for line in nmpfilelines:
+nmpfpfilelines = nmpfpfile.readlines()
+for line in nmpfpfilelines:
     if len(line.rstrip('\n ')) > 0:
         nmpfplist.append(line.rstrip('\n '))
 nmpfpfile.close()
 
-nmpfile = open(args.logfilepath+'/nearmisspoints.log','w')
+nmploglines = []
+nmplog = open(args.logfilepath+'/nearmisspoints.log','w')
 nmpnmp = open(args.logfilepath+'/tm-master.nmp','w')
 for w in all_waypoints.point_list():
     if w.near_miss_points is not None:
@@ -2287,14 +2288,20 @@ for w in all_waypoints.point_list():
             extra_field += "LI"
         if extra_field != "":
             extra_field = " " + extra_field
-        nmpfile.write(nmpline.rstrip() + '\n')
+        nmploglines.append(nmpline.rstrip())
 
-        # write actual lines to nmp file, indicating FP and/or LI
+        # write actual lines to .nmp file, indicating FP and/or LI
         # for marked FPs or looks intentional items
         for nmpnmpline in nmpnmplines:
             nmpnmp.write(nmpnmpline + extra_field + "\n")
-nmpfile.close()
 nmpnmp.close()
+
+# sort and write actual lines to nearmisspoints.log
+nmploglines.sort()
+for n in nmploglines:
+    nmplog.write(n + '\n')
+nmploglines = None
+nmplog.close()
 
 # report any unmatched nmpfps.log entries
 nmpfpsunmatchedfile = open(args.logfilepath+'/nmpfpsunmatched.log','w')
