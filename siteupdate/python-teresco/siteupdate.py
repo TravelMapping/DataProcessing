@@ -2615,7 +2615,7 @@ for h in highway_systems:
                              + ' mi\n')
     if len(h.mileage_by_region) > 1:
         hdstatsfile.write("System " + h.systemname + " by region:\n")
-        for region in list(h.mileage_by_region.keys()):
+        for region in sorted(h.mileage_by_region.keys()):
             hdstatsfile.write(region + ": " + "{0:.2f}".format(h.mileage_by_region[region]) + " mi\n")
     hdstatsfile.write("System " + h.systemname + " by route:\n")
     for cr in h.con_route_list:
