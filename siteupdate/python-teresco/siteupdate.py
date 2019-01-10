@@ -878,7 +878,7 @@ class ConnectedRoute:
             el.add_error("System mismatch parsing line [" + line + "], expected " + system.systemname)
         self.route = fields[1]
         self.banner = fields[2]
-        self.groupname = fields[3].replace("'","''")
+        self.groupname = fields[3]
         # fields[4] is the list of roots, which will become a python list
         # of Route objects already in the system
         self.roots = []
@@ -905,7 +905,7 @@ class ConnectedRoute:
 
     def csv_line(self):
         """return csv line to insert into a table"""
-        return "'" + self.system.systemname + "','" + self.route + "','" + self.banner + "','" + self.groupname + "','" + self.roots[0].root + "','" + str(self.mileage) + "'";
+        return "'" + self.system.systemname + "','" + self.route + "','" + self.banner + "','" + self.groupname.replace("'","''") + "','" + self.roots[0].root + "','" + str(self.mileage) + "'";
 
     def readable_name(self):
         """return a string for a human-readable connected route name"""
