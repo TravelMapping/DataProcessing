@@ -878,7 +878,7 @@ class ConnectedRoute:
             el.add_error("System mismatch parsing line [" + line + "], expected " + system.systemname)
         self.route = fields[1]
         self.banner = fields[2]
-        self.groupname = fields[3].replace("'","''")
+        self.groupname = fields[3]
         # fields[4] is the list of roots, which will become a python list
         # of Route objects already in the system
         self.roots = []
@@ -905,7 +905,7 @@ class ConnectedRoute:
 
     def csv_line(self):
         """return csv line to insert into a table"""
-        return "'" + self.system.systemname + "','" + self.route + "','" + self.banner + "','" + self.groupname + "','" + self.roots[0].root + "','" + str(self.mileage) + "'";
+        return "'" + self.system.systemname + "','" + self.route + "','" + self.banner + "','" + self.groupname.replace("'","''") + "','" + self.roots[0].root + "','" + str(self.mileage) + "'";
 
     def readable_name(self):
         """return a string for a human-readable connected route name"""
@@ -2622,7 +2622,7 @@ for h in highway_systems:
                              + ' mi\n')
     if len(h.mileage_by_region) > 1:
         hdstatsfile.write("System " + h.systemname + " by region:\n")
-        for region in list(h.mileage_by_region.keys()):
+        for region in sorted(h.mileage_by_region.keys()):
             hdstatsfile.write(region + ": " + "{0:.2f}".format(h.mileage_by_region[region]) + " mi\n")
     hdstatsfile.write("System " + h.systemname + " by route:\n")
     for cr in h.con_route_list:
@@ -2658,7 +2658,7 @@ for t in traveler_lists:
     t.log_entries.append("Overall in active+preview systems: " + format_clinched_mi(t_active_preview_miles,active_preview_miles))
 
     t.log_entries.append("Overall by region: (each line reports active only then active+preview)")
-    for region in list(t.active_preview_mileage_by_region.keys()):
+    for region in sorted(t.active_preview_mileage_by_region.keys()):
         t_active_miles = 0.0
         total_active_miles = 0.0
         if region in list(t.active_only_mileage_by_region.keys()):
@@ -2716,7 +2716,7 @@ for t in traveler_lists:
             if t_system_overall > 0.0:
                 if len(h.mileage_by_region) > 1:
                     t.log_entries.append("System " + h.systemname + " by region:")
-                for region in list(h.mileage_by_region.keys()):
+                for region in sorted(h.mileage_by_region.keys()):
                     system_region_mileage = 0.0
                     if h.systemname in t.system_region_mileages and region in t.system_region_mileages[h.systemname]:
                         system_region_mileage = t.system_region_mileages[h.systemname][region]
