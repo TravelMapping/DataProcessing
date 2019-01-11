@@ -2709,7 +2709,7 @@ for t in traveler_lists:
             if t_system_overall > 0.0:
                 if len(h.mileage_by_region) > 1:
                     t.log_entries.append("System " + h.systemname + " by region:")
-                for region in list(h.mileage_by_region.keys()):
+                for region in sorted(h.mileage_by_region.keys()):
                     system_region_mileage = 0.0
                     if h.systemname in t.system_region_mileages and region in t.system_region_mileages[h.systemname]:
                         system_region_mileage = t.system_region_mileages[h.systemname][region]
