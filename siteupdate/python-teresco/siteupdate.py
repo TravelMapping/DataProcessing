@@ -2651,7 +2651,7 @@ for t in traveler_lists:
     t.log_entries.append("Overall in active+preview systems: " + format_clinched_mi(t_active_preview_miles,active_preview_miles))
 
     t.log_entries.append("Overall by region: (each line reports active only then active+preview)")
-    for region in list(t.active_preview_mileage_by_region.keys()):
+    for region in sorted(t.active_preview_mileage_by_region.keys()):
         t_active_miles = 0.0
         total_active_miles = 0.0
         if region in list(t.active_only_mileage_by_region.keys()):
