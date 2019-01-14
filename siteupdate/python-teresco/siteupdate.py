@@ -878,7 +878,7 @@ class ConnectedRoute:
             el.add_error("System mismatch parsing line [" + line + "], expected " + system.systemname)
         self.route = fields[1]
         self.banner = fields[2]
-        self.groupname = fields[3].replace("'","''")
+        self.groupname = fields[3]
         # fields[4] is the list of roots, which will become a python list
         # of Route objects already in the system
         self.roots = []
@@ -905,7 +905,7 @@ class ConnectedRoute:
 
     def csv_line(self):
         """return csv line to insert into a table"""
-        return "'" + self.system.systemname + "','" + self.route + "','" + self.banner + "','" + self.groupname + "','" + self.roots[0].root + "','" + str(self.mileage) + "'";
+        return "'" + self.system.systemname + "','" + self.route + "','" + self.banner + "','" + self.groupname.replace("'","''") + "','" + self.roots[0].root + "','" + str(self.mileage) + "'";
 
     def readable_name(self):
         """return a string for a human-readable connected route name"""
@@ -2242,13 +2242,14 @@ print(et.et() + "Near-miss point log and tm-master.nmp file.", flush=True)
 # read in fp file
 nmpfplist = []
 nmpfpfile = open(args.highwaydatapath+'/nmpfps.log','r')
-nmpfilelines = nmpfpfile.readlines()
-for line in nmpfilelines:
+nmpfpfilelines = nmpfpfile.readlines()
+for line in nmpfpfilelines:
     if len(line.rstrip('\n ')) > 0:
         nmpfplist.append(line.rstrip('\n '))
 nmpfpfile.close()
 
-nmpfile = open(args.logfilepath+'/nearmisspoints.log','w')
+nmploglines = []
+nmplog = open(args.logfilepath+'/nearmisspoints.log','w')
 nmpnmp = open(args.logfilepath+'/tm-master.nmp','w')
 for w in all_waypoints.point_list():
     if w.near_miss_points is not None:
@@ -2287,14 +2288,20 @@ for w in all_waypoints.point_list():
             extra_field += "LI"
         if extra_field != "":
             extra_field = " " + extra_field
-        nmpfile.write(nmpline.rstrip() + '\n')
+        nmploglines.append(nmpline.rstrip())
 
-        # write actual lines to nmp file, indicating FP and/or LI
+        # write actual lines to .nmp file, indicating FP and/or LI
         # for marked FPs or looks intentional items
         for nmpnmpline in nmpnmplines:
             nmpnmp.write(nmpnmpline + extra_field + "\n")
-nmpfile.close()
 nmpnmp.close()
+
+# sort and write actual lines to nearmisspoints.log
+nmploglines.sort()
+for n in nmploglines:
+    nmplog.write(n + '\n')
+nmploglines = None
+nmplog.close()
 
 # report any unmatched nmpfps.log entries
 nmpfpsunmatchedfile = open(args.logfilepath+'/nmpfpsunmatched.log','w')
@@ -2359,6 +2366,7 @@ updates = []
 print(et.et() + "Reading updates file.  ",end="",flush=True)
 with open(args.highwaydatapath+"/updates.csv", "rt", encoding='UTF-8') as file:
     lines = file.readlines()
+file.close()
 
 lines.pop(0)  # ignore header line
 for line in lines:
@@ -2376,6 +2384,7 @@ systemupdates = []
 print(et.et() + "Reading systemupdates file.  ",end="",flush=True)
 with open(args.highwaydatapath+"/systemupdates.csv", "rt", encoding='UTF-8') as file:
     lines = file.readlines()
+file.close()
 
 lines.pop(0)  # ignore header line
 for line in lines:
@@ -2613,7 +2622,7 @@ for h in highway_systems:
                              + ' mi\n')
     if len(h.mileage_by_region) > 1:
         hdstatsfile.write("System " + h.systemname + " by region:\n")
-        for region in list(h.mileage_by_region.keys()):
+        for region in sorted(h.mileage_by_region.keys()):
             hdstatsfile.write(region + ": " + "{0:.2f}".format(h.mileage_by_region[region]) + " mi\n")
     hdstatsfile.write("System " + h.systemname + " by route:\n")
     for cr in h.con_route_list:
@@ -2649,7 +2658,7 @@ for t in traveler_lists:
     t.log_entries.append("Overall in active+preview systems: " + format_clinched_mi(t_active_preview_miles,active_preview_miles))
 
     t.log_entries.append("Overall by region: (each line reports active only then active+preview)")
-    for region in list(t.active_preview_mileage_by_region.keys()):
+    for region in sorted(t.active_preview_mileage_by_region.keys()):
         t_active_miles = 0.0
         total_active_miles = 0.0
         if region in list(t.active_only_mileage_by_region.keys()):
@@ -2707,7 +2716,7 @@ for t in traveler_lists:
             if t_system_overall > 0.0:
                 if len(h.mileage_by_region) > 1:
                     t.log_entries.append("System " + h.systemname + " by region:")
-                for region in list(h.mileage_by_region.keys()):
+                for region in sorted(h.mileage_by_region.keys()):
                     system_region_mileage = 0.0
                     if h.systemname in t.system_region_mileages and region in t.system_region_mileages[h.systemname]:
                         system_region_mileage = t.system_region_mileages[h.systemname][region]
@@ -2860,6 +2869,35 @@ for h in highway_systems:
     sysfile.write('\n')
     sysfile.close()
 
+# read in the datacheck false positives list
+print(et.et() + "Reading datacheckfps.csv.",flush=True)
+with open(args.highwaydatapath+"/datacheckfps.csv", "rt",encoding='utf-8') as file:
+    lines = file.readlines()
+file.close()
+
+lines.pop(0)  # ignore header line
+datacheckfps = []
+datacheck_always_error = [ 'DUPLICATE_LABEL', 'HIDDEN_TERMINUS',
+                           'LABEL_INVALID_CHAR', 'LABEL_SLASHES',
+                           'LONG_UNDERSCORE', 'MALFORMED_URL',
+                           'NONTERMINAL_UNDERSCORE' ]
+for line in lines:
+    fields = line.rstrip('\n').split(';')
+    if len(fields) != 6:
+        el.add_error("Could not parse datacheckfps.csv line: " + line)
+        continue
+    if fields[4] in datacheck_always_error:
+        print("datacheckfps.csv line not allowed (always error): " + line)
+        continue
+    datacheckfps.append(fields)
+
+# See if we have any errors that should be fatal to the site update process
+if len(el.error_list) > 0:
+    print("ABORTING due to " + str(len(el.error_list)) + " errors:")
+    for i in range(len(el.error_list)):
+        print(str(i+1) + ": " + el.error_list[i])
+    sys.exit(1)
+
 # Build a graph structure out of all highway data in active and
 # preview systems
 print(et.et() + "Setting up for graphs of highway data.", flush=True)
@@ -2894,6 +2932,7 @@ else:
     print("\n" + et.et() + "Creating area data graphs.", flush=True)
     with open(args.highwaydatapath+"/graphs/areagraphs.csv", "rt",encoding='utf-8') as file:
         lines = file.readlines()
+    file.close()
     lines.pop(0);  # ignore header line
     area_list = []
     for line in lines:
@@ -2941,6 +2980,7 @@ else:
     h = None
     with open(args.highwaydatapath+"/graphs/systemgraphs.csv", "rt",encoding='utf-8') as file:
         lines = file.readlines()
+    file.close()
     lines.pop(0);  # ignore header line
     for hname in lines:
         h = None
@@ -2964,6 +3004,7 @@ else:
 
     with open(args.highwaydatapath+"/graphs/multisystem.csv", "rt",encoding='utf-8') as file:
         lines = file.readlines()
+    file.close()
     lines.pop(0);  # ignore header line
     for line in lines:
         fields = line.rstrip('\n').split(";")
@@ -2989,6 +3030,7 @@ else:
 
     with open(args.highwaydatapath+"/graphs/multiregion.csv", "rt",encoding='utf-8') as file:
         lines = file.readlines()
+    file.close()
     lines.pop(0);  # ignore header line
     for line in lines:
         fields = line.rstrip('\n').split(";")
@@ -3051,33 +3093,6 @@ else:
 
 # data check: visit each system and route and check for various problems
 print(et.et() + "Performing data checks.",end="",flush=True)
-# first, read in the false positives list
-with open(args.highwaydatapath+"/datacheckfps.csv", "rt",encoding='utf-8') as file:
-    lines = file.readlines()
-
-lines.pop(0)  # ignore header line
-datacheckfps = []
-datacheck_always_error = [ 'DUPLICATE_LABEL', 'HIDDEN_TERMINUS',
-                           'LABEL_INVALID_CHAR', 'LABEL_SLASHES',
-                           'LONG_UNDERSCORE', 'MALFORMED_URL',
-                           'NONTERMINAL_UNDERSCORE' ]
-for line in lines:
-    fields = line.rstrip('\n').split(';')
-    if len(fields) != 6:
-        el.add_error("Could not parse datacheckfps.csv line: " + line)
-        continue
-    if fields[4] in datacheck_always_error:
-        print("datacheckfps.csv line not allowed (always error): " + line)
-        continue
-    datacheckfps.append(fields)
-
-# See if we have any errors that should be fatal to the site update process
-if len(el.error_list) > 0:
-    print("ABORTING due to " + str(len(el.error_list)) + " errors:")
-    for i in range(len(el.error_list)):
-        print(str(i+1) + ": " + el.error_list[i])
-    sys.exit(1)
-
 # perform most datachecks here (list initialized above)
 for h in highway_systems:
     print(".",end="",flush=True)
