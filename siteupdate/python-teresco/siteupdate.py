@@ -2359,6 +2359,7 @@ for t in traveler_ids:
         print(" " + t,end="",flush=True)
         traveler_lists.append(TravelerList(t,route_hash,args.userlistfilepath))
 print(" processed " + str(len(traveler_lists)) + " traveler list files.")
+traveler_lists.sort(key=lambda TravelerList: TravelerList.traveler_name)
 
 # Read updates.csv file, just keep in the fields array for now since we're
 # just going to drop this into the DB later anyway
