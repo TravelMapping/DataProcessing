@@ -1088,7 +1088,7 @@ class TravelerList:
         # systems are not clinchable)
         self.active_preview_mileage_by_region = dict()
         self.active_only_mileage_by_region = dict()
-        # a place where this user's total mileage per system, again by region
+        # a place for this user's total mileage per system, again by region
         # this will be a dictionary of dictionaries, keys of the top level
         # are system names (e.g., 'usai') and values are dictionaries whose
         # keys are region names and values are total mileage in that
@@ -2274,7 +2274,7 @@ for w in all_waypoints.point_list():
                 nmpnmplines.append(other_label + " " + str(other_w.lat) + " " + str(other_w.lng))
         # indicate if this was in the FP list or if it's off by exact amt
         # so looks like it's intentional, and detach near_miss_points list
-        # so it doesn't get a rewrite
+        # so it doesn't get a rewrite in nmp_merged WPT files
         # also set the extra field to mark FP/LI items in the .nmp file
         extra_field = ""
         if nmpline.rstrip() in nmpfplist:
@@ -2326,7 +2326,7 @@ if args.nmpmergepath != "" and not args.errorcheck:
                     wptfile.write("http://www.openstreetmap.org/?lat={0:.6f}".format(w.lat) + "&lon={0:.6f}".format(w.lng) + "\n")
                 else:
                     # for now, arbitrarily choose the northernmost
-                    # latitude and westernmost longitude values in the
+                    # latitude and easternmost longitude values in the
                     # list and denote a "merged" point with the https
                     lat = w.lat
                     lng = w.lng
@@ -2505,7 +2505,7 @@ for h in highway_systems:
                                 active_only_concurrency_count += 1
                         if other.route.system == r.system:
                             system_concurrency_count += 1
-            # so we know how many times this segment will be encountered
+            # we know how many times this segment will be encountered
             # in both the system and overall/active+preview/active-only
             # routes, so let's add in the appropriate (possibly fractional)
             # mileage to the overall totals and to the system categorized
