@@ -2359,6 +2359,7 @@ for t in traveler_ids:
         print(" " + t,end="",flush=True)
         traveler_lists.append(TravelerList(t,route_hash,args.userlistfilepath))
 print(" processed " + str(len(traveler_lists)) + " traveler list files.")
+traveler_lists.sort(key=lambda TravelerList: TravelerList.traveler_name)
 
 # Read updates.csv file, just keep in the fields array for now since we're
 # just going to drop this into the DB later anyway
@@ -2800,23 +2801,23 @@ for t in traveler_lists:
 
 # write stats csv files
 print(et.et() + "Writing stats csv files.",flush=True)
+
 # first, overall per traveler by region, both active only and active+preview
 allfile = open(args.csvstatfilepath + "/allbyregionactiveonly.csv","w",encoding='UTF-8')
-allfile.write("Traveler")
-regions = list(active_only_mileage_by_region.keys())
-regions.sort()
+allfile.write("Traveler,Total")
+regions = sorted(active_only_mileage_by_region.keys())
 for region in regions:
     allfile.write(',' + region)
 allfile.write('\n')
 for t in traveler_lists:
-    allfile.write(t.traveler_name)
+    allfile.write(t.traveler_name + ",{0:.2f}".format(math.fsum(list(t.active_only_mileage_by_region.values()))))
     for region in regions:
         if region in t.active_only_mileage_by_region.keys():
             allfile.write(',{0:.2f}'.format(t.active_only_mileage_by_region[region]))
         else:
             allfile.write(',0')
     allfile.write('\n')
-allfile.write('TOTAL')
+allfile.write('TOTAL,{0:.2f}'.format(math.fsum(list(active_only_mileage_by_region.values()))))
 for region in regions:
     allfile.write(',{0:.2f}'.format(active_only_mileage_by_region[region]))
 allfile.write('\n')
@@ -2824,21 +2825,20 @@ allfile.close()
 
 # active+preview
 allfile = open(args.csvstatfilepath + "/allbyregionactivepreview.csv","w",encoding='UTF-8')
-allfile.write("Traveler")
-regions = list(active_preview_mileage_by_region.keys())
-regions.sort()
+allfile.write("Traveler,Total")
+regions = sorted(active_preview_mileage_by_region.keys())
 for region in regions:
     allfile.write(',' + region)
 allfile.write('\n')
 for t in traveler_lists:
-    allfile.write(t.traveler_name)
+    allfile.write(t.traveler_name + ",{0:.2f}".format(math.fsum(list(t.active_preview_mileage_by_region.values()))))
     for region in regions:
         if region in t.active_preview_mileage_by_region.keys():
             allfile.write(',{0:.2f}'.format(t.active_preview_mileage_by_region[region]))
         else:
             allfile.write(',0')
     allfile.write('\n')
-allfile.write('TOTAL')
+allfile.write('TOTAL,{0:.2f}'.format(math.fsum(list(active_preview_mileage_by_region.values()))))
 for region in regions:
     allfile.write(',{0:.2f}'.format(active_preview_mileage_by_region[region]))
 allfile.write('\n')
@@ -2847,23 +2847,22 @@ allfile.close()
 # now, a file for each system, again per traveler by region
 for h in highway_systems:
     sysfile = open(args.csvstatfilepath + "/" + h.systemname + '-all.csv',"w",encoding='UTF-8')
-    sysfile.write('Traveler')
-    regions = list(h.mileage_by_region.keys())
-    regions.sort()
+    sysfile.write('Traveler,Total')
+    regions = sorted(h.mileage_by_region.keys())
     for region in regions:
         sysfile.write(',' + region)
     sysfile.write('\n')
     for t in traveler_lists:
         # only include entries for travelers who have any mileage in system
         if h.systemname in t.system_region_mileages:
-            sysfile.write(t.traveler_name)
+            sysfile.write(t.traveler_name + ",{0:.2f}".format(math.fsum(list(t.system_region_mileages[h.systemname].values()))))
             for region in regions:
                 if region in t.system_region_mileages[h.systemname]:
                     sysfile.write(',{0:.2f}'.format(t.system_region_mileages[h.systemname][region]))
                 else:
                     sysfile.write(',0')
             sysfile.write('\n')
-    sysfile.write('TOTAL')
+    sysfile.write('TOTAL,{0:.2f}'.format(math.fsum(list(h.mileage_by_region.values()))))
     for region in regions:
         sysfile.write(',{0:.2f}'.format(h.mileage_by_region[region]))
     sysfile.write('\n')
