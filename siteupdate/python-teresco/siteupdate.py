@@ -1155,21 +1155,6 @@ class DatacheckEntry:
          self.info = info
          self.fp = False
 
-    def match(self,fpentry):
-        """Check if the fpentry from the csv file matches in all fields"""
-        # quick and easy checks first
-        if self.route.root != fpentry[0] or self.code != fpentry[4]:
-            return False
-        # now label matches
-        if len(self.labels) > 0 and self.labels[0] != fpentry[1]:
-            return False
-        if len(self.labels) > 1 and self.labels[1] != fpentry[2]:
-            return False
-        if len(self.labels) > 2 and self.labels[2] != fpentry[3]:
-            return False
-        # finally make sure info matches if we got this far
-        return self.info == fpentry[5]
-
     def match_except_info(self,fpentry):
         """Check if the fpentry from the csv file matches in all fields
         except the info field"""
@@ -1183,8 +1168,7 @@ class DatacheckEntry:
             return False
         if len(self.labels) > 2 and self.labels[2] != fpentry[3]:
             return False
-        # call it a match except info if the info does not match
-        return self.info != fpentry[5]
+        return True
 
     def __str__(self):
         return self.route.root + ";" + str(self.labels) + ";" + self.code + ";" + self.info
@@ -3272,6 +3256,7 @@ fpfile = open(args.logfilepath+'/nearmatchfps.log','w',encoding='utf-8')
 fpfile.write("Log file created at: " + str(datetime.datetime.now()) + "\n")
 toremove = []
 counter = 0
+fpcount = 0
 for d in datacheckerrors:
     #print("Checking: " + str(d))
     counter += 1
@@ -3279,26 +3264,18 @@ for d in datacheckerrors:
         print(".", end="",flush=True)
     for fp in datacheckfps:
         #print("Comparing: " + str(d) + " to " + str(fp))
-        if d.match(fp):
-            #print("Match!")
-            d.fp = True
-            toremove.append(fp)
-            break
         if d.match_except_info(fp):
+            if d.info == fp[5]:
+                #print("Match!")
+                d.fp = True
+                fpcount += 1
+                datacheckfps.remove(fp)
+                break
             fpfile.write("FP_ENTRY: " + fp[0] + ';' + fp[1] + ';' + fp[2] + ';' + fp[3] + ';' + fp[4] + ';' + fp[5] + '\n')
             fpfile.write("CHANGETO: " + fp[0] + ';' + fp[1] + ';' + fp[2] + ';' + fp[3] + ';' + fp[4] + ';' + d.info + '\n')
-
 fpfile.close()
-# now remove the ones we matched from the list
-for fp in toremove:
-    counter += 1
-    if counter % 1000 == 0:
-        print(".", end="",flush=True)
-    if fp in datacheckfps:
-        datacheckfps.remove(fp)
-    else:
-        print("Matched FP entry not in list!: " + str(fp))
 print("!", flush=True)
+print(et.et() + "Matched " + str(fpcount) + " FP entries.", flush=True)
 
 # write log of unmatched false positives from the datacheckfps.csv
 print(et.et() + "Writing log of unmatched datacheck FP entries.")
@@ -3323,7 +3300,7 @@ if len(datacheckerrors) > 0:
         if not d.fp:
             logfile.write(str(d.route.root)+";")
             if len(d.labels) == 0:
-                logfile.write(";;;;")
+                logfile.write(";;;")
             elif len(d.labels) == 1:
                 logfile.write(d.labels[0]+";;;")
             elif len(d.labels) == 2:
