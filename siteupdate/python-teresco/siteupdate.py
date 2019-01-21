@@ -1171,7 +1171,17 @@ class DatacheckEntry:
         return True
 
     def __str__(self):
-        return self.route.root + ";" + str(self.labels) + ";" + self.code + ";" + self.info
+        entry = str(self.route.root)+";"
+        if len(self.labels) == 0:
+            entry += ";;;"
+        elif len(self.labels) == 1:
+            entry += self.labels[0]+";;;"
+        elif len(self.labels) == 2:
+            entry += self.labels[0]+";"+self.labels[1]+";;"
+        else:
+            entry += self.labels[0]+";"+self.labels[1]+";"+self.labels[2]+";"
+        entry += self.code+";"+self.info
+        return entry
 
 class HighwayGraphVertexInfo:
     """This class encapsulates information needed for a highway graph
@@ -3298,16 +3308,7 @@ logfile.write("Root;Waypoint1;Waypoint2;Waypoint3;Error;Info\n")
 if len(datacheckerrors) > 0:
     for d in datacheckerrors:
         if not d.fp:
-            logfile.write(str(d.route.root)+";")
-            if len(d.labels) == 0:
-                logfile.write(";;;")
-            elif len(d.labels) == 1:
-                logfile.write(d.labels[0]+";;;")
-            elif len(d.labels) == 2:
-                logfile.write(d.labels[0]+";"+d.labels[1]+";;")
-            else:
-                logfile.write(d.labels[0]+";"+d.labels[1]+";"+d.labels[2]+";")
-            logfile.write(d.code+";"+d.info+"\n")
+            logfile.write(str(d)+"\n")
 else:
     logfile.write("No datacheck errors found.")
 logfile.close()
