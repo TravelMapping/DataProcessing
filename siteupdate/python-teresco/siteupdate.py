@@ -267,6 +267,7 @@ class Waypoint:
         # last has the URL, which needs more work to get lat/lng
         url_parts = parts[-1].split('=')
         if len(url_parts) < 3:
+            #print("\nWARNING: Malformed URL in " + route.root + ", line: " + line, end="", flush=True)
             datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_URL', parts[-1]))
             self.lat = 0
             self.lng = 0
@@ -283,18 +284,21 @@ class Waypoint:
             if lat_string[c] == '.':
                 point_count += 1
                 if point_count > 1:
+                    #print("\nWARNING: Malformed URL in " + route.root + ", line: " + line, end="", flush=True)
                     datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_URL', parts[-1]))
                     lat_string = "0"
                     lng_string = "0"
                     break
             # check for minus sign not at beginning
             if lat_string[c] == '-' and c > 0:
+                #print("\nWARNING: Malformed URL in " + route.root + ", line: " + line, end="", flush=True)
                 datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_URL', parts[-1]))
                 lat_string = "0"
                 lng_string = "0"
                 break
             # check for invalid characters
             if lat_string[c] not in "-.0123456789":
+                #print("\nWARNING: Malformed URL in " + route.root + ", line: " + line, end="", flush=True)
                 datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_URL', parts[-1]))
                 lat_string = "0"
                 lng_string = "0"
@@ -307,18 +311,21 @@ class Waypoint:
             if lng_string[c] == '.':
                 point_count += 1
                 if point_count > 1:
+                    #print("\nWARNING: Malformed URL in " + route.root + ", line: " + line, end="", flush=True)
                     datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_URL', parts[-1]))
                     lat_string = "0"
                     lng_string = "0"
                     break
             # check for minus sign not at beginning
             if lng_string[c] == '-' and c > 0:
+                #print("\nWARNING: Malformed URL in " + route.root + ", line: " + line, end="", flush=True)
                 datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_URL', parts[-1]))
                 lat_string = "0"
                 lng_string = "0"
                 break
             # check for invalid characters
             if lng_string[c] not in "-.0123456789":
+                #print("\nWARNING: Malformed URL in " + route.root + ", line: " + line, end="", flush=True)
                 datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_URL', parts[-1]))
                 lat_string = "0"
                 lng_string = "0"
@@ -644,6 +651,9 @@ class Waypoint:
                     return True
         return False
 
+    def is_valid(self):
+        return self.lat != 0.0 or self.lng != 0.0
+
 class HighwaySegment:
     """This class represents one highway segment: the connection between two
     Waypoints connected by one or more routes"""
@@ -770,6 +780,9 @@ class Route:
                 if len(line) > 0:
                     previous_point = w
                     w = Waypoint(line,self,datacheckerrors)
+                    if w.is_valid() == False:
+                        w = previous_point
+                        continue
                     self.point_list.append(w)
                     # populate unused alt labels
                     for label in w.alt_labels:
@@ -865,7 +878,7 @@ class ConnectedRoute:
             el.add_error("System mismatch parsing line [" + line + "], expected " + system.systemname)
         self.route = fields[1]
         self.banner = fields[2]
-        self.groupname = fields[3].replace("'","''")
+        self.groupname = fields[3]
         # fields[4] is the list of roots, which will become a python list
         # of Route objects already in the system
         self.roots = []
@@ -892,7 +905,7 @@ class ConnectedRoute:
 
     def csv_line(self):
         """return csv line to insert into a table"""
-        return "'" + self.system.systemname + "','" + self.route + "','" + self.banner + "','" + self.groupname + "','" + self.roots[0].root + "','" + str(self.mileage) + "'";
+        return "'" + self.system.systemname + "','" + self.route + "','" + self.banner + "','" + self.groupname.replace("'","''") + "','" + self.roots[0].root + "','" + str(self.mileage) + "'";
 
     def readable_name(self):
         """return a string for a human-readable connected route name"""
@@ -1029,8 +1042,8 @@ class TravelerList:
                 checking_index = 0;
                 for w in r.point_list:
                     lower_label = w.label.lower().strip("+*")
-                    list_label_1 = fields[2].lower().strip("*")
-                    list_label_2 = fields[3].lower().strip("*")
+                    list_label_1 = fields[2].lower().strip("+*")
+                    list_label_2 = fields[3].lower().strip("+*")
                     if list_label_1 == lower_label or list_label_2 == lower_label:
                         canonical_waypoints.append(w)
                         canonical_waypoint_indices.append(checking_index)
@@ -1075,7 +1088,7 @@ class TravelerList:
         # systems are not clinchable)
         self.active_preview_mileage_by_region = dict()
         self.active_only_mileage_by_region = dict()
-        # a place where this user's total mileage per system, again by region
+        # a place for this user's total mileage per system, again by region
         # this will be a dictionary of dictionaries, keys of the top level
         # are system names (e.g., 'usai') and values are dictionaries whose
         # keys are region names and values are total mileage in that
@@ -1142,21 +1155,6 @@ class DatacheckEntry:
          self.info = info
          self.fp = False
 
-    def match(self,fpentry):
-        """Check if the fpentry from the csv file matches in all fields"""
-        # quick and easy checks first
-        if self.route.root != fpentry[0] or self.code != fpentry[4]:
-            return False
-        # now label matches
-        if len(self.labels) > 0 and self.labels[0] != fpentry[1]:
-            return False
-        if len(self.labels) > 1 and self.labels[1] != fpentry[2]:
-            return False
-        if len(self.labels) > 2 and self.labels[2] != fpentry[3]:
-            return False
-        # finally make sure info matches if we got this far
-        return self.info == fpentry[5]
-
     def match_except_info(self,fpentry):
         """Check if the fpentry from the csv file matches in all fields
         except the info field"""
@@ -1170,8 +1168,7 @@ class DatacheckEntry:
             return False
         if len(self.labels) > 2 and self.labels[2] != fpentry[3]:
             return False
-        # call it a match except info if the info does not match
-        return self.info != fpentry[5]
+        return True
 
     def __str__(self):
         return self.route.root + ";" + str(self.labels) + ";" + self.code + ";" + self.info
@@ -2229,13 +2226,14 @@ print(et.et() + "Near-miss point log and tm-master.nmp file.", flush=True)
 # read in fp file
 nmpfplist = []
 nmpfpfile = open(args.highwaydatapath+'/nmpfps.log','r')
-nmpfilelines = nmpfpfile.readlines()
-for line in nmpfilelines:
+nmpfpfilelines = nmpfpfile.readlines()
+for line in nmpfpfilelines:
     if len(line.rstrip('\n ')) > 0:
         nmpfplist.append(line.rstrip('\n '))
 nmpfpfile.close()
 
-nmpfile = open(args.logfilepath+'/nearmisspoints.log','w')
+nmploglines = []
+nmplog = open(args.logfilepath+'/nearmisspoints.log','w')
 nmpnmp = open(args.logfilepath+'/tm-master.nmp','w')
 for w in all_waypoints.point_list():
     if w.near_miss_points is not None:
@@ -2260,7 +2258,7 @@ for w in all_waypoints.point_list():
                 nmpnmplines.append(other_label + " " + str(other_w.lat) + " " + str(other_w.lng))
         # indicate if this was in the FP list or if it's off by exact amt
         # so looks like it's intentional, and detach near_miss_points list
-        # so it doesn't get a rewrite
+        # so it doesn't get a rewrite in nmp_merged WPT files
         # also set the extra field to mark FP/LI items in the .nmp file
         extra_field = ""
         if nmpline.rstrip() in nmpfplist:
@@ -2274,14 +2272,20 @@ for w in all_waypoints.point_list():
             extra_field += "LI"
         if extra_field != "":
             extra_field = " " + extra_field
-        nmpfile.write(nmpline.rstrip() + '\n')
+        nmploglines.append(nmpline.rstrip())
 
-        # write actual lines to nmp file, indicating FP and/or LI
+        # write actual lines to .nmp file, indicating FP and/or LI
         # for marked FPs or looks intentional items
         for nmpnmpline in nmpnmplines:
             nmpnmp.write(nmpnmpline + extra_field + "\n")
-nmpfile.close()
 nmpnmp.close()
+
+# sort and write actual lines to nearmisspoints.log
+nmploglines.sort()
+for n in nmploglines:
+    nmplog.write(n + '\n')
+nmploglines = None
+nmplog.close()
 
 # report any unmatched nmpfps.log entries
 nmpfpsunmatchedfile = open(args.logfilepath+'/nmpfpsunmatched.log','w')
@@ -2306,7 +2310,7 @@ if args.nmpmergepath != "" and not args.errorcheck:
                     wptfile.write("http://www.openstreetmap.org/?lat={0:.6f}".format(w.lat) + "&lon={0:.6f}".format(w.lng) + "\n")
                 else:
                     # for now, arbitrarily choose the northernmost
-                    # latitude and westernmost longitude values in the
+                    # latitude and easternmost longitude values in the
                     # list and denote a "merged" point with the https
                     lat = w.lat
                     lng = w.lng
@@ -2339,6 +2343,7 @@ for t in traveler_ids:
         print(" " + t,end="",flush=True)
         traveler_lists.append(TravelerList(t,route_hash,args.userlistfilepath))
 print(" processed " + str(len(traveler_lists)) + " traveler list files.")
+traveler_lists.sort(key=lambda TravelerList: TravelerList.traveler_name)
 
 # Read updates.csv file, just keep in the fields array for now since we're
 # just going to drop this into the DB later anyway
@@ -2346,6 +2351,7 @@ updates = []
 print(et.et() + "Reading updates file.  ",end="",flush=True)
 with open(args.highwaydatapath+"/updates.csv", "rt", encoding='UTF-8') as file:
     lines = file.readlines()
+file.close()
 
 lines.pop(0)  # ignore header line
 for line in lines:
@@ -2363,6 +2369,7 @@ systemupdates = []
 print(et.et() + "Reading systemupdates file.  ",end="",flush=True)
 with open(args.highwaydatapath+"/systemupdates.csv", "rt", encoding='UTF-8') as file:
     lines = file.readlines()
+file.close()
 
 lines.pop(0)  # ignore header line
 for line in lines:
@@ -2483,7 +2490,7 @@ for h in highway_systems:
                                 active_only_concurrency_count += 1
                         if other.route.system == r.system:
                             system_concurrency_count += 1
-            # so we know how many times this segment will be encountered
+            # we know how many times this segment will be encountered
             # in both the system and overall/active+preview/active-only
             # routes, so let's add in the appropriate (possibly fractional)
             # mileage to the overall totals and to the system categorized
@@ -2600,7 +2607,7 @@ for h in highway_systems:
                              + ' mi\n')
     if len(h.mileage_by_region) > 1:
         hdstatsfile.write("System " + h.systemname + " by region:\n")
-        for region in list(h.mileage_by_region.keys()):
+        for region in sorted(h.mileage_by_region.keys()):
             hdstatsfile.write(region + ": " + "{0:.2f}".format(h.mileage_by_region[region]) + " mi\n")
     hdstatsfile.write("System " + h.systemname + " by route:\n")
     for cr in h.con_route_list:
@@ -2636,7 +2643,7 @@ for t in traveler_lists:
     t.log_entries.append("Overall in active+preview systems: " + format_clinched_mi(t_active_preview_miles,active_preview_miles))
 
     t.log_entries.append("Overall by region: (each line reports active only then active+preview)")
-    for region in list(t.active_preview_mileage_by_region.keys()):
+    for region in sorted(t.active_preview_mileage_by_region.keys()):
         t_active_miles = 0.0
         total_active_miles = 0.0
         if region in list(t.active_only_mileage_by_region.keys()):
@@ -2694,7 +2701,7 @@ for t in traveler_lists:
             if t_system_overall > 0.0:
                 if len(h.mileage_by_region) > 1:
                     t.log_entries.append("System " + h.systemname + " by region:")
-                for region in list(h.mileage_by_region.keys()):
+                for region in sorted(h.mileage_by_region.keys()):
                     system_region_mileage = 0.0
                     if h.systemname in t.system_region_mileages and region in t.system_region_mileages[h.systemname]:
                         system_region_mileage = t.system_region_mileages[h.systemname][region]
@@ -2778,23 +2785,23 @@ for t in traveler_lists:
 
 # write stats csv files
 print(et.et() + "Writing stats csv files.",flush=True)
+
 # first, overall per traveler by region, both active only and active+preview
 allfile = open(args.csvstatfilepath + "/allbyregionactiveonly.csv","w",encoding='UTF-8')
-allfile.write("Traveler")
-regions = list(active_only_mileage_by_region.keys())
-regions.sort()
+allfile.write("Traveler,Total")
+regions = sorted(active_only_mileage_by_region.keys())
 for region in regions:
     allfile.write(',' + region)
 allfile.write('\n')
 for t in traveler_lists:
-    allfile.write(t.traveler_name)
+    allfile.write(t.traveler_name + ",{0:.2f}".format(math.fsum(list(t.active_only_mileage_by_region.values()))))
     for region in regions:
         if region in t.active_only_mileage_by_region.keys():
             allfile.write(',{0:.2f}'.format(t.active_only_mileage_by_region[region]))
         else:
             allfile.write(',0')
     allfile.write('\n')
-allfile.write('TOTAL')
+allfile.write('TOTAL,{0:.2f}'.format(math.fsum(list(active_only_mileage_by_region.values()))))
 for region in regions:
     allfile.write(',{0:.2f}'.format(active_only_mileage_by_region[region]))
 allfile.write('\n')
@@ -2802,21 +2809,20 @@ allfile.close()
 
 # active+preview
 allfile = open(args.csvstatfilepath + "/allbyregionactivepreview.csv","w",encoding='UTF-8')
-allfile.write("Traveler")
-regions = list(active_preview_mileage_by_region.keys())
-regions.sort()
+allfile.write("Traveler,Total")
+regions = sorted(active_preview_mileage_by_region.keys())
 for region in regions:
     allfile.write(',' + region)
 allfile.write('\n')
 for t in traveler_lists:
-    allfile.write(t.traveler_name)
+    allfile.write(t.traveler_name + ",{0:.2f}".format(math.fsum(list(t.active_preview_mileage_by_region.values()))))
     for region in regions:
         if region in t.active_preview_mileage_by_region.keys():
             allfile.write(',{0:.2f}'.format(t.active_preview_mileage_by_region[region]))
         else:
             allfile.write(',0')
     allfile.write('\n')
-allfile.write('TOTAL')
+allfile.write('TOTAL,{0:.2f}'.format(math.fsum(list(active_preview_mileage_by_region.values()))))
 for region in regions:
     allfile.write(',{0:.2f}'.format(active_preview_mileage_by_region[region]))
 allfile.write('\n')
@@ -2825,27 +2831,55 @@ allfile.close()
 # now, a file for each system, again per traveler by region
 for h in highway_systems:
     sysfile = open(args.csvstatfilepath + "/" + h.systemname + '-all.csv',"w",encoding='UTF-8')
-    sysfile.write('Traveler')
-    regions = list(h.mileage_by_region.keys())
-    regions.sort()
+    sysfile.write('Traveler,Total')
+    regions = sorted(h.mileage_by_region.keys())
     for region in regions:
         sysfile.write(',' + region)
     sysfile.write('\n')
     for t in traveler_lists:
         # only include entries for travelers who have any mileage in system
         if h.systemname in t.system_region_mileages:
-            sysfile.write(t.traveler_name)
+            sysfile.write(t.traveler_name + ",{0:.2f}".format(math.fsum(list(t.system_region_mileages[h.systemname].values()))))
             for region in regions:
                 if region in t.system_region_mileages[h.systemname]:
                     sysfile.write(',{0:.2f}'.format(t.system_region_mileages[h.systemname][region]))
                 else:
                     sysfile.write(',0')
             sysfile.write('\n')
-    sysfile.write('TOTAL')
+    sysfile.write('TOTAL,{0:.2f}'.format(math.fsum(list(h.mileage_by_region.values()))))
     for region in regions:
         sysfile.write(',{0:.2f}'.format(h.mileage_by_region[region]))
     sysfile.write('\n')
     sysfile.close()
+
+# read in the datacheck false positives list
+print(et.et() + "Reading datacheckfps.csv.",flush=True)
+with open(args.highwaydatapath+"/datacheckfps.csv", "rt",encoding='utf-8') as file:
+    lines = file.readlines()
+file.close()
+
+lines.pop(0)  # ignore header line
+datacheckfps = []
+datacheck_always_error = [ 'DUPLICATE_LABEL', 'HIDDEN_TERMINUS',
+                           'LABEL_INVALID_CHAR', 'LABEL_SLASHES',
+                           'LONG_UNDERSCORE', 'MALFORMED_URL',
+                           'NONTERMINAL_UNDERSCORE' ]
+for line in lines:
+    fields = line.rstrip('\n').split(';')
+    if len(fields) != 6:
+        el.add_error("Could not parse datacheckfps.csv line: " + line)
+        continue
+    if fields[4] in datacheck_always_error:
+        print("datacheckfps.csv line not allowed (always error): " + line)
+        continue
+    datacheckfps.append(fields)
+
+# See if we have any errors that should be fatal to the site update process
+if len(el.error_list) > 0:
+    print("ABORTING due to " + str(len(el.error_list)) + " errors:")
+    for i in range(len(el.error_list)):
+        print(str(i+1) + ": " + el.error_list[i])
+    sys.exit(1)
 
 # Build a graph structure out of all highway data in active and
 # preview systems
@@ -2878,9 +2912,10 @@ else:
                         'These graphs contain all routes currently plotted in the Travel Mapping project.'])
 
     # graphs restricted by place/area - from areagraphs.csv file
-    print(et.et() + "Creating area data graphs.", flush=True)
+    print("\n" + et.et() + "Creating area data graphs.", flush=True)
     with open(args.highwaydatapath+"/graphs/areagraphs.csv", "rt",encoding='utf-8') as file:
         lines = file.readlines()
+    file.close()
     lines.pop(0);  # ignore header line
     area_list = []
     for line in lines:
@@ -2920,16 +2955,20 @@ else:
                         'These graphs contain all routes currently plotted within the given region.'])
     print("!")
 
-    # Graphs restricted by system
+    # Graphs restricted by system - from systemgraphs.csv file
     print(et.et() + "Creating system data graphs.", flush=True)
 
     # We will create graph data and a graph file for only a few interesting
     # systems, as many are not useful on their own
     h = None
-    for hname in ['usai', 'usaus', 'cantch', 'eure']:
+    with open(args.highwaydatapath+"/graphs/systemgraphs.csv", "rt",encoding='utf-8') as file:
+        lines = file.readlines()
+    file.close()
+    lines.pop(0);  # ignore header line
+    for hname in lines:
         h = None
         for hs in highway_systems:
-            if hs.systemname == hname:
+            if hs.systemname == hname.strip():
                 h = hs
                 break
         if h is not None:
@@ -2948,6 +2987,7 @@ else:
 
     with open(args.highwaydatapath+"/graphs/multisystem.csv", "rt",encoding='utf-8') as file:
         lines = file.readlines()
+    file.close()
     lines.pop(0);  # ignore header line
     for line in lines:
         fields = line.rstrip('\n').split(";")
@@ -2973,6 +3013,7 @@ else:
 
     with open(args.highwaydatapath+"/graphs/multiregion.csv", "rt",encoding='utf-8') as file:
         lines = file.readlines()
+    file.close()
     lines.pop(0);  # ignore header line
     for line in lines:
         fields = line.rstrip('\n').split(";")
@@ -3035,33 +3076,6 @@ else:
 
 # data check: visit each system and route and check for various problems
 print(et.et() + "Performing data checks.",end="",flush=True)
-# first, read in the false positives list
-with open(args.highwaydatapath+"/datacheckfps.csv", "rt",encoding='utf-8') as file:
-    lines = file.readlines()
-
-lines.pop(0)  # ignore header line
-datacheckfps = []
-datacheck_always_error = [ 'DUPLICATE_LABEL', 'HIDDEN_TERMINUS',
-                           'LABEL_INVALID_CHAR', 'LABEL_SLASHES',
-                           'LONG_UNDERSCORE', 'MALFORMED_URL',
-                           'NONTERMINAL_UNDERSCORE' ]
-for line in lines:
-    fields = line.rstrip('\n').split(';')
-    if len(fields) != 6:
-        el.add_error("Could not parse datacheckfps.csv line: " + line)
-        continue
-    if fields[4] in datacheck_always_error:
-        print("datacheckfps.csv line not allowed (always error): " + line)
-        continue
-    datacheckfps.append(fields)
-
-# See if we have any errors that should be fatal to the site update process
-if len(el.error_list) > 0:
-    print("ABORTING due to " + str(len(el.error_list)) + " errors:")
-    for i in range(len(el.error_list)):
-        print(str(i+1) + ": " + el.error_list[i])
-    sys.exit(1)
-
 # perform most datachecks here (list initialized above)
 for h in highway_systems:
     print(".",end="",flush=True)
@@ -3186,6 +3200,9 @@ for h in highway_systems:
                 # look for labels with invalid characters
                 if not re.fullmatch('[a-zA-Z0-9()/\+\*_\-\.]+', w.label):
                     datacheckerrors.append(DatacheckEntry(r,[w.label],'LABEL_INVALID_CHAR'))
+                for a in w.alt_labels:
+                    if not re.fullmatch('[a-zA-Z0-9()/\+\*_\-\.]+', a):
+                        datacheckerrors.append(DatacheckEntry(r,[a],'LABEL_INVALID_CHAR'))
 
                 # look for labels with a slash after an underscore
                 if '_' in w.label and '/' in w.label and \
@@ -3239,6 +3256,7 @@ fpfile = open(args.logfilepath+'/nearmatchfps.log','w',encoding='utf-8')
 fpfile.write("Log file created at: " + str(datetime.datetime.now()) + "\n")
 toremove = []
 counter = 0
+fpcount = 0
 for d in datacheckerrors:
     #print("Checking: " + str(d))
     counter += 1
@@ -3246,26 +3264,18 @@ for d in datacheckerrors:
         print(".", end="",flush=True)
     for fp in datacheckfps:
         #print("Comparing: " + str(d) + " to " + str(fp))
-        if d.match(fp):
-            #print("Match!")
-            d.fp = True
-            toremove.append(fp)
-            break
         if d.match_except_info(fp):
+            if d.info == fp[5]:
+                #print("Match!")
+                d.fp = True
+                fpcount += 1
+                datacheckfps.remove(fp)
+                break
             fpfile.write("FP_ENTRY: " + fp[0] + ';' + fp[1] + ';' + fp[2] + ';' + fp[3] + ';' + fp[4] + ';' + fp[5] + '\n')
             fpfile.write("CHANGETO: " + fp[0] + ';' + fp[1] + ';' + fp[2] + ';' + fp[3] + ';' + fp[4] + ';' + d.info + '\n')
-
 fpfile.close()
-# now remove the ones we matched from the list
-for fp in toremove:
-    counter += 1
-    if counter % 1000 == 0:
-        print(".", end="",flush=True)
-    if fp in datacheckfps:
-        datacheckfps.remove(fp)
-    else:
-        print("Matched FP entry not in list!: " + str(fp))
 print("!", flush=True)
+print(et.et() + "Matched " + str(fpcount) + " FP entries.", flush=True)
 
 # write log of unmatched false positives from the datacheckfps.csv
 print(et.et() + "Writing log of unmatched datacheck FP entries.")
@@ -3290,7 +3300,7 @@ if len(datacheckerrors) > 0:
         if not d.fp:
             logfile.write(str(d.route.root)+";")
             if len(d.labels) == 0:
-                logfile.write(";;;;")
+                logfile.write(";;;")
             elif len(d.labels) == 1:
                 logfile.write(d.labels[0]+";;;")
             elif len(d.labels) == 2:
