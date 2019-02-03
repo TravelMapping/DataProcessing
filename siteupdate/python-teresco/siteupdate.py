@@ -1267,6 +1267,7 @@ class HighwayGraphEdgeInfo:
         if not duplicate:
             graph.vertices[s.waypoint1.unique_name].incident_edges.append(self)
             graph.vertices[s.waypoint2.unique_name].incident_edges.append(self)
+            graph.edges.add(self)
 
     # compute an edge label, optionally resticted by systems
     def label(self,systems=None):
@@ -1334,6 +1335,7 @@ class HighwayGraphCollapsedEdgeInfo:
             if not duplicate:
                 self.vertex1.incident_collapsed_edges.append(self)
                 self.vertex2.incident_collapsed_edges.append(self)
+                graph.collapsed_edges.add(self)
 
         # build by collapsing two existing edges around a common
         # hidden vertex waypoint, whose information is given in
@@ -1344,6 +1346,7 @@ class HighwayGraphCollapsedEdgeInfo:
             # with the single edge we are constructing here
             edge1 = vertex_info.incident_collapsed_edges[0]
             edge2 = vertex_info.incident_collapsed_edges[1]
+            graph.collapsed_edges.add(self)
             # segment names should match as routes should not start or end
             # nor should concurrencies begin or end at a hidden point
             if edge1.segment_name != edge2.segment_name:
@@ -1398,6 +1401,7 @@ class HighwayGraphCollapsedEdgeInfo:
                 removed += 1
             if removed != 1:
                 print("ERROR: edge1 " + str(edge1) + " removed from " + str(removed) + " adjacency lists instead of 1.")
+            graph.collapsed_edges.remove(edge1)
             removed = 0
             if edge2 in self.vertex1.incident_collapsed_edges:
                 self.vertex1.incident_collapsed_edges.remove(edge2)
@@ -1407,6 +1411,7 @@ class HighwayGraphCollapsedEdgeInfo:
                 removed += 1
             if removed != 1:
                 print("ERROR: edge2 " + str(edge2) + " removed from " + str(removed) + " adjacency lists instead of 1.")
+            graph.collapsed_edges.remove(edge2)
             self.vertex1.incident_collapsed_edges.append(self)
             self.vertex2.incident_collapsed_edges.append(self)
 
@@ -1518,6 +1523,8 @@ class HighwayGraph:
         self.unique_waypoints = dict()
         all_waypoint_list = all_waypoints.point_list()
         self.highway_systems = highway_systems
+        self.edges = set()
+        self.collapsed_edges = set()
 
         # add a unique name field to each waypoint, initialized to
         # None, which should get filled in later for any waypoint that
@@ -1719,18 +1726,16 @@ class HighwayGraph:
         # return a set of edges from the graph, optionally
         # restricted by region or system or placeradius area
         edge_set = set()
-        for v in self.vertices.values():
-            for e in v.incident_edges:
-                if placeradius is None or placeradius.contains_edge(e):
-                    if regions is None or e.region in regions:
-                        system_match = systems is None
-                        if not system_match:
-                            for (r, s) in e.route_names_and_systems:
-                                if s in systems:
-                                    system_match = True
-                        if system_match:
-                            edge_set.add(e)
-
+        for e in self.edges:
+            if placeradius is None or placeradius.contains_edge(e):
+                if regions is None or e.region in regions:
+                    system_match = systems is None
+                    if not system_match:
+                        for (r, s) in e.route_names_and_systems:
+                            if s in systems:
+                                system_match = True
+                    if system_match:
+                        edge_set.add(e)
         return edge_set
 
     def matching_collapsed_edges(self, regions=None, systems=None,
@@ -1739,20 +1744,16 @@ class HighwayGraph:
         # edge format, optionally restricted by region or system or
         # placeradius area
         edge_set = set()
-        for v in self.vertices.values():
-            if v.is_hidden:
-                continue
-            for e in v.incident_collapsed_edges:
-                if placeradius is None or placeradius.contains_edge(e):
-                    if regions is None or e.region in regions:
-                        system_match = systems is None
-                        if not system_match:
-                            for (r, s) in e.route_names_and_systems:
-                                if s in systems:
-                                    system_match = True
-                        if system_match:
-                            edge_set.add(e)
-
+        for e in self.collapsed_edges:
+            if placeradius is None or placeradius.contains_edge(e):
+                if regions is None or e.region in regions:
+                    system_match = systems is None
+                    if not system_match:
+                        for (r, s) in e.route_names_and_systems:
+                            if s in systems:
+                                system_match = True
+                    if system_match:
+                        edge_set.add(e)
         return edge_set
 
     # write the entire set of highway data a format very similar to
