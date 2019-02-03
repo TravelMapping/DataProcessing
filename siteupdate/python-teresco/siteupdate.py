@@ -1687,40 +1687,32 @@ class HighwayGraph:
                 edges += len(v.incident_collapsed_edges)
         return edges//2
 
-    def matching_waypoint(self, label, vinfo, regions=None, systems=None,
-                          placeradius=None):
-        # determine if the vertex list entry given in label and vinfo
-        # belongs in the subset restricted by the listed regions and/or
-        # systems, or within the given placeradius area
-        if (placeradius is not None and
-            not placeradius.contains_vertex_info(vinfo)):
-            return False
-        
-        region_match = regions is None
-        if not region_match:
-            for r in regions:
-                if r in vinfo.regions:
-                    region_match = True
-        system_match = systems is None
-        if not system_match:
-            for s in systems:
-                if s in vinfo.systems:
-                    system_match = True
-        return region_match and system_match
-
-
-    def num_matching_waypoints(self, regions=None, systems=None,
-                               placeradius=None, visible_only=False):
-        # count up the waypoints in or colocated in the system(s)
-        # and/or regions(s) and/or within the given area
-        matching_waypoints = 0
-        for label, vinfo in self.vertices.items():
+    def matching_vertices(self, regions, systems, placeradius, visible_only):
+        # return a list of vertices from the graph, optionally
+        # restricted by region or system or placeradius area
+        vertex_list = []
+        for vinfo in self.vertices.values():
             if not visible_only or not vinfo.is_hidden:
-                if self.matching_waypoint(label, vinfo, regions, systems,
-                                          placeradius):
-                    matching_waypoints += 1
-
-        return matching_waypoints
+                if placeradius is not None and not placeradius.contains_vertex_info(vinfo):
+                    continue
+                region_match = regions is None
+                if not region_match:
+                    for r in regions:
+                        if r in vinfo.regions:
+                            region_match = True
+                            break
+                if not region_match:
+                    continue
+                system_match = systems is None
+                if not system_match:
+                    for s in systems:
+                        if s in vinfo.systems:
+                            system_match = True
+                            break
+                if not system_match:
+                    continue
+                vertex_list.append(vinfo)
+        return vertex_list
 
     def matching_edges(self, regions=None, systems=None, placeradius=None):
         # return a set of edges from the graph, optionally
@@ -1811,21 +1803,18 @@ class HighwayGraph:
 
         tmgfile = open(filename, 'w')
         tmgfile.write("TMG 1.0 simple\n")
+        matching_vertices = self.matching_vertices(regions, systems, placeradius, False)
         matching_edges = self.matching_edges(regions, systems, placeradius)
-        matching_waypoints = self.num_matching_waypoints(regions, systems,
-                                                         placeradius)
-        print('(' + str(matching_waypoints) + ',' + str(len(matching_edges)) + ') ', end="", flush=True)
+        print('(' + str(len(matching_vertices)) + ',' + str(len(matching_edges)) + ') ', end="", flush=True)
         # ready to write the header
-        tmgfile.write(str(matching_waypoints) + ' ' + str(len(matching_edges)) + '\n')
+        tmgfile.write(str(len(matching_vertices)) + ' ' + str(len(matching_edges)) + '\n')
 
-        # write waypoints
+        # write vertices
         vertex_num = 0
-        for label, vinfo in self.vertices.items():
-            if self.matching_waypoint(label, vinfo, regions, systems,
-                                      placeradius):
-                tmgfile.write(label + ' ' + str(vinfo.lat) + ' ' + str(vinfo.lng) + '\n')
-                vinfo.vertex_num = vertex_num
-                vertex_num += 1
+        for vinfo in matching_vertices:
+            tmgfile.write(vinfo.unique_name + ' ' + str(vinfo.lat) + ' ' + str(vinfo.lng) + '\n')
+            vinfo.vertex_num = vertex_num
+            vertex_num += 1
 
         # write edges
         edge = 0
@@ -1834,7 +1823,7 @@ class HighwayGraph:
             edge += 1
 
         tmgfile.close()
-        return (matching_waypoints, len(matching_edges))
+        return (len(matching_vertices), len(matching_edges))
 
     # write the entire set of data in the tmg collapsed edge format
     def write_master_tmg_collapsed(self, filename):
@@ -1877,25 +1866,17 @@ class HighwayGraph:
 
         tmgfile = open(filename, 'w')
         tmgfile.write("TMG 1.0 collapsed\n")
-
-        matching_edges = self.matching_collapsed_edges(regions, systems,
-                                                       placeradius)
-        matching_waypoints = self.num_matching_waypoints(regions, systems,
-                                                         placeradius,
-                                                         visible_only=True)
-
-        print("(" + str(matching_waypoints) + "," + str(len(matching_edges)) + ") ", end="", flush=True)
-        tmgfile.write(str(matching_waypoints) + " " + str(len(matching_edges)) + "\n")
+        matching_vertices = self.matching_vertices(regions, systems, placeradius, True)
+        matching_edges = self.matching_collapsed_edges(regions, systems, placeradius)
+        print('(' + str(len(matching_vertices)) + ',' + str(len(matching_edges)) + ') ', end="", flush=True)
+        tmgfile.write(str(len(matching_vertices)) + " " + str(len(matching_edges)) + "\n")
 
         # write visible vertices
         vertex_num = 0
-        for label, vinfo in self.vertices.items():
-            if not vinfo.is_hidden and \
-                    self.matching_waypoint(label, vinfo, regions, systems,
-                                           placeradius):
-                vinfo.vertex_num = vertex_num
-                tmgfile.write(label + ' ' + str(vinfo.lat) + ' ' + str(vinfo.lng) + '\n')
-                vertex_num += 1
+        for vinfo in matching_vertices:
+            vinfo.vertex_num = vertex_num
+            tmgfile.write(vinfo.unique_name + ' ' + str(vinfo.lat) + ' ' + str(vinfo.lng) + '\n')
+            vertex_num += 1
 
         # write collapsed edges
         edge = 0
@@ -1904,7 +1885,7 @@ class HighwayGraph:
             edge += 1
 
         tmgfile.close()
-        return (matching_waypoints, len(matching_edges))
+        return (len(matching_vertices), len(matching_edges))
 
 def format_clinched_mi(clinched,total):
     """return a nicely-formatted string for a given number of miles
