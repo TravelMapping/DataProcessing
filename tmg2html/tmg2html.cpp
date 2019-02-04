@@ -46,6 +46,7 @@ int main(int argc, char *argv[])
 	if (!tmg)	{ cout << argv[1] << " not found.\n"; return 0; }
 
 	const char *filename = &argv[1][string(argv[1]).find_last_of("/\\")+1];
+	cout << filename << "   ->   " << &argv[2][string(argv[2]).find_last_of("/\\")+1] << endl;;
 
 	unsigned int NumVertices, NumEdges;
 	string tmgline;
