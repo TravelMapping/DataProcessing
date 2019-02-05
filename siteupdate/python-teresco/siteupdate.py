@@ -1256,17 +1256,17 @@ class HighwayGraphEdgeInfo:
         # checks for the very unusual cases where an edge ends up
         # in the system as itself and its "reverse"
         duplicate = False
-        for e in graph.vertices[s.waypoint1.unique_name].incident_edges:
+        for e in self.vertex1.incident_edges:
             if e.vertex1 == self.vertex2 and e.vertex2 == self.vertex1:
                 duplicate = True
 
-        for e in graph.vertices[s.waypoint2.unique_name].incident_edges:
+        for e in self.vertex2.incident_edges:
             if e.vertex1 == self.vertex2 and e.vertex2 == self.vertex1:
                 duplicate = True
 
         if not duplicate:
-            graph.vertices[s.waypoint1.unique_name].incident_edges.append(self)
-            graph.vertices[s.waypoint2.unique_name].incident_edges.append(self)
+            self.vertex1.incident_edges.append(self)
+            self.vertex2.incident_edges.append(self)
 
     # compute an edge label, optionally resticted by systems
     def label(self,systems=None):
