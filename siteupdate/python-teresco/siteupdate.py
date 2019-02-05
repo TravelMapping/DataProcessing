@@ -1571,12 +1571,12 @@ class HighwayGraph:
             # key of the unique name we just computed
             if w.colocated is None:
                 self.unique_waypoints[point_name] = [ w ]
+                w.unique_name = point_name
             else:
                 self.unique_waypoints[point_name] = w.colocated
-
-            # mark each of these Waypoint objects also with this name
-            for wpt in self.unique_waypoints[point_name]:
-                wpt.unique_name = point_name
+                # mark each of these Waypoint objects also with this name
+                for wpt in w.colocated:
+                    wpt.unique_name = point_name
 
         # now create graph edges from highway segments start by
         # marking all as unvisited and giving a segment name of None,
