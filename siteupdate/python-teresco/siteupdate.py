@@ -1194,47 +1194,48 @@ class HighwayGraphVertexInfo:
     vertex.
     """
 
-    def __init__(self,waypoint_list,datacheckerrors):
-        self.lat = waypoint_list[0].lat
-        self.lng = waypoint_list[0].lng
-        self.unique_name = waypoint_list[0].unique_name
+    def __init__(self,wpt,unique_name,datacheckerrors):
+        self.lat = wpt.lat
+        self.lng = wpt.lng
+        self.unique_name = unique_name
         # will consider hidden iff all colocated waypoints are hidden
         self.is_hidden = True
-        # note: if saving the first waypoint, no longer need first
-        # three fields and can replace with methods
-        self.first_waypoint = waypoint_list[0]
+        # note: if saving the first waypoint, no longer need
+        # lat & lng and can replace with methods
+        self.first_waypoint = wpt
         self.regions = set()
         self.systems = set()
-        for w in waypoint_list:
+        self.incident_edges = []
+        self.incident_collapsed_edges = []
+        if wpt.colocated is None:
+            if not wpt.is_hidden:
+                self.is_hidden = False
+            self.regions.add(wpt.route.region)
+            self.systems.add(wpt.route.system)
+            return
+        for w in wpt.colocated:
             if not w.is_hidden:
                 self.is_hidden = False
             self.regions.add(w.route.region)
             self.systems.add(w.route.system)
-        self.incident_edges = []
-        self.incident_collapsed_edges = []
         # VISIBLE_HIDDEN_COLOC datacheck
-        if self.visible_hidden_coloc(waypoint_list):
-            # determine which route, label, and info to use for this entry asciibetically
-            vis_list = []
-            hid_list = []
-            for w in waypoint_list:
-                if w.is_hidden:
-                    hid_list.append(w)
-                else:
-                    vis_list.append(w)
-            datacheckerrors.append(DatacheckEntry(vis_list[0].route,[vis_list[0].label],"VISIBLE_HIDDEN_COLOC",
-                                                  hid_list[0].route.root+"@"+hid_list[0].label))
+        for p in range(1, len(wpt.colocated)):
+            if wpt.colocated[p].is_hidden != wpt.colocated[0].is_hidden:
+                # determine which route, label, and info to use for this entry asciibetically
+                vis_list = []
+                hid_list = []
+                for w in wpt.colocated:
+                    if w.is_hidden:
+                        hid_list.append(w)
+                    else:
+                        vis_list.append(w)
+                datacheckerrors.append(DatacheckEntry(vis_list[0].route,[vis_list[0].label],"VISIBLE_HIDDEN_COLOC",
+                                                      hid_list[0].route.root+"@"+hid_list[0].label))
+                break;
 
     # printable string
     def __str__(self):
         return self.unique_name
-
-    @staticmethod
-    def visible_hidden_coloc(waypoint_list):
-        for w in range(1,len(waypoint_list)):
-            if waypoint_list[w].is_hidden != waypoint_list[0].is_hidden:
-                return True
-        return False
 
 class HighwayGraphEdgeInfo:
     """This class encapsulates information needed for a 'standard'
@@ -1505,8 +1506,7 @@ class HighwayGraph:
     """This class implements the capability to create graph
     data structures representing the highway data.
 
-    On construction, build a list (as keys of a dict) of unique
-    waypoint names that can be used as vertex labels in unique_waypoints,
+    On construction, build a set of unique vertex names
     and determine edges, at most one per concurrent segment.
     Create two sets of edges - one for the full graph
     and one for the graph with hidden waypoints compressed into
@@ -1514,15 +1514,10 @@ class HighwayGraph:
     """
 
     def __init__(self, all_waypoints, highway_systems, datacheckerrors):
-        # first, build a list of the unique waypoints and create
-        # unique names that will be our vertex labels, these will
-        # be in a dict where the keys are the unique vertex labels
-        # and the values are lists of Waypoint objects (either a
-        # colocation list or a singleton list for a place occupied
-        # by a single Waypoint)
-        self.unique_waypoints = dict()
+        # first, find unique waypoints and create vertex labels
+        vertex_names = set()
+        self.vertices = {}
         all_waypoint_list = all_waypoints.point_list()
-        self.highway_systems = highway_systems
 
         # add a unique name field to each waypoint, initialized to
         # None, which should get filled in later for any waypoint that
@@ -1535,17 +1530,18 @@ class HighwayGraph:
         # to this list
         self.waypoint_naming_log = []
 
-        # loop again, for each Waypoint, create a unique name and an
-        # entry in the unique_waypoints list, unless it's a point not
-        # in or colocated with any active or preview system
+        # loop for each Waypoint, create a unique name and vertex
+        # unless it's a point not in or colocated with any active
+        # or preview system, or is colocated and not at the front
+        # of its colocation list
         for w in all_waypoint_list:
             # skip if this point is occupied by only waypoints in
             # devel systems
             if not w.is_or_colocated_with_active_or_preview():
                 continue
 
-            # skip if named previously as someone else's colocated point
-            if w.unique_name is not None:
+            # skip if colocated and not at front of list
+            if w.colocated is not None and w != w.colocated[0]:
                 continue
 
             # come up with a unique name that brings in its meaning
@@ -1554,45 +1550,34 @@ class HighwayGraph:
             point_name = w.canonical_waypoint_name(self.waypoint_naming_log)
 
             # if that's taken, append the region code
-            if point_name in self.unique_waypoints:
+            if point_name in vertex_names:
                 point_name += "|" + w.route.region
                 self.waypoint_naming_log.append("Appended region: " + point_name)
 
             # if that's taken, see if the simple name
             # is available
-            if point_name in self.unique_waypoints:
+            if point_name in vertex_names:
                 simple_name = w.simple_waypoint_name()
-                if simple_name not in self.unique_waypoints:
+                if simple_name not in vertex_names:
                     self.waypoint_naming_log.append("Revert to simple: " + simple_name + " from (taken) " + point_name)
                     point_name = simple_name
 
             # if we have not yet succeeded, add !'s until we do
-            while point_name in self.unique_waypoints:
+            while point_name in vertex_names:
                 point_name += "!"
                 self.waypoint_naming_log.append("Appended !: " + point_name)
 
-            # we're good, add the list of waypoints, either as a
-            # singleton list or the colocated list a values for the
-            # key of the unique name we just computed
+            # we're good; now construct a vertex
             if w.colocated is None:
-                self.unique_waypoints[point_name] = [ w ]
-                w.unique_name = point_name
+                self.vertices[w] = HighwayGraphVertexInfo(w, point_name, datacheckerrors)
             else:
-                self.unique_waypoints[point_name] = w.colocated
-                # mark each of these Waypoint objects also with this name
-                for wpt in w.colocated:
-                    wpt.unique_name = point_name
+                self.vertices[w] = HighwayGraphVertexInfo(w.colocated[0], point_name, datacheckerrors)
 
-        # Full graph info now complete.  Next, build a graph structure
-        # that is more convenient to use.
-
-        # One copy of the vertices
-        self.vertices = {}
-        for pointlist in self.unique_waypoints.values():
-            self.vertices[pointlist[0]] = HighwayGraphVertexInfo(pointlist,datacheckerrors)
+        # now that vertices are in place with names, set of unique names is no longer needed
+        vertex_names = None
 
         # add edges, which end up in two separate vertex adjacency lists,
-        for h in self.highway_systems:
+        for h in highway_systems:
             if h.devel():
                 continue
             for r in h.route_list:
