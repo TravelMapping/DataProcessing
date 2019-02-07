@@ -654,6 +654,12 @@ class Waypoint:
     def is_valid(self):
         return self.lat != 0.0 or self.lng != 0.0
 
+    def hashpoint(self):
+        # return a canonical waypoint for graph vertex hashtable lookup
+        if self.colocated is None:
+            return self
+        return self.colocated[0]
+
 class HighwaySegment:
     """This class represents one highway segment: the connection between two
     Waypoints connected by one or more routes"""
@@ -1239,8 +1245,8 @@ class HighwayGraphEdgeInfo:
         # temp debug
         self.written = False
         self.segment_name = s.segment_name()
-        self.vertex1 = graph.vertices[s.waypoint1.unique_name]
-        self.vertex2 = graph.vertices[s.waypoint2.unique_name]
+        self.vertex1 = graph.vertices[s.waypoint1.hashpoint()]
+        self.vertex2 = graph.vertices[s.waypoint2.hashpoint()]
         # assumption: each edge/segment lives within a unique region
         self.region = s.route.region
         # a list of route name/system pairs
@@ -1304,8 +1310,8 @@ class HighwayGraphCollapsedEdgeInfo:
         # initial construction is based on a HighwaySegment
         if segment is not None:
             self.segment_name = segment.segment_name()
-            self.vertex1 = graph.vertices[segment.waypoint1.unique_name]
-            self.vertex2 = graph.vertices[segment.waypoint2.unique_name]
+            self.vertex1 = graph.vertices[segment.waypoint1.hashpoint()]
+            self.vertex2 = graph.vertices[segment.waypoint2.hashpoint()]
             # assumption: each edge/segment lives within a unique region
             # and a 'multi-edge' would not be able to span regions as there
             # would be a required visible waypoint at the border
@@ -1582,8 +1588,8 @@ class HighwayGraph:
 
         # One copy of the vertices
         self.vertices = {}
-        for label, pointlist in self.unique_waypoints.items():
-            self.vertices[label] = HighwayGraphVertexInfo(pointlist,datacheckerrors)
+        for pointlist in self.unique_waypoints.values():
+            self.vertices[pointlist[0]] = HighwayGraphVertexInfo(pointlist,datacheckerrors)
 
         # add edges, which end up in two separate vertex adjacency lists,
         for h in self.highway_systems:
@@ -1725,8 +1731,8 @@ class HighwayGraph:
         # number waypoint entries as we go to support original .gra
         # format output
         vertex_num = 0
-        for label, vinfo in self.vertices.items():
-            tmgfile.write(label + ' ' + str(vinfo.lat) + ' ' + str(vinfo.lng) + '\n')
+        for vinfo in self.vertices.values():
+            tmgfile.write(vinfo.unique_name + ' ' + str(vinfo.lat) + ' ' + str(vinfo.lng) + '\n')
             vinfo.vertex_num = vertex_num
             vertex_num += 1
 
@@ -1765,10 +1771,10 @@ class HighwayGraph:
 
         # write visible vertices
         vis_vertex_num = 0
-        for label, vinfo in self.vertices.items():
+        for vinfo in self.vertices.values():
             if not vinfo.is_hidden:
                 vinfo.vis_vertex_num = vis_vertex_num
-                tmgfile.write(label + ' ' + str(vinfo.lat) + ' ' + str(vinfo.lng) + '\n')
+                tmgfile.write(vinfo.unique_name + ' ' + str(vinfo.lat) + ' ' + str(vinfo.lng) + '\n')
                 vis_vertex_num += 1
 
         # write collapsed edges
