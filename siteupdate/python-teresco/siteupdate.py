@@ -1274,6 +1274,10 @@ class HighwayGraphEdgeInfo:
         if not duplicate:
             self.vertex1.incident_edges.append(self)
             self.vertex2.incident_edges.append(self)
+        else:
+            # flag as invalid/duplicate in order to bypass
+            # building a HighwayGraphCollapsedEdgeInfo
+            self.vertex1 = None
 
     # compute an edge label, optionally resticted by systems
     def label(self,systems=None):
@@ -1296,8 +1300,8 @@ class HighwayGraphCollapsedEdgeInfo:
     edge that can incorporate intermediate points.
     """
 
-    def __init__(self,graph,segment=None,vertex_info=None):
-        if segment is None and vertex_info is None:
+    def __init__(self,graph,HGEdge=None,vertex_info=None):
+        if HGEdge is None and vertex_info is None:
             print("ERROR: improper use of HighwayGraphCollapsedEdgeInfo constructor\n")
             return
 
@@ -1308,39 +1312,19 @@ class HighwayGraphCollapsedEdgeInfo:
         # vertex2
         self.intermediate_points = []
 
-        # initial construction is based on a HighwaySegment
-        if segment is not None:
-            self.segment_name = segment.segment_name()
-            self.vertex1 = graph.vertices[segment.waypoint1.hashpoint()]
-            self.vertex2 = graph.vertices[segment.waypoint2.hashpoint()]
+        # initial construction is based on a HighwayGraphEdgeInfo
+        if HGEdge is not None:
+            self.segment_name = HGEdge.segment_name
+            self.vertex1 = HGEdge.vertex1
+            self.vertex2 = HGEdge.vertex2
             # assumption: each edge/segment lives within a unique region
             # and a 'multi-edge' would not be able to span regions as there
             # would be a required visible waypoint at the border
-            self.region = segment.route.region
+            self.region = HGEdge.region
             # a list of route name/system pairs
-            self.route_names_and_systems = []
-            if segment.concurrent is None:
-                self.route_names_and_systems.append((segment.route.list_entry_name(), segment.route.system))
-            else:
-                for cs in segment.concurrent:
-                    if cs.route.system.devel():
-                        continue
-                    self.route_names_and_systems.append((cs.route.list_entry_name(), cs.route.system))
-
-            # checks for the very unusual cases where an edge ends up
-            # in the system as itself and its "reverse"
-            duplicate = False
-            for e in self.vertex1.incident_collapsed_edges:
-                if e.vertex1 == self.vertex2 and e.vertex2 == self.vertex1:
-                    duplicate = True
-
-            for e in self.vertex2.incident_collapsed_edges:
-                if e.vertex1 == self.vertex2 and e.vertex2 == self.vertex1:
-                    duplicate = True
-
-            if not duplicate:
-                self.vertex1.incident_collapsed_edges.append(self)
-                self.vertex2.incident_collapsed_edges.append(self)
+            self.route_names_and_systems = HGEdge.route_names_and_systems
+            self.vertex1.incident_collapsed_edges.append(self)
+            self.vertex2.incident_collapsed_edges.append(self)
 
         # build by collapsing two existing edges around a common
         # hidden vertex waypoint, whose information is given in
@@ -1584,10 +1568,13 @@ class HighwayGraph:
                 for s in r.segment_list:
                     if s.concurrent is None or s == s.concurrent[0]:
                         # first one copy for the full simple graph
-                        HighwayGraphEdgeInfo(s, self)
+                        e = HighwayGraphEdgeInfo(s, self)
                         # and again for a graph where hidden waypoints
                         # are merged into the edge structures
-                        HighwayGraphCollapsedEdgeInfo(self, segment=s)
+                        if e.vertex1 is not None:
+                            HighwayGraphCollapsedEdgeInfo(self, HGEdge=e)
+                        else:
+                            e = None
 
         print("Full graph has " + str(len(self.vertices)) +
               " vertices, " + str(self.edge_count()) + " edges.")
