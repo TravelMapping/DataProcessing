@@ -1300,7 +1300,7 @@ class HighwayGraphCollapsedEdgeInfo:
     edge that can incorporate intermediate points.
     """
 
-    def __init__(self,graph,HGEdge=None,vertex_info=None):
+    def __init__(self,HGEdge=None,vertex_info=None):
         if HGEdge is None and vertex_info is None:
             print("ERROR: improper use of HighwayGraphCollapsedEdgeInfo constructor\n")
             return
@@ -1572,7 +1572,7 @@ class HighwayGraph:
                         # and again for a graph where hidden waypoints
                         # are merged into the edge structures
                         if e.vertex1 is not None:
-                            HighwayGraphCollapsedEdgeInfo(self, HGEdge=e)
+                            HighwayGraphCollapsedEdgeInfo(HGEdge=e)
                         else:
                             e = None
 
@@ -1593,7 +1593,7 @@ class HighwayGraph:
                     vinfo.is_hidden = False
                     continue
                 # construct from vertex_info this time
-                HighwayGraphCollapsedEdgeInfo(self, vertex_info=vinfo)
+                HighwayGraphCollapsedEdgeInfo(vertex_info=vinfo)
 
         # print summary info
         print("Edge compressed graph has " + str(self.num_visible_vertices()) +
