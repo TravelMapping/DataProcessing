@@ -1567,7 +1567,8 @@ class HighwayGraph:
                 point_name += "!"
                 self.waypoint_naming_log.append("Appended !: " + point_name)
 
-            # we're good; now construct a vertex
+            # we're good; now add point_name to the set and construct a vertex
+            vertex_names.add(point_name)
             if w.colocated is None:
                 self.vertices[w] = HighwayGraphVertexInfo(w, point_name, datacheckerrors)
             else:
