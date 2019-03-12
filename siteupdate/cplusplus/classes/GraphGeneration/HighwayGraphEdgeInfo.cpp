@@ -16,9 +16,8 @@ HighwayGraphEdgeInfo::HighwayGraphEdgeInfo(HighwaySegment *s, HighwayGraph *grap
 	}
 	vertex1->incident_edges.push_back(this);
 	vertex2->incident_edges.push_back(this);
-	// assumption: each edge/segment lives within a unique region
-	region = s->route->region;
-	region->edges.insert(this);
+	segment = s;
+	s->route->region->edges.insert(this);
 	// a list of route name/system pairs
 	if (!s->concurrent)
 	{	route_names_and_systems.emplace_back(s->route->list_entry_name(), s->route->system);

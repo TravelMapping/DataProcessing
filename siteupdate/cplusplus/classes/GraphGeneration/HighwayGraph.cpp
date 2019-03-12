@@ -105,11 +105,12 @@ class HighwayGraph
 		{	if (counter % 10000 == 0) std::cout << '.' << std::flush;
 			counter++;
 			if (wv.second->is_hidden)
-			{	if (wv.second->incident_collapsed_edges.size() < 2)
-				{	// these cases are flagged as HIDDEN_TERMINUS
-					wv.second->is_hidden = 0;
+			{	// cases with only one edge are flagged as HIDDEN_TERMINUS
+				if (wv.second->incident_collapsed_edges.size() < 2)
+				{	wv.second->is_hidden = 0;
 					continue;
 				}
+				// if >2 edges, flag HIDDEN_JUNCTION, mark as visible, and do not compress
 				if (wv.second->incident_collapsed_edges.size() > 2)
 				{	std::list<Waypoint*>::iterator it = wv.second->first_waypoint->colocated->begin();
 					Waypoint *dcw = *it; // "datacheck waypoint"
@@ -118,6 +119,25 @@ class HighwayGraph
 						dcw->root_at_label() = (*it)->root_at_label();
 					datacheckerrors->add(dcw->route, dcw->label, "", "", "HIDDEN_JUNCTION", std::to_string(wv.second->incident_collapsed_edges.size()));
 					wv.second->is_hidden = 0;
+					continue;
+				}
+				// if edge clinched_by sets mismatch, mark as visible and do not compress
+				// first, the easy check, for whether set sizes mismatch
+				if (wv.second->incident_collapsed_edges.front()->segment->clinched_by.size()
+				 != wv.second->incident_collapsed_edges.back()->segment->clinched_by.size())
+				 {	wv.second->is_hidden = 0;
+					continue;
+				 }
+				// next, compare clinched_by sets; look for any element in the 1st not in the 2nd
+				bool mismatch = 0;
+				for (TravelerList *t : wv.second->incident_collapsed_edges.front()->segment->clinched_by)
+				  if (wv.second->incident_collapsed_edges.back()->segment->clinched_by.find(t)
+				   == wv.second->incident_collapsed_edges.back()->segment->clinched_by.end())
+				  {	mismatch = 1;
+					break;
+				  }
+				if (mismatch)
+				{	wv.second->is_hidden = 0;
 					continue;
 				}
 				// construct from vertex_info this time
@@ -262,7 +282,7 @@ class HighwayGraph
 			  if (!g.placeradius || g.placeradius->contains_edge(e))
 			  {	bool rg_in_rg = 0;
 				if (g.regions) for (Region *r : *g.regions)
-				  if (r == e->region)
+				  if (r == e->segment->route->region)
 				  {	rg_in_rg = 1;
 					break;
 				  }
@@ -336,7 +356,7 @@ class HighwayGraph
 	}
 
 	// write the entire set of data in the tmg collapsed edge format
-	void write_master_tmg_collapsed(GraphListEntry *mcptr, std::string filename, unsigned int threadnum)
+	void write_master_tmg_collapsed(GraphListEntry *mcptr, std::string filename, unsigned int threadnum, std::list<TravelerList*> *traveler_lists)
 	{	std::ofstream tmgfile(filename.data());
 		unsigned int num_collapsed_edges = collapsed_edge_count();
 		tmgfile << "TMG 1.0 collapsed\n";
@@ -359,7 +379,7 @@ class HighwayGraph
 		    for (HighwayGraphCollapsedEdgeInfo *e : wv.second->incident_collapsed_edges)
 		      if (!e->written)
 		      {	e->written = 1;
-			tmgfile << e->collapsed_tmg_line(0, threadnum) << '\n';
+			tmgfile << e->collapsed_tmg2_line(0, threadnum, traveler_lists) << '\n';
 			edge++;
 		      }
 		// sanity check on edges written
@@ -376,7 +396,8 @@ class HighwayGraph
 	// restricted by regions in the list if given,
 	// by system in the list if given,
 	// or to within a given area if placeradius is given
-	void write_subgraphs_tmg(std::vector<GraphListEntry> &graph_vector, std::string path, size_t graphnum, unsigned int threadnum)
+	void write_subgraphs_tmg(std::vector<GraphListEntry> &graph_vector, std::string path, size_t graphnum, unsigned int threadnum,
+				 std::list<TravelerList*> *traveler_lists)
 	{	unsigned int visible_v;
 		std::string simplefilename = path+graph_vector[graphnum].filename();
 		std::string collapfilename = path+graph_vector[graphnum+1].filename();
@@ -389,7 +410,7 @@ class HighwayGraph
 			  << '(' << mv.size() << ',' << mse.size() << ") "
 			  << '(' << visible_v << ',' << mce.size() << ") " << std::flush;
 		simplefile << "TMG 1.0 simple\n";
-		collapfile << "TMG 1.0 collapsed\n";
+		collapfile << "TMG 2.0 collapsed\n";
 		simplefile << mv.size() << ' ' << mse.size() << '\n';
 		collapfile << visible_v << ' ' << mce.size() << '\n';
 
@@ -416,7 +437,10 @@ class HighwayGraph
 				   << e->vertex2->vertex_num[threadnum] << ' '
 				   << e->label(graph_vector[graphnum].systems) << '\n';
 		for (HighwayGraphCollapsedEdgeInfo *e : mce)
-			collapfile << e->collapsed_tmg_line(graph_vector[graphnum].systems, threadnum) << '\n';
+			collapfile << e->collapsed_tmg2_line(graph_vector[graphnum].systems, threadnum, traveler_lists) << '\n';
+		for (TravelerList *t : *traveler_lists)
+			collapfile << t->traveler_name << ' ';
+		collapfile << '\n';
 		simplefile.close();
 		collapfile.close();
 

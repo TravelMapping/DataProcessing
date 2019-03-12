@@ -4,10 +4,7 @@ HighwayGraphCollapsedEdgeInfo::HighwayGraphCollapsedEdgeInfo(HighwayGraphEdgeInf
 	segment_name = e->segment_name;
 	vertex1 = e->vertex1;
 	vertex2 = e->vertex2;
-	// assumption: each edge/segment lives within a unique region
-	// and a 'multi-edge' would not be able to span regions as there
-	// would be a required visible waypoint at the border
-	region = e->region;
+	segment = e->segment;
 	// a list of route name/system pairs
 	route_names_and_systems = e->route_names_and_systems;
 	vertex1->incident_collapsed_edges.push_back(this);
@@ -33,10 +30,10 @@ HighwayGraphCollapsedEdgeInfo::HighwayGraphCollapsedEdgeInfo(HighwayGraphVertexI
 	segment_name = edge1->segment_name;
 	//std::cout << "\nDEBUG: collapsing edges along " << segment_name << " at vertex " << \
 			*(vertex_info->unique_name) << ", edge1 is " << edge1->str() << " and edge2 is " << edge2->str() << std::endl;
-	// region and route names/systems should also match, but not
+	// segment and route names/systems should also match, but not
 	// doing that sanity check here, as the above check should take
 	// care of that
-	region = edge1->region;
+	segment = edge1->segment;
 	route_names_and_systems = edge1->route_names_and_systems;
 
 	// figure out and remember which endpoints are not the
@@ -117,9 +114,22 @@ std::string HighwayGraphCollapsedEdgeInfo::label(std::list<HighwaySystem*> *syst
 	return the_label;
 }
 
-// line appropriate for a tmg collapsed edge file
+// line appropriate for a tmg 1.0 collapsed edge file
 std::string HighwayGraphCollapsedEdgeInfo::collapsed_tmg_line(std::list<HighwaySystem*> *systems, unsigned int threadnum)
 {	std::string line = std::to_string(vertex1->vis_vertex_num[threadnum]) + " " + std::to_string(vertex2->vis_vertex_num[threadnum]) + " " + label(systems);
+	char fstr[43];
+	for (HighwayGraphVertexInfo *intermediate : intermediate_points)
+	{	sprintf(fstr, " %.15g %.15g", intermediate->lat, intermediate->lng);
+		line += fstr;
+	}
+	return line;
+}
+
+// line appropriate for a tmg 2.0 collapsed edge file, with encoded travelers
+std::string HighwayGraphCollapsedEdgeInfo::collapsed_tmg2_line(std::list<HighwaySystem*> *systems, unsigned int threadnum, std::list<TravelerList*> *traveler_lists)
+{	std::string line = std::to_string(vertex1->vis_vertex_num[threadnum]) + " " + std::to_string(vertex2->vis_vertex_num[threadnum]) + " " + label(systems);
+	line += ' ';
+	line += segment->clinchedby_code(traveler_lists);
 	char fstr[43];
 	for (HighwayGraphVertexInfo *intermediate : intermediate_points)
 	{	sprintf(fstr, " %.15g %.15g", intermediate->lat, intermediate->lng);
