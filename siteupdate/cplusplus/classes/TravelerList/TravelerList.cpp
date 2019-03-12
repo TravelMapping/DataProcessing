@@ -23,6 +23,7 @@ class TravelerList
 	std::unordered_map<Route*, double> routes_traveled;						// mileage per traveled route
 	std::unordered_map<HighwaySystem*, unsigned int> con_routes_clinched;				// clinch count per system
 	//std::unordered_map<HighwaySystem*, unsigned int> routes_clinched;				// commented out in original siteupdate.py
+	unsigned int traveler_num;
 	unsigned int active_systems_traveled;
 	unsigned int active_systems_clinched;
 	unsigned int preview_systems_traveled;
