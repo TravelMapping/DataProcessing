@@ -56,7 +56,7 @@ class TravelerList
 		strtok_mtx->unlock();
 		lines.push_back(listdata+listdatasize+1); // add a dummy "past-the-end" element to make lines[l+1]-2 work
 
-		for(unsigned int l = 0; l < lines.size()-1; l++)
+		for (unsigned int l = 0; l < lines.size()-1; l++)
 		{	// strip whitespace
 			while (lines[l][0] == ' ' || lines[l][0] == '\t') lines[l]++;
 			char * endchar = lines[l+1]-2; // -2 skips over the 0 inserted by strtok
@@ -76,7 +76,9 @@ class TravelerList
 			if (fields.size() != 4)
 			  // OK if 5th field exists and starts with #
 			  if (fields.size() < 5 || fields[4][0] != '#')
-			  {	log << "Incorrect format line: " << origline << '\n';
+			  {	for (size_t c = 0; c < origline.size(); c++)
+				  if (origline[c] < 0x20 || origline[c] >= 0x7F) origline[c] = '?';
+				log << "Incorrect format line: " << origline << '\n';
 				continue;
 			  }
 
@@ -130,7 +132,17 @@ class TravelerList
 					     }
 					checking_index++;
 				}
-				if (canonical_waypoints.size() != 2) log << "Waypoint label(s) not found in line: " << origline << '\n';
+				if (canonical_waypoints.size() != 2)
+				{	bool invalid_char = 0;
+					for (size_t c = 0; c < origline.size(); c++)
+					  if (origline[c] < 0x20 || origline[c] >= 0x7F)
+					  {	origline[c] = '?';
+						invalid_char = 1;
+					  }
+					log << "Waypoint label(s) not found in line: " << origline;
+					if (invalid_char) log << " [line contains invalid character(s)]";
+					log << '\n';
+				}
 				else {	list_entries.emplace_back(/**line,*/ r, canonical_waypoint_indices[0], canonical_waypoint_indices[1]);
 					// find the segments we just matched and store this traveler with the
 					// segments and the segments with the traveler (might not need both
@@ -143,7 +155,15 @@ class TravelerList
 				     }
 			    }
 			catch (const std::out_of_range& oor)
-			    {	log << "Unknown region/highway combo in line: " << origline << '\n';
+			    {	bool invalid_char = 0;
+				for (size_t c = 0; c < origline.size(); c++)
+				  if (origline[c] < 0x20 || origline[c] >= 0x7F)
+				  {	origline[c] = '?';
+					invalid_char = 1;
+				  }
+				log << "Unknown region/highway combo in line: " << origline;
+				if (invalid_char) log << " [line contains invalid character(s)]";
+				log << '\n';
 			    }
 		}
 		delete[] listdata;
