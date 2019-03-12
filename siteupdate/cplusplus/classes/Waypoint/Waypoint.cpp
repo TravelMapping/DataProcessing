@@ -14,12 +14,10 @@ Waypoint::Waypoint(char *line, Route *rte, std::mutex *strtok_mtx, DatacheckEntr
 		alt_labels.push_back(token);	// get all tokens & put into label deque
 	strtok_mtx->unlock();
 
-	std::string URL;
-	if (!alt_labels.empty())
-	{	URL = alt_labels.back();	// last token is actually the URL...
-		alt_labels.pop_back();		// ...and not a label.
-	}
-	//FIXME else log an error
+	// We know alt_labels will have at least one element, because if the WPT line is
+	// blank or contains only spaces, Route::read_wpt will not call this constructor.
+	std::string URL = alt_labels.back();	// last token is actually the URL...
+	alt_labels.pop_back();			// ...and not a label.
 	if (alt_labels.empty()) label = "NULL";
 	else {	label = alt_labels.front();	// first token is the primary label...
 		alt_labels.pop_front();		// ...and not an alternate.
