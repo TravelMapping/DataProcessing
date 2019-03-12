@@ -664,7 +664,6 @@ class HighwaySegment:
         self.route = route
         self.concurrent = None
         self.clinched_by = []
-        self.segment_name = None
 
     def __str__(self):
         return self.route.readable_name() + " " + self.waypoint1.label + " " + self.waypoint2.label
@@ -684,19 +683,20 @@ class HighwaySegment:
         """return segment length in miles"""
         return self.waypoint1.distance_to(self.waypoint2)
 
-    def set_segment_name(self):
-        """compute and set a segment name based on names of all
+    def segment_name(self):
+        """compute a segment name based on names of all
         concurrent routes, used for graph edge labels"""
-        self.segment_name = ""
+        segment_name = ""
         if self.concurrent is None:
             if self.route.system.active_or_preview():
-                self.segment_name += self.route.list_entry_name()
+                segment_name += self.route.list_entry_name()
         else:
             for cs in self.concurrent:
                 if cs.route.system.active_or_preview():
-                    if self.segment_name != "":
-                        self.segment_name += ","
-                    self.segment_name += cs.route.list_entry_name()
+                    if segment_name != "":
+                        segment_name += ","
+                    segment_name += cs.route.list_entry_name()
+        return segment_name
 
 class Route:
     """This class encapsulates the contents of one .csv file line
@@ -1238,7 +1238,7 @@ class HighwayGraphEdgeInfo:
     def __init__(self,s,graph):
         # temp debug
         self.written = False
-        self.segment_name = s.segment_name
+        self.segment_name = s.segment_name()
         self.vertex1 = graph.vertices[s.waypoint1.unique_name]
         self.vertex2 = graph.vertices[s.waypoint2.unique_name]
         # assumption: each edge/segment lives within a unique region
@@ -1256,17 +1256,17 @@ class HighwayGraphEdgeInfo:
         # checks for the very unusual cases where an edge ends up
         # in the system as itself and its "reverse"
         duplicate = False
-        for e in graph.vertices[s.waypoint1.unique_name].incident_edges:
+        for e in self.vertex1.incident_edges:
             if e.vertex1 == self.vertex2 and e.vertex2 == self.vertex1:
                 duplicate = True
 
-        for e in graph.vertices[s.waypoint2.unique_name].incident_edges:
+        for e in self.vertex2.incident_edges:
             if e.vertex1 == self.vertex2 and e.vertex2 == self.vertex1:
                 duplicate = True
 
         if not duplicate:
-            graph.vertices[s.waypoint1.unique_name].incident_edges.append(self)
-            graph.vertices[s.waypoint2.unique_name].incident_edges.append(self)
+            self.vertex1.incident_edges.append(self)
+            self.vertex2.incident_edges.append(self)
 
     # compute an edge label, optionally resticted by systems
     def label(self,systems=None):
@@ -1303,7 +1303,7 @@ class HighwayGraphCollapsedEdgeInfo:
 
         # initial construction is based on a HighwaySegment
         if segment is not None:
-            self.segment_name = segment.segment_name
+            self.segment_name = segment.segment_name()
             self.vertex1 = graph.vertices[segment.waypoint1.unique_name]
             self.vertex2 = graph.vertices[segment.waypoint2.unique_name]
             # assumption: each edge/segment lives within a unique region
@@ -1501,9 +1501,8 @@ class HighwayGraph:
 
     On construction, build a list (as keys of a dict) of unique
     waypoint names that can be used as vertex labels in unique_waypoints,
-    and a determine edges, at most one per concurrent segment, by
-    setting segment names only on certain HighwaySegments in the overall
-    data set.  Create two sets of edges - one for the full graph
+    and determine edges, at most one per concurrent segment.
+    Create two sets of edges - one for the full graph
     and one for the graph with hidden waypoints compressed into
     multi-point edges.
     """
@@ -1571,41 +1570,12 @@ class HighwayGraph:
             # key of the unique name we just computed
             if w.colocated is None:
                 self.unique_waypoints[point_name] = [ w ]
+                w.unique_name = point_name
             else:
                 self.unique_waypoints[point_name] = w.colocated
-
-            # mark each of these Waypoint objects also with this name
-            for wpt in self.unique_waypoints[point_name]:
-                wpt.unique_name = point_name
-
-        # now create graph edges from highway segments start by
-        # marking all as unvisited and giving a segment name of None,
-        # so only those segments that are given a name are used later
-        # in the graph edge listing
-        for h in highway_systems:
-            if h.devel():
-                continue
-            for r in h.route_list:
-                for s in r.segment_list:
-                    s.visited = False
-                    s.segment_name = None
-
-        # now go back and visit again, but concurrent segments just
-        # get named once. also count up unique edges as we go
-        self.unique_edges = 0
-        for h in highway_systems:
-            if h.devel():
-                continue
-            for r in h.route_list:
-                for s in r.segment_list:
-                    if not s.visited:
-                        self.unique_edges += 1
-                        s.set_segment_name()
-                        if s.concurrent is None:
-                            s.visited = True
-                        else:
-                            for cs in s.concurrent:
-                                cs.visited = True
+                # mark each of these Waypoint objects also with this name
+                for wpt in w.colocated:
+                    wpt.unique_name = point_name
 
         # Full graph info now complete.  Next, build a graph structure
         # that is more convenient to use.
@@ -1615,30 +1585,21 @@ class HighwayGraph:
         for label, pointlist in self.unique_waypoints.items():
             self.vertices[label] = HighwayGraphVertexInfo(pointlist,datacheckerrors)
 
-        # add edges, which end up in vertex adjacency lists, first one
-        # copy for the full graph
+        # add edges, which end up in two separate vertex adjacency lists,
         for h in self.highway_systems:
             if h.devel():
                 continue
             for r in h.route_list:
                 for s in r.segment_list:
-                    if s.segment_name is not None:
+                    if s.concurrent is None or s == s.concurrent[0]:
+                        # first one copy for the full simple graph
                         HighwayGraphEdgeInfo(s, self)
+                        # and again for a graph where hidden waypoints
+                        # are merged into the edge structures
+                        HighwayGraphCollapsedEdgeInfo(self, segment=s)
 
         print("Full graph has " + str(len(self.vertices)) +
               " vertices, " + str(self.edge_count()) + " edges.")
-
-        # add edges again, which end up in a separate set of vertex
-        # adjacency lists, this one will be used to create a graph
-        # where the hidden waypoints are merged into the edge
-        # structures
-        for h in self.highway_systems:
-            if h.devel():
-                continue
-            for r in h.route_list:
-                for s in r.segment_list:
-                    if s.segment_name is not None:
-                        HighwayGraphCollapsedEdgeInfo(self, segment=s)
 
         # compress edges adjacent to hidden vertices
         for label, vinfo in self.vertices.items():
