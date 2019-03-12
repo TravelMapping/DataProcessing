@@ -91,7 +91,7 @@ int main(int argc, char *argv[])
 {	ifstream file;
 	string filename, line;
 	mutex list_mtx, log_mtx, strtok_mtx;
-	time_t ctimepoint;	//FIXME rename to timestamp
+	time_t timestamp;
 
 	// start a timer for including elapsed time reports in messages
 	ElapsedTime et;
@@ -539,8 +539,8 @@ int main(int argc, char *argv[])
 	cout << et.et() << "Writing points in use log." << endl;
 	filename = args.logfilepath+"/pointsinuse.log";
 	ofstream inusefile(filename.data());
-	ctimepoint = time(0);
-	inusefile << "Log file created at: " << ctime(&ctimepoint);
+	timestamp = time(0);
+	inusefile << "Log file created at: " << ctime(&timestamp);
 	for (HighwaySystem *h : highway_systems)
 	  for (Route &r : h->route_list)
 	    if (r.labels_in_use.size())
@@ -557,8 +557,8 @@ int main(int argc, char *argv[])
 	cout << et.et() << "Writing unused alt labels log." << endl;
 	filename = args.logfilepath+"/unusedaltlabels.log";
 	ofstream unusedfile(filename.data());
-	ctimepoint = time(0);
-	unusedfile << "Log file created at: " << ctime(&ctimepoint);
+	timestamp = time(0);
+	unusedfile << "Log file created at: " << ctime(&timestamp);
 	unsigned int total_unused_alt_labels = 0;
 	for (HighwaySystem *h : highway_systems)
 		for (Route &r : h->route_list)
@@ -580,8 +580,8 @@ int main(int argc, char *argv[])
 	cout << et.et() << "Concurrent segment detection." << flush;
 	filename = args.logfilepath+"/concurrencies.log";
 	ofstream concurrencyfile(filename.data());
-	ctimepoint = time(0);
-	concurrencyfile << "Log file created at: " << ctime(&ctimepoint);
+	timestamp = time(0);
+	concurrencyfile << "Log file created at: " << ctime(&timestamp);
 	for (HighwaySystem *h : highway_systems)
 	{   cout << '.' << flush;
 	    for (Route &r : h->route_list)
@@ -678,8 +678,8 @@ int main(int argc, char *argv[])
 	char fstr[112];
 	filename = args.logfilepath+"/highwaydatastats.log";
 	ofstream hdstatsfile(filename);
-	ctimepoint = time(0);
-	hdstatsfile << "Travel Mapping highway mileage as of " << ctime(&ctimepoint);
+	timestamp = time(0);
+	hdstatsfile << "Travel Mapping highway mileage as of " << ctime(&timestamp);
 
 	double active_only_miles = 0;
 	double active_preview_miles = 0;
@@ -974,8 +974,8 @@ int main(int argc, char *argv[])
 	cout << et.et() << "Marking datacheck false positives." << flush;
 	filename = args.logfilepath+"/nearmatchfps.log";
 	ofstream fpfile(filename.data());
-	ctimepoint = time(0);
-	fpfile << "Log file created at: " << ctime(&ctimepoint);
+	timestamp = time(0);
+	fpfile << "Log file created at: " << ctime(&timestamp);
 	list<array<string, 6>> toremove;
 	unsigned int counter = 0;
 	unsigned int fpcount = 0;
@@ -1006,8 +1006,8 @@ int main(int argc, char *argv[])
 	cout << et.et() << "Writing log of unmatched datacheck FP entries." << endl;
 	filename = args.logfilepath+"/unmatchedfps.log";
 	fpfile.open(filename.data());
-	ctimepoint = time(0);
-	fpfile << "Log file created at: " << ctime(&ctimepoint);
+	timestamp = time(0);
+	fpfile << "Log file created at: " << ctime(&timestamp);
 	if (datacheckfps.empty()) fpfile << "No unmatched FP entries.\n";
 	else	for (array<string, 6> entry : datacheckfps)
 			fpfile << entry[0] << ';' << entry[1] << ';' << entry[2] << ';' << entry[3] << ';' << entry[4] << ';' << entry[5] << '\n';
@@ -1017,8 +1017,8 @@ int main(int argc, char *argv[])
 	cout << et.et() << "Writing datacheck.log" << endl;
 	filename = args.logfilepath + "/datacheck.log";
 	ofstream logfile(filename.data());
-	ctimepoint = time(0);
-	logfile << "Log file created at: " << ctime(&ctimepoint);
+	timestamp = time(0);
+	logfile << "Log file created at: " << ctime(&timestamp);
 	logfile << "Datacheck errors that have been flagged as false positives are not included.\n";
 	logfile << "These entries should be in a format ready to paste into datacheckfps.csv.\n";
 	logfile << "Root;Waypoint1;Waypoint2;Waypoint3;Error;Info\n";
