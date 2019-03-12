@@ -413,6 +413,12 @@ int main(int argc, char *argv[])
       #endif
 	cout << " processed " << traveler_lists.size() << " traveler list files." << endl;
 	traveler_lists.sort(sort_travelers_by_name);
+	// assign traveler numbers
+	unsigned int travnum = 0;
+	for (TravelerList *t : traveler_lists)
+	{	t->traveler_num = travnum;
+		travnum++;
+	}
 
 	//#include "debug/highway_segment_log.cpp"
 	//#include "debug/pioneers.cpp"
