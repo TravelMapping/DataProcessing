@@ -17,7 +17,7 @@ HighwayGraphEdgeInfo::HighwayGraphEdgeInfo(HighwaySegment *s, HighwayGraph *grap
 	vertex1->incident_edges.push_back(this);
 	vertex2->incident_edges.push_back(this);
 	// assumption: each edge/segment lives within a unique region
-	region = s->route->region; //FIXME may not need to store region anymore
+	region = s->route->region;
 	region->edges.insert(this);
 	// a list of route name/system pairs
 	if (!s->concurrent)
