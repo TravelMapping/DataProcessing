@@ -947,6 +947,7 @@ class HighwaySystem:
         self.tier = tier
         self.level = level
         self.mileage_by_region = dict()
+        self.vertices = set()
         try:
             file = open(path+"/"+systemname+".csv","rt",encoding='utf-8')
         except OSError as e:
@@ -1194,7 +1195,7 @@ class HighwayGraphVertexInfo:
     vertex.
     """
 
-    def __init__(self,wpt,unique_name,datacheckerrors):
+    def __init__(self,wpt,unique_name,datacheckerrors,rg_vset_hash):
         self.lat = wpt.lat
         self.lng = wpt.lng
         self.unique_name = unique_name
@@ -1212,12 +1213,24 @@ class HighwayGraphVertexInfo:
                 self.is_hidden = False
             self.regions.add(wpt.route.region)
             self.systems.add(wpt.route.system)
+            wpt.route.system.vertices.add(self)
+            if wpt.route.region not in rg_vset_hash:
+                rg_vset_hash[wpt.route.region] = set()
+                rg_vset_hash[wpt.route.region].add(self)
+            else:
+                rg_vset_hash[wpt.route.region].add(self)
             return
         for w in wpt.colocated:
             if not w.is_hidden:
                 self.is_hidden = False
             self.regions.add(w.route.region)
             self.systems.add(w.route.system)
+            if w.route.region not in rg_vset_hash:
+                rg_vset_hash[w.route.region] = set()
+                rg_vset_hash[w.route.region].add(self)
+            else:
+                rg_vset_hash[w.route.region].add(self)
+            w.route.system.vertices.add(self)
         # VISIBLE_HIDDEN_COLOC datacheck
         for p in range(1, len(wpt.colocated)):
             if wpt.colocated[p].is_hidden != wpt.colocated[0].is_hidden:
@@ -1501,6 +1514,8 @@ class HighwayGraph:
         # first, find unique waypoints and create vertex labels
         vertex_names = set()
         self.vertices = {}
+        # hash table containing a set of vertices for each region
+        self.rg_vset_hash = {}
         all_waypoint_list = all_waypoints.point_list()
 
         # add a unique name field to each waypoint, initialized to
@@ -1554,9 +1569,9 @@ class HighwayGraph:
             # we're good; now add point_name to the set and construct a vertex
             vertex_names.add(point_name)
             if w.colocated is None:
-                self.vertices[w] = HighwayGraphVertexInfo(w, point_name, datacheckerrors)
+                self.vertices[w] = HighwayGraphVertexInfo(w, point_name, datacheckerrors, self.rg_vset_hash)
             else:
-                self.vertices[w] = HighwayGraphVertexInfo(w.colocated[0], point_name, datacheckerrors)
+                self.vertices[w] = HighwayGraphVertexInfo(w.colocated[0], point_name, datacheckerrors, self.rg_vset_hash)
 
         # now that vertices are in place with names, set of unique names is no longer needed
         vertex_names = None
@@ -1620,34 +1635,55 @@ class HighwayGraph:
                 edges += len(v.incident_collapsed_edges)
         return edges//2
 
-    def matching_vertices(self, regions, systems, placeradius):
-        # return a list of vertices from the graph, optionally
+    def matching_vertices(self, regions, systems, placeradius, rg_vset_hash):
+        # return a tuple containing
+        # 1st, a set of vertices from the graph, optionally
         # restricted by region or system or placeradius area
-        vis = 0
-        vertex_list = []
-        for vinfo in self.vertices.values():
-            if placeradius is not None and not placeradius.contains_vertex_info(vinfo):
-                continue
-            region_match = regions is None
-            if not region_match:
-                for r in regions:
-                    if r in vinfo.regions:
-                        region_match = True
-                        break
-            if not region_match:
-                continue
-            system_match = systems is None
-            if not system_match:
-                for s in systems:
-                    if s in vinfo.systems:
-                        system_match = True
-                        break
-            if not system_match:
-                continue
-            if not vinfo.is_hidden:
-                vis += 1
-            vertex_list.append(vinfo)
-        return (vertex_list, vis)
+        # 2nd, the number of visible vertices in this set
+        visible = 0
+        vertex_set = set()
+        rg_vertex_set = set()
+        sys_vertex_set = set()
+        # rg_vertex_set is the union of all sets in regions
+        if regions is not None:
+            for r in regions:
+                rg_vertex_set = rg_vertex_set | rg_vset_hash[r]
+        # sys_vertex_set is the union of all sets in systems
+        if systems is not None:
+            for h in systems:
+                sys_vertex_set = sys_vertex_set | h.vertices
+        # determine which vertices are within our region(s) and/or system(s)
+        if regions is not None:
+            if systems is not None:
+                # both regions & systems populated: vertex_set is
+                # intersection of rg_vertex_set & sys_vertex_set
+                vertex_set = rg_vertex_set & sys_vertex_set
+            else:
+                # only regions populated
+                vertex_set = rg_vertex_set
+        else:
+            if systems is not None:
+                # only systems populated
+                vertex_set = sys_vertex_set
+            else:
+                # neither are populated; include all vertices...
+                for v in self.vertices.values():
+                    # ...unless a PlaceRadius is specified
+                    if placeradius is None or placeradius.contains_vertex_info(v):
+                        vertex_set.add(v)
+        # if placeradius is provided along with non-empty region
+        # or system parameters, erase vertices outside placeradius
+        if placeradius is not None and (systems is not None or regions is not None):
+            pr_vertex_set = set()
+            for v in vertex_set:
+                if placeradius.contains_vertex_info(v):
+                    pr_vertex_set.add(v)
+            vertex_set = pr_vertex_set
+        # find number of visible vertices
+        for v in vertex_set:
+          if not v.is_hidden:
+              visible += 1
+        return (vertex_set, visible)
 
     def matching_edges(self, mv, regions=None, systems=None, placeradius=None):
         # return a set of edges from the graph, optionally
@@ -1776,7 +1812,7 @@ class HighwayGraph:
         visible = 0
         simplefile = open(path+root+"-simple.tmg","w",encoding='utf-8')
         collapfile = open(path+root+".tmg","w",encoding='utf-8')
-        (mv, visible) = self.matching_vertices(regions, systems, placeradius)
+        (mv, visible) = self.matching_vertices(regions, systems, placeradius, self.rg_vset_hash)
         mse = self.matching_edges(mv, regions, systems, placeradius)
         mce = self.matching_collapsed_edges(mv, regions, systems, placeradius)
         print('(' + str(len(mv)) + ',' + str(len(mse)) + ") ", end="", flush=True)
