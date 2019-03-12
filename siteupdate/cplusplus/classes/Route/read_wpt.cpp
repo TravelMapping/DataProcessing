@@ -26,6 +26,7 @@ void Route::read_wpt
 	strtok_mtx->lock();
 	for (char *token = strtok(wptdata, "\r\n"); token; token = strtok(0, "\r\n") ) lines.emplace_back(token);
 	strtok_mtx->unlock();
+	lines.push_back(wptdata+wptdatasize+1); // add a dummy "past-the-end" element to make lines[l+1]-2 work
 	// set to be used per-route to find label duplicates
 	std::unordered_set<std::string> all_route_labels;
 	// set to be used for finding duplicate coordinates
@@ -34,10 +35,17 @@ void Route::read_wpt
 	Waypoint *last_visible = 0;
 	char fstr[112];
 
-	for (char *line : lines)
-	{	//FIXME incorporate fix for whitespace-only lines
-		if (line[0] == 0) continue;
-		Waypoint *w = new Waypoint(line, this, strtok_mtx, datacheckerrors);
+	for (unsigned int l = 0; l < lines.size()-1; l++)
+	{	// strip whitespace
+		while (lines[l][0] == ' ' || lines[l][0] == '\t') lines[l]++;
+		char * endchar = lines[l+1]-2; // -2 skips over the 0 inserted by strtok
+		if (*endchar == 0) endchar--;  // skip back one more for CRLF cases FIXME what about lines followed by blank lines?
+		while (*endchar == ' ' || *endchar == '\t')
+		{	*endchar = 0;
+			endchar--;
+		}
+		if (lines[l][0] == 0) continue;
+		Waypoint *w = new Waypoint(lines[l], this, strtok_mtx, datacheckerrors);
 		point_list.push_back(w);
 		// populate unused alt labels
 		for (size_t i = 0; i < w->alt_labels.size(); i++)
