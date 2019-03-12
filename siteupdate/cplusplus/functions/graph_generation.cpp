@@ -31,13 +31,13 @@ else {	list<Region*> *regions;
 	     {	cout << et.et() << "Writing master TM simple graph file, tm-master-simple.tmg" << endl;
 		graph_data.write_master_tmg_simple(&graph_vector[0], args.graphfilepath+"/tm-master-simple.tmg");
 		cout << et.et() << "Writing master TM collapsed graph file, tm-master.tmg." << endl;
-		graph_data.write_master_tmg_collapsed(&graph_vector[1], args.graphfilepath+"/tm-master.tmg", 0);
+		graph_data.write_master_tmg_collapsed(&graph_vector[1], args.graphfilepath+"/tm-master.tmg", 0, &traveler_lists);
 	     }
       #ifdef threading_enabled
 	else {	cout << et.et() << "Writing master TM simple graph file, tm-master-simple.tmg" << endl;
 		thr[0] = new thread(MasterTmgSimpleThread, &graph_data, &graph_vector[0], args.graphfilepath+"/tm-master-simple.tmg");
 		cout << et.et() << "Writing master TM collapsed graph file, tm-master.tmg." << endl;
-		thr[1] = new thread(MasterTmgCollapsedThread, &graph_data, &graph_vector[1], args.graphfilepath+"/tm-master.tmg");
+		thr[1] = new thread(MasterTmgCollapsedThread, &graph_data, &graph_vector[1], args.graphfilepath+"/tm-master.tmg", &traveler_lists);
 		thr[0]->join();
 		thr[1]->join();
 		delete thr[0];
@@ -81,7 +81,7 @@ else {	list<Region*> *regions;
       #ifdef threading_enabled
 	// set up for threaded subgraph generation
 	for (unsigned int t = 0; t < args.numthreads; t++)
-		thr[t] = new thread(SubgraphThread, t, &graph_data, &graph_vector, &graphnum, &list_mtx, args.graphfilepath + "/");
+		thr[t] = new thread(SubgraphThread, t, &graph_data, &graph_vector, &graphnum, &list_mtx, args.graphfilepath + "/", &traveler_lists);
 	for (unsigned int t = 0; t < args.numthreads; t++)
 		thr[t]->join();
 	for (unsigned int t = 0; t < args.numthreads; t++)
@@ -117,7 +117,7 @@ else {	list<Region*> *regions;
       #ifdef threading_enabled
 	// set up for threaded subgraph generation
 	for (unsigned int t = 0; t < args.numthreads; t++)
-		thr[t] = new thread(SubgraphThread, t, &graph_data, &graph_vector, &graphnum, &list_mtx, args.graphfilepath + "/");
+		thr[t] = new thread(SubgraphThread, t, &graph_data, &graph_vector, &graphnum, &list_mtx, args.graphfilepath + "/", &traveler_lists);
 	for (unsigned int t = 0; t < args.numthreads; t++)
 		thr[t]->join();
 	for (unsigned int t = 0; t < args.numthreads; t++)
@@ -163,7 +163,7 @@ else {	list<Region*> *regions;
       #ifdef threading_enabled
 	// set up for threaded subgraph generation
 	for (unsigned int t = 0; t < args.numthreads; t++)
-		thr[t] = new thread(SubgraphThread, t, &graph_data, &graph_vector, &graphnum, &list_mtx, args.graphfilepath + "/");
+		thr[t] = new thread(SubgraphThread, t, &graph_data, &graph_vector, &graphnum, &list_mtx, args.graphfilepath + "/", &traveler_lists);
 	for (unsigned int t = 0; t < args.numthreads; t++)
 		thr[t]->join();
 	for (unsigned int t = 0; t < args.numthreads; t++)
@@ -219,7 +219,7 @@ else {	list<Region*> *regions;
       #ifdef threading_enabled
 	// set up for threaded subgraph generation
 	for (unsigned int t = 0; t < args.numthreads; t++)
-		thr[t] = new thread(SubgraphThread, t, &graph_data, &graph_vector, &graphnum, &list_mtx, args.graphfilepath + "/");
+		thr[t] = new thread(SubgraphThread, t, &graph_data, &graph_vector, &graphnum, &list_mtx, args.graphfilepath + "/", &traveler_lists);
 	for (unsigned int t = 0; t < args.numthreads; t++)
 		thr[t]->join();
 	for (unsigned int t = 0; t < args.numthreads; t++)
@@ -274,7 +274,7 @@ else {	list<Region*> *regions;
       #ifdef threading_enabled
 	// set up for threaded subgraph generation
 	for (unsigned int t = 0; t < args.numthreads; t++)
-		thr[t] = new thread(SubgraphThread, t, &graph_data, &graph_vector, &graphnum, &list_mtx, args.graphfilepath + "/");
+		thr[t] = new thread(SubgraphThread, t, &graph_data, &graph_vector, &graphnum, &list_mtx, args.graphfilepath + "/", &traveler_lists);
 	for (unsigned int t = 0; t < args.numthreads; t++)
 		thr[t]->join();
 	for (unsigned int t = 0; t < args.numthreads; t++)
@@ -313,7 +313,7 @@ else {	list<Region*> *regions;
       #ifdef threading_enabled
 	// set up for threaded subgraph generation
 	for (unsigned int t = 0; t < args.numthreads; t++)
-		thr[t] = new thread(SubgraphThread, t, &graph_data, &graph_vector, &graphnum, &list_mtx, args.graphfilepath + "/");
+		thr[t] = new thread(SubgraphThread, t, &graph_data, &graph_vector, &graphnum, &list_mtx, args.graphfilepath + "/", &traveler_lists);
 	for (unsigned int t = 0; t < args.numthreads; t++)
 		thr[t]->join();
 	for (unsigned int t = 0; t < args.numthreads; t++)
@@ -352,7 +352,7 @@ else {	list<Region*> *regions;
       #ifdef threading_enabled
 	// set up for threaded subgraph generation
 	for (unsigned int t = 0; t < args.numthreads; t++)
-		thr[t] = new thread(SubgraphThread, t, &graph_data, &graph_vector, &graphnum, &list_mtx, args.graphfilepath + "/");
+		thr[t] = new thread(SubgraphThread, t, &graph_data, &graph_vector, &graphnum, &list_mtx, args.graphfilepath + "/", &traveler_lists);
 	for (unsigned int t = 0; t < args.numthreads; t++)
 		thr[t]->join();
 	for (unsigned int t = 0; t < args.numthreads; t++)
