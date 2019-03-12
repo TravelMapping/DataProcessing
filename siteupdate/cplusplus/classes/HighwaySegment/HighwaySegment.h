@@ -7,16 +7,17 @@ class HighwaySegment
 	Waypoint *waypoint2;
 	Route *route;
 	std::list<HighwaySegment*> *concurrent;
-	std::forward_list<TravelerList*> clinched_by;	//FIXME try unordered_set?
+	std::unordered_set<TravelerList*> clinched_by;
 	std::mutex clin_mtx;
 
 	HighwaySegment(Waypoint *, Waypoint *, Route *);
 
 	std::string str();
-	bool add_clinched_by(TravelerList *);		//FIXME rework to use unordered_set? Simpler coding, probably faster
+	bool add_clinched_by(TravelerList *);
 	std::string csv_line(unsigned int);
 	double length();
 	std::string segment_name();
 	unsigned int index();
 	void compute_stats();
+	std::string clinchedby_code(std::list<TravelerList*> *);
 };
