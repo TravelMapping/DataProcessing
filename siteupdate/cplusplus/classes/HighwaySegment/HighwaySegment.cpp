@@ -52,15 +52,15 @@ unsigned int HighwaySegment::index()
 
 std::string HighwaySegment::clinchedby_code(std::list<TravelerList*> *traveler_lists)
 {	std::string code;
-	std::vector<unsigned char> clinch_vector(ceil(traveler_lists->size()/4)*4, 0);
+	std::vector<unsigned char> clinch_vector(ceil(double(traveler_lists->size())/4)*4, 0);
 	for (TravelerList* t : clinched_by)
-		clinch_vector[t->traveler_num] = 1;
+		clinch_vector.at(t->traveler_num) = 1;
 	for (unsigned short t = 0; t < traveler_lists->size(); t += 4)
 	{	unsigned char nibble = 0;
-		nibble |= clinch_vector[t];
-		nibble |= clinch_vector[t+1]*2;
-		nibble |= clinch_vector[t+2]*4;
-		nibble |= clinch_vector[t+3]*8;
+		nibble |= clinch_vector.at(t);
+		nibble |= clinch_vector.at(t+1)*2;
+		nibble |= clinch_vector.at(t+2)*4;
+		nibble |= clinch_vector.at(t+3)*8;
 		if (nibble < 10) nibble += '0';
 		else nibble += 55;
 		code.push_back(nibble);
