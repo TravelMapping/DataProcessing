@@ -51,7 +51,12 @@ unsigned int HighwaySegment::index()
 }
 
 std::string HighwaySegment::clinchedby_code(std::list<TravelerList*> *traveler_lists)
-{	std::string code;
+{	// Return a hexadecimal string encoding which travelers have clinched this segment, for use in "traveled" graph files
+	// Each character stores info for traveler #n thru traveler #n+3
+	// The first character stores traveler 0 thru traveler 3,
+	// The second character stores traveler 4 thru traveler 7, etc.
+	// For each character, the low-order bit stores traveler n, and the high bit traveler n+3.
+	std::string code;
 	std::vector<unsigned char> clinch_vector(ceil(double(traveler_lists->size())/4)*4, 0);
 	for (TravelerList* t : clinched_by)
 		clinch_vector.at(t->traveler_num) = 1;
