@@ -88,7 +88,7 @@ else {	list<Region*> *regions;
 		delete thr[t];
       #else
 	while (graphnum < graph_vector.size())
-	{	graph_data.write_subgraphs_tmg(graph_vector, args.graphfilepath + "/", graphnum, 0);
+	{	graph_data.write_subgraphs_tmg(graph_vector, args.graphfilepath + "/", graphnum, 0, &traveler_lists);
 		graphnum += 2;
 	}
       #endif
@@ -124,7 +124,7 @@ else {	list<Region*> *regions;
 		delete thr[t];
       #else
 	while (graphnum < graph_vector.size())
-	{	graph_data.write_subgraphs_tmg(graph_vector, args.graphfilepath + "/", graphnum, 0);
+	{	graph_data.write_subgraphs_tmg(graph_vector, args.graphfilepath + "/", graphnum, 0, &traveler_lists);
 		graphnum += 2;
 	}
       #endif
@@ -170,7 +170,7 @@ else {	list<Region*> *regions;
 		delete thr[t];
       #else
 	while (graphnum < graph_vector.size())
-	{	graph_data.write_subgraphs_tmg(graph_vector, args.graphfilepath + "/", graphnum, 0);
+	{	graph_data.write_subgraphs_tmg(graph_vector, args.graphfilepath + "/", graphnum, 0, &traveler_lists);
 		graphnum += 2;
 	}
       #endif
@@ -226,7 +226,7 @@ else {	list<Region*> *regions;
 		delete thr[t];
       #else
 	while (graphnum < graph_vector.size())
-	{	graph_data.write_subgraphs_tmg(graph_vector, args.graphfilepath + "/", graphnum, 0);
+	{	graph_data.write_subgraphs_tmg(graph_vector, args.graphfilepath + "/", graphnum, 0, &traveler_lists);
 		graphnum += 2;
 	}
       #endif
@@ -281,7 +281,7 @@ else {	list<Region*> *regions;
 		delete thr[t];
       #else
 	while (graphnum < graph_vector.size())
-	{	graph_data.write_subgraphs_tmg(graph_vector, args.graphfilepath + "/", graphnum, 0);
+	{	graph_data.write_subgraphs_tmg(graph_vector, args.graphfilepath + "/", graphnum, 0, &traveler_lists);
 		graphnum += 2;
 	}
       #endif
@@ -320,7 +320,7 @@ else {	list<Region*> *regions;
 		delete thr[t];
       #else
 	while (graphnum < graph_vector.size())
-	{	graph_data.write_subgraphs_tmg(graph_vector, args.graphfilepath + "/", graphnum, 0);
+	{	graph_data.write_subgraphs_tmg(graph_vector, args.graphfilepath + "/", graphnum, 0, &traveler_lists);
 		graphnum += 2;
 	}
       #endif
@@ -359,7 +359,7 @@ else {	list<Region*> *regions;
 		delete thr[t];
       #else
 	while (graphnum < graph_vector.size())
-	{	graph_data.write_subgraphs_tmg(graph_vector, args.graphfilepath + "/", graphnum, 0);
+	{	graph_data.write_subgraphs_tmg(graph_vector, args.graphfilepath + "/", graphnum, 0, &traveler_lists);
 		graphnum += 2;
 	}
       #endif
