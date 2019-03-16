@@ -15,7 +15,7 @@ class HighwayGraph
 	// to track the waypoint name compressions, add log entries
 	// to this list
 	std::list<std::string> waypoint_naming_log;
-	std::unordered_map<Waypoint*, HighwayGraphVertexInfo*> vertices;
+	std::unordered_map<Waypoint*, HGVertex*> vertices;
 
 	HighwayGraph
 	(	WaypointQuadtree &all_waypoints,
@@ -70,8 +70,8 @@ class HighwayGraph
 
 			// we're good; now construct a vertex
 			if (!w->colocated)
-				vertices[w] = new HighwayGraphVertexInfo(w, &*(vertex_names.insert(point_name).first), datacheckerrors, numthreads);
-			else	vertices[w] = new HighwayGraphVertexInfo(w->colocated->front(), &*(vertex_names.insert(point_name).first), datacheckerrors, numthreads);
+				vertices[w] = new HGVertex(w, &*(vertex_names.insert(point_name).first), datacheckerrors, numthreads);
+			else	vertices[w] = new HGVertex(w->colocated->front(), &*(vertex_names.insert(point_name).first), datacheckerrors, numthreads);
 			// vertices are deleted by HighwayGraph::clear
 		}
 		std::cout << '!' << std::endl;
@@ -89,11 +89,11 @@ class HighwayGraph
 			    if (!s->concurrent || s == s->concurrent->front())
 			    {	// first one copy for the full simple graph
 				bool duplicate = 0;
-				HighwayGraphEdgeInfo *e = new HighwayGraphEdgeInfo(s, this, duplicate);
+				HGEdge *e = new HGEdge(s, this, duplicate);
 				// and again for a graph where hidden waypoints
 				// are merged into the edge structures
-				if (!duplicate) new HighwayGraphCollapsedEdgeInfo(e);
-				// edges & collapsed edges are deleted by ~HighwayGraphVertexInfo, called by HighwayGraph::clear
+				if (!duplicate) new HGCollapsedEdge(e);
+				// edges & collapsed edges are deleted by ~HGVertex, called by HighwayGraph::clear
 			    }
 		}
 		std::cout << "!\n" << et.et() << "Full graph has " << vertices.size() << " vertices, " << edge_count() << " edges." << std::endl;
@@ -101,7 +101,7 @@ class HighwayGraph
 		// compress edges adjacent to hidden vertices
 		counter = 0;
 		std::cout << et.et() << "Compressing collapsed edges" << std::flush;
-		for (std::pair<const Waypoint*, HighwayGraphVertexInfo*> wv : vertices)
+		for (std::pair<const Waypoint*, HGVertex*> wv : vertices)
 		{	if (counter % 10000 == 0) std::cout << '.' << std::flush;
 			counter++;
 			if (wv.second->is_hidden)
@@ -141,8 +141,8 @@ class HighwayGraph
 					continue;
 				}
 				// construct from vertex_info this time
-				new HighwayGraphCollapsedEdgeInfo(wv.second);
-				// collapsed edges are deleted by ~HighwayGraphVertexInfo, called by HighwayGraph::clear
+				new HGCollapsedEdge(wv.second);
+				// collapsed edges are deleted by ~HGVertex, called by HighwayGraph::clear
 			}
 		}
 
@@ -153,40 +153,40 @@ class HighwayGraph
 
 	unsigned int num_visible_vertices()
 	{	unsigned int count = 0;
-		for (std::pair<const Waypoint*, HighwayGraphVertexInfo*> wv : vertices)
+		for (std::pair<const Waypoint*, HGVertex*> wv : vertices)
 		  if (!wv.second->is_hidden) count ++;
 		return count;
 	}
 
 	unsigned int edge_count()
 	{	unsigned int edges = 0;
-		for (std::pair<const Waypoint*, HighwayGraphVertexInfo*> wv : vertices)
+		for (std::pair<const Waypoint*, HGVertex*> wv : vertices)
 		  edges += wv.second->incident_edges.size();
 		return edges/2;
 	}
 
 	unsigned int collapsed_edge_count()
 	{	unsigned int edges = 0;
-		for (std::pair<const Waypoint*, HighwayGraphVertexInfo*> wv : vertices)
+		for (std::pair<const Waypoint*, HGVertex*> wv : vertices)
 		  if (!wv.second->is_hidden)
 		    edges += wv.second->incident_collapsed_edges.size();
 		return edges/2;
 	}
 
 	void clear()
-	{	for (std::pair<const Waypoint*, HighwayGraphVertexInfo*> wv : vertices) delete wv.second;
+	{	for (std::pair<const Waypoint*, HGVertex*> wv : vertices) delete wv.second;
 		vertex_names.clear();
 		waypoint_naming_log.clear();
 		vertices.clear();
 	}
 
-	std::unordered_set<HighwayGraphVertexInfo*> matching_vertices(GraphListEntry &g, unsigned int &vis)
+	std::unordered_set<HGVertex*> matching_vertices(GraphListEntry &g, unsigned int &vis)
 	{	// return a set of vertices from the graph, optionally
 		// restricted by region or system or placeradius area
 		vis = 0;
-		std::unordered_set<HighwayGraphVertexInfo*> vertex_set;
-		std::unordered_set<HighwayGraphVertexInfo*> rg_vertex_set;
-		std::unordered_set<HighwayGraphVertexInfo*> sys_vertex_set;
+		std::unordered_set<HGVertex*> vertex_set;
+		std::unordered_set<HGVertex*> rg_vertex_set;
+		std::unordered_set<HGVertex*> sys_vertex_set;
 		// rg_vertex_set is the union of all sets in regions
 		if (g.regions) for (Region *r : *g.regions)
 			rg_vertex_set.insert(r->vertices.begin(), r->vertices.end());
@@ -200,14 +200,14 @@ class HighwayGraph
 			if (g.systems)
 				// both regions & systems populated: vertex_set is
 				// intersection of rg_vertex_set & sys_vertex_set
-				for (HighwayGraphVertexInfo *v : sys_vertex_set)
+				for (HGVertex *v : sys_vertex_set)
 				  vertex_set.erase(v);
 		     }
 		else	if (g.systems)
 				// only systems populated
 				vertex_set = sys_vertex_set;
 			else	// neither are populated; include all vertices...
-			  for (std::pair<const Waypoint*, HighwayGraphVertexInfo*> wv : vertices)
+			  for (std::pair<const Waypoint*, HGVertex*> wv : vertices)
 				// ...unless a PlaceRadius is specified
 				if (!g.placeradius || g.placeradius->contains_vertex_info(wv.second))
 				  vertex_set.insert(wv.second);
@@ -215,24 +215,24 @@ class HighwayGraph
 		// if placeradius is provided along with region or
 		// system parameters, erase vertices outside placeradius
 		if (g.placeradius && (g.systems || g.regions))
-		{	std::unordered_set<HighwayGraphVertexInfo*>::iterator v = vertex_set.begin();
+		{	std::unordered_set<HGVertex*>::iterator v = vertex_set.begin();
 			while(v != vertex_set.end())
 			  if (!g.placeradius->contains_vertex_info(*v))
 				v = vertex_set.erase(v);
 			  else	v++;
 		}
 		// find number of visible vertices
-		for (HighwayGraphVertexInfo *v : vertex_set)
+		for (HGVertex *v : vertex_set)
 		  if (!v->is_hidden) vis++;
 		return vertex_set;
 	}//*/
 
-	std::unordered_set<HighwayGraphEdgeInfo*> matching_edges(std::unordered_set<HighwayGraphVertexInfo*> &mv, GraphListEntry &g)
+	std::unordered_set<HGEdge*> matching_edges(std::unordered_set<HGVertex*> &mv, GraphListEntry &g)
 	{	// return a set of edges from the graph, optionally
 		// restricted by region or system or placeradius area
-		std::unordered_set<HighwayGraphEdgeInfo*> edge_set;
-		std::unordered_set<HighwayGraphEdgeInfo*> rg_edge_set;
-		std::unordered_set<HighwayGraphEdgeInfo*> sys_edge_set;
+		std::unordered_set<HGEdge*> edge_set;
+		std::unordered_set<HGEdge*> rg_edge_set;
+		std::unordered_set<HGEdge*> sys_edge_set;
 		// rg_edge_set is the union of all sets in regions
 		if (g.regions) for (Region *r : *g.regions)
 			rg_edge_set.insert(r->edges.begin(), r->edges.end());
@@ -246,15 +246,15 @@ class HighwayGraph
 			if (g.systems)
 				// both regions & systems populated: edge_set is
 				// intersection of rg_edge_set & sys_edge_set
-				for (HighwayGraphEdgeInfo *v : sys_edge_set)
-				  edge_set.erase(v);
+				for (HGEdge *e : sys_edge_set)
+				  edge_set.erase(e);
 		     }
 		else	if (g.systems)
 				// only systems populated
 				edge_set = sys_edge_set;
-			else	// neither are populated; include all edges///
-			  for (HighwayGraphVertexInfo *v : mv)
-			    for (HighwayGraphEdgeInfo *e : v->incident_edges)
+			else	// neither are populated; include all edges...
+			  for (HGVertex *v : mv)
+			    for (HGEdge *e : v->incident_edges)
 				// ...unless a PlaceRadius is specified
 				if (!g.placeradius || g.placeradius->contains_edge(e))
 				  edge_set.insert(e);
@@ -262,7 +262,7 @@ class HighwayGraph
 		// if placeradius is provided along with non-empty region
 		// or system parameters, erase edges outside placeradius
 		if (g.placeradius && (g.systems || g.regions))
-		{	std::unordered_set<HighwayGraphEdgeInfo*>::iterator e = edge_set.begin();
+		{	std::unordered_set<HGEdge*>::iterator e = edge_set.begin();
 			while(e != edge_set.end())
 			  if (!g.placeradius->contains_edge(*e))
 				e = edge_set.erase(e);
@@ -271,14 +271,14 @@ class HighwayGraph
 		return edge_set;
 	}
 
-	std::unordered_set<HighwayGraphCollapsedEdgeInfo*> matching_collapsed_edges(std::unordered_set<HighwayGraphVertexInfo*> &mv, GraphListEntry &g)
+	std::unordered_set<HGCollapsedEdge*> matching_collapsed_edges(std::unordered_set<HGVertex*> &mv, GraphListEntry &g)
 	{	// return a set of edges from the graph edges for the collapsed
 		// edge format, optionally restricted by region or system or
 		// placeradius area
-		std::unordered_set<HighwayGraphCollapsedEdgeInfo*> edge_set;
-		for (HighwayGraphVertexInfo *v : mv)
+		std::unordered_set<HGCollapsedEdge*> edge_set;
+		for (HGVertex *v : mv)
 		{	if (v->is_hidden) continue;
-			for (HighwayGraphCollapsedEdgeInfo *e : v->incident_collapsed_edges)
+			for (HGCollapsedEdge *e : v->incident_collapsed_edges)
 			  if (!g.placeradius || g.placeradius->contains_edge(e))
 			  {	bool rg_in_rg = 0;
 				if (g.regions) for (Region *r : *g.regions)
@@ -322,7 +322,7 @@ class HighwayGraph
 		// number waypoint entries as we go to support original .gra
 		// format output
 		int vertex_num = 0;
-		for (std::pair<const Waypoint*, HighwayGraphVertexInfo*> wv : vertices)
+		for (std::pair<const Waypoint*, HGVertex*> wv : vertices)
 		{	char fstr[42];
 			sprintf(fstr, "%.15g %.15g", wv.second->lat, wv.second->lng);
 			tmgfile << *(wv.second->unique_name) << ' ' << fstr << '\n';
@@ -335,16 +335,16 @@ class HighwayGraph
 
 		// now edges, only print if not already printed
 		int edge = 0;
-		for (std::pair<const Waypoint*, HighwayGraphVertexInfo*> wv : vertices)
-		  for (HighwayGraphEdgeInfo *e : wv.second->incident_edges)
+		for (std::pair<const Waypoint*, HGVertex*> wv : vertices)
+		  for (HGEdge *e : wv.second->incident_edges)
 		    if (!e->written)
 		    {	e->written = 1;
 			tmgfile << e->vertex1->vertex_num[0] << ' ' << e->vertex2->vertex_num[0] << ' ' << e->label(0) << '\n';
 			edge++;
 		    }
 		// sanity checks
-		for (std::pair<const Waypoint*, HighwayGraphVertexInfo*> wv : vertices)
-		  for (HighwayGraphEdgeInfo *e : wv.second->incident_edges)
+		for (std::pair<const Waypoint*, HGVertex*> wv : vertices)
+		  for (HGEdge *e : wv.second->incident_edges)
 		    if (!e->written)
 		      std::cout << "ERROR: never wrote edge " << e->vertex1->vertex_num << ' ' << e->vertex2->vertex_num[0] << ' ' << e->label(0) << std::endl;
 		if (edge_count() != edge)
@@ -364,7 +364,7 @@ class HighwayGraph
 
 		// write visible vertices
 		int vis_vertex_num = 0;
-		for (std::pair<const Waypoint*, HighwayGraphVertexInfo*> wv : vertices)
+		for (std::pair<const Waypoint*, HGVertex*> wv : vertices)
 		  if (!wv.second->is_hidden)
 		  {	char fstr[42];
 			sprintf(fstr, "%.15g %.15g", wv.second->lat, wv.second->lng);
@@ -374,9 +374,9 @@ class HighwayGraph
 		  }
 		// write collapsed edges
 		int edge = 0;
-		for (std::pair<const Waypoint*, HighwayGraphVertexInfo*> wv : vertices)
+		for (std::pair<const Waypoint*, HGVertex*> wv : vertices)
 		  if (!wv.second->is_hidden)
-		    for (HighwayGraphCollapsedEdgeInfo *e : wv.second->incident_collapsed_edges)
+		    for (HGCollapsedEdge *e : wv.second->incident_collapsed_edges)
 		      if (!e->written)
 		      {	e->written = 1;
 			tmgfile << e->collapsed_tmg2_line(0, threadnum, traveler_lists) << '\n';
@@ -403,9 +403,9 @@ class HighwayGraph
 		std::string collapfilename = path+graph_vector[graphnum+1].filename();
 		std::ofstream simplefile(simplefilename.data());
 		std::ofstream collapfile(collapfilename.data());
-		std::unordered_set<HighwayGraphVertexInfo*> mv = matching_vertices(graph_vector[graphnum], visible_v);
-		std::unordered_set<HighwayGraphEdgeInfo*> mse = matching_edges(mv, graph_vector[graphnum]);
-		std::unordered_set<HighwayGraphCollapsedEdgeInfo*> mce = matching_collapsed_edges(mv, graph_vector[graphnum]);
+		std::unordered_set<HGVertex*> mv = matching_vertices(graph_vector[graphnum], visible_v);
+		std::unordered_set<HGEdge*> mse = matching_edges(mv, graph_vector[graphnum]);
+		std::unordered_set<HGCollapsedEdge*> mce = matching_collapsed_edges(mv, graph_vector[graphnum]);
 		std::cout << graph_vector[graphnum].tag()
 			  << '(' << mv.size() << ',' << mse.size() << ") "
 			  << '(' << visible_v << ',' << mce.size() << ") " << std::flush;
@@ -417,7 +417,7 @@ class HighwayGraph
 		// write vertices
 		unsigned int sv = 0;
 		unsigned int cv = 0;
-		for (HighwayGraphVertexInfo *v : mv)
+		for (HGVertex *v : mv)
 		{	char fstr[43];
 			sprintf(fstr, " %.15g %.15g", v->lat, v->lng);
 			// all vertices, for simple graph
@@ -432,11 +432,11 @@ class HighwayGraph
 			}
 		}
 		// write edges
-		for (HighwayGraphEdgeInfo *e : mse)
+		for (HGEdge *e : mse)
 			simplefile << e->vertex1->vertex_num[threadnum] << ' '
 				   << e->vertex2->vertex_num[threadnum] << ' '
 				   << e->label(graph_vector[graphnum].systems) << '\n';
-		for (HighwayGraphCollapsedEdgeInfo *e : mce)
+		for (HGCollapsedEdge *e : mce)
 			collapfile << e->collapsed_tmg2_line(graph_vector[graphnum].systems, threadnum, traveler_lists) << '\n';
 		for (TravelerList *t : *traveler_lists)
 			collapfile << t->traveler_name << ' ';

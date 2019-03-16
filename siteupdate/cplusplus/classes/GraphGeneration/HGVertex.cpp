@@ -1,4 +1,4 @@
-class HighwayGraphVertexInfo
+class HGVertex
 {   /* This class encapsulates information needed for a highway graph
     vertex.
     */
@@ -9,12 +9,12 @@ class HighwayGraphVertexInfo
 	Waypoint *first_waypoint;
 	std::unordered_set<Region*> regions;
 	std::unordered_set<HighwaySystem*> systems;
-	std::list<HighwayGraphEdgeInfo*> incident_edges;
-	std::list<HighwayGraphCollapsedEdgeInfo*> incident_collapsed_edges;
+	std::list<HGEdge*> incident_edges;
+	std::list<HGCollapsedEdge*> incident_collapsed_edges;
 	int *vertex_num;
 	int *vis_vertex_num;
 
-	HighwayGraphVertexInfo(Waypoint *wpt, const std::string *n, DatacheckEntryList *datacheckerrors, unsigned int numthreads)
+	HGVertex(Waypoint *wpt, const std::string *n, DatacheckEntryList *datacheckerrors, unsigned int numthreads)
 	{	lat = wpt->lat;
 		lng = wpt->lng;
 		vertex_num = new int[numthreads];
@@ -57,7 +57,7 @@ class HighwayGraphVertexInfo
 		  }
 	}
 
-	~HighwayGraphVertexInfo()
+	~HGVertex()
 	{	//std::cout << "deleting vertex at " << first_waypoint->str() << std::endl;
 		while (incident_edges.size()) delete incident_edges.front();
 		while (incident_collapsed_edges.size()) delete incident_collapsed_edges.front();

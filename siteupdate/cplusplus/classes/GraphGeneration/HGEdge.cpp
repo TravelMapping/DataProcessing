@@ -1,4 +1,4 @@
-HighwayGraphEdgeInfo::HighwayGraphEdgeInfo(HighwaySegment *s, HighwayGraph *graph, bool &duplicate)
+HGEdge::HGEdge(HighwaySegment *s, HighwayGraph *graph, bool &duplicate)
 {	// temp debug [sic]
 	written = 0;
 	segment_name = s->segment_name();
@@ -6,9 +6,9 @@ HighwayGraphEdgeInfo::HighwayGraphEdgeInfo(HighwaySegment *s, HighwayGraph *grap
 	vertex2 = graph->vertices.at(s->waypoint2->hashpoint());
 	// checks for the very unusual cases where an edge ends up
 	// in the system as itself and its "reverse"
-	for (HighwayGraphEdgeInfo *e : vertex1->incident_edges)
+	for (HGEdge *e : vertex1->incident_edges)
 		if (e->vertex1 == vertex2 && e->vertex2 == vertex1)	duplicate = 1;
-	for (HighwayGraphEdgeInfo *e : vertex2->incident_edges)
+	for (HGEdge *e : vertex2->incident_edges)
 		if (e->vertex1 == vertex2 && e->vertex2 == vertex1)	duplicate = 1;
 	if (duplicate)
 	{	delete this;
@@ -30,15 +30,15 @@ HighwayGraphEdgeInfo::HighwayGraphEdgeInfo(HighwaySegment *s, HighwayGraph *grap
 		}
 }
 
-HighwayGraphEdgeInfo::~HighwayGraphEdgeInfo()
-{	for (	std::list<HighwayGraphEdgeInfo*>::iterator e = vertex1->incident_edges.begin();
+HGEdge::~HGEdge()
+{	for (	std::list<HGEdge*>::iterator e = vertex1->incident_edges.begin();
 		e != vertex1->incident_edges.end();
 		e++
 	    )	if (*e == this)
 		{	vertex1->incident_edges.erase(e);
 			break;
 		}
-	for (	std::list<HighwayGraphEdgeInfo*>::iterator e = vertex2->incident_edges.begin();
+	for (	std::list<HGEdge*>::iterator e = vertex2->incident_edges.begin();
 		e != vertex2->incident_edges.end();
 		e++
 	    )	if (*e == this)
@@ -50,7 +50,7 @@ HighwayGraphEdgeInfo::~HighwayGraphEdgeInfo()
 }
 
 // compute an edge label, optionally resticted by systems
-std::string HighwayGraphEdgeInfo::label(std::list<HighwaySystem*> *systems)
+std::string HGEdge::label(std::list<HighwaySystem*> *systems)
 {	std::string the_label;
 	for (std::pair<std::string, HighwaySystem*> &ns : route_names_and_systems)
 	{	// test whether system in systems
@@ -69,6 +69,6 @@ std::string HighwayGraphEdgeInfo::label(std::list<HighwaySystem*> *systems)
 }
 
 // printable string for this edge
-std::string HighwayGraphEdgeInfo::str()
-{	return "HighwayGraphEdgeInfo: " + segment_name + " from " + *vertex1->unique_name + " to " + *vertex2->unique_name;
+std::string HGEdge::str()
+{	return "HGEdge: " + segment_name + " from " + *vertex1->unique_name + " to " + *vertex2->unique_name;
 }

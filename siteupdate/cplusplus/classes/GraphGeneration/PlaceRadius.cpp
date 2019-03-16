@@ -19,7 +19,7 @@ class PlaceRadius
 		r = strtoul(R, 0, 10);
 	}
 
-	bool contains_vertex_info(HighwayGraphVertexInfo *vinfo)
+	bool contains_vertex_info(HGVertex *vinfo)
 	{	/* return whether vinfo's coordinates are within this area */
 		// convert to radians to compute distance
 		double rlat1 = lat * Waypoint::pi/180;
@@ -33,12 +33,12 @@ class PlaceRadius
 		return ans <= r;
 	}
 
-	bool contains_edge(HighwayGraphEdgeInfo *e)
+	bool contains_edge(HGEdge *e)
 	{	/* return whether both endpoints of edge e are within this area */
 		return contains_vertex_info(e->vertex1) and contains_vertex_info(e->vertex2);
 	}
 
-	bool contains_edge(HighwayGraphCollapsedEdgeInfo *e)
+	bool contains_edge(HGCollapsedEdge *e)
 	{	/* return whether both endpoints of edge e are within this area */
 		return contains_vertex_info(e->vertex1) and contains_vertex_info(e->vertex2);
 	}
