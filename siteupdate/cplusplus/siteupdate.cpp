@@ -25,7 +25,6 @@ class DatacheckEntryList;
 class HighwayGraph;
 class HGVertex;
 class HGEdge;
-class HGCollapsedEdge;
 #include <chrono>
 #include <cmath>
 #include <cstring>
@@ -69,13 +68,11 @@ class HGCollapsedEdge;
 #include "classes/ConnectedRoute.cpp"
 #include "classes/TravelerList/TravelerList.cpp"
 #include "classes/HighwaySegment/HighwaySegment.cpp"
-#include "classes/GraphGeneration/HGEdge.h"
 #include "classes/GraphGeneration/HGCollapsedEdge.h"
 #include "classes/GraphGeneration/HGVertex.cpp"
 #include "classes/GraphGeneration/PlaceRadius.cpp"
 #include "classes/GraphGeneration/GraphListEntry.cpp"
 #include "classes/GraphGeneration/HighwayGraph.cpp"
-#include "classes/GraphGeneration/HGEdge.cpp"
 #include "classes/GraphGeneration/HGCollapsedEdge.cpp"
 #include "threads/ReadWptThread.cpp"
 #include "threads/NmpMergedThread.cpp"

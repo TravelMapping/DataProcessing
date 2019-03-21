@@ -34,7 +34,8 @@ std::string GraphListEntry::filename()
 {	switch (form)
 	{	case 's': return root+"-simple.tmg";
 		case 'c': return root+".tmg";
-		default : return std::string("ERROR: GraphListEntry::filename() unexpected format token ('")+form+"')";
+		case 't': return root+"-traveled.tmg";
+		default : return std::string("\nERROR: GraphListEntry::filename() unexpected format token ('")+form+"')\n";
 	}
 }
 
@@ -42,7 +43,8 @@ std::string GraphListEntry::format()
 {	switch (form)
 	{	case 's': return "simple";
 		case 'c': return "collapsed";
-		default : return std::string("ERROR: GraphListEntry::format() unexpected format token ('")+form+"')";
+		case 't': return "traveled";
+		default : return std::string("\nERROR: GraphListEntry::format() unexpected format token ('")+form+"')\n";
 	}
 }
 
@@ -56,7 +58,7 @@ std::string GraphListEntry::category()
 		case 'R': return "multiregion";
 		case 'c': return "country";
 		case 'C': return "continent";
-		default : return std::string("ERROR: GraphListEntry::category() unexpected category token ('")+cat+"')";
+		default : return std::string("\nERROR: GraphListEntry::category() unexpected category token ('")+cat+"')\n";
 	}
 }
 
@@ -69,6 +71,6 @@ std::string GraphListEntry::tag()
 		case 'R': return root + ' ';
 		case 'c': return regions->front()->country_code() + ' ';	// must have valid pointer
 		case 'C': return regions->front()->continent_code() + ' ';	// must have valid pointer
-		default : return std::string("ERROR: GraphListEntry::tag() unexpected category token ('")+cat+"')";
+		default : return std::string("\nERROR: GraphListEntry::tag() unexpected category token ('")+cat+"')\n";
 	}
 }

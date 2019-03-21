@@ -37,9 +37,4 @@ class PlaceRadius
 	{	/* return whether both endpoints of edge e are within this area */
 		return contains_vertex_info(e->vertex1) and contains_vertex_info(e->vertex2);
 	}
-
-	bool contains_edge(HGCollapsedEdge *e)
-	{	/* return whether both endpoints of edge e are within this area */
-		return contains_vertex_info(e->vertex1) and contains_vertex_info(e->vertex2);
-	}
 };
