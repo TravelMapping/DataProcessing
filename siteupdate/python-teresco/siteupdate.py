@@ -1190,7 +1190,7 @@ class DatacheckEntry:
         entry += self.code+";"+self.info
         return entry
 
-class HighwayGraphVertexInfo:
+class HGVertex:
     """This class encapsulates information needed for a highway graph
     vertex.
     """
@@ -1206,8 +1206,8 @@ class HighwayGraphVertexInfo:
         self.first_waypoint = wpt
         self.regions = set()
         self.systems = set()
-        self.incident_edges = []
-        self.incident_collapsed_edges = []
+        self.incident_s_edges = [] # simple
+        self.incident_c_edges = [] # collapsed
         if wpt.colocated is None:
             if not wpt.is_hidden:
                 self.is_hidden = False
@@ -1276,20 +1276,20 @@ class HighwayGraphEdgeInfo:
         # checks for the very unusual cases where an edge ends up
         # in the system as itself and its "reverse"
         duplicate = False
-        for e in self.vertex1.incident_edges:
+        for e in self.vertex1.incident_s_edges:
             if e.vertex1 == self.vertex2 and e.vertex2 == self.vertex1:
                 duplicate = True
 
-        for e in self.vertex2.incident_edges:
+        for e in self.vertex2.incident_s_edges:
             if e.vertex1 == self.vertex2 and e.vertex2 == self.vertex1:
                 duplicate = True
 
         if not duplicate:
-            self.vertex1.incident_edges.append(self)
-            self.vertex2.incident_edges.append(self)
+            self.vertex1.incident_s_edges.append(self)
+            self.vertex2.incident_s_edges.append(self)
         else:
             # flag as invalid/duplicate in order to bypass
-            # building a HighwayGraphCollapsedEdgeInfo
+            # building HGEdge
             self.vertex1 = None
 
     # compute an edge label, optionally resticted by systems
@@ -1308,14 +1308,14 @@ class HighwayGraphEdgeInfo:
     def __str__(self):
         return "HighwayGraphEdgeInfo: " + self.segment_name + " from " + str(self.vertex1) + " to " + str(self.vertex2)
 
-class HighwayGraphCollapsedEdgeInfo:
+class HGEdge:
     """This class encapsulates information needed for a highway graph
     edge that can incorporate intermediate points.
     """
 
-    def __init__(self,HGEdge=None,vertex_info=None):
-        if HGEdge is None and vertex_info is None:
-            print("ERROR: improper use of HighwayGraphCollapsedEdgeInfo constructor\n")
+    def __init__(self,ref_edge=None,vertex=None):
+        if ref_edge is None and vertex is None:
+            print("ERROR: improper use of HGEdge constructor\n")
             return
 
         # a few items we can do for either construction type
@@ -1326,34 +1326,34 @@ class HighwayGraphCollapsedEdgeInfo:
         self.intermediate_points = []
 
         # initial construction is based on a HighwayGraphEdgeInfo
-        if HGEdge is not None:
-            self.segment_name = HGEdge.segment_name
-            self.vertex1 = HGEdge.vertex1
-            self.vertex2 = HGEdge.vertex2
+        if ref_edge is not None:
+            self.segment_name = ref_edge.segment_name
+            self.vertex1 = ref_edge.vertex1
+            self.vertex2 = ref_edge.vertex2
             # assumption: each edge/segment lives within a unique region
             # and a 'multi-edge' would not be able to span regions as there
             # would be a required visible waypoint at the border
-            self.region = HGEdge.region
+            self.region = ref_edge.region
             # a list of route name/system pairs
-            self.route_names_and_systems = HGEdge.route_names_and_systems
-            self.vertex1.incident_collapsed_edges.append(self)
-            self.vertex2.incident_collapsed_edges.append(self)
+            self.route_names_and_systems = ref_edge.route_names_and_systems
+            self.vertex1.incident_c_edges.append(self)
+            self.vertex2.incident_c_edges.append(self)
 
         # build by collapsing two existing edges around a common
         # hidden vertex waypoint, whose information is given in
-        # vertex_info
-        if vertex_info is not None:
+        # vertex
+        if vertex is not None:
             # we know there are exactly 2 incident edges, as we
             # checked for that, and we will replace these two
             # with the single edge we are constructing here
-            edge1 = vertex_info.incident_collapsed_edges[0]
-            edge2 = vertex_info.incident_collapsed_edges[1]
+            edge1 = vertex.incident_c_edges[0]
+            edge2 = vertex.incident_c_edges[1]
             # segment names should match as routes should not start or end
             # nor should concurrencies begin or end at a hidden point
             if edge1.segment_name != edge2.segment_name:
-                print("ERROR: segment name mismatch in HighwayGraphCollapsedEdgeInfo: edge1 named " + edge1.segment_name + " edge2 named " + edge2.segment_name + "\n")
+                print("ERROR: segment name mismatch in HGEdge collapse constructor: edge1 named " + edge1.segment_name + " edge2 named " + edge2.segment_name + "\n")
             self.segment_name = edge1.segment_name
-            #print("\nDEBUG: collapsing edges along " + self.segment_name + " at vertex " + str(vertex_info) + ", edge1 is " + str(edge1) + " and edge2 is " + str(edge2))
+            #print("\nDEBUG: collapsing edges along " + self.segment_name + " at vertex " + str(vertex) + ", edge1 is " + str(edge1) + " and edge2 is " + str(edge2))
             # region and route names/systems should also match, but not
             # doing that sanity check here, as the above check should take
             # care of that
@@ -1367,7 +1367,7 @@ class HighwayGraphCollapsedEdgeInfo:
             self.intermediate_points = edge1.intermediate_points.copy()
             #print("DEBUG: copied edge1 intermediates" + self.intermediate_point_string())
 
-            if edge1.vertex1 == vertex_info:
+            if edge1.vertex1 == vertex:
                 #print("DEBUG: self.vertex1 getting edge1.vertex2: " + str(edge1.vertex2) + " and reversing edge1 intermediates")
                 self.vertex1 = edge1.vertex2
                 self.intermediate_points.reverse()
@@ -1375,12 +1375,12 @@ class HighwayGraphCollapsedEdgeInfo:
                 #print("DEBUG: self.vertex1 getting edge1.vertex1: " + str(edge1.vertex1))
                 self.vertex1 = edge1.vertex1
 
-            #print("DEBUG: appending to intermediates: " + str(vertex_info))
-            self.intermediate_points.append(vertex_info)
+            #print("DEBUG: appending to intermediates: " + str(vertex))
+            self.intermediate_points.append(vertex)
 
             toappend = edge2.intermediate_points.copy()
             #print("DEBUG: copied edge2 intermediates" + edge2.intermediate_point_string())
-            if edge2.vertex1 == vertex_info:
+            if edge2.vertex1 == vertex:
                 #print("DEBUG: self.vertex2 getting edge2.vertex2: " + str(edge2.vertex2))
                 self.vertex2 = edge2.vertex2
             else:
@@ -1394,25 +1394,25 @@ class HighwayGraphCollapsedEdgeInfo:
 
             # replace edge references at our endpoints with ourself
             removed = 0
-            if edge1 in self.vertex1.incident_collapsed_edges:
-                self.vertex1.incident_collapsed_edges.remove(edge1)
+            if edge1 in self.vertex1.incident_c_edges:
+                self.vertex1.incident_c_edges.remove(edge1)
                 removed += 1
-            if edge1 in self.vertex2.incident_collapsed_edges:
-                self.vertex2.incident_collapsed_edges.remove(edge1)
+            if edge1 in self.vertex2.incident_c_edges:
+                self.vertex2.incident_c_edges.remove(edge1)
                 removed += 1
             if removed != 1:
                 print("ERROR: edge1 " + str(edge1) + " removed from " + str(removed) + " adjacency lists instead of 1.")
             removed = 0
-            if edge2 in self.vertex1.incident_collapsed_edges:
-                self.vertex1.incident_collapsed_edges.remove(edge2)
+            if edge2 in self.vertex1.incident_c_edges:
+                self.vertex1.incident_c_edges.remove(edge2)
                 removed += 1
-            if edge2 in self.vertex2.incident_collapsed_edges:
-                self.vertex2.incident_collapsed_edges.remove(edge2)
+            if edge2 in self.vertex2.incident_c_edges:
+                self.vertex2.incident_c_edges.remove(edge2)
                 removed += 1
             if removed != 1:
                 print("ERROR: edge2 " + str(edge2) + " removed from " + str(removed) + " adjacency lists instead of 1.")
-            self.vertex1.incident_collapsed_edges.append(self)
-            self.vertex2.incident_collapsed_edges.append(self)
+            self.vertex1.incident_c_edges.append(self)
+            self.vertex2.incident_c_edges.append(self)
 
 
     # compute an edge label, optionally resticted by systems
@@ -1429,18 +1429,18 @@ class HighwayGraphCollapsedEdgeInfo:
 
     # printable string for this edge
     def __str__(self):
-        return "HighwayGraphCollapsedEdgeInfo: " + self.segment_name + " from " + str(self.vertex1) + " to " + str(self.vertex2) + " via " + str(len(self.intermediate_points)) + " points"
+        return "HGEdge: " + self.segment_name + " from " + str(self.vertex1) + " to " + str(self.vertex2) + " via " + str(len(self.intermediate_points)) + " points"
 
     # line appropriate for a tmg collapsed edge file
     def collapsed_tmg_line(self, systems=None):
-        line = str(self.vertex1.vis_vertex_num) + " " + str(self.vertex2.vis_vertex_num) + " " + self.label(systems)
+        line = str(self.vertex1.c_vertex_num) + " " + str(self.vertex2.c_vertex_num) + " " + self.label(systems)
         for intermediate in self.intermediate_points:
             line += " " + str(intermediate.lat) + " " + str(intermediate.lng)
         return line
 
     # line appropriate for a tmg collapsed edge file, with debug info
     def debug_tmg_line(self, systems=None):
-        line = str(self.vertex1.vertex_num) + " [" + self.vertex1.unique_name + "] " + str(self.vertex2.vertex_num) + " [" + self.vertex2.unique_name + "] " + self.label(systems)
+        line = str(self.vertex1.c_vertex_num) + " [" + self.vertex1.unique_name + "] " + str(self.vertex2.c_vertex_num) + " [" + self.vertex2.unique_name + "] " + self.label(systems)
         for intermediate in self.intermediate_points:
             line += " [" + intermediate.unique_name + "] " + str(intermediate.lat) + " " + str(intermediate.lng)
         return line
@@ -1468,13 +1468,13 @@ class PlaceRadius:
         self.lng = float(lng)
         self.r = int(r)
 
-    def contains_vertex_info(self, vinfo):
-        """return whether vinfo's coordinates are within this area"""
-        # convert to radians to compte distance
+    def contains_vertex(self, v):
+        """return whether v's coordinates are within this area"""
+        # convert to radians to compute distance
         rlat1 = math.radians(self.lat)
         rlng1 = math.radians(self.lng)
-        rlat2 = math.radians(vinfo.lat)
-        rlng2 = math.radians(vinfo.lng)
+        rlat2 = math.radians(v.lat)
+        rlng2 = math.radians(v.lng)
 
         ans = math.acos(math.cos(rlat1)*math.cos(rlng1)*math.cos(rlat2)*math.cos(rlng2) +\
                         math.cos(rlat1)*math.sin(rlng1)*math.cos(rlat2)*math.sin(rlng2) +\
@@ -1483,7 +1483,7 @@ class PlaceRadius:
 
     def contains_waypoint(self, w):
         """return whether w is within this area"""
-        # convert to radians to compte distance
+        # convert to radians to compute distance
         rlat1 = math.radians(self.lat)
         rlng1 = math.radians(self.lng)
         rlat2 = math.radians(w.lat)
@@ -1574,14 +1574,14 @@ class HighwayGraph:
             # we're good; now add point_name to the set and construct a vertex
             vertex_names.add(point_name)
             if w.colocated is None:
-                self.vertices[w] = HighwayGraphVertexInfo(w, point_name, datacheckerrors, self.rg_vset_hash)
+                self.vertices[w] = HGVertex(w, point_name, datacheckerrors, self.rg_vset_hash)
             else:
-                self.vertices[w] = HighwayGraphVertexInfo(w.colocated[0], point_name, datacheckerrors, self.rg_vset_hash)
+                self.vertices[w] = HGVertex(w.colocated[0], point_name, datacheckerrors, self.rg_vset_hash)
 
         # now that vertices are in place with names, set of unique names is no longer needed
         vertex_names = None
 
-        # add edges, which end up in two separate vertex adjacency lists,
+        # create edges
         counter = 0
         print("!\n" + et.et() + "Creating edges", end="", flush=True)
         for h in highway_systems:
@@ -1598,63 +1598,64 @@ class HighwayGraph:
                         # and again for a graph where hidden waypoints
                         # are merged into the edge structures
                         if e.vertex1 is not None:
-                            HighwayGraphCollapsedEdgeInfo(HGEdge=e)
+                            HGEdge(ref_edge=e)
                         else:
                             e = None
 
         # compress edges adjacent to hidden vertices
         counter = 0
         print("!\n" + et.et() + "Compressing collapsed edges", end="", flush=True)
-        for label, vinfo in self.vertices.items():
+        for label, v in self.vertices.items():
             if counter % 10000 == 0:
                 print('.', end="", flush=True)
             counter += 1
-            if vinfo.is_hidden:
-                if len(vinfo.incident_collapsed_edges) < 2:
-                    # these cases are flagged as HIDDEN_TERMINUS
-                    vinfo.is_hidden = False
+            if v.is_hidden:
+                # cases with only one edge are flagged as HIDDEN_TERMINUS
+                if len(v.incident_c_edges) < 2:
+                    v.is_hidden = False
                     continue
-                if len(vinfo.incident_collapsed_edges) > 2:
-                    datacheckerrors.append(DatacheckEntry(vinfo.first_waypoint.colocated[0].route,
-                                           [vinfo.first_waypoint.colocated[0].label],
-                                           "HIDDEN_JUNCTION",str(len(vinfo.incident_collapsed_edges))))
-                    vinfo.is_hidden = False
+                # if >2 edges, flag HIDDEN_JUNCTION, mark as visible, and do not compress
+                if len(v.incident_c_edges) > 2:
+                    datacheckerrors.append(DatacheckEntry(v.first_waypoint.colocated[0].route,
+                                           [v.first_waypoint.colocated[0].label],
+                                           "HIDDEN_JUNCTION",str(len(v.incident_c_edges))))
+                    v.is_hidden = False
                     continue
-                # construct from vertex_info this time
-                HighwayGraphCollapsedEdgeInfo(vertex_info=vinfo)
+                # construct from vertex this time
+                HGEdge(vertex=v)
 
         # print summary info
         print("!\n" + et.et() + "   Simple graph has " + str(len(self.vertices)) +
-              " vertices, " + str(self.edge_count()) + " edges.")
-        print(et.et() + "Collapsed graph has " + str(self.num_visible_vertices()) +
+              " vertices, " + str(self.simple_edge_count()) + " edges.")
+        print(et.et() + "Collapsed graph has " + str(self.num_collapsed_vertices()) +
               " vertices, " + str(self.collapsed_edge_count()) + " edges.")
 
-    def num_visible_vertices(self):
+    def num_collapsed_vertices(self):
         count = 0
         for v in self.vertices.values():
             if not v.is_hidden:
                 count += 1
         return count
 
-    def edge_count(self):
+    def simple_edge_count(self):
         edges = 0
         for v in self.vertices.values():
-            edges += len(v.incident_edges)
+            edges += len(v.incident_s_edges)
         return edges//2
 
     def collapsed_edge_count(self):
         edges = 0
         for v in self.vertices.values():
             if not v.is_hidden:
-                edges += len(v.incident_collapsed_edges)
+                edges += len(v.incident_c_edges)
         return edges//2
 
     def matching_vertices(self, regions, systems, placeradius, rg_vset_hash):
         # return a tuple containing
         # 1st, a set of vertices from the graph, optionally
         # restricted by region or system or placeradius area
-        # 2nd, the number of visible vertices in this set
-        visible = 0
+        # 2nd, the number of collapsed vertices in this set
+        cv_count = 0
         vertex_set = set()
         rg_vertex_set = set()
         sys_vertex_set = set()
@@ -1683,28 +1684,28 @@ class HighwayGraph:
                 # neither are populated; include all vertices...
                 for v in self.vertices.values():
                     # ...unless a PlaceRadius is specified
-                    if placeradius is None or placeradius.contains_vertex_info(v):
+                    if placeradius is None or placeradius.contains_vertex(v):
                         vertex_set.add(v)
         # if placeradius is provided along with non-empty region
         # or system parameters, erase vertices outside placeradius
         if placeradius is not None and (systems is not None or regions is not None):
             pr_vertex_set = set()
             for v in vertex_set:
-                if placeradius.contains_vertex_info(v):
+                if placeradius.contains_vertex(v):
                     pr_vertex_set.add(v)
             vertex_set = pr_vertex_set
-        # find number of visible vertices
+        # find number of collapsed vertices
         for v in vertex_set:
           if not v.is_hidden:
-              visible += 1
-        return (vertex_set, visible)
+              cv_count += 1
+        return (vertex_set, cv_count)
 
-    def matching_edges(self, mv, regions=None, systems=None, placeradius=None):
+    def matching_simple_edges(self, mv, regions=None, systems=None, placeradius=None):
         # return a set of edges from the graph, optionally
         # restricted by region or system or placeradius area
         edge_set = set()
         for v in mv:
-            for e in v.incident_edges:
+            for e in v.incident_s_edges:
                 if placeradius is None or placeradius.contains_edge(e):
                     if regions is None or e.region in regions:
                         system_match = systems is None
@@ -1725,7 +1726,7 @@ class HighwayGraph:
         for v in mv:
             if v.is_hidden:
                 continue
-            for e in v.incident_collapsed_edges:
+            for e in v.incident_c_edges:
                 if placeradius is None or placeradius.contains_edge(e):
                     if regions is None or e.region in regions:
                         system_match = systems is None
@@ -1750,59 +1751,59 @@ class HighwayGraph:
     def write_master_tmg_simple(self,filename):
         tmgfile = open(filename, 'w')
         tmgfile.write("TMG 1.0 simple\n")
-        tmgfile.write(str(len(self.vertices)) + ' ' + str(self.edge_count()) + '\n')
+        tmgfile.write(str(len(self.vertices)) + ' ' + str(self.simple_edge_count()) + '\n')
         # number waypoint entries as we go to support original .gra
         # format output
-        vertex_num = 0
-        for vinfo in self.vertices.values():
-            tmgfile.write(vinfo.unique_name + ' ' + str(vinfo.lat) + ' ' + str(vinfo.lng) + '\n')
-            vinfo.vertex_num = vertex_num
-            vertex_num += 1
+        s_vertex_num = 0
+        for v in self.vertices.values():
+            tmgfile.write(v.unique_name + ' ' + str(v.lat) + ' ' + str(v.lng) + '\n')
+            v.s_vertex_num = s_vertex_num
+            s_vertex_num += 1
 
         # sanity check
-        if len(self.vertices) != vertex_num:
-            print("ERROR: computed " + str(len(self.vertices)) + " waypoints but wrote " + str(vertex_num))
+        if len(self.vertices) != s_vertex_num:
+            print("ERROR: computed " + str(len(self.vertices)) + " waypoints but wrote " + str(s_vertex_num))
 
         # now edges, only print if not already printed
         edge = 0
         for v in self.vertices.values():
-            for e in v.incident_edges:
+            for e in v.incident_s_edges:
                 if not e.written:
                     e.written = True
-                    tmgfile.write(str(e.vertex1.vertex_num) + ' ' + str(e.vertex2.vertex_num) + ' ' + e.label() + '\n')
+                    tmgfile.write(str(e.vertex1.s_vertex_num) + ' ' + str(e.vertex2.s_vertex_num) + ' ' + e.label() + '\n')
                     edge += 1
 
         # sanity checks
         for v in self.vertices.values():
-            for e in v.incident_edges:
+            for e in v.incident_s_edges:
                 if not e.written:
-                    print("ERROR: never wrote edge " + str(e.vertex1.vertex_num) + ' ' + str(e.vertex2.vertex_num) + ' ' + e.label() + '\n')
-        if self.edge_count() != edge:
-            print("ERROR: computed " + str(self.edge_count()) + " edges but wrote " + str(edge) + "\n")
+                    print("ERROR: never wrote edge " + str(e.vertex1.s_vertex_num) + ' ' + str(e.vertex2.s_vertex_num) + ' ' + e.label() + '\n')
+        if self.simple_edge_count() != edge:
+            print("ERROR: computed " + str(self.simple_edge_count()) + " edges but wrote " + str(edge) + "\n")
 
         tmgfile.close()
-        return (len(self.vertices), self.edge_count())
+        return (len(self.vertices), self.simple_edge_count())
 
     # write the entire set of data in the tmg collapsed edge format
     def write_master_tmg_collapsed(self, filename):
         tmgfile = open(filename, 'w')
         tmgfile.write("TMG 1.0 collapsed\n")
-        tmgfile.write(str(self.num_visible_vertices()) + " " +
+        tmgfile.write(str(self.num_collapsed_vertices()) + " " +
                       str(self.collapsed_edge_count()) + "\n")
 
         # write visible vertices
-        vis_vertex_num = 0
-        for vinfo in self.vertices.values():
-            if not vinfo.is_hidden:
-                vinfo.vis_vertex_num = vis_vertex_num
-                tmgfile.write(vinfo.unique_name + ' ' + str(vinfo.lat) + ' ' + str(vinfo.lng) + '\n')
-                vis_vertex_num += 1
+        c_vertex_num = 0
+        for v in self.vertices.values():
+            if not v.is_hidden:
+                v.c_vertex_num = c_vertex_num
+                tmgfile.write(v.unique_name + ' ' + str(v.lat) + ' ' + str(v.lng) + '\n')
+                c_vertex_num += 1
 
         # write collapsed edges
         edge = 0
         for v in self.vertices.values():
             if not v.is_hidden:
-                for e in v.incident_collapsed_edges:
+                for e in v.incident_c_edges:
                     if not e.written:
                         e.written = True
                         tmgfile.write(e.collapsed_tmg_line() + '\n')
@@ -1813,7 +1814,7 @@ class HighwayGraph:
             print("ERROR: computed " + str(self.collapsed_edge_count()) + " collapsed edges, but wrote " + str(edge) + "\n")
 
         tmgfile.close()
-        return (self.num_visible_vertices(), self.collapsed_edge_count())
+        return (self.num_collapsed_vertices(), self.collapsed_edge_count())
 
     # write a subset of the data,
     # in both simple and collapsed formats,
@@ -1821,18 +1822,18 @@ class HighwayGraph:
     # by system in the list if given,
     # or to within a given area if placeradius is given
     def write_subgraphs_tmg(self, graph_list, path, root, descr, category, regions, systems, placeradius):
-        visible = 0
+        cv_count = 0
         simplefile = open(path+root+"-simple.tmg","w",encoding='utf-8')
         collapfile = open(path+root+".tmg","w",encoding='utf-8')
-        (mv, visible) = self.matching_vertices(regions, systems, placeradius, self.rg_vset_hash)
-        mse = self.matching_edges(mv, regions, systems, placeradius)
+        (mv, cv_count) = self.matching_vertices(regions, systems, placeradius, self.rg_vset_hash)
+        mse = self.matching_simple_edges(mv, regions, systems, placeradius)
         mce = self.matching_collapsed_edges(mv, regions, systems, placeradius)
         print('(' + str(len(mv)) + ',' + str(len(mse)) + ") ", end="", flush=True)
-        print('(' + str(visible) + ',' + str(len(mce)) + ") ", end="", flush=True)
+        print('(' + str(cv_count) + ',' + str(len(mce)) + ") ", end="", flush=True)
         simplefile.write("TMG 1.0 simple\n")
         collapfile.write("TMG 1.0 collapsed\n")
         simplefile.write(str(len(mv)) + ' ' + str(len(mse)) + '\n')
-        collapfile.write(str(visible) + ' ' + str(len(mce)) + '\n')
+        collapfile.write(str(cv_count) + ' ' + str(len(mce)) + '\n')
 
         # write vertices
         sv = 0
@@ -1840,23 +1841,23 @@ class HighwayGraph:
         for v in mv:
             # all vertices, for simple graph
             simplefile.write(v.unique_name + ' ' + str(v.lat) + ' ' + str(v.lng) + '\n')
-            v.vertex_num = sv
+            v.s_vertex_num = sv
             sv += 1
-            # visible vertices, for collapsed graph
+            # visible vertices for collapsed graph
             if not v.is_hidden:
                 collapfile.write(v.unique_name + ' ' + str(v.lat) + ' ' + str(v.lng) + '\n')
-                v.vis_vertex_num = cv
+                v.c_vertex_num = cv
                 cv += 1
         # write edges
         for e in mse:
-            simplefile.write(str(e.vertex1.vertex_num) + ' ' + str(e.vertex2.vertex_num) + ' ' + e.label(systems) + '\n')
+            simplefile.write(str(e.vertex1.s_vertex_num) + ' ' + str(e.vertex2.s_vertex_num) + ' ' + e.label(systems) + '\n')
         for e in mce:
             collapfile.write(e.collapsed_tmg_line(systems) + '\n')
         simplefile.close()
         collapfile.close()
 
         graph_list.append(GraphListEntry(root+"-simple.tmg", descr, len(mv), len(mse), "simple", category))
-        graph_list.append(GraphListEntry(root   +    ".tmg", descr, visible, len(mce), "collapsed", category))
+        graph_list.append(GraphListEntry(root   +    ".tmg", descr, cv_count, len(mce), "collapsed", category))
 
 def format_clinched_mi(clinched,total):
     """return a nicely-formatted string for a given number of miles
