@@ -1333,7 +1333,7 @@ class HGEdge:
                 print("ERROR: segment name mismatch in HGEdge collapse constructor: edge1 named " + edge1.segment_name + " edge2 named " + edge2.segment_name + "\n")
             self.segment_name = edge1.segment_name
             #print("\nDEBUG: collapsing edges along " + self.segment_name + " at vertex " + str(vertex) + ", edge1 is " + str(edge1) + " and edge2 is " + str(edge2))
-            # region and route names/systems should also match, but not
+            # segment and route names/systems should also match, but not
             # doing that sanity check here, as the above check should take
             # care of that
             self.segment = edge1.segment
