@@ -704,6 +704,22 @@ class HighwaySegment:
                     segment_name += cs.route.list_entry_name()
         return segment_name
 
+    def concurrent_travelers_sanity_check(self):
+        if self.route.system.devel():
+            return ""
+        if self.concurrent is not None:
+            for conc in self.concurrent:
+                if len(self.clinched_by) != len(conc.clinched_by):
+                    if conc.route.system.devel():
+                        return ""
+                    return '[' + str(self) + ']' + " clinched by " + str(len(self.clinched_by)) + " travelers; " \
+                         + '[' + str(conc) + ']' + " clinched by " + str(len(conc.clinched_by)) + '\n'
+                else:
+                    for t in self.clinched_by:
+                        if t not in conc.clinched_by:
+                            return t.traveler_name + " has clinched [" + str(self) + "], but not [" + str(conc) + "]\n"
+        return ""
+
 class Route:
     """This class encapsulates the contents of one .csv file line
     that represents a highway within a system and the corresponding
@@ -2377,6 +2393,14 @@ for t in traveler_lists:
                     concurrencyfile.write("Concurrency augment for traveler " + t.traveler_name + ": [" + str(hs) + "] based on [" + str(s) + "]\n")
 print("!")
 concurrencyfile.close()
+
+"""sanetravfile = open(args.logfilepath+'/concurrent_travelers_sanity_check.log','w',encoding='utf-8')
+for h in highway_systems:
+    for r in h.route_list:
+        for s in r.segment_list:
+            sanetravfile.write(s.concurrent_travelers_sanity_check())
+sanetravfile.close()
+"""
 
 # compute lots of stats, first total mileage by route, system, overall, where
 # system and overall are stored in dictionaries by region
