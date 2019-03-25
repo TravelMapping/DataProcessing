@@ -1250,92 +1250,54 @@ class HGVertex:
     def __str__(self):
         return self.unique_name
 
-class HighwayGraphEdgeInfo:
-    """This class encapsulates information needed for a 'standard'
-    highway graph edge.
-    """
-
-    def __init__(self,s,graph):
-        # temp debug
-        self.written = False
-        self.segment_name = s.segment_name()
-        self.vertex1 = graph.vertices[s.waypoint1.hashpoint()]
-        self.vertex2 = graph.vertices[s.waypoint2.hashpoint()]
-        # assumption: each edge/segment lives within a unique region
-        self.region = s.route.region
-        # a list of route name/system pairs
-        self.route_names_and_systems = []
-        if s.concurrent is None:
-            self.route_names_and_systems.append((s.route.list_entry_name(), s.route.system))
-        else:
-            for cs in s.concurrent:
-                if cs.route.system.devel():
-                    continue
-                self.route_names_and_systems.append((cs.route.list_entry_name(), cs.route.system))
-
-        # checks for the very unusual cases where an edge ends up
-        # in the system as itself and its "reverse"
-        duplicate = False
-        for e in self.vertex1.incident_s_edges:
-            if e.vertex1 == self.vertex2 and e.vertex2 == self.vertex1:
-                duplicate = True
-
-        for e in self.vertex2.incident_s_edges:
-            if e.vertex1 == self.vertex2 and e.vertex2 == self.vertex1:
-                duplicate = True
-
-        if not duplicate:
-            self.vertex1.incident_s_edges.append(self)
-            self.vertex2.incident_s_edges.append(self)
-        else:
-            # flag as invalid/duplicate in order to bypass
-            # building HGEdge
-            self.vertex1 = None
-
-    # compute an edge label, optionally resticted by systems
-    def label(self,systems=None):
-        the_label = ""
-        for (name, system) in self.route_names_and_systems:
-            if systems is None or system in systems:
-                if the_label == "":
-                    the_label = name
-                else:
-                    the_label += ","+name
-
-        return the_label
-
-    # printable string for this edge
-    def __str__(self):
-        return "HighwayGraphEdgeInfo: " + self.segment_name + " from " + str(self.vertex1) + " to " + str(self.vertex2)
-
 class HGEdge:
-    """This class encapsulates information needed for a highway graph
-    edge that can incorporate intermediate points.
+    """This class encapsulates information needed for a highway graph edge.
     """
 
-    def __init__(self,ref_edge=None,vertex=None):
-        if ref_edge is None and vertex is None:
-            print("ERROR: improper use of HGEdge constructor\n")
+    def __init__(self,s=None,graph=None,vertex=None):
+        if s is None and vertex is None:
+            print("ERROR: improper use of HGEdge constructor: s is None; vertex is None\n")
             return
 
         # a few items we can do for either construction type
-        self.written = False
+        self.s_written = False # simple
+        self.c_written = False # collapsed
 
         # intermediate points, if more than 1, will go from vertex1 to
         # vertex2
         self.intermediate_points = []
 
-        # initial construction is based on a HighwayGraphEdgeInfo
-        if ref_edge is not None:
-            self.segment_name = ref_edge.segment_name
-            self.vertex1 = ref_edge.vertex1
-            self.vertex2 = ref_edge.vertex2
+        # initial construction is based on a HighwaySegment
+        if s is not None:
+            if graph is None:
+                print("ERROR: improper use of HGEdge constructor: s is not None; graph is None\n")
+                return
+            self.segment_name = s.segment_name()
+            self.vertex1 = graph.vertices[s.waypoint1.hashpoint()]
+            self.vertex2 = graph.vertices[s.waypoint2.hashpoint()]
             # assumption: each edge/segment lives within a unique region
             # and a 'multi-edge' would not be able to span regions as there
             # would be a required visible waypoint at the border
-            self.region = ref_edge.region
+            self.region = s.route.region
             # a list of route name/system pairs
-            self.route_names_and_systems = ref_edge.route_names_and_systems
+            self.route_names_and_systems = []
+            if s.concurrent is None:
+                self.route_names_and_systems.append((s.route.list_entry_name(), s.route.system))
+            else:
+                for cs in s.concurrent:
+                    if cs.route.system.devel():
+                        continue
+                    self.route_names_and_systems.append((cs.route.list_entry_name(), cs.route.system))
+            # checks for the very unusual cases where an edge ends up
+            # in the system as itself and its "reverse"
+            for e in self.vertex1.incident_s_edges:
+                if e.vertex1 == self.vertex2 and e.vertex2 == self.vertex1:
+                    return
+            for e in self.vertex2.incident_s_edges:
+                if e.vertex1 == self.vertex2 and e.vertex2 == self.vertex1:
+                    return
+            self.vertex1.incident_s_edges.append(self)
+            self.vertex2.incident_s_edges.append(self)
             self.vertex1.incident_c_edges.append(self)
             self.vertex2.incident_c_edges.append(self)
 
@@ -1593,14 +1555,7 @@ class HighwayGraph:
             for r in h.route_list:
                 for s in r.segment_list:
                     if s.concurrent is None or s == s.concurrent[0]:
-                        # first one copy for the full simple graph
-                        e = HighwayGraphEdgeInfo(s, self)
-                        # and again for a graph where hidden waypoints
-                        # are merged into the edge structures
-                        if e.vertex1 is not None:
-                            HGEdge(ref_edge=e)
-                        else:
-                            e = None
+                        HGEdge(s, self)
 
         # compress edges adjacent to hidden vertices
         counter = 0
@@ -1768,15 +1723,15 @@ class HighwayGraph:
         edge = 0
         for v in self.vertices.values():
             for e in v.incident_s_edges:
-                if not e.written:
-                    e.written = True
+                if not e.s_written:
+                    e.s_written = True
                     tmgfile.write(str(e.vertex1.s_vertex_num) + ' ' + str(e.vertex2.s_vertex_num) + ' ' + e.label() + '\n')
                     edge += 1
 
         # sanity checks
         for v in self.vertices.values():
             for e in v.incident_s_edges:
-                if not e.written:
+                if not e.s_written:
                     print("ERROR: never wrote edge " + str(e.vertex1.s_vertex_num) + ' ' + str(e.vertex2.s_vertex_num) + ' ' + e.label() + '\n')
         if self.simple_edge_count() != edge:
             print("ERROR: computed " + str(self.simple_edge_count()) + " edges but wrote " + str(edge) + "\n")
@@ -1804,8 +1759,8 @@ class HighwayGraph:
         for v in self.vertices.values():
             if not v.is_hidden:
                 for e in v.incident_c_edges:
-                    if not e.written:
-                        e.written = True
+                    if not e.c_written:
+                        e.c_written = True
                         tmgfile.write(e.collapsed_tmg_line() + '\n')
                         edge += 1
 
