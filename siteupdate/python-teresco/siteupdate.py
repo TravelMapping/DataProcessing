@@ -1291,10 +1291,11 @@ class HGEdge:
             self.segment_name = s.segment_name()
             self.vertex1 = graph.vertices[s.waypoint1.hashpoint()]
             self.vertex2 = graph.vertices[s.waypoint2.hashpoint()]
+            # canonical segment, used to reference region and list of travelers
             # assumption: each edge/segment lives within a unique region
             # and a 'multi-edge' would not be able to span regions as there
             # would be a required visible waypoint at the border
-            self.region = s.route.region
+            self.segment = s
             # a list of route name/system pairs
             self.route_names_and_systems = []
             if s.concurrent is None:
@@ -1335,7 +1336,7 @@ class HGEdge:
             # region and route names/systems should also match, but not
             # doing that sanity check here, as the above check should take
             # care of that
-            self.region = edge1.region
+            self.segment = edge1.segment
             self.route_names_and_systems = edge1.route_names_and_systems
 
             # figure out and remember which endpoints are not the
@@ -1678,7 +1679,7 @@ class HighwayGraph:
         for v in mv:
             for e in v.incident_s_edges:
                 if placeradius is None or placeradius.contains_edge(e):
-                    if regions is None or e.region in regions:
+                    if regions is None or e.segment.route.region in regions:
                         system_match = systems is None
                         if not system_match:
                             for (r, s) in e.route_names_and_systems:
@@ -1699,7 +1700,7 @@ class HighwayGraph:
                 continue
             for e in v.incident_c_edges:
                 if placeradius is None or placeradius.contains_edge(e):
-                    if regions is None or e.region in regions:
+                    if regions is None or e.segment.route.region in regions:
                         system_match = systems is None
                         if not system_match:
                             for (r, s) in e.route_names_and_systems:
