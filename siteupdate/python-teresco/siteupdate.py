@@ -1216,7 +1216,7 @@ class HGVertex:
         self.lng = wpt.lng
         self.unique_name = unique_name
         # will consider hidden iff all colocated waypoints are hidden
-        self.is_hidden = True
+        self.visibility = 0
         # note: if saving the first waypoint, no longer need
         # lat & lng and can replace with methods
         self.first_waypoint = wpt
@@ -1226,7 +1226,7 @@ class HGVertex:
         self.incident_c_edges = [] # collapsed
         if wpt.colocated is None:
             if not wpt.is_hidden:
-                self.is_hidden = False
+                self.visibility = 2
             self.regions.add(wpt.route.region)
             self.systems.add(wpt.route.system)
             wpt.route.system.vertices.add(self)
@@ -1238,7 +1238,7 @@ class HGVertex:
             return
         for w in wpt.colocated:
             if not w.is_hidden:
-                self.is_hidden = False
+                self.visibility = 2
             self.regions.add(w.route.region)
             self.systems.add(w.route.system)
             if w.route.region not in rg_vset_hash:
@@ -1581,17 +1581,17 @@ class HighwayGraph:
             if counter % 10000 == 0:
                 print('.', end="", flush=True)
             counter += 1
-            if v.is_hidden:
+            if v.visibility == 0:
                 # cases with only one edge are flagged as HIDDEN_TERMINUS
                 if len(v.incident_c_edges) < 2:
-                    v.is_hidden = False
+                    v.visibility = 2
                     continue
                 # if >2 edges, flag HIDDEN_JUNCTION, mark as visible, and do not compress
                 if len(v.incident_c_edges) > 2:
                     datacheckerrors.append(DatacheckEntry(v.first_waypoint.colocated[0].route,
                                            [v.first_waypoint.colocated[0].label],
                                            "HIDDEN_JUNCTION",str(len(v.incident_c_edges))))
-                    v.is_hidden = False
+                    v.visibility = 2
                     continue
                 # construct from vertex this time
                 HGEdge(vertex=v)
@@ -1605,7 +1605,7 @@ class HighwayGraph:
     def num_collapsed_vertices(self):
         count = 0
         for v in self.vertices.values():
-            if not v.is_hidden:
+            if v.visibility == 2:
                 count += 1
         return count
 
@@ -1618,7 +1618,7 @@ class HighwayGraph:
     def collapsed_edge_count(self):
         edges = 0
         for v in self.vertices.values():
-            if not v.is_hidden:
+            if v.visibility == 2:
                 edges += len(v.incident_c_edges)
         return edges//2
 
@@ -1668,7 +1668,7 @@ class HighwayGraph:
             vertex_set = pr_vertex_set
         # find number of collapsed vertices
         for v in vertex_set:
-          if not v.is_hidden:
+          if v.visibility == 2:
               cv_count += 1
         return (vertex_set, cv_count)
 
@@ -1696,7 +1696,7 @@ class HighwayGraph:
         # placeradius area
         edge_set = set()
         for v in mv:
-            if v.is_hidden:
+            if v.visibility < 2:
                 continue
             for e in v.incident_c_edges:
                 if placeradius is None or placeradius.contains_edge(e):
@@ -1766,7 +1766,7 @@ class HighwayGraph:
         # write visible vertices
         c_vertex_num = 0
         for v in self.vertices.values():
-            if not v.is_hidden:
+            if v.visibility == 2:
                 v.c_vertex_num = c_vertex_num
                 tmgfile.write(v.unique_name + ' ' + str(v.lat) + ' ' + str(v.lng) + '\n')
                 c_vertex_num += 1
@@ -1774,7 +1774,7 @@ class HighwayGraph:
         # write collapsed edges
         edge = 0
         for v in self.vertices.values():
-            if not v.is_hidden:
+            if v.visibility == 2:
                 for e in v.incident_c_edges:
                     if not e.c_written:
                         e.c_written = True
@@ -1816,7 +1816,7 @@ class HighwayGraph:
             v.s_vertex_num = sv
             sv += 1
             # visible vertices for collapsed graph
-            if not v.is_hidden:
+            if v.visibility == 2:
                 collapfile.write(v.unique_name + ' ' + str(v.lat) + ' ' + str(v.lng) + '\n')
                 v.c_vertex_num = cv
                 cv += 1
