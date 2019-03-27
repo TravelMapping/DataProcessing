@@ -1773,14 +1773,33 @@ class HighwayGraph:
 
     def matching_collapsed_edges(self, mv, regions=None, systems=None,
                                  placeradius=None):
-        # return a set of edges from the graph edges for the collapsed
-        # edge format, optionally restricted by region or system or
-        # placeradius area
+        # return a set of edges for the collapsed edge format,
+        # optionally restricted by region or system or placeradius
         edge_set = set()
         for v in mv:
             if v.visibility < 2:
                 continue
             for e in v.incident_c_edges:
+                if placeradius is None or placeradius.contains_edge(e):
+                    if regions is None or e.segment.route.region in regions:
+                        system_match = systems is None
+                        if not system_match:
+                            for (r, s) in e.route_names_and_systems:
+                                if s in systems:
+                                    system_match = True
+                        if system_match:
+                            edge_set.add(e)
+        return edge_set
+
+    def matching_traveled_edges(self, mv, regions=None, systems=None,
+                                 placeradius=None):
+        # return a set of edges for the traveled graph format,
+        # optionally restricted by region or system or placeradius
+        edge_set = set()
+        for v in mv:
+            if v.visibility < 1:
+                continue
+            for e in v.incident_t_edges:
                 if placeradius is None or placeradius.contains_edge(e):
                     if regions is None or e.segment.route.region in regions:
                         system_match = systems is None
@@ -1908,42 +1927,57 @@ class HighwayGraph:
     # by system in the list if given,
     # or to within a given area if placeradius is given
     def write_subgraphs_tmg(self, graph_list, path, root, descr, category, regions, systems, placeradius):
-        cv_count = 0
         simplefile = open(path+root+"-simple.tmg","w",encoding='utf-8')
         collapfile = open(path+root+".tmg","w",encoding='utf-8')
+        travelfile = open(path+root+"-traveled.tmg","w",encoding='utf-8')
         (mv, cv_count, tv_count) = self.matching_vertices(regions, systems, placeradius, self.rg_vset_hash)
         mse = self.matching_simple_edges(mv, regions, systems, placeradius)
         mce = self.matching_collapsed_edges(mv, regions, systems, placeradius)
+        mte = self.matching_traveled_edges(mv, regions, systems, placeradius)
         print('(' + str(len(mv)) + ',' + str(len(mse)) + ") ", end="", flush=True)
         print('(' + str(cv_count) + ',' + str(len(mce)) + ") ", end="", flush=True)
+        print('(' + str(tv_count) + ',' + str(len(mte)) + ") ", end="", flush=True)
         simplefile.write("TMG 1.0 simple\n")
         collapfile.write("TMG 1.0 collapsed\n")
+        travelfile.write("TMG 2.0 traveled\n")
         simplefile.write(str(len(mv)) + ' ' + str(len(mse)) + '\n')
         collapfile.write(str(cv_count) + ' ' + str(len(mce)) + '\n')
+        travelfile.write(str(tv_count) + ' ' + str(len(mte)) + '\n')
 
         # write vertices
         sv = 0
         cv = 0
+        tv = 0
         for v in mv:
             # all vertices, for simple graph
             simplefile.write(v.unique_name + ' ' + str(v.lat) + ' ' + str(v.lng) + '\n')
             v.s_vertex_num = sv
             sv += 1
-            # visible vertices for collapsed graph
-            if v.visibility == 2:
-                collapfile.write(v.unique_name + ' ' + str(v.lat) + ' ' + str(v.lng) + '\n')
-                v.c_vertex_num = cv
-                cv += 1
+            # visible vertices
+            if v.visibility >= 1:
+                # for traveled graph
+                travelfile.write(v.unique_name + ' ' + str(v.lat) + ' ' + str(v.lng) + '\n')
+                v.t_vertex_num = tv
+                tv += 1
+                if v.visibility == 2:
+                    # for collapsed graph
+                    collapfile.write(v.unique_name + ' ' + str(v.lat) + ' ' + str(v.lng) + '\n')
+                    v.c_vertex_num = cv
+                    cv += 1
         # write edges
         for e in mse:
             simplefile.write(str(e.vertex1.s_vertex_num) + ' ' + str(e.vertex2.s_vertex_num) + ' ' + e.label(systems) + '\n')
         for e in mce:
             collapfile.write(e.collapsed_tmg_line(systems) + '\n')
+        for e in mte:
+            travelfile.write(e.traveled_tmg_line(systems) + '\n')
         simplefile.close()
         collapfile.close()
+        travelfile.close()
 
-        graph_list.append(GraphListEntry(root+"-simple.tmg", descr, len(mv), len(mse), "simple", category))
-        graph_list.append(GraphListEntry(root   +    ".tmg", descr, cv_count, len(mce), "collapsed", category))
+        graph_list.append(GraphListEntry(root+  "-simple.tmg", descr, len(mv),  len(mse), "simple",    category))
+        graph_list.append(GraphListEntry(root+         ".tmg", descr, cv_count, len(mce), "collapsed", category))
+        graph_list.append(GraphListEntry(root+"-traveled.tmg", descr, tv_count, len(mte), "traveled",  category))
 
 def format_clinched_mi(clinched,total):
     """return a nicely-formatted string for a given number of miles
