@@ -1518,23 +1518,10 @@ class PlaceRadius:
                         math.sin(rlat1)*math.sin(rlat2)) * 3963.1 # EARTH_RADIUS;
         return ans <= self.r
 
-    def contains_waypoint(self, w):
-        """return whether w is within this area"""
-        # convert to radians to compute distance
-        rlat1 = math.radians(self.lat)
-        rlng1 = math.radians(self.lng)
-        rlat2 = math.radians(w.lat)
-        rlng2 = math.radians(w.lng)
-
-        ans = math.acos(math.cos(rlat1)*math.cos(rlng1)*math.cos(rlat2)*math.cos(rlng2) +\
-                        math.cos(rlat1)*math.sin(rlng1)*math.cos(rlat2)*math.sin(rlng2) +\
-                        math.sin(rlat1)*math.sin(rlat2)) * 3963.1 # EARTH_RADIUS;
-        return ans <= self.r
-
     def contains_edge(self, e):
         """return whether both endpoints of edge e are within this area"""
-        return (self.contains_waypoint(e.vertex1) and
-                self.contains_waypoint(e.vertex2))
+        return (self.contains_vertex(e.vertex1) and
+                self.contains_vertex(e.vertex2))
         
 class HighwayGraph:
     """This class implements the capability to create graph
@@ -1654,7 +1641,7 @@ class HighwayGraph:
                     continue
                 # if edge clinched_by lists mismatch, set visibility to 1
                 # (visible in traveled graph; hidden in collapsed graph)
-                # first, the easy check, for whether set sizes mismatch
+                # first, the easy check, for whether list sizes mismatch
                 if len(v.incident_t_edges[0].segment.clinched_by) \
                 != len(v.incident_t_edges[1].segment.clinched_by):
                         v.visibility = 1
