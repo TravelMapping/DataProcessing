@@ -720,20 +720,19 @@ class HighwaySegment:
                             return t.traveler_name + " has clinched [" + str(self) + "], but not [" + str(conc) + "]\n"
         return ""
 
-    def clinchedby_code(self, traveler_lists):
+    def set_clinchedby_code(self, traveler_lists):
         # Return a hexadecimal string encoding which travelers have clinched this segment, for use in "traveled" graph files
         # Each character stores info for traveler #n thru traveler #n+3
         # The 1st character stores traveler 0 thru traveler 3,
         # The 2nd character stores traveler 4 thru traveler 7, etc.
         # For each character, the low-order bit stores traveler n, and the high bit traveler n+3.
 
-        code = ""
+        self.clinchedby_code = ""
         clinch_array = [0]*( math.ceil(len(traveler_lists)/4) )
         for t in self.clinched_by:
             clinch_array[t.traveler_num // 4] += 2 ** (t.traveler_num % 4)
         for c in clinch_array:
-            code += "0123456789ABCDEF"[c]
-        return code
+            self.clinchedby_code += "0123456789ABCDEF"[c]
 
 class Route:
     """This class encapsulates the contents of one .csv file line
@@ -1470,7 +1469,7 @@ class HGEdge:
     # line appropriate for a tmg traveled edge file
     def traveled_tmg_line(self, traveler_lists, systems=None):
         line = str(self.vertex1.t_vertex_num) + " " + str(self.vertex2.t_vertex_num) + " " + self.label(systems)
-        line += " " + self.segment.clinchedby_code(traveler_lists)
+        line += " " + self.segment.clinchedby_code
         for intermediate in self.intermediate_points:
             line += " " + str(intermediate.lat) + " " + str(intermediate.lng)
         return line
@@ -1535,7 +1534,7 @@ class HighwayGraph:
      - one for the traveled graph: collapsed edges split at endpoints of users' travels
     """
 
-    def __init__(self, all_waypoints, highway_systems, datacheckerrors, et):
+    def __init__(self, all_waypoints, highway_systems, datacheckerrors, et, traveler_lists):
         # first, find unique waypoints and create vertex labels
         vertex_names = set()
         self.vertices = {}
@@ -1619,6 +1618,7 @@ class HighwayGraph:
                 for s in r.segment_list:
                     if s.concurrent is None or s == s.concurrent[0]:
                         HGEdge(s, self)
+                        s.set_clinchedby_code(traveler_lists)
 
         # compress edges adjacent to hidden vertices
         counter = 0
@@ -2994,7 +2994,7 @@ if len(el.error_list) > 0:
 # Build a graph structure out of all highway data in active and
 # preview systems
 print(et.et() + "Setting up for graphs of highway data.", flush=True)
-graph_data = HighwayGraph(all_waypoints, highway_systems, datacheckerrors, et)
+graph_data = HighwayGraph(all_waypoints, highway_systems, datacheckerrors, et, traveler_lists)
 
 print(et.et() + "Writing graph waypoint simplification log.", flush=True)
 logfile = open(args.logfilepath + '/waypointsimplification.log', 'w')
