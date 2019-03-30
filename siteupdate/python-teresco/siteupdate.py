@@ -1800,6 +1800,7 @@ class HighwayGraph:
         # return a set of edges for the traveled graph format,
         # optionally restricted by region or system or placeradius
         edge_set = set()
+        trav_set = set()
         for v in mv:
             if v.visibility < 1:
                 continue
@@ -1813,7 +1814,9 @@ class HighwayGraph:
                                     system_match = True
                         if system_match:
                             edge_set.add(e)
-        return edge_set
+                            for t in e.segment.clinched_by:
+                                trav_set.add(t)
+        return (edge_set, sorted(trav_set, key=lambda TravelerList: TravelerList.traveler_name))
 
     # write the entire set of highway data a format very similar to
     # the original .gra format.  The first line is a header specifying
@@ -1934,14 +1937,21 @@ class HighwayGraph:
     # restricted by regions in the list if given,
     # by systems in the list if given,
     # or to within a given area if placeradius is given
-    def write_subgraphs_tmg(self, graph_list, path, root, descr, category, regions, systems, placeradius, traveler_lists):
+    def write_subgraphs_tmg(self, graph_list, path, root, descr, category, regions, systems, placeradius):
         simplefile = open(path+root+"-simple.tmg","w",encoding='utf-8')
         collapfile = open(path+root+".tmg","w",encoding='utf-8')
         travelfile = open(path+root+"-traveled.tmg","w",encoding='utf-8')
         (mv, cv_count, tv_count) = self.matching_vertices(regions, systems, placeradius, self.rg_vset_hash)
         mse = self.matching_simple_edges(mv, regions, systems, placeradius)
         mce = self.matching_collapsed_edges(mv, regions, systems, placeradius)
-        mte = self.matching_traveled_edges(mv, regions, systems, placeradius)
+        (mte, traveler_lists) = self.matching_traveled_edges(mv, regions, systems, placeradius)
+        """if len(traveler_lists) == 0:
+            print("\n\nNo travelers in " + root + "\n", flush=True)#"""
+        # assign traveler numbers
+        travnum = 0
+        for t in traveler_lists:
+            t.traveler_num = travnum
+            travnum += 1
         print('(' + str(len(mv)) + ',' + str(len(mse)) + ") ", end="", flush=True)
         print('(' + str(cv_count) + ',' + str(len(mce)) + ") ", end="", flush=True)
         print('(' + str(tv_count) + ',' + str(len(mte)) + ") ", end="", flush=True)
@@ -3044,8 +3054,7 @@ else:
     for a in area_list:
         print(a.base + '(' + str(a.r) + ') ', end="", flush=True)
         graph_data.write_subgraphs_tmg(graph_list, args.graphfilepath + "/", a.base + str(a.r) + "-area",
-                                       a.place + " (" + str(a.r) + " mi radius)", "area", None, None, a,
-                                       traveler_lists)
+                                       a.place + " (" + str(a.r) + " mi radius)", "area", None, None, a)
     graph_types.append(['area', 'Routes Within a Given Radius of a Place',
                         'These graphs contain all routes currently plotted within the given distance radius of the given place.'])
     print("!")
@@ -3063,8 +3072,7 @@ else:
         region_type = r[4]
         print(region_code + ' ', end="",flush=True)
         graph_data.write_subgraphs_tmg(graph_list, args.graphfilepath + "/", region_code + "-region",
-                                       region_name + " (" + region_type + ")", "region", [ region_code ], None, None,
-                                       traveler_lists)
+                                       region_name + " (" + region_type + ")", "region", [ region_code ], None, None)
     graph_types.append(['region', 'Routes Within a Single Region',
                         'These graphs contain all routes currently plotted within the given region.'])
     print("!")
@@ -3088,8 +3096,7 @@ else:
         if h is not None:
             print(h.systemname + ' ', end="",flush=True)
             graph_data.write_subgraphs_tmg(graph_list, args.graphfilepath + "/", h.systemname+"-system",
-                                           h.systemname + " (" + h.fullname + ")", "system", None, [ h ], None,
-                                           traveler_lists)
+                                           h.systemname + " (" + h.fullname + ")", "system", None, [ h ], None)
     if h is not None:
         graph_types.append(['system', 'Routes Within a Single Highway System',
                             'These graphs contain the routes within a single highway system and are not restricted by region.'])
@@ -3114,8 +3121,7 @@ else:
             if h.systemname in selected_systems:
                 systems.append(h)
         graph_data.write_subgraphs_tmg(graph_list, args.graphfilepath + "/", fields[1],
-                                       fields[0], "multisystem", None, systems, None,
-                                       traveler_lists)
+                                       fields[0], "multisystem", None, systems, None)
     graph_types.append(['multisystem', 'Routes Within Multiple Highway Systems',
                         'These graphs contain the routes within a set of highway systems.'])
     print("!")
@@ -3139,8 +3145,7 @@ else:
             if r[0] in selected_regions and r[0] in active_preview_mileage_by_region:
                 region_list.append(r[0])
         graph_data.write_subgraphs_tmg(graph_list, args.graphfilepath + "/", fields[1],
-                                       fields[0], "multiregion", region_list, None, None,
-                                       traveler_lists)
+                                       fields[0], "multiregion", region_list, None, None)
     graph_types.append(['multiregion', 'Routes Within Multiple Regions',
                         'These graphs contain the routes within a set of regions.'])
     print("!")
@@ -3159,8 +3164,7 @@ else:
         if len(region_list) >= 2:
             print(c[0] + " ", end="", flush=True)
             graph_data.write_subgraphs_tmg(graph_list, args.graphfilepath + "/", c[0] + "-country",
-                                           c[1] + " All Routes in Country", "country", region_list, None, None,
-                                           traveler_lists)
+                                           c[1] + " All Routes in Country", "country", region_list, None, None)
     graph_types.append(['country', 'Routes Within a Single Multi-Region Country',
                         'These graphs contain the routes within a single country that is composed of multiple regions that contain plotted routes.  Countries consisting of a single region are represented by their regional graph.'])
     print("!")
@@ -3177,8 +3181,7 @@ else:
         if len(region_list) >= 1:
             print(c[0] + " ", end="", flush=True)
             graph_data.write_subgraphs_tmg(graph_list, args.graphfilepath + "/", c[0] + "-continent",
-                                           c[1] + " All Routes on Continent", "continent", region_list, None, None,
-                                           traveler_lists)
+                                           c[1] + " All Routes on Continent", "continent", region_list, None, None)
     graph_types.append(['continent', 'Routes Within a Continent',
                         'These graphs contain the routes on a continent.'])
     print("!")
