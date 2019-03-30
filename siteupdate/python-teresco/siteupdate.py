@@ -1510,7 +1510,7 @@ class HighwayGraph:
     multi-point edges.
     """
 
-    def __init__(self, all_waypoints, highway_systems, datacheckerrors):
+    def __init__(self, all_waypoints, highway_systems, datacheckerrors, et):
         # first, find unique waypoints and create vertex labels
         vertex_names = set()
         self.vertices = {}
@@ -1533,7 +1533,12 @@ class HighwayGraph:
         # unless it's a point not in or colocated with any active
         # or preview system, or is colocated and not at the front
         # of its colocation list
+        counter = 0
+        print(et.et() + "Creating unique names and vertices", end="", flush=True)
         for w in all_waypoint_list:
+            if counter % 10000 == 0:
+                print('.', end="", flush=True)
+            counter += 1
             # skip if this point is occupied by only waypoints in
             # devel systems
             if not w.is_or_colocated_with_active_or_preview():
@@ -1577,9 +1582,14 @@ class HighwayGraph:
         vertex_names = None
 
         # add edges, which end up in two separate vertex adjacency lists,
+        counter = 0
+        print("!\n" + et.et() + "Creating edges", end="", flush=True)
         for h in highway_systems:
             if h.devel():
                 continue
+            if counter % 6 == 0:
+                print('.', end="", flush=True)
+            counter += 1;
             for r in h.route_list:
                 for s in r.segment_list:
                     if s.concurrent is None or s == s.concurrent[0]:
@@ -1592,11 +1602,13 @@ class HighwayGraph:
                         else:
                             e = None
 
-        print("Full graph has " + str(len(self.vertices)) +
-              " vertices, " + str(self.edge_count()) + " edges.")
-
         # compress edges adjacent to hidden vertices
+        counter = 0
+        print("!\n" + et.et() + "Compressing collapsed edges", end="", flush=True)
         for label, vinfo in self.vertices.items():
+            if counter % 10000 == 0:
+                print('.', end="", flush=True)
+            counter += 1
             if vinfo.is_hidden:
                 if len(vinfo.incident_collapsed_edges) < 2:
                     # these cases are flagged as HIDDEN_TERMINUS
@@ -1612,7 +1624,9 @@ class HighwayGraph:
                 HighwayGraphCollapsedEdgeInfo(vertex_info=vinfo)
 
         # print summary info
-        print("Edge compressed graph has " + str(self.num_visible_vertices()) +
+        print("!\n" + et.et() + "   Simple graph has " + str(len(self.vertices)) +
+              " vertices, " + str(self.edge_count()) + " edges.")
+        print(et.et() + "Collapsed graph has " + str(self.num_visible_vertices()) +
               " vertices, " + str(self.collapsed_edge_count()) + " edges.")
 
     def num_visible_vertices(self):
@@ -1773,8 +1787,6 @@ class HighwayGraph:
     def write_master_tmg_collapsed(self, filename):
         tmgfile = open(filename, 'w')
         tmgfile.write("TMG 1.0 collapsed\n")
-        print("(" + str(self.num_visible_vertices()) + "," +
-              str(self.collapsed_edge_count()) + ") ", end="", flush=True)
         tmgfile.write(str(self.num_visible_vertices()) + " " +
                       str(self.collapsed_edge_count()) + "\n")
 
@@ -2835,7 +2847,7 @@ if len(el.error_list) > 0:
 # Build a graph structure out of all highway data in active and
 # preview systems
 print(et.et() + "Setting up for graphs of highway data.", flush=True)
-graph_data = HighwayGraph(all_waypoints, highway_systems, datacheckerrors)
+graph_data = HighwayGraph(all_waypoints, highway_systems, datacheckerrors, et)
 
 print(et.et() + "Writing graph waypoint simplification log.", flush=True)
 logfile = open(args.logfilepath + '/waypointsimplification.log', 'w')
@@ -2863,7 +2875,7 @@ else:
                         'These graphs contain all routes currently plotted in the Travel Mapping project.'])
 
     # graphs restricted by place/area - from areagraphs.csv file
-    print("\n" + et.et() + "Creating area data graphs.", flush=True)
+    print(et.et() + "Creating area data graphs.", flush=True)
     with open(args.highwaydatapath+"/graphs/areagraphs.csv", "rt",encoding='utf-8') as file:
         lines = file.readlines()
     file.close()
