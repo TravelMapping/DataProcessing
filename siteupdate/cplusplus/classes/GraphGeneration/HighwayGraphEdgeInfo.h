@@ -5,7 +5,7 @@ class HighwayGraphEdgeInfo
 	public:
 	bool written;
 	std::string segment_name;
-	HighwayGraphVertexInfo *vertex1, *vertex2;
+	HGVertex *vertex1, *vertex2;
 	Region *region;
 	std::list<std::pair<std::string, HighwaySystem*>> route_names_and_systems;
 

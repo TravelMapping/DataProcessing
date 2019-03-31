@@ -40,7 +40,7 @@ class Region
 	double active_preview_mileage;
 	double overall_mileage;
 	std::mutex *ao_mi_mtx, *ap_mi_mtx, *ov_mi_mtx;
-	std::unordered_set<HighwayGraphVertexInfo*> vertices;
+	std::unordered_set<HGVertex*> vertices;
 	std::unordered_set<HighwayGraphEdgeInfo*> edges;
 
 	Region (std::string &line,

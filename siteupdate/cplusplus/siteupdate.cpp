@@ -23,9 +23,9 @@ class TravelerList;
 class Region;
 class DatacheckEntryList;
 class HighwayGraph;
-class HighwayGraphVertexInfo;
+class HGVertex;
 class HighwayGraphEdgeInfo;
-class HighwayGraphCollapsedEdgeInfo;
+class HGEdge;
 #include <chrono>
 #include <cmath>
 #include <cstring>

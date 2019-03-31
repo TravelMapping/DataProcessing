@@ -6,16 +6,16 @@ HighwayGraphEdgeInfo::HighwayGraphEdgeInfo(HighwaySegment *s, HighwayGraph *grap
 	vertex2 = graph->vertices.at(s->waypoint2->hashpoint());
 	// checks for the very unusual cases where an edge ends up
 	// in the system as itself and its "reverse"
-	for (HighwayGraphEdgeInfo *e : vertex1->incident_edges)
+	for (HighwayGraphEdgeInfo *e : vertex1->incident_s_edges)
 		if (e->vertex1 == vertex2 && e->vertex2 == vertex1)	duplicate = 1;
-	for (HighwayGraphEdgeInfo *e : vertex2->incident_edges)
+	for (HighwayGraphEdgeInfo *e : vertex2->incident_s_edges)
 		if (e->vertex1 == vertex2 && e->vertex2 == vertex1)	duplicate = 1;
 	if (duplicate)
 	{	delete this;
 		return;
 	}
-	vertex1->incident_edges.push_back(this);
-	vertex2->incident_edges.push_back(this);
+	vertex1->incident_s_edges.push_back(this);
+	vertex2->incident_s_edges.push_back(this);
 	// assumption: each edge/segment lives within a unique region
 	region = s->route->region;
 	region->edges.insert(this);
@@ -32,18 +32,18 @@ HighwayGraphEdgeInfo::HighwayGraphEdgeInfo(HighwaySegment *s, HighwayGraph *grap
 }
 
 HighwayGraphEdgeInfo::~HighwayGraphEdgeInfo()
-{	for (	std::list<HighwayGraphEdgeInfo*>::iterator e = vertex1->incident_edges.begin();
-		e != vertex1->incident_edges.end();
+{	for (	std::list<HighwayGraphEdgeInfo*>::iterator e = vertex1->incident_s_edges.begin();
+		e != vertex1->incident_s_edges.end();
 		e++
 	    )	if (*e == this)
-		{	vertex1->incident_edges.erase(e);
+		{	vertex1->incident_s_edges.erase(e);
 			break;
 		}
-	for (	std::list<HighwayGraphEdgeInfo*>::iterator e = vertex2->incident_edges.begin();
-		e != vertex2->incident_edges.end();
+	for (	std::list<HighwayGraphEdgeInfo*>::iterator e = vertex2->incident_s_edges.begin();
+		e != vertex2->incident_s_edges.end();
 		e++
 	    )	if (*e == this)
-		{	vertex2->incident_edges.erase(e);
+		{	vertex2->incident_s_edges.erase(e);
 			break;
 		}
 	segment_name.clear();
