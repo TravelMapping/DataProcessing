@@ -33,11 +33,6 @@ class PlaceRadius
 		return ans <= r;
 	}
 
-	bool contains_edge(HighwayGraphEdgeInfo *e)
-	{	/* return whether both endpoints of edge e are within this area */
-		return contains_vertex(e->vertex1) and contains_vertex(e->vertex2);
-	}
-
 	bool contains_edge(HGEdge *e)
 	{	/* return whether both endpoints of edge e are within this area */
 		return contains_vertex(e->vertex1) and contains_vertex(e->vertex2);

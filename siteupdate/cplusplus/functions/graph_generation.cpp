@@ -108,6 +108,7 @@ else {	list<Region*> *regions;
 	for (Region &region : all_regions)
 	{	if (region.active_preview_mileage == 0) continue;
 		regions = new list<Region*>(1, &region);
+			  // deleted on termination of program
 		graph_vector.emplace_back(region.code + "-region", region.name + " (" + region.type + ")",
 					  's', 'r', regions, (list<HighwaySystem*>*)0, (PlaceRadius*)0);
 		graph_vector.emplace_back(region.code + "-region", region.name + " (" + region.type + ")",
@@ -152,6 +153,7 @@ else {	list<Region*> *regions;
 		  }
 		if (h)
 		{	systems = new list<HighwaySystem*>(1, h);
+				  // deleted on termination of program
 			graph_vector.emplace_back(h->systemname + "-system", h->systemname + " (" + h->fullname + ")",
 						  's', 's', (list<Region*>*)0, systems, (PlaceRadius*)0);
 			graph_vector.emplace_back(h->systemname + "-system", h->systemname + " (" + h->fullname + ")",
@@ -198,6 +200,7 @@ else {	list<Region*> *regions;
 			continue;
 		}
 		systems = new list<HighwaySystem*>;
+			  // deleted on termination of program
 		list<string> selected_systems;
 		//FIXME rewrite this whole bit to be more compact
 		for(char* token = strtok(fields[2], ","); token; token = strtok(0, ",")) selected_systems.push_back(token);
@@ -253,6 +256,7 @@ else {	list<Region*> *regions;
 			continue;
 		}
 		regions = new list<Region*>;
+			  // deleted on termination of program
 		list<string> selected_regions;
 		//FIXME rewrite this whole bit to be more compact
 		for(char* token = strtok(fields[2], ","); token; token = strtok(0, ",")) selected_regions.push_back(token);
@@ -296,6 +300,7 @@ else {	list<Region*> *regions;
 	// add entries to graph_vector
 	for (pair<string, string> &c : countries)
 	{	regions = new list<Region*>;
+			  // deleted on termination of program
 		for (Region &r : all_regions)
 		  // does it match this country and have routes?
 		  if (&c == r.country && r.active_preview_mileage)
@@ -336,6 +341,7 @@ else {	list<Region*> *regions;
 	// add entries to graph_vector
 	for (pair<string, string> &c : continents)
 	{	regions = new list<Region*>;
+			  // deleted on termination of program
 		for (Region &r : all_regions)
 		  // does it match this continent and have routes?
 		  if (&c == r.continent && r.active_preview_mileage)

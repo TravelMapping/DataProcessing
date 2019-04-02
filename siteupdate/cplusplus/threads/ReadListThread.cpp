@@ -14,5 +14,6 @@ void ReadListThread(std::list<std::string> *traveler_ids, std::list<TravelerList
 		std::cout << ' ' << tl << std::flush;
 		tl_mtx->unlock();
 		traveler_lists->push_back(new TravelerList(tl, route_hash, args, strtok_mtx));
+					  // deleted on termination of program
 	}
 }

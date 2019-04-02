@@ -9,7 +9,7 @@ class HGVertex
 	Waypoint *first_waypoint;
 	std::unordered_set<Region*> regions;
 	std::unordered_set<HighwaySystem*> systems;
-	std::list<HighwayGraphEdgeInfo*> incident_s_edges;
+	std::list<HGEdge*> incident_s_edges;
 	std::list<HGEdge*> incident_c_edges;
 	int *s_vertex_num;
 	int *c_vertex_num;
@@ -19,6 +19,7 @@ class HGVertex
 		lng = wpt->lng;
 		s_vertex_num = new int[numthreads];
 		c_vertex_num = new int[numthreads];
+			       // deleted by ~HGVertex, called by HighwayGraph::clear
 		unique_name = n;
 		// will consider hidden iff all colocated waypoints are hidden
 		is_hidden = 1;

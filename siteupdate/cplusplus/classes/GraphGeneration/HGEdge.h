@@ -3,17 +3,24 @@ class HGEdge
     edge that can incorporate intermediate points.
     */
 	public:
-	bool written;
+	bool s_written, c_written; // simple, collapsed
 	std::string segment_name;
 	HGVertex *vertex1, *vertex2;
 	std::list<HGVertex*> intermediate_points; // if more than 1, will go from vertex1 to vertex2
 	Region *region;
 	std::list<std::pair<std::string, HighwaySystem*>> route_names_and_systems;
+	unsigned char format;
 
-	HGEdge(HighwayGraphEdgeInfo *);
-	HGEdge(HGVertex *);
+	// constants for more human-readable format masks
+	static const unsigned char simple;
+	static const unsigned char collapsed;
+	static const unsigned char traveled;
+
+	HGEdge(HighwaySegment *, HighwayGraph *);
+	HGEdge(HGVertex *, unsigned char);
 	~HGEdge();
 
+	void detach(unsigned char);
 	std::string label(std::list<HighwaySystem*> *);
 	std::string collapsed_tmg_line(std::list<HighwaySystem*> *, unsigned int);
 	std::string debug_tmg_line(std::list<HighwaySystem*> *, unsigned int);

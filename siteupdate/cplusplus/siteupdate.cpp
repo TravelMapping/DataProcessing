@@ -24,7 +24,6 @@ class Region;
 class DatacheckEntryList;
 class HighwayGraph;
 class HGVertex;
-class HighwayGraphEdgeInfo;
 class HGEdge;
 #include <chrono>
 #include <cmath>
@@ -69,13 +68,11 @@ class HGEdge;
 #include "classes/ConnectedRoute.cpp"
 #include "classes/TravelerList/TravelerList.cpp"
 #include "classes/HighwaySegment/HighwaySegment.cpp"
-#include "classes/GraphGeneration/HighwayGraphEdgeInfo.h"
 #include "classes/GraphGeneration/HGEdge.h"
 #include "classes/GraphGeneration/HGVertex.cpp"
 #include "classes/GraphGeneration/PlaceRadius.cpp"
 #include "classes/GraphGeneration/GraphListEntry.cpp"
 #include "classes/GraphGeneration/HighwayGraph.cpp"
-#include "classes/GraphGeneration/HighwayGraphEdgeInfo.cpp"
 #include "classes/GraphGeneration/HGEdge.cpp"
 #include "threads/ReadWptThread.cpp"
 #include "threads/NmpMergedThread.cpp"
@@ -202,6 +199,7 @@ int main(int argc, char *argv[])
 				continue;
 			}
 			HighwaySystem *hs = new HighwaySystem(line, el, args.highwaydatapath+"/hwy_data/_systems", args.systemsfile, countries, all_regions);
+					    // deleted on termination of program
 			if (hs->is_valid()) highway_systems.push_back(hs);
 			else delete hs;
 			cout << hs->systemname << '.' << std::flush;
@@ -214,6 +212,7 @@ int main(int argc, char *argv[])
 	file.close();
 
 	DatacheckEntryList *datacheckerrors = new DatacheckEntryList;
+					      // deleted on termination of program
 
 	// check for duplicate .list names
 	// and duplicate root entries among Route and ConnectedRoute
@@ -596,6 +595,7 @@ int main(int argc, char *argv[])
 		                        if (other)
 		                            if (!s->concurrent)
 		                            {   s->concurrent = new list<HighwaySegment*>;
+								// deleted on termination of program
 		                                other->concurrent = s->concurrent;
 		                                s->concurrent->push_back(s);
 		                                s->concurrent->push_back(other);
@@ -948,7 +948,6 @@ int main(int argc, char *argv[])
 		{	el.add_error("Could not parse datacheckfps.csv line: [" + line + "], expected 6 fields, found more");
 			continue;
 		}
-		char *rootstr = new char[line.size()-left];
 		fields[5] = line.substr(left+1);
 
 		if (datacheck_always_error.find(fields[4]) != datacheck_always_error.end())

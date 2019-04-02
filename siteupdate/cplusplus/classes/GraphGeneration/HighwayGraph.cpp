@@ -72,7 +72,7 @@ class HighwayGraph
 			if (!w->colocated)
 				vertices[w] = new HGVertex(w, &*(vertex_names.insert(point_name).first), datacheckerrors, numthreads);
 			else	vertices[w] = new HGVertex(w->colocated->front(), &*(vertex_names.insert(point_name).first), datacheckerrors, numthreads);
-			// vertices are deleted by HighwayGraph::clear
+					      // deleted by HighwayGraph::clear
 		}
 		std::cout << '!' << std::endl;
 		//#include "../../debug/unique_names.cpp"
@@ -87,14 +87,8 @@ class HighwayGraph
 			for (Route &r : h->route_list)
 			  for (HighwaySegment *s : r.segment_list)
 			    if (!s->concurrent || s == s->concurrent->front())
-			    {	// first one copy for the full simple graph
-				bool duplicate = 0;
-				HighwayGraphEdgeInfo *e = new HighwayGraphEdgeInfo(s, this, duplicate);
-				// and again for a graph where hidden waypoints
-				// are merged into the edge structures
-				if (!duplicate) new HGEdge(e);
-				// edges & collapsed edges are deleted by ~HGVertex, called by HighwayGraph::clear
-			    }
+			      new HGEdge(s, this);
+			      // deleted by ~HGVertex, called by HighwayGraph::clear
 		}
 		std::cout << "!\n" << et.et() << "Full graph has " << vertices.size() << " vertices, " << simple_edge_count() << " edges." << std::endl;
 
@@ -122,8 +116,10 @@ class HighwayGraph
 					continue;
 				}
 				// construct from vertex this time
-				new HGEdge(wv.second);
-				// collapsed edges are deleted by ~HGVertex, called by HighwayGraph::clear
+				new HGEdge(wv.second, HGEdge::collapsed);
+				// Final collapsed edges are deleted by ~HGVertex, called by HighwayGraph::clear.
+				// Partially collapsed edges created during the compression process are deleted
+				// upon detachment from all graphs.
 			}
 		}
 
@@ -208,12 +204,12 @@ class HighwayGraph
 		return vertex_set;
 	}//*/
 
-	std::unordered_set<HighwayGraphEdgeInfo*> matching_simple_edges(std::unordered_set<HGVertex*> &mv, GraphListEntry &g)
+	std::unordered_set<HGEdge*> matching_simple_edges(std::unordered_set<HGVertex*> &mv, GraphListEntry &g)
 	{	// return a set of edges from the graph, optionally
 		// restricted by region or system or placeradius area
-		std::unordered_set<HighwayGraphEdgeInfo*> edge_set;
-		std::unordered_set<HighwayGraphEdgeInfo*> rg_edge_set;
-		std::unordered_set<HighwayGraphEdgeInfo*> sys_edge_set;
+		std::unordered_set<HGEdge*> edge_set;
+		std::unordered_set<HGEdge*> rg_edge_set;
+		std::unordered_set<HGEdge*> sys_edge_set;
 		// rg_edge_set is the union of all sets in regions
 		if (g.regions) for (Region *r : *g.regions)
 			rg_edge_set.insert(r->edges.begin(), r->edges.end());
@@ -227,7 +223,7 @@ class HighwayGraph
 			if (g.systems)
 				// both regions & systems populated: edge_set is
 				// intersection of rg_edge_set & sys_edge_set
-				for (HighwayGraphEdgeInfo *v : sys_edge_set)
+				for (HGEdge *v : sys_edge_set)
 				  edge_set.erase(v);
 		     }
 		else	if (g.systems)
@@ -235,7 +231,7 @@ class HighwayGraph
 				edge_set = sys_edge_set;
 			else	// neither are populated; include all edges///
 			  for (HGVertex *v : mv)
-			    for (HighwayGraphEdgeInfo *e : v->incident_s_edges)
+			    for (HGEdge *e : v->incident_s_edges)
 				// ...unless a PlaceRadius is specified
 				if (!g.placeradius || g.placeradius->contains_edge(e))
 				  edge_set.insert(e);
@@ -243,7 +239,7 @@ class HighwayGraph
 		// if placeradius is provided along with non-empty region
 		// or system parameters, erase edges outside placeradius
 		if (g.placeradius && (g.systems || g.regions))
-		{	std::unordered_set<HighwayGraphEdgeInfo*>::iterator e = edge_set.begin();
+		{	std::unordered_set<HGEdge*>::iterator e = edge_set.begin();
 			while(e != edge_set.end())
 			  if (!g.placeradius->contains_edge(*e))
 				e = edge_set.erase(e);
@@ -299,8 +295,7 @@ class HighwayGraph
 	{	std::ofstream tmgfile(filename.data());
 		tmgfile << "TMG 1.0 simple\n";
 		tmgfile << vertices.size() << ' ' << simple_edge_count() << '\n';
-		// number waypoint entries as we go to support original .gra
-		// format output
+		// number waypoint entries as we go
 		int s_vertex_num = 0;
 		for (std::pair<const Waypoint*, HGVertex*> wv : vertices)
 		{	char fstr[42];
@@ -316,16 +311,16 @@ class HighwayGraph
 		// now edges, only print if not already printed
 		int edge = 0;
 		for (std::pair<const Waypoint*, HGVertex*> wv : vertices)
-		  for (HighwayGraphEdgeInfo *e : wv.second->incident_s_edges)
-		    if (!e->written)
-		    {	e->written = 1;
+		  for (HGEdge *e : wv.second->incident_s_edges)
+		    if (!e->s_written)
+		    {	e->s_written = 1;
 			tmgfile << e->vertex1->s_vertex_num[0] << ' ' << e->vertex2->s_vertex_num[0] << ' ' << e->label(0) << '\n';
 			edge++;
 		    }
 		// sanity checks
 		for (std::pair<const Waypoint*, HGVertex*> wv : vertices)
-		  for (HighwayGraphEdgeInfo *e : wv.second->incident_s_edges)
-		    if (!e->written)
+		  for (HGEdge *e : wv.second->incident_s_edges)
+		    if (!e->s_written)
 		      std::cout << "ERROR: never wrote edge " << e->vertex1->s_vertex_num << ' ' << e->vertex2->s_vertex_num[0] << ' ' << e->label(0) << std::endl;
 		if (simple_edge_count() != edge)
 		  std::cout << "ERROR: computed " << simple_edge_count() << " edges but wrote " << edge << std::endl;
@@ -357,8 +352,8 @@ class HighwayGraph
 		for (std::pair<const Waypoint*, HGVertex*> wv : vertices)
 		  if (!wv.second->is_hidden)
 		    for (HGEdge *e : wv.second->incident_c_edges)
-		      if (!e->written)
-		      {	e->written = 1;
+		      if (!e->c_written)
+		      {	e->c_written = 1;
 			tmgfile << e->collapsed_tmg_line(0, threadnum) << '\n';
 			edge++;
 		      }
@@ -383,7 +378,7 @@ class HighwayGraph
 		std::ofstream simplefile(simplefilename.data());
 		std::ofstream collapfile(collapfilename.data());
 		std::unordered_set<HGVertex*> mv = matching_vertices(graph_vector[graphnum], cv_count);
-		std::unordered_set<HighwayGraphEdgeInfo*> mse = matching_simple_edges(mv, graph_vector[graphnum]);
+		std::unordered_set<HGEdge*> mse = matching_simple_edges(mv, graph_vector[graphnum]);
 		std::unordered_set<HGEdge*> mce = matching_collapsed_edges(mv, graph_vector[graphnum]);
 		std::cout << graph_vector[graphnum].tag()
 			  << '(' << mv.size() << ',' << mse.size() << ") "
@@ -411,7 +406,7 @@ class HighwayGraph
 			}
 		}
 		// write edges
-		for (HighwayGraphEdgeInfo *e : mse)
+		for (HGEdge *e : mse)
 			simplefile << e->vertex1->s_vertex_num[threadnum] << ' '
 				   << e->vertex2->s_vertex_num[threadnum] << ' '
 				   << e->label(graph_vector[graphnum].systems) << '\n';

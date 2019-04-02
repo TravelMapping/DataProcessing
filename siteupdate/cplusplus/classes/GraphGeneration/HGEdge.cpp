@@ -1,24 +1,55 @@
-HGEdge::HGEdge(HighwayGraphEdgeInfo *e)
-{	// initial construction is based on a HighwayGraphEdgeInfo
-	written = 0;
-	segment_name = e->segment_name;
-	vertex1 = e->vertex1;
-	vertex2 = e->vertex2;
+// constants for more human-readable format masks
+const unsigned char HGEdge::simple = 1;
+const unsigned char HGEdge::collapsed = 2;
+const unsigned char HGEdge::traveled = 4;
+
+HGEdge::HGEdge(HighwaySegment *s, HighwayGraph *graph)
+{	// temp debug
+	s_written = 0; // simple
+	c_written = 0; // collapsed
+	vertex1 = graph->vertices.at(s->waypoint1->hashpoint());
+	vertex2 = graph->vertices.at(s->waypoint2->hashpoint());
+	// checks for the very unusual cases where an edge ends up
+	// in the system as itself and its "reverse"
+	for (HGEdge *e : vertex1->incident_s_edges)
+	  if (e->vertex1 == vertex2 && e->vertex2 == vertex1)
+	  {	delete this;
+		return;
+	  }
+	for (HGEdge *e : vertex2->incident_s_edges)
+	  if (e->vertex1 == vertex2 && e->vertex2 == vertex1)
+	  {	delete this;
+		return;
+	  }
+	format = simple | collapsed;
+	segment_name = s->segment_name();
+	vertex1->incident_s_edges.push_back(this);
+	vertex2->incident_s_edges.push_back(this);
+	vertex1->incident_c_edges.push_back(this);
+	vertex2->incident_c_edges.push_back(this);
 	// assumption: each edge/segment lives within a unique region
 	// and a 'multi-edge' would not be able to span regions as there
 	// would be a required visible waypoint at the border
-	region = e->region;
+	region = s->route->region;
+	region->edges.insert(this);
 	// a list of route name/system pairs
-	route_names_and_systems = e->route_names_and_systems;
-	vertex1->incident_c_edges.push_back(this);
-	vertex2->incident_c_edges.push_back(this);
+	if (!s->concurrent)
+	{	route_names_and_systems.emplace_back(s->route->list_entry_name(), s->route->system);
+		s->route->system->edges.insert(this);
+	}
+	else	for (HighwaySegment *cs : *(s->concurrent))
+		{	if (cs->route->system->devel()) continue;
+			route_names_and_systems.emplace_back(cs->route->list_entry_name(), cs->route->system);
+			cs->route->system->edges.insert(this);
+		}
 }
 
-HGEdge::HGEdge(HGVertex *vertex)
+HGEdge::HGEdge(HGVertex *vertex, unsigned char fmt_mask)
 {	// build by collapsing two existing edges around a common
 	// hidden vertex waypoint, whose information is given in
 	// vertex
-	written = 0;
+	c_written = 0;
+	format = fmt_mask;
 	// we know there are exactly 2 incident edges, as we
 	// checked for that, and we will replace these two
 	// with the single edge we are constructing here
@@ -68,31 +99,62 @@ HGEdge::HGEdge(HGVertex *vertex)
 	     }
 	intermediate_points.splice(intermediate_points.end(), edge2->intermediate_points);
 
-	//std::cout << "DEBUG: intermediates complete: from " << *(vertex1->unique_name) << " via " \
-		  << intermediate_point_string() << " to " << *(vertex2->unique_name) << std::endl;
+	//std::cout << "DEBUG: intermediates complete: from " << *(vertex1->unique_name) << " via " << \
+			intermediate_point_string() << " to " << *(vertex2->unique_name) << std::endl;
 
 	// replace edge references at our endpoints with ourself
-	delete edge1; // destructor removes edge from adjacency lists
-	delete edge2; // destructor removes edge from adjacency lists
+	edge1->detach(fmt_mask);
+	edge2->detach(fmt_mask);
+	if (!edge1->format) delete edge1;
+	if (!edge2->format) delete edge2;
 	vertex1->incident_c_edges.push_back(this);
 	vertex2->incident_c_edges.push_back(this);
 }
 
+void HGEdge::detach(unsigned char fmt_mask)
+{	if (fmt_mask & simple)
+	{	for (	std::list<HGEdge*>::iterator e = vertex1->incident_s_edges.begin();
+			e != vertex1->incident_s_edges.end();
+			e++
+		    )	if (*e == this)
+			{	vertex1->incident_s_edges.erase(e);
+				break;
+			}
+		for (	std::list<HGEdge*>::iterator e = vertex2->incident_s_edges.begin();
+			e != vertex2->incident_s_edges.end();
+			e++
+		    )	if (*e == this)
+			{	vertex2->incident_s_edges.erase(e);
+				break;
+			}
+	}
+	if (fmt_mask & collapsed)
+	{	for (	std::list<HGEdge*>::iterator e = vertex1->incident_c_edges.begin();
+			e != vertex1->incident_c_edges.end();
+			e++
+		    )	if (*e == this)
+			{	vertex1->incident_c_edges.erase(e);
+				break;
+			}
+		for (	std::list<HGEdge*>::iterator e = vertex2->incident_c_edges.begin();
+			e != vertex2->incident_c_edges.end();
+			e++
+		    )	if (*e == this)
+			{	vertex2->incident_c_edges.erase(e);
+				break;
+			}
+	}
+	format &= ~fmt_mask;
+}
+
 HGEdge::~HGEdge()
-{	for (	std::list<HGEdge*>::iterator e = vertex1->incident_c_edges.begin();
-		e != vertex1->incident_c_edges.end();
-		e++
-	    )	if (*e == this)
-		{	vertex1->incident_c_edges.erase(e);
-			break;
-		}
-	for (	std::list<HGEdge*>::iterator e = vertex2->incident_c_edges.begin();
-		e != vertex2->incident_c_edges.end();
-		e++
-	    )	if (*e == this)
-		{	vertex2->incident_c_edges.erase(e);
-			break;
-		}
+{	/*if (format)
+	{	std::cout << '~';
+		if (format & simple)	std::cout << 's';
+		if (format & collapsed)	std::cout << 'c';
+		std::cout << std::endl;
+	}//*/
+	detach(format);
 	segment_name.clear();
 	intermediate_points.clear();
 	route_names_and_systems.clear();
