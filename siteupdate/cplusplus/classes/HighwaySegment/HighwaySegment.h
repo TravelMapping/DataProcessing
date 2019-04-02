@@ -18,5 +18,6 @@ class HighwaySegment
 	double length();
 	std::string segment_name();
 	unsigned int index();
+	//std::string concurrent_travelers_sanity_check();
 	void compute_stats();
 };

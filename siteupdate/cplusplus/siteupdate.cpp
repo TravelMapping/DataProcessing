@@ -648,6 +648,14 @@ int main(int argc, char *argv[])
 	cout << "!\n";
 	concurrencyfile.close();
 
+	/*filename = args.logfilepath+"/concurrent_travelers_sanity_check.log";
+	ofstream sanetravfile(filename.data());
+	for (HighwaySystem *h : highway_systems)
+	    for (Route &r : h->route_list)
+		for (HighwaySegment *s : r.segment_list)
+		    sanetravfile << s->concurrent_travelers_sanity_check();
+	sanetravfile.close(); //*/
+
 	// compute lots of stats, first total mileage by route, system, overall, where
 	// system and overall are stored in unordered_maps by region
 	cout << et.et() << "Computing stats." << flush;
