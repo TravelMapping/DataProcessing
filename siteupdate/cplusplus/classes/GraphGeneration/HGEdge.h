@@ -7,7 +7,7 @@ class HGEdge
 	std::string segment_name;
 	HGVertex *vertex1, *vertex2;
 	std::list<HGVertex*> intermediate_points; // if more than 1, will go from vertex1 to vertex2
-	Region *region;
+	HighwaySegment *segment;
 	std::list<std::pair<std::string, HighwaySystem*>> route_names_and_systems;
 	unsigned char format;
 

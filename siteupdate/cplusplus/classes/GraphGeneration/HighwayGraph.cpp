@@ -258,7 +258,7 @@ class HighwayGraph
 			  if (!g.placeradius || g.placeradius->contains_edge(e))
 			  {	bool rg_in_rg = 0;
 				if (g.regions) for (Region *r : *g.regions)
-				  if (r == e->region)
+				  if (r == e->segment->route->region)
 				  {	rg_in_rg = 1;
 					break;
 				  }

@@ -4,7 +4,7 @@ const unsigned char HGEdge::collapsed = 2;
 const unsigned char HGEdge::traveled = 4;
 
 HGEdge::HGEdge(HighwaySegment *s, HighwayGraph *graph)
-{	// temp debug
+{	// initial construction is based on a HighwaySegment
 	s_written = 0; // simple
 	c_written = 0; // collapsed
 	vertex1 = graph->vertices.at(s->waypoint1->hashpoint());
@@ -27,11 +27,12 @@ HGEdge::HGEdge(HighwaySegment *s, HighwayGraph *graph)
 	vertex2->incident_s_edges.push_back(this);
 	vertex1->incident_c_edges.push_back(this);
 	vertex2->incident_c_edges.push_back(this);
+	// canonical segment, used to reference region and list of travelers
 	// assumption: each edge/segment lives within a unique region
 	// and a 'multi-edge' would not be able to span regions as there
 	// would be a required visible waypoint at the border
-	region = s->route->region;
-	region->edges.insert(this);
+	segment = s;
+	s->route->region->edges.insert(this);
 	// a list of route name/system pairs
 	if (!s->concurrent)
 	{	route_names_and_systems.emplace_back(s->route->list_entry_name(), s->route->system);
@@ -64,10 +65,10 @@ HGEdge::HGEdge(HGVertex *vertex, unsigned char fmt_mask)
 	segment_name = edge1->segment_name;
 	//std::cout << "\nDEBUG: collapsing edges along " << segment_name << " at vertex " << \
 			*(vertex->unique_name) << ", edge1 is " << edge1->str() << " and edge2 is " << edge2->str() << std::endl;
-	// region and route names/systems should also match, but not
+	// segment and route names/systems should also match, but not
 	// doing that sanity check here, as the above check should take
 	// care of that
-	region = edge1->region;
+	segment = edge1->segment;
 	route_names_and_systems = edge1->route_names_and_systems;
 
 	// figure out and remember which endpoints are not the
