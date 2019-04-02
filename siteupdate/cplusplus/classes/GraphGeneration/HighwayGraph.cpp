@@ -98,10 +98,10 @@ class HighwayGraph
 		for (std::pair<const Waypoint*, HGVertex*> wv : vertices)
 		{	if (counter % 10000 == 0) std::cout << '.' << std::flush;
 			counter++;
-			if (wv.second->is_hidden)
+			if (!wv.second->visibility)
 			{	// cases with only one edge are flagged as HIDDEN_TERMINUS
 				if (wv.second->incident_c_edges.size() < 2)
-				{	wv.second->is_hidden = 0;
+				{	wv.second->visibility = 2;
 					continue;
 				}
 				// if >2 edges, flag HIDDEN_JUNCTION, mark as visible, and do not compress
@@ -112,7 +112,7 @@ class HighwayGraph
 					    if (dcw->root_at_label() > (*it)->root_at_label())
 						dcw->root_at_label() = (*it)->root_at_label(); //TODO: WHAT THE...? How is this actually working? (Or is it?)
 					datacheckerrors->add(dcw->route, dcw->label, "", "", "HIDDEN_JUNCTION", std::to_string(wv.second->incident_c_edges.size()));
-					wv.second->is_hidden = 0;
+					wv.second->visibility = 2;
 					continue;
 				}
 				// construct from vertex this time
@@ -131,7 +131,7 @@ class HighwayGraph
 	unsigned int num_collapsed_vertices()
 	{	unsigned int count = 0;
 		for (std::pair<const Waypoint*, HGVertex*> wv : vertices)
-		  if (!wv.second->is_hidden) count ++;
+		  if (wv.second->visibility == 2) count ++;
 		return count;
 	}
 
@@ -145,7 +145,7 @@ class HighwayGraph
 	unsigned int collapsed_edge_count()
 	{	unsigned int edges = 0;
 		for (std::pair<const Waypoint*, HGVertex*> wv : vertices)
-		  if (!wv.second->is_hidden)
+		  if (wv.second->visibility == 2)
 		    edges += wv.second->incident_c_edges.size();
 		return edges/2;
 	}
@@ -200,7 +200,7 @@ class HighwayGraph
 		}
 		// find number of collapsed vertices
 		for (HGVertex *v : vertex_set)
-		  if (!v->is_hidden) cv_count++;
+		  if (v->visibility == 2) cv_count++;
 		return vertex_set;
 	}//*/
 
@@ -253,7 +253,7 @@ class HighwayGraph
 		// optionally restricted by region or system or placeradius
 		std::unordered_set<HGEdge*> edge_set;
 		for (HGVertex *v : mv)
-		{	if (v->is_hidden) continue;
+		{	if (v->visibility < 2) continue;
 			for (HGEdge *e : v->incident_c_edges)
 			  if (!g.placeradius || g.placeradius->contains_edge(e))
 			  {	bool rg_in_rg = 0;
@@ -340,7 +340,7 @@ class HighwayGraph
 		// write visible vertices
 		int c_vertex_num = 0;
 		for (std::pair<const Waypoint*, HGVertex*> wv : vertices)
-		  if (!wv.second->is_hidden)
+		  if (wv.second->visibility == 2)
 		  {	char fstr[42];
 			sprintf(fstr, "%.15g %.15g", wv.second->lat, wv.second->lng);
 			tmgfile << *(wv.second->unique_name) << ' ' << fstr << '\n';
@@ -350,7 +350,7 @@ class HighwayGraph
 		// write collapsed edges
 		int edge = 0;
 		for (std::pair<const Waypoint*, HGVertex*> wv : vertices)
-		  if (!wv.second->is_hidden)
+		  if (wv.second->visibility == 2)
 		    for (HGEdge *e : wv.second->incident_c_edges)
 		      if (!e->c_written)
 		      {	e->c_written = 1;
@@ -399,7 +399,7 @@ class HighwayGraph
 			v->s_vertex_num[threadnum] = sv;
 			sv++;
 			// visible vertices, for collapsed graph
-			if (!v->is_hidden)
+			if (v->visibility == 2)
 			{	collapfile << *(v->unique_name) << fstr << '\n';
 				v->c_vertex_num[threadnum] = cv;
 				cv++;

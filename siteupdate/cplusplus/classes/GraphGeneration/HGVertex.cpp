@@ -5,7 +5,7 @@ class HGVertex
 	public:
 	double lat, lng;
 	const std::string *unique_name;
-	bool is_hidden;
+	char visibility;
 	Waypoint *first_waypoint;
 	std::unordered_set<Region*> regions;
 	std::unordered_set<HighwaySystem*> systems;
@@ -22,12 +22,12 @@ class HGVertex
 			       // deleted by ~HGVertex, called by HighwayGraph::clear
 		unique_name = n;
 		// will consider hidden iff all colocated waypoints are hidden
-		is_hidden = 1;
+		visibility = 0;
 		// note: if saving the first waypoint, no longer need
 		// lat & lng and can replace with methods
 		first_waypoint = wpt;
 		if (!wpt->colocated)
-		{	if (!wpt->is_hidden) is_hidden = 0;
+		{	if (!wpt->is_hidden) visibility = 2;
 			regions.insert(wpt->route->region);
 			systems.insert(wpt->route->system);
 			wpt->route->region->vertices.insert(this);
@@ -35,7 +35,7 @@ class HGVertex
 			return;
 		}
 		for (Waypoint *w : *(wpt->colocated))
-		{	if (!w->is_hidden) is_hidden = 0;
+		{	if (!w->is_hidden) visibility = 2;
 			regions.insert(w->route->region);
 			systems.insert(w->route->system);
 			w->route->region->vertices.insert(this);
