@@ -22,7 +22,7 @@ HGEdge::HGEdge(HighwaySegment *s, HighwayGraph *graph)
 	  {	delete this;
 		return;
 	  }
-	format = simple | collapsed;
+	format = simple | collapsed | traveled;
 	segment_name = s->segment_name();
 	vertex1->incident_s_edges.push_back(this);
 	vertex2->incident_s_edges.push_back(this);
@@ -77,8 +77,12 @@ HGEdge::HGEdge(HGVertex *vertex, unsigned char fmt_mask)
 		std::cout << "edge1 named " << edge1->segment_name << " edge2 named " << edge2->segment_name << '\n' << std::endl;
 	}
 	segment_name = edge1->segment_name;
-	//std::cout << "\nDEBUG: collapsing edges along " << segment_name << " at vertex " << \
-			*(vertex->unique_name) << ", edge1 is " << edge1->str() << " and edge2 is " << edge2->str() << std::endl;
+	/*std::cout << "\nDEBUG: collapsing edges |";
+	if (fmt_mask & collapsed) std::cout << 'c';	else std::cout << '-';
+	if (fmt_mask & traveled)  std::cout << 't';	else std::cout << '-';
+	std::cout << "| along " << segment_name << " at vertex " << *(vertex->unique_name);
+	std::cout << "\n       edge1 is " << edge1->str();
+	std::cout << "\n       edge2 is " << edge2->str() << std::endl;//*/
 	// segment and route names/systems should also match, but not
 	// doing that sanity check here, as the above check should take
 	// care of that
@@ -107,15 +111,16 @@ HGEdge::HGEdge(HGVertex *vertex, unsigned char fmt_mask)
 	if (edge2->vertex1 == vertex)
 	     {	//std::cout << "DEBUG: vertex2 getting edge2->vertex2: " << *(edge2->vertex2->unique_name) << std::endl;
 		vertex2 = edge2->vertex2;
+		intermediate_points.insert(intermediate_points.end(), edge2->intermediate_points.begin(), edge2->intermediate_points.end());
 	     }
-	else {	//std:: cout << "DEBUG: vertex2 getting edge2->vertex1: " << *(edge2->vertex1->unique_name) << " and reversing edge2 intermediates" << std::endl;
+	else {	//std::cout << "DEBUG: vertex2 getting edge2->vertex1: " << *(edge2->vertex1->unique_name) << " and reversing edge2 intermediates" << std::endl;
 		vertex2 = edge2->vertex1;
-		edge2->intermediate_points.reverse();
+		intermediate_points.insert(intermediate_points.end(), edge2->intermediate_points.rbegin(), edge2->intermediate_points.rend());
 	     }
-	intermediate_points.splice(intermediate_points.end(), edge2->intermediate_points);
 
 	//std::cout << "DEBUG: intermediates complete: from " << *(vertex1->unique_name) << " via " << \
 			intermediate_point_string() << " to " << *(vertex2->unique_name) << std::endl;
+	//std::cout << "DEBUG: new " << str() << std::endl;
 
 	// replace edge references at our endpoints with ourself
 	edge1->detach(fmt_mask);
@@ -252,10 +257,16 @@ std::string HGEdge::debug_tmg_line(std::list<HighwaySystem*> *systems, unsigned 
 
 // printable string for this edge
 std::string HGEdge::str()
-{	return "HGEdge: " + segment_name
+{	std::string str = "HGEdge |";
+	if (format & simple)	str += 's';	else str += '-';
+	if (format & collapsed)	str += 'c';	else str += '-';
+	if (format & traveled)	str += 't';	else str += '-';
+	str += "|: " + segment_name
 	+ " from " + *vertex1->unique_name
 	+  " to "  + *vertex2->unique_name
-	+  " via " + std::to_string(intermediate_points.size()) + " points";
+	+  " via " + std::to_string(intermediate_points.size()) + " points {"
+	+ std::to_string((long long unsigned int)this) + '}';
+	return str;
 }
 
 // return the intermediate points as a string
