@@ -7,6 +7,7 @@ HGEdge::HGEdge(HighwaySegment *s, HighwayGraph *graph)
 {	// initial construction is based on a HighwaySegment
 	s_written = 0; // simple
 	c_written = 0; // collapsed
+	t_written = 0; // traveled
 	vertex1 = graph->vertices.at(s->waypoint1->hashpoint());
 	vertex2 = graph->vertices.at(s->waypoint2->hashpoint());
 	// checks for the very unusual cases where an edge ends up
@@ -27,6 +28,8 @@ HGEdge::HGEdge(HighwaySegment *s, HighwayGraph *graph)
 	vertex2->incident_s_edges.push_back(this);
 	vertex1->incident_c_edges.push_back(this);
 	vertex2->incident_c_edges.push_back(this);
+	vertex1->incident_t_edges.push_back(this);
+	vertex2->incident_t_edges.push_back(this);
 	// canonical segment, used to reference region and list of travelers
 	// assumption: each edge/segment lives within a unique region
 	// and a 'multi-edge' would not be able to span regions as there
@@ -50,12 +53,23 @@ HGEdge::HGEdge(HGVertex *vertex, unsigned char fmt_mask)
 	// hidden vertex waypoint, whose information is given in
 	// vertex
 	c_written = 0;
+	t_written = 0;
 	format = fmt_mask;
 	// we know there are exactly 2 incident edges, as we
 	// checked for that, and we will replace these two
-	// with the single edge we are constructing here
-	HGEdge *edge1 = vertex->incident_c_edges.front();
-	HGEdge *edge2 = vertex->incident_c_edges.back();
+	// with the single edge we are constructing here...
+	HGEdge *edge1 = 0;
+	HGEdge *edge2 = 0;
+	if (fmt_mask & collapsed)
+	{	// ...in the compressed graph, and/or...
+		edge1 = vertex->incident_c_edges.front();
+		edge2 = vertex->incident_c_edges.back();
+	}
+	if (fmt_mask & traveled)
+	{	// ...in the traveled graph, as appropriate
+		edge1 = vertex->incident_t_edges.front();
+		edge2 = vertex->incident_t_edges.back();
+	}
 	// segment names should match as routes should not start or end
 	// nor should concurrencies begin or end at a hidden point
 	if (edge1->segment_name != edge2->segment_name)
@@ -108,8 +122,14 @@ HGEdge::HGEdge(HGVertex *vertex, unsigned char fmt_mask)
 	edge2->detach(fmt_mask);
 	if (!edge1->format) delete edge1;
 	if (!edge2->format) delete edge2;
-	vertex1->incident_c_edges.push_back(this);
-	vertex2->incident_c_edges.push_back(this);
+	if (fmt_mask & collapsed)
+	{	vertex1->incident_c_edges.push_back(this);
+		vertex2->incident_c_edges.push_back(this);
+	}
+	if (fmt_mask & traveled)
+	{	vertex1->incident_t_edges.push_back(this);
+		vertex2->incident_t_edges.push_back(this);
+	}
 }
 
 void HGEdge::detach(unsigned char fmt_mask)
@@ -142,6 +162,22 @@ void HGEdge::detach(unsigned char fmt_mask)
 			e++
 		    )	if (*e == this)
 			{	vertex2->incident_c_edges.erase(e);
+				break;
+			}
+	}
+	if (fmt_mask & traveled)
+	{	for (	std::list<HGEdge*>::iterator e = vertex1->incident_t_edges.begin();
+			e != vertex1->incident_t_edges.end();
+			e++
+		    )	if (*e == this)
+			{	vertex1->incident_t_edges.erase(e);
+				break;
+			}
+		for (	std::list<HGEdge*>::iterator e = vertex2->incident_t_edges.begin();
+			e != vertex2->incident_t_edges.end();
+			e++
+		    )	if (*e == this)
+			{	vertex2->incident_t_edges.erase(e);
 				break;
 			}
 	}
@@ -183,6 +219,17 @@ std::string HGEdge::label(std::list<HighwaySystem*> *systems)
 // line appropriate for a tmg collapsed edge file
 std::string HGEdge::collapsed_tmg_line(std::list<HighwaySystem*> *systems, unsigned int threadnum)
 {	std::string line = std::to_string(vertex1->c_vertex_num[threadnum]) + " " + std::to_string(vertex2->c_vertex_num[threadnum]) + " " + label(systems);
+	char fstr[43];
+	for (HGVertex *intermediate : intermediate_points)
+	{	sprintf(fstr, " %.15g %.15g", intermediate->lat, intermediate->lng);
+		line += fstr;
+	}
+	return line;
+}
+
+// line appropriate for a tmg traveled edge file
+std::string HGEdge::traveled_tmg_line(std::list<HighwaySystem*> *systems, unsigned int threadnum)
+{	std::string line = std::to_string(vertex1->t_vertex_num[threadnum]) + " " + std::to_string(vertex2->t_vertex_num[threadnum]) + " " + label(systems);
 	char fstr[43];
 	for (HGVertex *intermediate : intermediate_points)
 	{	sprintf(fstr, " %.15g %.15g", intermediate->lat, intermediate->lng);

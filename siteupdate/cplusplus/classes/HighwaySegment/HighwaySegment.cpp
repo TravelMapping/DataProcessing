@@ -11,13 +11,9 @@ std::string HighwaySegment::str()
 
 bool HighwaySegment::add_clinched_by(TravelerList *traveler)
 {	clin_mtx.lock();
-	for (TravelerList *t : clinched_by) if (t == traveler)
-	{	clin_mtx.unlock();
-		return 0;
-	}
-	clinched_by.push_front(traveler);
+	bool result = clinched_by.insert(traveler).second;
 	clin_mtx.unlock();
-	return 1;
+	return result;
 }
 
 std::string HighwaySegment::csv_line(unsigned int id)

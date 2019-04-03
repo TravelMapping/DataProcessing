@@ -9,20 +9,26 @@ class HGVertex
 	Waypoint *first_waypoint;
 	std::unordered_set<Region*> regions;
 	std::unordered_set<HighwaySystem*> systems;
-	std::list<HGEdge*> incident_s_edges;
-	std::list<HGEdge*> incident_c_edges;
+	std::list<HGEdge*> incident_s_edges; // simple
+	std::list<HGEdge*> incident_c_edges; // collapsed
+	std::list<HGEdge*> incident_t_edges; // traveled
 	int *s_vertex_num;
 	int *c_vertex_num;
+	int *t_vertex_num;
 
 	HGVertex(Waypoint *wpt, const std::string *n, DatacheckEntryList *datacheckerrors, unsigned int numthreads)
 	{	lat = wpt->lat;
 		lng = wpt->lng;
 		s_vertex_num = new int[numthreads];
 		c_vertex_num = new int[numthreads];
+		t_vertex_num = new int[numthreads];
 			       // deleted by ~HGVertex, called by HighwayGraph::clear
 		unique_name = n;
-		// will consider hidden iff all colocated waypoints are hidden
 		visibility = 0;
+		    // permitted values:
+		    // 0: never visible outside of simple graphs
+		    // 1: visible only in traveled graph; hidden in collapsed graph
+		    // 2: visible in both traveled & collapsed graphs
 		// note: if saving the first waypoint, no longer need
 		// lat & lng and can replace with methods
 		first_waypoint = wpt;
@@ -35,7 +41,8 @@ class HGVertex
 			return;
 		}
 		for (Waypoint *w : *(wpt->colocated))
-		{	if (!w->is_hidden) visibility = 2;
+		{	// will consider hidden iff all colocated waypoints are hidden
+			if (!w->is_hidden) visibility = 2;
 			regions.insert(w->route->region);
 			systems.insert(w->route->system);
 			w->route->region->vertices.insert(this);

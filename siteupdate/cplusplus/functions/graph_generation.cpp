@@ -24,16 +24,19 @@ else {	list<Region*> *regions;
 
 	graph_vector.emplace_back("tm-master", "All Travel Mapping Data", 's', 'M', (list<Region*>*)0, (list<HighwaySystem*>*)0, (PlaceRadius*)0);
 	graph_vector.emplace_back("tm-master", "All Travel Mapping Data", 'c', 'M', (list<Region*>*)0, (list<HighwaySystem*>*)0, (PlaceRadius*)0);
+	graph_vector.emplace_back("tm-master", "All Travel Mapping Data", 't', 'M', (list<Region*>*)0, (list<HighwaySystem*>*)0, (PlaceRadius*)0);
 
-      #ifdef threading_enabled
+      /*#ifdef threading_enabled
 	if (args.numthreads <= 1)
-      #endif
+      #endif//*/
 	     {	cout << et.et() << "Writing master TM simple graph file, tm-master-simple.tmg" << endl;
 		graph_data.write_master_tmg_simple(&graph_vector[0], args.graphfilepath+"/tm-master-simple.tmg");
 		cout << et.et() << "Writing master TM collapsed graph file, tm-master.tmg." << endl;
 		graph_data.write_master_tmg_collapsed(&graph_vector[1], args.graphfilepath+"/tm-master.tmg", 0);
+		cout << et.et() << "Writing master TM traveled graph file, tm-master.tmg." << endl;
+		graph_data.write_master_tmg_traveled(&graph_vector[2], args.graphfilepath+"/tm-master-traveled.tmg", 0);
 	     }
-      #ifdef threading_enabled
+      /*#ifdef threading_enabled
 	else {	cout << et.et() << "Writing master TM simple graph file, tm-master-simple.tmg" << endl;
 		thr[0] = new thread(MasterTmgSimpleThread, &graph_data, &graph_vector[0], args.graphfilepath+"/tm-master-simple.tmg");
 		cout << et.et() << "Writing master TM collapsed graph file, tm-master.tmg." << endl;
@@ -43,10 +46,10 @@ else {	list<Region*> *regions;
 		delete thr[0];
 		delete thr[1];
 	     }
-      #endif
+      #endif//*/
 
 	graph_types.push_back({"master", "All Travel Mapping Data", "These graphs contain all routes currently plotted in the Travel Mapping project."});
-	size_t graphnum = 2;
+	size_t graphnum = 3;
 
 
 	// graphs restricted by place/area - from areagraphs.csv file

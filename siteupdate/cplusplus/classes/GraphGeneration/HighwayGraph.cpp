@@ -4,9 +4,10 @@ class HighwayGraph
 
     On construction, build a set of unique vertex names
     and determine edges, at most one per concurrent segment.
-    Create two sets of edges - one for the full graph
-    and one for the graph with hidden waypoints compressed into
-    multi-point edges.
+    Create three sets of edges:
+     - one for the simple graph
+     - one for the collapsed graph with hidden waypoints compressed into multi-point edges
+     - one for the traveled graph: collapsed edges split at endpoints of users' travels
     */
 
 	public:
@@ -90,7 +91,7 @@ class HighwayGraph
 			      new HGEdge(s, this);
 			      // deleted by ~HGVertex, called by HighwayGraph::clear
 		}
-		std::cout << "!\n" << et.et() << "Full graph has " << vertices.size() << " vertices, " << simple_edge_count() << " edges." << std::endl;
+		std::cout << '!' << std::endl;
 
 		// compress edges adjacent to hidden vertices
 		counter = 0;
@@ -115,23 +116,54 @@ class HighwayGraph
 					wv.second->visibility = 2;
 					continue;
 				}
+				// if edge clinched_by sets mismatch, set visibility to 1
+				// (visible in traveled graph; hidden in collapsed graph)
+				// first, the easy check, for whether set sizes mismatch
+				if (wv.second->incident_t_edges.front()->segment->clinched_by.size()
+				 != wv.second->incident_t_edges.back()->segment->clinched_by.size())
+					wv.second->visibility = 1;
+				// next, compare clinched_by sets; look for any element in the 1st not in the 2nd
+				else for (TravelerList *t : wv.second->incident_t_edges.front()->segment->clinched_by)
+					if (wv.second->incident_t_edges.back()->segment->clinched_by.find(t)
+					 == wv.second->incident_t_edges.back()->segment->clinched_by.end())
+					{	wv.second->visibility = 1;
+						break;
+					}
 				// construct from vertex this time
-				new HGEdge(wv.second, HGEdge::collapsed);
-				// Final collapsed edges are deleted by ~HGVertex, called by HighwayGraph::clear.
-				// Partially collapsed edges created during the compression process are deleted
-				// upon detachment from all graphs.
+				if (wv.second->visibility == 1)
+					new HGEdge(wv.second, HGEdge::collapsed);
+				else if ((wv.second->incident_c_edges.front() == wv.second->incident_t_edges.front()
+				       && wv.second->incident_c_edges.back()  == wv.second->incident_t_edges.back())
+				      || (wv.second->incident_c_edges.front() == wv.second->incident_t_edges.back()
+				       && wv.second->incident_c_edges.back()  == wv.second->incident_t_edges.front()))
+					new HGEdge(wv.second, HGEdge::collapsed | HGEdge::traveled);
+				else {	new HGEdge(wv.second, HGEdge::collapsed);
+					new HGEdge(wv.second, HGEdge::traveled);
+					// Final collapsed edges are deleted by ~HGVertex, called by HighwayGraph::clear.
+					// Partially collapsed edges created during the compression process are deleted
+					// upon detachment from all graphs.
+				     }
 			}
 		}
+		std::cout << '!' << std::endl;
 
 		// print summary info
-		std::cout << "!\n" << et.et() << "Edge compressed graph has " << num_collapsed_vertices()
-			  << " vertices, " << collapsed_edge_count() << " edges." << std::endl;
+		std::cout << et.et() << "   Simple graph has " << vertices.size() << " vertices, " << simple_edge_count() << " edges." << std::endl;
+		std::cout << et.et() << "Collapsed graph has " << num_collapsed_vertices() << " vertices, " << collapsed_edge_count() << " edges." << std::endl;
+		std::cout << et.et() << " Traveled graph has " << num_traveled_vertices() << " vertices, " << traveled_edge_count() << " edges." << std::endl;
 	} // end ctor
 
 	unsigned int num_collapsed_vertices()
 	{	unsigned int count = 0;
 		for (std::pair<const Waypoint*, HGVertex*> wv : vertices)
 		  if (wv.second->visibility == 2) count ++;
+		return count;
+	}
+
+	unsigned int num_traveled_vertices()
+	{	unsigned int count = 0;
+		for (std::pair<const Waypoint*, HGVertex*> wv : vertices)
+		  if (wv.second->visibility >= 1) count ++;
 		return count;
 	}
 
@@ -150,6 +182,14 @@ class HighwayGraph
 		return edges/2;
 	}
 
+	unsigned int traveled_edge_count()
+	{	unsigned int edges = 0;
+		for (std::pair<const Waypoint*, HGVertex*> wv : vertices)
+		  if (wv.second->visibility >= 1)
+		    edges += wv.second->incident_t_edges.size();
+		return edges/2;
+	}
+
 	void clear()
 	{	for (std::pair<const Waypoint*, HGVertex*> wv : vertices) delete wv.second;
 		vertex_names.clear();
@@ -157,10 +197,13 @@ class HighwayGraph
 		vertices.clear();
 	}
 
-	std::unordered_set<HGVertex*> matching_vertices(GraphListEntry &g, unsigned int &cv_count)
+	std::unordered_set<HGVertex*> matching_vertices(GraphListEntry &g, unsigned int &cv_count, unsigned int &tv_count)
 	{	// Return a set of vertices from the graph, optionally
 		// restricted by region or system or placeradius area.
+		// Keep a count of collapsed & traveled vertices as we
+		// go, and pass them by reference.
 		cv_count = 0;
+		tv_count = 0;
 		std::unordered_set<HGVertex*> vertex_set;
 		std::unordered_set<HGVertex*> rg_vertex_set;
 		std::unordered_set<HGVertex*> sys_vertex_set;
@@ -198,9 +241,12 @@ class HighwayGraph
 				v = vertex_set.erase(v);
 			  else	v++;
 		}
-		// find number of collapsed vertices
+		// find number of collapsed/traveled vertices
 		for (HGVertex *v : vertex_set)
-		  if (v->visibility == 2) cv_count++;
+		  if (v->visibility >= 1)
+		  {	tv_count++;
+			if (v->visibility == 2) cv_count++;
+		  }
 		return vertex_set;
 	}//*/
 
@@ -366,18 +412,54 @@ class HighwayGraph
 		mcptr->edges = num_collapsed_edges;
 	}
 
+	// write the entire set of data in the tmg traveled format
+	void write_master_tmg_traveled(GraphListEntry *mtptr, std::string filename, unsigned int threadnum)
+	{	std::ofstream tmgfile(filename.data());
+		unsigned int num_traveled_edges = traveled_edge_count();
+		tmgfile << "TMG 2.0 traveled\n";
+		tmgfile << num_traveled_vertices() << " " << num_traveled_edges << '\n';
+
+		// write visible vertices
+		int t_vertex_num = 0;
+		for (std::pair<const Waypoint*, HGVertex*> wv : vertices)
+		  if (wv.second->visibility >= 1)
+		  {	char fstr[42];
+			sprintf(fstr, "%.15g %.15g", wv.second->lat, wv.second->lng);
+			tmgfile << *(wv.second->unique_name) << ' ' << fstr << '\n';
+			wv.second->t_vertex_num[threadnum] = t_vertex_num;
+			t_vertex_num++;
+		  }
+		// write traveled edges
+		int edge = 0;
+		for (std::pair<const Waypoint*, HGVertex*> wv : vertices)
+		  if (wv.second->visibility >= 1)
+		    for (HGEdge *e : wv.second->incident_t_edges)
+		      if (!e->t_written)
+		      {	e->t_written = 1;
+			tmgfile << e->traveled_tmg_line(0, threadnum) << '\n';
+			edge++;
+		      }
+		// sanity check on edges written
+		if (num_traveled_edges != edge)
+			std::cout << "ERROR: computed " << num_traveled_edges << " traveled edges, but wrote " << edge << '\n';
+
+		tmgfile.close();
+		mtptr->vertices = num_traveled_vertices();
+		mtptr->edges = num_traveled_edges;
+	}
+
 	// write a subset of the data,
 	// in both simple and collapsed formats,
 	// restricted by regions in the list if given,
 	// by systems in the list if given,
 	// or to within a given area if placeradius is given
 	void write_subgraphs_tmg(std::vector<GraphListEntry> &graph_vector, std::string path, size_t graphnum, unsigned int threadnum)
-	{	unsigned int cv_count;
+	{	unsigned int cv_count, tv_count;
 		std::string simplefilename = path+graph_vector[graphnum].filename();
 		std::string collapfilename = path+graph_vector[graphnum+1].filename();
 		std::ofstream simplefile(simplefilename.data());
 		std::ofstream collapfile(collapfilename.data());
-		std::unordered_set<HGVertex*> mv = matching_vertices(graph_vector[graphnum], cv_count);
+		std::unordered_set<HGVertex*> mv = matching_vertices(graph_vector[graphnum], cv_count, tv_count);
 		std::unordered_set<HGEdge*> mse = matching_simple_edges(mv, graph_vector[graphnum]);
 		std::unordered_set<HGEdge*> mce = matching_collapsed_edges(mv, graph_vector[graphnum]);
 		std::cout << graph_vector[graphnum].tag()
