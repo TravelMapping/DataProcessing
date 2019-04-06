@@ -233,8 +233,9 @@ std::string HGEdge::collapsed_tmg_line(std::list<HighwaySystem*> *systems, unsig
 }
 
 // line appropriate for a tmg traveled edge file
-std::string HGEdge::traveled_tmg_line(std::list<HighwaySystem*> *systems, unsigned int threadnum)
+std::string HGEdge::traveled_tmg_line(std::list<HighwaySystem*> *systems, std::list<TravelerList*> *traveler_lists, unsigned int threadnum)
 {	std::string line = std::to_string(vertex1->t_vertex_num[threadnum]) + " " + std::to_string(vertex2->t_vertex_num[threadnum]) + " " + label(systems);
+	line += " " + segment->clinchedby_code(traveler_lists);
 	char fstr[43];
 	for (HGVertex *intermediate : intermediate_points)
 	{	sprintf(fstr, " %.15g %.15g", intermediate->lat, intermediate->lng);

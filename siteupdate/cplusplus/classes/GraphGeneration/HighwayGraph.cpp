@@ -413,7 +413,7 @@ class HighwayGraph
 	}
 
 	// write the entire set of data in the tmg traveled format
-	void write_master_tmg_traveled(GraphListEntry *mtptr, std::string filename, unsigned int threadnum)
+	void write_master_tmg_traveled(GraphListEntry *mtptr, std::string filename, std::list<TravelerList*> *traveler_lists, unsigned int threadnum)
 	{	std::ofstream tmgfile(filename.data());
 		unsigned int num_traveled_edges = traveled_edge_count();
 		tmgfile << "TMG 2.0 traveled\n";
@@ -436,9 +436,13 @@ class HighwayGraph
 		    for (HGEdge *e : wv.second->incident_t_edges)
 		      if (!e->t_written)
 		      {	e->t_written = 1;
-			tmgfile << e->traveled_tmg_line(0, threadnum) << '\n';
+			tmgfile << e->traveled_tmg_line(0, traveler_lists, threadnum) << '\n';
 			edge++;
 		      }
+		// traveler names
+		for (TravelerList *t : *traveler_lists)
+			tmgfile << t->traveler_name << ' ';
+
 		// sanity check on edges written
 		if (num_traveled_edges != edge)
 			std::cout << "ERROR: computed " << num_traveled_edges << " traveled edges, but wrote " << edge << '\n';
@@ -449,11 +453,12 @@ class HighwayGraph
 	}
 
 	// write a subset of the data,
-	// in both simple and collapsed formats,
+	// in simple, collapsed and traveled formats,
 	// restricted by regions in the list if given,
 	// by systems in the list if given,
 	// or to within a given area if placeradius is given
-	void write_subgraphs_tmg(std::vector<GraphListEntry> &graph_vector, std::string path, size_t graphnum, unsigned int threadnum)
+	void write_subgraphs_tmg(std::vector<GraphListEntry> &graph_vector, std::string path, size_t graphnum,
+				 unsigned int threadnum, std::list<TravelerList*> *traveler_lists)
 	{	unsigned int cv_count, tv_count;
 		std::string simplefilename = path+graph_vector[graphnum].filename();
 		std::string collapfilename = path+graph_vector[graphnum+1].filename();

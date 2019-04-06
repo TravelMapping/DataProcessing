@@ -23,10 +23,12 @@ class TravelerList
 	std::unordered_map<Route*, double> routes_traveled;						// mileage per traveled route
 	std::unordered_map<HighwaySystem*, unsigned int> con_routes_clinched;				// clinch count per system
 	//std::unordered_map<HighwaySystem*, unsigned int> routes_clinched;				// commented out in original siteupdate.py
+	unsigned int traveler_num;
 	unsigned int active_systems_traveled;
 	unsigned int active_systems_clinched;
 	unsigned int preview_systems_traveled;
 	unsigned int preview_systems_clinched;
+	static std::mutex alltrav_mtx;	// for locking the traveler_lists list when reading .lists from disk
 
 	TravelerList(std::string travname, std::unordered_map<std::string, Route*> *route_hash, Arguments *args, std::mutex *strtok_mtx)
 	{	active_systems_traveled = 0;
@@ -194,6 +196,8 @@ class TravelerList
 
 	#include "userlog.cpp"
 };
+
+std::mutex TravelerList::alltrav_mtx;
 
 bool sort_travelers_by_name(const TravelerList *t1, const TravelerList *t2)
 {	return t1->traveler_name < t2->traveler_name;

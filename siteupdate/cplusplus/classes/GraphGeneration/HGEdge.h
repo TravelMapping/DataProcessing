@@ -23,7 +23,7 @@ class HGEdge
 	void detach(unsigned char);
 	std::string label(std::list<HighwaySystem*> *);
 	std::string collapsed_tmg_line(std::list<HighwaySystem*> *, unsigned int);
-	std::string traveled_tmg_line(std::list<HighwaySystem*> *, unsigned int);
+	std::string traveled_tmg_line(std::list<HighwaySystem*> *, std::list<TravelerList*> *, unsigned int);
 	std::string debug_tmg_line(std::list<HighwaySystem*> *, unsigned int);
 	std::string str();
 	std::string intermediate_point_string();
