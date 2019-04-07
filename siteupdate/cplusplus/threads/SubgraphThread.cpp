@@ -10,7 +10,7 @@ size_t *index, std::mutex *mtx, std::string path, std::list<TravelerList*> *trav
 		//std::cout << "Thread " << id << " with graph_vector.size()=" << graph_vector->size() << " & index=" << *index << std::endl;
 		//std::cout << "Thread " << id << " assigned " << graph_vector->at(*index).tag() << std::endl;
 		size_t i = *index;
-		*index += 2;
+		*index += 3;
 		mtx->unlock();
 		graph_data->write_subgraphs_tmg(*graph_vector, path, i, id, traveler_lists);
 	}

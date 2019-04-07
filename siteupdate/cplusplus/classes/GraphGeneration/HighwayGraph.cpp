@@ -327,6 +327,39 @@ class HighwayGraph
 		return edge_set;
 	}
 
+	std::unordered_set<HGEdge*> matching_traveled_edges(std::unordered_set<HGVertex*> &mv, GraphListEntry &g)
+	{	// return a set of edges for the traveled graph format,
+		// optionally restricted by region or system or placeradius
+		std::unordered_set<HGEdge*> edge_set;
+		for (HGVertex *v : mv)
+		{	if (v->visibility < 1) continue;
+			for (HGEdge *e : v->incident_t_edges)
+			  if (!g.placeradius || g.placeradius->contains_edge(e))
+			  {	bool rg_in_rg = 0;
+				if (g.regions) for (Region *r : *g.regions)
+				  if (r == e->segment->route->region)
+				  {	rg_in_rg = 1;
+					break;
+				  }
+				if (!g.regions || rg_in_rg)
+				{	bool system_match = !g.systems;
+					if (!system_match)
+					  for (std::pair<std::string, HighwaySystem*> &rs : e->route_names_and_systems)
+					  {	bool sys_in_sys = 0;
+						if (g.systems) for (HighwaySystem *s : *g.systems)
+						  if (s == rs.second)
+						  {	sys_in_sys = 1;
+							break;
+						  }
+						if (sys_in_sys) system_match = 1;
+					  }
+					if (system_match) edge_set.insert(e);
+				}
+			  }
+		}
+		return edge_set;
+	}
+
 	// write the entire set of highway data in .tmg format.
 	// The first line is a header specifying
 	// the format and version number, the second line specifying the
@@ -460,24 +493,28 @@ class HighwayGraph
 	void write_subgraphs_tmg(std::vector<GraphListEntry> &graph_vector, std::string path, size_t graphnum,
 				 unsigned int threadnum, std::list<TravelerList*> *traveler_lists)
 	{	unsigned int cv_count, tv_count;
-		std::string simplefilename = path+graph_vector[graphnum].filename();
-		std::string collapfilename = path+graph_vector[graphnum+1].filename();
-		std::ofstream simplefile(simplefilename.data());
-		std::ofstream collapfile(collapfilename.data());
+		std::ofstream simplefile((path+graph_vector[graphnum].filename()).data());
+		std::ofstream collapfile((path+graph_vector[graphnum+1].filename()).data());
+		std::ofstream travelfile((path+graph_vector[graphnum+2].filename()).data());
 		std::unordered_set<HGVertex*> mv = matching_vertices(graph_vector[graphnum], cv_count, tv_count);
 		std::unordered_set<HGEdge*> mse = matching_simple_edges(mv, graph_vector[graphnum]);
 		std::unordered_set<HGEdge*> mce = matching_collapsed_edges(mv, graph_vector[graphnum]);
+		std::unordered_set<HGEdge*> mte = matching_traveled_edges(mv, graph_vector[graphnum]);
 		std::cout << graph_vector[graphnum].tag()
 			  << '(' << mv.size() << ',' << mse.size() << ") "
-			  << '(' << cv_count << ',' << mce.size() << ") " << std::flush;
+			  << '(' << cv_count << ',' << mce.size() << ") "
+			  << '(' << tv_count << ',' << mte.size() << ") " << std::flush;
 		simplefile << "TMG 1.0 simple\n";
 		collapfile << "TMG 1.0 collapsed\n";
+		travelfile << "TMG 2.0 traveled\n";
 		simplefile << mv.size() << ' ' << mse.size() << '\n';
 		collapfile << cv_count << ' ' << mce.size() << '\n';
+		travelfile << tv_count << ' ' << mte.size() << '\n';
 
 		// write vertices
 		unsigned int sv = 0;
 		unsigned int cv = 0;
+		unsigned int tv = 0;
 		for (HGVertex *v : mv)
 		{	char fstr[43];
 			sprintf(fstr, " %.15g %.15g", v->lat, v->lng);
@@ -485,11 +522,18 @@ class HighwayGraph
 			simplefile << *(v->unique_name) << fstr << '\n';
 			v->s_vertex_num[threadnum] = sv;
 			sv++;
-			// visible vertices, for collapsed graph
-			if (v->visibility == 2)
-			{	collapfile << *(v->unique_name) << fstr << '\n';
-				v->c_vertex_num[threadnum] = cv;
-				cv++;
+			// visible vertices...
+			if (v->visibility >= 1)
+			{	// for traveled graph,
+				travelfile << *(v->unique_name) << fstr << '\n';
+				v->t_vertex_num[threadnum] = tv;
+				tv++;
+				if (v->visibility == 2)
+				{	// and for collapsed graph
+					collapfile << *(v->unique_name) << fstr << '\n';
+					v->c_vertex_num[threadnum] = cv;
+					cv++;
+				}
 			}
 		}
 		// write edges
@@ -499,8 +543,14 @@ class HighwayGraph
 				   << e->label(graph_vector[graphnum].systems) << '\n';
 		for (HGEdge *e : mce)
 			collapfile << e->collapsed_tmg_line(graph_vector[graphnum].systems, threadnum) << '\n';
+		for (HGEdge *e : mte)
+			travelfile << e->traveled_tmg_line(graph_vector[graphnum].systems, traveler_lists, threadnum) << '\n';
+		// traveler names
+		for (TravelerList *t : *traveler_lists)
+			travelfile << t->traveler_name << ' ';
 		simplefile.close();
 		collapfile.close();
+		travelfile.close();
 
 		graph_vector[graphnum].vertices = mv.size();
 		graph_vector[graphnum+1].vertices = cv_count;

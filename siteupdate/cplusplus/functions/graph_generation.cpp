@@ -79,6 +79,8 @@ else {	list<Region*> *regions;
 					  's', 'a', (list<Region*>*)0, (list<HighwaySystem*>*)0, &a);
 		graph_vector.emplace_back(a.base + to_string(a.r) + "-area", a.place + " (" + to_string(a.r) + " mi radius)",
 					  'c', 'a', (list<Region*>*)0, (list<HighwaySystem*>*)0, &a);
+		graph_vector.emplace_back(a.base + to_string(a.r) + "-area", a.place + " (" + to_string(a.r) + " mi radius)",
+					  't', 'a', (list<Region*>*)0, (list<HighwaySystem*>*)0, &a);
 	}
 	// write new graph_vector entries to disk
       #ifdef threading_enabled
@@ -92,7 +94,7 @@ else {	list<Region*> *regions;
       #else
 	while (graphnum < graph_vector.size())
 	{	graph_data.write_subgraphs_tmg(graph_vector, args.graphfilepath + "/", graphnum, 0, &traveler_lists);
-		graphnum += 2;
+		graphnum += 3;
 	}
       #endif
 	graph_types.push_back({"area", "Routes Within a Given Radius of a Place",
@@ -116,6 +118,8 @@ else {	list<Region*> *regions;
 					  's', 'r', regions, (list<HighwaySystem*>*)0, (PlaceRadius*)0);
 		graph_vector.emplace_back(region.code + "-region", region.name + " (" + region.type + ")",
 					  'c', 'r', (list<Region*>*)0, (list<HighwaySystem*>*)0, (PlaceRadius*)0);
+		graph_vector.emplace_back(region.code + "-region", region.name + " (" + region.type + ")",
+					  't', 'r', (list<Region*>*)0, (list<HighwaySystem*>*)0, (PlaceRadius*)0);
 	}
 	// write new graph_vector entries to disk
       #ifdef threading_enabled
@@ -129,7 +133,7 @@ else {	list<Region*> *regions;
       #else
 	while (graphnum < graph_vector.size())
 	{	graph_data.write_subgraphs_tmg(graph_vector, args.graphfilepath + "/", graphnum, 0, &traveler_lists);
-		graphnum += 2;
+		graphnum += 3;
 	}
       #endif
 	graph_types.push_back({"region", "Routes Within a Single Region", "These graphs contain all routes currently plotted within the given region."});
@@ -161,6 +165,8 @@ else {	list<Region*> *regions;
 						  's', 's', (list<Region*>*)0, systems, (PlaceRadius*)0);
 			graph_vector.emplace_back(h->systemname + "-system", h->systemname + " (" + h->fullname + ")",
 						  'c', 's', (list<Region*>*)0, (list<HighwaySystem*>*)0, (PlaceRadius*)0);
+			graph_vector.emplace_back(h->systemname + "-system", h->systemname + " (" + h->fullname + ")",
+						  't', 's', (list<Region*>*)0, (list<HighwaySystem*>*)0, (PlaceRadius*)0);
 		}
 	}
 	file.close();
@@ -176,7 +182,7 @@ else {	list<Region*> *regions;
       #else
 	while (graphnum < graph_vector.size())
 	{	graph_data.write_subgraphs_tmg(graph_vector, args.graphfilepath + "/", graphnum, 0, &traveler_lists);
-		graphnum += 2;
+		graphnum += 3;
 	}
       #endif
 	if (h)	graph_types.push_back({"system", "Routes Within a Single Highway System",
@@ -218,6 +224,7 @@ else {	list<Region*> *regions;
 		}
 		graph_vector.emplace_back(fields[1], fields[0], 's', 'S', (list<Region*>*)0, systems, (PlaceRadius*)0);
 		graph_vector.emplace_back(fields[1], fields[0], 'c', 'S', (list<Region*>*)0, (list<HighwaySystem*>*)0, (PlaceRadius*)0);
+		graph_vector.emplace_back(fields[1], fields[0], 't', 'S', (list<Region*>*)0, (list<HighwaySystem*>*)0, (PlaceRadius*)0);
 		delete[] cline;
 	}
 	file.close();
@@ -233,7 +240,7 @@ else {	list<Region*> *regions;
       #else
 	while (graphnum < graph_vector.size())
 	{	graph_data.write_subgraphs_tmg(graph_vector, args.graphfilepath + "/", graphnum, 0, &traveler_lists);
-		graphnum += 2;
+		graphnum += 3;
 	}
       #endif
 	graph_types.push_back({"multisystem", "Routes Within Multiple Highway Systems", "These graphs contain the routes within a set of highway systems."});
@@ -274,6 +281,7 @@ else {	list<Region*> *regions;
 		}
 		graph_vector.emplace_back(fields[1], fields[0], 's', 'R', regions, (list<HighwaySystem*>*)0, (PlaceRadius*)0);
 		graph_vector.emplace_back(fields[1], fields[0], 'c', 'R', (list<Region*>*)0, (list<HighwaySystem*>*)0, (PlaceRadius*)0);
+		graph_vector.emplace_back(fields[1], fields[0], 't', 'R', (list<Region*>*)0, (list<HighwaySystem*>*)0, (PlaceRadius*)0);
 		delete[] cline;
 	}
 	file.close();
@@ -289,7 +297,7 @@ else {	list<Region*> *regions;
       #else
 	while (graphnum < graph_vector.size())
 	{	graph_data.write_subgraphs_tmg(graph_vector, args.graphfilepath + "/", graphnum, 0, &traveler_lists);
-		graphnum += 2;
+		graphnum += 3;
 	}
       #endif
 	graph_types.push_back({"multiregion", "Routes Within Multiple Regions", "These graphs contain the routes within a set of regions."});
@@ -315,6 +323,8 @@ else {	list<Region*> *regions;
 						  's', 'c', regions, (list<HighwaySystem*>*)0, (PlaceRadius*)0);
 			graph_vector.emplace_back(c.first + "-country", c.second + " All Routes in Country",
 						  'c', 'c', (list<Region*>*)0, (list<HighwaySystem*>*)0, (PlaceRadius*)0);
+			graph_vector.emplace_back(c.first + "-country", c.second + " All Routes in Country",
+						  't', 't', (list<Region*>*)0, (list<HighwaySystem*>*)0, (PlaceRadius*)0);
 		     }
 	}
 	// write new graph_vector entries to disk
@@ -329,7 +339,7 @@ else {	list<Region*> *regions;
       #else
 	while (graphnum < graph_vector.size())
 	{	graph_data.write_subgraphs_tmg(graph_vector, args.graphfilepath + "/", graphnum, 0, &traveler_lists);
-		graphnum += 2;
+		graphnum += 3;
 	}
       #endif
 	graph_types.push_back({"country", "Routes Within a Single Multi-Region Country",
@@ -355,6 +365,8 @@ else {	list<Region*> *regions;
 						  's', 'C', regions, (list<HighwaySystem*>*)0, (PlaceRadius*)0);
 			graph_vector.emplace_back(c.first + "-continent", c.second + " All Routes on Continent",
 						  'c', 'C', (list<Region*>*)0, (list<HighwaySystem*>*)0, (PlaceRadius*)0);
+			graph_vector.emplace_back(c.first + "-continent", c.second + " All Routes on Continent",
+						  't', 'C', (list<Region*>*)0, (list<HighwaySystem*>*)0, (PlaceRadius*)0);
 		     }
 	}
 	// write new graph_vector entries to disk
@@ -369,7 +381,7 @@ else {	list<Region*> *regions;
       #else
 	while (graphnum < graph_vector.size())
 	{	graph_data.write_subgraphs_tmg(graph_vector, args.graphfilepath + "/", graphnum, 0, &traveler_lists);
-		graphnum += 2;
+		graphnum += 3;
 	}
       #endif
 	graph_types.push_back({"continent", "Routes Within a Continent", "These graphs contain the routes on a continent."});
