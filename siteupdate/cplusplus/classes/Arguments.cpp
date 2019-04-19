@@ -11,6 +11,7 @@ class Arguments
 	/* g */ std::string graphfilepath;
 	/* k */ bool skipgraphs;
 	/* n */ std::string nmpmergepath;
+	/* p */ std::string splitregion, splitregionpath;
 	/* U */ std::list<std::string> userlist;
 	/* t */ unsigned int numthreads;
 	/* e */ bool errorcheck;
@@ -27,6 +28,7 @@ class Arguments
 		/* g */ graphfilepath = ".";
 		/* k */ skipgraphs = 0;
 		/* n */ nmpmergepath = "";
+		/* p */ splitregionpath = "";
 		/* U */ // nothing to do here
 		/* t */ numthreads = 4;
 		/* e */ errorcheck = 0;
@@ -52,6 +54,8 @@ class Arguments
 				skipgraphs = 1;
 			else if ( !strcmp(argv[n], "-n") || !strcmp(argv[n], "--nmpmergepath") ) {
 				nmpmergepath = argv[n+1]; n++; }
+			else if ( !strcmp(argv[n], "-p") || !strcmp(argv[n], "--splitregion") ) {
+				splitregionpath = argv[n+1]; splitregion = argv[n+2]; n +=2; }
 			else if ( !strcmp(argv[n], "-t") || !strcmp(argv[n], "--numthreads") ) {
 				numthreads = strtol(argv[n+1], 0, 10); n++; }
 			else if ( !strcmp(argv[n], "-e") || !strcmp(argv[n], "--errorcheck") )
@@ -70,8 +74,8 @@ class Arguments
 	{	std::cout <<	"usage: siteupdate.py [-h] [-w HIGHWAYDATAPATH] [-s SYSTEMSFILE]\n";
 		std::cout <<	"		     [-u USERLISTFILEPATH] [-d DATABASENAME] [-l LOGFILEPATH]\n";
 		std::cout <<	"		     [-c CSVSTATFILEPATH] [-g GRAPHFILEPATH] [-k]\n";
-		std::cout <<	"		     [-n NMPMERGEPATH] [-U USERLIST [USERLIST ...]]\n";
-		std::cout <<	"		     [-t NUMTHREADS] [-e]\n";
+		std::cout <<	"		     [-n NMPMERGEPATH] [-p SPLITREGIONPATH SPLITREGION]\n";
+		std::cout <<	"		     [-U USERLIST [USERLIST ...]] [-t NUMTHREADS] [-e]\n";
 		std::cout <<	"\n";
 		std::cout <<	"Create SQL, stats, graphs, and log files from highway and user data for the\n";
 		std::cout <<	"Travel Mapping project.\n";
@@ -98,6 +102,10 @@ class Arguments
 		std::cout <<	"  -n NMPMERGEPATH, --nmpmergepath NMPMERGEPATH\n";
 		std::cout <<	"		        Path to write data with NMPs merged (generated only if\n";
 		std::cout <<	"		        specified)\n";
+		std::cout <<	"  -p SPLITREGIONPATH SPLITREGION, --splitregion SPLITREGIONPATH SPLITREGION\n";
+		std::cout <<	"		        Path to logs & .lists for a specific...\n";
+		std::cout <<	"		        Region being split into rubregions.\n";
+		std::cout <<	"		        For Development.\n";
 		std::cout <<	"  -U USERLIST [USERLIST ...], --userlist USERLIST [USERLIST ...]\n";
 		std::cout <<	"		        For Development: list of users to use in dataset\n";
 		std::cout <<	"  -t NUMTHREADS, --numthreads NUMTHREADS\n";

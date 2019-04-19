@@ -39,6 +39,7 @@ class Route
 	public:
 	HighwaySystem *system;
 	Region *region;
+	ConnectedRoute *con_route;
 	std::string route;
 	std::string banner;
 	std::string abbrev;
@@ -70,5 +71,6 @@ class Route
 	std::string name_no_abbrev();
 	double clinched_by_traveler(TravelerList *);
 	bool is_valid();
+	std::string list_line(int, int);
 	void write_nmp_merged(std::string);
 };

@@ -5,6 +5,7 @@ std::mutex Route::awf_mtx;
 Route::Route(std::string &line, HighwaySystem *sys, ErrorList &el, std::list<Region> &all_regions)
 {	/* initialize object from a .csv file line,
 	but do not yet read in waypoint file */
+	con_route = 0;
 	mileage = 0;
 	rootOrder = -1;  // order within connected route
 	if (line.back() == 0x0D) line.erase(line.end()-1);	// trim DOS newlines
@@ -178,6 +179,17 @@ double Route::clinched_by_traveler(TravelerList *t)
 bool Route::is_valid()
 {	if (!region || route.empty() || root.empty() ) return 0;
 	return 1;
+}
+
+std::string Route::list_line(int beg, int end)
+{	/* Return a .list file line from (beg) to (end),
+	these being indices to the point_list vector.
+	These values can be "out-of-bounds" when getting lines
+	for connected routes. If so, truncate or return "". */
+	if (beg >= int(point_list.size()) || end <= 0) return "";
+	if (end >= int(point_list.size())) end = point_list.size()-1;
+	if (beg < 0) beg = 0;
+	return readable_name() + " " + point_list[beg]->label + " " + point_list[end]->label;
 }
 
 void Route::write_nmp_merged(std::string filename)
