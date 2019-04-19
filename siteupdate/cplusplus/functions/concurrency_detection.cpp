@@ -11,10 +11,9 @@ for (HighwaySystem *h : highway_systems)
 	for (HighwaySegment *s : r.segment_list)
 	    if (s->waypoint1->colocated && s->waypoint2->colocated)
 	        for ( Waypoint *w1 : *(s->waypoint1->colocated) )
-	            if (w1->route->root != r.root)	//FIXME: compare route objects directly, using pointers.
-							// Route is the odd one out anyway, being accessed by value, with copy ctors... Speed increase?
+	            if (w1->route != &r)
 	                for ( Waypoint *w2 : *(s->waypoint2->colocated) )
-	                    if (w1->route->root == w2->route->root) //FIXME, same thing
+	                    if (w1->route == w2->route)
 			    {   HighwaySegment *other = w1->route->find_segment_by_waypoints(w1,w2);
 	                        if (other)
 	                            if (!s->concurrent)
