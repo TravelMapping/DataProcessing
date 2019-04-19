@@ -53,15 +53,21 @@ if (args.splitregion != "")
 		for (Route &r : h->route_list)
 		{	if (r.region->code.substr(0, args.splitregion.size()) != args.splitregion) continue;
 			for (HighwaySegment *s : r.segment_list)
-			  if (!s->concurrent)
-				fralog << s->str() << " has no concurrencies\n";
-			  //TODO: check for concurrent same designated+bannered route in different region
-			  else if (s->concurrent->size() % 2)
-			  {	fralog << "Odd number of concurrencies:\n";
-				for (HighwaySegment *cs : *(s->concurrent))
-					fralog << '\t' << cs->str() << '\n';
-			  }
-			
+				if (!s->concurrent)
+					fralog << s->str() << " has no concurrencies\n";
+				else if (s->concurrent->size() % 2)
+				     {	fralog << "Odd number of concurrencies:\n";
+					for (HighwaySegment *cs : *(s->concurrent))
+					  fralog << '\t' << cs->str() << '\n';
+				     }
+				else {	// check for concurrent segment with same name+banner in different region
+					unsigned int matches = 0;
+					for (HighwaySegment *cs : *(s->concurrent))
+					  if (cs->route->name_no_abbrev() == s->route->name_no_abbrev() && cs->route->region != s->route->region)
+					    matches++;
+					if (matches != 1)
+					  fralog << matches << " concurrent segments with same name+banner in different region: " << s->str() << '\n';
+				     }
 		}
 		fralog.close();
 	}
