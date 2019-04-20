@@ -216,13 +216,15 @@ class HighwayGraph
 
 		// determine which vertices are within our region(s) and/or system(s)
 		if (g.regions)
-		     {	vertex_set = rg_vertex_set;
 			if (g.systems)
-				// both regions & systems populated: vertex_set is
+			{	// both regions & systems populated: vertex_set is
 				// intersection of rg_vertex_set & sys_vertex_set
 				for (HGVertex *v : sys_vertex_set)
-				  vertex_set.erase(v);
-		     }
+				  if (rg_vertex_set.find(v) != rg_vertex_set.end())
+				    vertex_set.insert(v);
+			}
+			else	// only regions populated
+				vertex_set = rg_vertex_set;
 		else	if (g.systems)
 				// only systems populated
 				vertex_set = sys_vertex_set;
@@ -265,13 +267,15 @@ class HighwayGraph
 
 		// determine which edges are within our region(s) and/or system(s)
 		if (g.regions)
-		     {	edge_set = rg_edge_set;
 			if (g.systems)
-				// both regions & systems populated: edge_set is
+			{	// both regions & systems populated: edge_set is
 				// intersection of rg_edge_set & sys_edge_set
-				for (HGEdge *v : sys_edge_set)
-				  edge_set.erase(v);
-		     }
+				for (HGEdge *e : sys_edge_set)
+				  if (rg_edge_set.find(e) != rg_edge_set.end())
+				    edge_set.insert(e);
+			}
+			else	// only regions populated
+				edge_set = rg_edge_set;
 		else	if (g.systems)
 				// only systems populated
 				edge_set = sys_edge_set;
