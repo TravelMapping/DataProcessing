@@ -210,18 +210,12 @@ else {	list<Region*> *regions;
 		}
 		systems = new list<HighwaySystem*>;
 			  // deleted on termination of program
-		list<string> selected_systems;
-		//FIXME rewrite this whole bit to be more compact
-		for(char* token = strtok(fields[2], ","); token; token = strtok(0, ",")) selected_systems.push_back(token);
-		for (HighwaySystem *h : highway_systems)
-		{	bool sys_sel = 0;
-			for (string &s : selected_systems)
-			  if (s == h->systemname)
-			  {	sys_sel = 1;
-				break;
-			  }
-			if (sys_sel) systems->push_back(h);
-		}
+		for(char* s = strtok(fields[2], ","); s; s = strtok(0, ","))
+		  for (HighwaySystem *h : highway_systems)
+		    if (s == h->systemname)
+		    {	systems->push_back(h);
+			break;
+		    }
 		graph_vector.emplace_back(fields[1], fields[0], 's', 'S', (list<Region*>*)0, systems, (PlaceRadius*)0);
 		graph_vector.emplace_back(fields[1], fields[0], 'c', 'S', (list<Region*>*)0, (list<HighwaySystem*>*)0, (PlaceRadius*)0);
 		graph_vector.emplace_back(fields[1], fields[0], 't', 'S', (list<Region*>*)0, (list<HighwaySystem*>*)0, (PlaceRadius*)0);
@@ -267,18 +261,12 @@ else {	list<Region*> *regions;
 		}
 		regions = new list<Region*>;
 			  // deleted on termination of program
-		list<string> selected_regions;
-		//FIXME rewrite this whole bit to be more compact
-		for(char* token = strtok(fields[2], ","); token; token = strtok(0, ",")) selected_regions.push_back(token);
-		for (Region &r : all_regions)
-		{	bool rg_sel = 0;
-			for (string &rg : selected_regions)
-			  if (rg == r.code)
-			  {	rg_sel = 1;
-				break;
-			  }
-			if (rg_sel && r.active_preview_mileage) regions->push_back(&r);
-		}
+		for(char* rg = strtok(fields[2], ","); rg; rg = strtok(0, ","))
+		  for (Region &r : all_regions)
+		    if (rg == r.code)
+		    {	regions->push_back(&r);
+			break;
+		    }
 		graph_vector.emplace_back(fields[1], fields[0], 's', 'R', regions, (list<HighwaySystem*>*)0, (PlaceRadius*)0);
 		graph_vector.emplace_back(fields[1], fields[0], 'c', 'R', (list<Region*>*)0, (list<HighwaySystem*>*)0, (PlaceRadius*)0);
 		graph_vector.emplace_back(fields[1], fields[0], 't', 'R', (list<Region*>*)0, (list<HighwaySystem*>*)0, (PlaceRadius*)0);
