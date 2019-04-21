@@ -34,6 +34,7 @@ std::string GraphListEntry::filename()
 {	switch (form)
 	{	case 's': return root+"-simple.tmg";
 		case 'c': return root+".tmg";
+		case 't': return root+"-traveled.tmg";
 		default : return std::string("ERROR: GraphListEntry::filename() unexpected format token ('")+form+"')";
 	}
 }
@@ -42,6 +43,7 @@ std::string GraphListEntry::format()
 {	switch (form)
 	{	case 's': return "simple";
 		case 'c': return "collapsed";
+		case 't': return "traveled";
 		default : return std::string("ERROR: GraphListEntry::format() unexpected format token ('")+form+"')";
 	}
 }

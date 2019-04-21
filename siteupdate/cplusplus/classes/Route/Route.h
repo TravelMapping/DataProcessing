@@ -39,6 +39,7 @@ class Route
 	public:
 	HighwaySystem *system;
 	Region *region;
+	ConnectedRoute *con_route;
 	std::string route;
 	std::string banner;
 	std::string abbrev;
@@ -49,10 +50,10 @@ class Route
 	std::vector<Waypoint*> point_list;
 	std::unordered_set<std::string> labels_in_use;
 	std::unordered_set<std::string> unused_alt_labels;
+	static std::mutex awf_mtx;	// for locking the all_wpt_files set when erasing processed WPTs
 	static std::mutex liu_mtx;	// for locking the labels_in_use set when inserting labels during TravelerList processing
 	static std::mutex ual_mtx;	// for locking the unused_alt_labels set when removing in-use alt_labels
-		// with one for each route, rather than static, no discernable speed difference. Saving a wee bit of RAM.
-	static std::mutex awf_mtx;	// for locking the all_wpt_files set when erasing processed WPTs
+					// with one for each route, rather than static, no discernable speed difference. Saving a wee bit of RAM.
 	std::vector<HighwaySegment*> segment_list;
 	double mileage;
 	int rootOrder;
@@ -70,5 +71,6 @@ class Route
 	std::string name_no_abbrev();
 	double clinched_by_traveler(TravelerList *);
 	bool is_valid();
+	std::string list_line(int, int);
 	void write_nmp_merged(std::string);
 };

@@ -23,9 +23,8 @@ class TravelerList;
 class Region;
 class DatacheckEntryList;
 class HighwayGraph;
-class HighwayGraphVertexInfo;
-class HighwayGraphEdgeInfo;
-class HighwayGraphCollapsedEdgeInfo;
+class HGVertex;
+class HGEdge;
 #include <chrono>
 #include <cmath>
 #include <cstring>
@@ -69,14 +68,12 @@ class HighwayGraphCollapsedEdgeInfo;
 #include "classes/ConnectedRoute.cpp"
 #include "classes/TravelerList/TravelerList.cpp"
 #include "classes/HighwaySegment/HighwaySegment.cpp"
-#include "classes/GraphGeneration/HighwayGraphEdgeInfo.h"
-#include "classes/GraphGeneration/HighwayGraphCollapsedEdgeInfo.h"
-#include "classes/GraphGeneration/HighwayGraphVertexInfo.cpp"
+#include "classes/GraphGeneration/HGEdge.h"
+#include "classes/GraphGeneration/HGVertex.cpp"
 #include "classes/GraphGeneration/PlaceRadius.cpp"
 #include "classes/GraphGeneration/GraphListEntry.cpp"
 #include "classes/GraphGeneration/HighwayGraph.cpp"
-#include "classes/GraphGeneration/HighwayGraphEdgeInfo.cpp"
-#include "classes/GraphGeneration/HighwayGraphCollapsedEdgeInfo.cpp"
+#include "classes/GraphGeneration/HGEdge.cpp"
 #include "threads/ReadWptThread.cpp"
 #include "threads/NmpMergedThread.cpp"
 #include "threads/ReadListThread.cpp"
@@ -202,6 +199,7 @@ int main(int argc, char *argv[])
 				continue;
 			}
 			HighwaySystem *hs = new HighwaySystem(line, el, args.highwaydatapath+"/hwy_data/_systems", args.systemsfile, countries, all_regions);
+					    // deleted on termination of program
 			if (hs->is_valid()) highway_systems.push_back(hs);
 			else delete hs;
 			cout << hs->systemname << '.' << std::flush;
@@ -214,6 +212,7 @@ int main(int argc, char *argv[])
 	file.close();
 
 	DatacheckEntryList *datacheckerrors = new DatacheckEntryList;
+					      // deleted on termination of program
 
 	// check for duplicate .list names
 	// and duplicate root entries among Route and ConnectedRoute
@@ -276,8 +275,8 @@ int main(int argc, char *argv[])
 	// that do not have a .csv file entry that causes them to be
 	// read into the data
 	cout << et.et() << "Finding all .wpt files. " << flush;
-	unordered_set<string> all_wpt_files;
-	crawl_hwy_data(args.highwaydatapath+"/hwy_data", all_wpt_files);
+	unordered_set<string> all_wpt_files, splitsystems;
+	crawl_hwy_data(args.highwaydatapath+"/hwy_data", all_wpt_files, splitsystems, args.splitregion, 0);
 	cout << all_wpt_files.size() << " files found." << endl;
 
 	// For finding colocated Waypoints and concurrent segments, we have
@@ -383,6 +382,8 @@ int main(int argc, char *argv[])
 	      #endif
 	}
 
+	#include "functions/concurrency_detection.cpp"
+
 	// Create hash table for faster lookup of routes by list file name
 	cout << et.et() << "Creating route hash table for list processing:" << endl;
 	unordered_map<string, Route*> route_hash;
@@ -413,6 +414,12 @@ int main(int argc, char *argv[])
       #endif
 	cout << " processed " << traveler_lists.size() << " traveler list files." << endl;
 	traveler_lists.sort(sort_travelers_by_name);
+	// assign traveler numbers
+	unsigned int travnum = 0;
+	for (TravelerList *t : traveler_lists)
+	{	t->traveler_num = travnum;
+		travnum++;
+	}
 
 	//#include "debug/highway_segment_log.cpp"
 	//#include "debug/pioneers.cpp"
@@ -575,52 +582,6 @@ int main(int argc, char *argv[])
 	unusedfile.close();
 
 
-	// concurrency detection -- will augment our structure with list of concurrent
-	// segments with each segment (that has a concurrency)
-	cout << et.et() << "Concurrent segment detection." << flush;
-	filename = args.logfilepath+"/concurrencies.log";
-	ofstream concurrencyfile(filename.data());
-	timestamp = time(0);
-	concurrencyfile << "Log file created at: " << ctime(&timestamp);
-	for (HighwaySystem *h : highway_systems)
-	{   cout << '.' << flush;
-	    for (Route &r : h->route_list)
-		for (HighwaySegment *s : r.segment_list)
-		    if (s->waypoint1->colocated && s->waypoint2->colocated)
-		        for ( Waypoint *w1 : *(s->waypoint1->colocated) )
-		            if (w1->route->root != r.root)	//FIXME: compare route objects directly, using pointers.
-								// Route is the odd one out anyway, being accessed by value, with copy ctors... Speed increase?
-		                for ( Waypoint *w2 : *(s->waypoint2->colocated) )
-		                    if (w1->route->root == w2->route->root) //FIXME, same thing
-				    {   HighwaySegment *other = w1->route->find_segment_by_waypoints(w1,w2);
-		                        if (other)
-		                            if (!s->concurrent)
-		                            {   s->concurrent = new list<HighwaySegment*>;
-		                                other->concurrent = s->concurrent;
-		                                s->concurrent->push_back(s);
-		                                s->concurrent->push_back(other);
-		                                concurrencyfile << "New concurrency [" << s->str() << "][" << other->str() << "] (" << s->concurrent->size() << ")\n";
-					    }
-		                            else
-		                            {   other->concurrent = s->concurrent;
-						std::list<HighwaySegment*>::iterator it = s->concurrent->begin();	//FIXME
-						while (it != s->concurrent->end() && *it != other) it++;		//see HighwaySegment.h
-		                                if (it == s->concurrent->end())
-		                                {   s->concurrent->push_back(other);
-		                                    //concurrencyfile << "Added concurrency [" << s->str() << "]-[" \
-								      << other->str() << "] (" << s->concurrent->size() << ")\n";
-		                                    concurrencyfile << "Extended concurrency ";
-		                                    for (HighwaySegment *x : *(s->concurrent))
-		                                        concurrencyfile << '[' << x->str() << ']';
-		                                    concurrencyfile << " (" << s->concurrent->size() << ")\n";
-						}
-					    }
-				    }
-	    // see https://github.com/TravelMapping/DataProcessing/issues/137
-	    // changes not yet implemented in either the original Python or this C++ version.
-	}
-	cout << "!\n";
-
 	// now augment any traveler clinched segments for concurrencies
 	cout << et.et() << "Augmenting travelers for detected concurrent segments." << flush;
         //#include "debug/concurrency_augments.cpp"
@@ -647,6 +608,14 @@ int main(int argc, char *argv[])
 
 	cout << "!\n";
 	concurrencyfile.close();
+
+	/*filename = args.logfilepath+"/concurrent_travelers_sanity_check.log";
+	ofstream sanetravfile(filename.data());
+	for (HighwaySystem *h : highway_systems)
+	    for (Route &r : h->route_list)
+		for (HighwaySegment *s : r.segment_list)
+		    sanetravfile << s->concurrent_travelers_sanity_check();
+	sanetravfile.close(); //*/
 
 	// compute lots of stats, first total mileage by route, system, overall, where
 	// system and overall are stored in unordered_maps by region
@@ -948,7 +917,6 @@ int main(int argc, char *argv[])
 		{	el.add_error("Could not parse datacheckfps.csv line: [" + line + "], expected 6 fields, found more");
 			continue;
 		}
-		char *rootstr = new char[line.size()-left];
 		fields[5] = line.substr(left+1);
 
 		if (datacheck_always_error.find(fields[4]) != datacheck_always_error.end())

@@ -26,6 +26,7 @@ void WaypointQuadtree::refine()
 	ne_child = new WaypointQuadtree(mid_lat, mid_lng, max_lat, max_lng);
 	sw_child = new WaypointQuadtree(min_lat, min_lng, mid_lat, mid_lng);
 	se_child = new WaypointQuadtree(min_lat, mid_lng, mid_lat, max_lng);
+		   // deleted on termination of program
 	for (Waypoint *p : points) insert(p);
 	points.clear();
 }

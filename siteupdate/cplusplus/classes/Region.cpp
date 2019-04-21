@@ -40,8 +40,8 @@ class Region
 	double active_preview_mileage;
 	double overall_mileage;
 	std::mutex *ao_mi_mtx, *ap_mi_mtx, *ov_mi_mtx;
-	std::unordered_set<HighwayGraphVertexInfo*> vertices;
-	std::unordered_set<HighwayGraphEdgeInfo*> edges;
+	std::unordered_set<HGVertex*> vertices;
+	std::unordered_set<HGEdge*> edges;
 
 	Region (std::string &line,
 		std::list<std::pair<std::string, std::string>> &countries,
@@ -53,6 +53,7 @@ class Region
 		ao_mi_mtx = new std::mutex;
 		ap_mi_mtx = new std::mutex;
 		ov_mi_mtx = new std::mutex;
+			    // deleted on termination of program
 		char *c_country = 0;
 		char *c_continent = 0;
 		// parse CSV line
