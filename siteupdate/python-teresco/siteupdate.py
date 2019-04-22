@@ -541,7 +541,7 @@ class Waypoint:
                             suffix = colocated[check_index].label[colocated[check_index].label.find('_'):]
                             if colocated[other_index].route.list_entry_name() + suffix == colocated[check_index].label:
                                 suffixes[other_index] = suffix
-                    if colocated[check_index].label.startswith(colocated[other_index].route.name_no_abbrev()):
+                    elif colocated[check_index].label.startswith(colocated[other_index].route.name_no_abbrev()):
                         this_match = True
                         if '_' in colocated[check_index].label:
                             suffix = colocated[check_index].label[colocated[check_index].label.find('_'):]
