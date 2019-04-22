@@ -58,7 +58,7 @@ class Route
 	double mileage;
 	int rootOrder;
 
-	Route(std::string &, HighwaySystem *, ErrorList &, std::list<Region> &);
+	Route(std::string &, HighwaySystem *, ErrorList &, std::unordered_map<std::string, Region*> &);
 
 	std::string str();
 	void read_wpt(WaypointQuadtree *, ErrorList *, std::string, std::mutex *, DatacheckEntryList *, std::unordered_set<std::string> *);

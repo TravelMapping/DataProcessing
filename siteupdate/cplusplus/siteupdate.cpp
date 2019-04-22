@@ -173,6 +173,7 @@ int main(int argc, char *argv[])
 
 	//regions
 	list<Region> all_regions;
+	unordered_map<string, Region*> region_hash;
 	filename = args.highwaydatapath+"/regions.csv";
 	file.open(filename.data());
 	if (!file) el.add_error("Could not open " + filename);
@@ -180,6 +181,7 @@ int main(int argc, char *argv[])
 		while(getline(file, line))
 		{	Region rg(line, countries, continents, el);
 			if (rg.is_valid()) all_regions.push_back(rg);
+			region_hash[all_regions.back().code] = &all_regions.back();
 		}
 	     }
 	file.close();
@@ -198,7 +200,7 @@ int main(int argc, char *argv[])
 			{	ignoring.push_back("Ignored comment in " + args.systemsfile + ": " + line);
 				continue;
 			}
-			HighwaySystem *hs = new HighwaySystem(line, el, args.highwaydatapath+"/hwy_data/_systems", args.systemsfile, countries, all_regions);
+			HighwaySystem *hs = new HighwaySystem(line, el, args.highwaydatapath+"/hwy_data/_systems", args.systemsfile, countries, region_hash);
 					    // deleted on termination of program
 			if (hs->is_valid()) highway_systems.push_back(hs);
 			else delete hs;

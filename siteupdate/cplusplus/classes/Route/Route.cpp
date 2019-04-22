@@ -2,7 +2,7 @@ std::mutex Route::liu_mtx;
 std::mutex Route::ual_mtx;
 std::mutex Route::awf_mtx;
 
-Route::Route(std::string &line, HighwaySystem *sys, ErrorList &el, std::list<Region> &all_regions)
+Route::Route(std::string &line, HighwaySystem *sys, ErrorList &el, std::unordered_map<std::string, Region*> &region_hash)
 {	/* initialize object from a .csv file line,
 	but do not yet read in waypoint file */
 	con_route = 0;
@@ -28,9 +28,11 @@ Route::Route(std::string &line, HighwaySystem *sys, ErrorList &el, std::list<Reg
 	{	el.add_error("Could not parse " + system->systemname + ".csv line: [" + line + "], expected 8 fields, found 2");
 		return;
 	}
-	region = region_by_code(line.substr(left+1, right-left-1), all_regions);
-	if (!region)
+	try { region = region_hash.at(line.substr(left+1, right-left-1));
+	    }
+	catch (const std::out_of_range& oor)
 	    {	el.add_error("Unrecognized region in " + system->systemname + ".csv line: [" + line + "], " + line.substr(left+1, right-left-1));
+		region = 0;
 		return;
 	    }
 
