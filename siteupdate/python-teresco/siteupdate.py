@@ -3208,9 +3208,12 @@ for h in highway_systems:
 
         for w in r.point_list:
             # duplicate labels
-            label_list = w.alt_labels.copy()
-            label_list.append(w.label)
-            for label in label_list:
+            lower_label = w.label.lower().strip("+*")
+            if lower_label in all_route_labels:
+                datacheckerrors.append(DatacheckEntry(r,[lower_label],"DUPLICATE_LABEL"))
+            else:
+                all_route_labels.add(lower_label)
+            for label in w.alt_labels:
                 lower_label = label.lower().strip("+*")
                 if lower_label in all_route_labels:
                     datacheckerrors.append(DatacheckEntry(r,[lower_label],"DUPLICATE_LABEL"))
@@ -3228,7 +3231,7 @@ for h in highway_systems:
                 for other_w in r.point_list:
                     if w == other_w:
                         break
-                    if w.lat == other_w.lat and w.lng == other_w.lng and w.label != other_w.label:
+                    if w.lat == other_w.lat and w.lng == other_w.lng:
                         labels = []
                         labels.append(other_w.label)
                         labels.append(w.label)
