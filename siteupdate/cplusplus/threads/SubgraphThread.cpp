@@ -1,5 +1,5 @@
-void SubgraphThread(unsigned int id, HighwayGraph *graph_data, std::vector<GraphListEntry> *graph_vector,
-size_t *index, std::mutex *mtx, std::string path, std::list<TravelerList*> *traveler_lists)
+void SubgraphThread(unsigned int id, HighwayGraph *graph_data,
+std::vector<GraphListEntry> *graph_vector, size_t *index,std::mutex *mtx, std::string path)
 {	//std::cout << "Starting SubgraphThread " << id << std::endl;
 	while (*index < graph_vector->size())
 	{	mtx->lock();
@@ -12,6 +12,6 @@ size_t *index, std::mutex *mtx, std::string path, std::list<TravelerList*> *trav
 		size_t i = *index;
 		*index += 3;
 		mtx->unlock();
-		graph_data->write_subgraphs_tmg(*graph_vector, path, i, id, traveler_lists);
+		graph_data->write_subgraphs_tmg(*graph_vector, path, i, id);
 	}
 }

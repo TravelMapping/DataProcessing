@@ -33,7 +33,7 @@ class GraphListEntry
 std::string GraphListEntry::filename()
 {	switch (form)
 	{	case 's': return root+"-simple.tmg";
-		case 'c': return root+".tmg";
+		case 'c': return root+"-collapsed.tmg";
 		case 't': return root+"-traveled.tmg";
 		default : return std::string("ERROR: GraphListEntry::filename() unexpected format token ('")+form+"')";
 	}
