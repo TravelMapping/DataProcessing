@@ -479,6 +479,7 @@ class HighwayGraph
 		// traveler names
 		for (TravelerList *t : *traveler_lists)
 			tmgfile << t->traveler_name << ' ';
+		tmgfile << '\n';
 
 		// sanity check on edges written
 		if (num_traveled_edges != edge)
@@ -552,6 +553,7 @@ class HighwayGraph
 		// traveler names
 		for (TravelerList *t : *traveler_lists)
 			travelfile << t->traveler_name << ' ';
+		travelfile << '\n';
 		simplefile.close();
 		collapfile.close();
 		travelfile.close();
