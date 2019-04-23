@@ -23,7 +23,7 @@ class TravelerList
 	std::unordered_map<Route*, double> routes_traveled;						// mileage per traveled route
 	std::unordered_map<HighwaySystem*, unsigned int> con_routes_clinched;				// clinch count per system
 	//std::unordered_map<HighwaySystem*, unsigned int> routes_clinched;				// commented out in original siteupdate.py
-	unsigned int traveler_num;
+	unsigned int *traveler_num;
 	unsigned int active_systems_traveled;
 	unsigned int active_systems_clinched;
 	unsigned int preview_systems_traveled;
@@ -35,6 +35,8 @@ class TravelerList
 		active_systems_clinched = 0;
 		preview_systems_traveled = 0;
 		preview_systems_clinched = 0;
+		traveler_num = new unsigned int[args->numthreads];
+			       // deleted on termination of program
 		traveler_name = travname.substr(0, travname.size()-5); // strip ".list" from end of travname
 		std::string filename = args->logfilepath+"/users/"+traveler_name+".log";
 		std::ofstream log(filename.data());

@@ -416,10 +416,10 @@ int main(int argc, char *argv[])
       #endif
 	cout << " processed " << traveler_lists.size() << " traveler list files." << endl;
 	traveler_lists.sort(sort_travelers_by_name);
-	// assign traveler numbers
+	// assign traveler numbers for master traveled graph
 	unsigned int travnum = 0;
 	for (TravelerList *t : traveler_lists)
-	{	t->traveler_num = travnum;
+	{	t->traveler_num[0] = travnum;
 		travnum++;
 	}
 

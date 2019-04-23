@@ -331,10 +331,11 @@ class HighwayGraph
 		return edge_set;
 	}
 
-	std::unordered_set<HGEdge*> matching_traveled_edges(std::unordered_set<HGVertex*> &mv, GraphListEntry &g)
+	void matching_traveled_edges(std::unordered_set<HGVertex*> &mv, GraphListEntry &g,
+				     std::unordered_set<HGEdge*> &edge_set, std::list<TravelerList*> &traveler_lists)
 	{	// return a set of edges for the traveled graph format,
 		// optionally restricted by region or system or placeradius
-		std::unordered_set<HGEdge*> edge_set;
+		std::unordered_set<TravelerList*> trav_set;
 		for (HGVertex *v : mv)
 		{	if (v->visibility < 1) continue;
 			for (HGEdge *e : v->incident_t_edges)
@@ -357,11 +358,15 @@ class HighwayGraph
 						  }
 						if (sys_in_sys) system_match = 1;
 					  }
-					if (system_match) edge_set.insert(e);
+					if (system_match)
+					{	edge_set.insert(e);
+						for (TravelerList *t : e->segment->clinched_by) trav_set.insert(t);
+					}
 				}
 			  }
 		}
-		return edge_set;
+		traveler_lists.assign(trav_set.begin(), trav_set.end());
+		traveler_lists.sort(sort_travelers_by_name);
 	}
 
 	// write the entire set of highway data in .tmg format.
@@ -454,7 +459,7 @@ class HighwayGraph
 	{	std::ofstream tmgfile(filename.data());
 		unsigned int num_traveled_edges = traveled_edge_count();
 		tmgfile << "TMG 2.0 traveled\n";
-		tmgfile << num_traveled_vertices() << " " << num_traveled_edges << '\n';
+		tmgfile << num_traveled_vertices() << ' ' << num_traveled_edges << ' ' << traveler_lists->size() << '\n';
 
 		// write visible vertices
 		int t_vertex_num = 0;
@@ -495,8 +500,7 @@ class HighwayGraph
 	// restricted by regions in the list if given,
 	// by systems in the list if given,
 	// or to within a given area if placeradius is given
-	void write_subgraphs_tmg(std::vector<GraphListEntry> &graph_vector, std::string path, size_t graphnum,
-				 unsigned int threadnum, std::list<TravelerList*> *traveler_lists)
+	void write_subgraphs_tmg(std::vector<GraphListEntry> &graph_vector, std::string path, size_t graphnum, unsigned int threadnum)
 	{	unsigned int cv_count, tv_count;
 		std::ofstream simplefile((path+graph_vector[graphnum].filename()).data());
 		std::ofstream collapfile((path+graph_vector[graphnum+1].filename()).data());
@@ -504,7 +508,15 @@ class HighwayGraph
 		std::unordered_set<HGVertex*> mv = matching_vertices(graph_vector[graphnum], cv_count, tv_count);
 		std::unordered_set<HGEdge*> mse = matching_simple_edges(mv, graph_vector[graphnum]);
 		std::unordered_set<HGEdge*> mce = matching_collapsed_edges(mv, graph_vector[graphnum]);
-		std::unordered_set<HGEdge*> mte = matching_traveled_edges(mv, graph_vector[graphnum]);
+		std::unordered_set<HGEdge*> mte;
+		std::list<TravelerList*> traveler_lists;
+		matching_traveled_edges(mv, graph_vector[graphnum], mte, traveler_lists);
+		// assign traveler numbers
+		unsigned int travnum = 0;
+		for (TravelerList *t : traveler_lists)
+		{	t->traveler_num[threadnum] = travnum;
+			travnum++;
+		}
 		std::cout << graph_vector[graphnum].tag()
 			  << '(' << mv.size() << ',' << mse.size() << ") "
 			  << '(' << cv_count << ',' << mce.size() << ") "
@@ -514,7 +526,7 @@ class HighwayGraph
 		travelfile << "TMG 2.0 traveled\n";
 		simplefile << mv.size() << ' ' << mse.size() << '\n';
 		collapfile << cv_count << ' ' << mce.size() << '\n';
-		travelfile << tv_count << ' ' << mte.size() << '\n';
+		travelfile << tv_count << ' ' << mte.size() << ' ' << traveler_lists.size() << '\n';
 
 		// write vertices
 		unsigned int sv = 0;
@@ -549,9 +561,9 @@ class HighwayGraph
 		for (HGEdge *e : mce)
 			collapfile << e->collapsed_tmg_line(graph_vector[graphnum].systems, threadnum) << '\n';
 		for (HGEdge *e : mte)
-			travelfile << e->traveled_tmg_line(graph_vector[graphnum].systems, traveler_lists, threadnum) << '\n';
+			travelfile << e->traveled_tmg_line(graph_vector[graphnum].systems, &traveler_lists, threadnum) << '\n';
 		// traveler names
-		for (TravelerList *t : *traveler_lists)
+		for (TravelerList *t : traveler_lists)
 			travelfile << t->traveler_name << ' ';
 		travelfile << '\n';
 		simplefile.close();
