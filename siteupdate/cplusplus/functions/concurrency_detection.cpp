@@ -26,8 +26,8 @@ for (HighwaySystem *h : highway_systems)
 				    }
 	                            else
 	                            {   other->concurrent = s->concurrent;
-					std::list<HighwaySegment*>::iterator it = s->concurrent->begin();	//FIXME
-					while (it != s->concurrent->end() && *it != other) it++;		//see HighwaySegment.h
+					std::list<HighwaySegment*>::iterator it = s->concurrent->begin();
+					while (it != s->concurrent->end() && *it != other) it++;
 	                                if (it == s->concurrent->end())
 	                                {   s->concurrent->push_back(other);
 	                                    //concurrencyfile << "Added concurrency [" << s->str() << "]-[" \

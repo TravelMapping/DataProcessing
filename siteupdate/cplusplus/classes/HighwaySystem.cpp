@@ -32,7 +32,7 @@ class HighwaySystem
 
 	HighwaySystem(std::string &line, ErrorList &el, std::string path, std::string &systemsfile,
 		      std::list<std::pair<std::string,std::string>> &countries,
-		      std::list<Region> &all_regions)
+		      std::unordered_map<std::string, Region*> &region_hash)
 	{	char *c_country = 0;
 		std::string filename;
 		std::ifstream file;
@@ -63,7 +63,7 @@ class HighwaySystem
 		else {	getline(file, line); // ignore header line
 			while(getline(file, line))
 			{	if (line.back() == 0x0D) line.erase(line.end()-1);	// trim DOS newlines
-				route_list.emplace_back(line, this, el, all_regions);
+				route_list.emplace_back(line, this, el, region_hash);
 				if (!route_list.back().is_valid()) route_list.pop_back();
 			}
 		     }

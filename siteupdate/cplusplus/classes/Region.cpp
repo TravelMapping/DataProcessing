@@ -93,13 +93,6 @@ class Region
 	}
 };
 
-Region *region_by_code(std::string code, std::list<Region> &all_regions)
-//FIXME replace with an unordered_map
-{	for (std::list<Region>::iterator r = all_regions.begin(); r != all_regions.end(); r++)
-		if (r->code == code) return &*r;
-	return 0;
-}
-
 bool sort_regions_by_code(const Region *r1, const Region *r2)
 {	return r1->code < r2->code;
 }
