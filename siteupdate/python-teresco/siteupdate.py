@@ -1921,6 +1921,7 @@ class HighwayGraph:
         # traveler names
         for t in traveler_lists:
             tmgfile.write(t.traveler_name + ' ')
+        tmgfile.write('\n')
 
         # sanity check on edges written
         if self.traveled_edge_count() != edge:
@@ -1983,6 +1984,7 @@ class HighwayGraph:
         # traveler names
         for t in traveler_lists:
             travelfile.write(t.traveler_name + ' ')
+        travelfile.write('\n')
 
         simplefile.close()
         collapfile.close()
