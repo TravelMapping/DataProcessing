@@ -225,7 +225,7 @@ inline Waypoint* Waypoint::hashpoint()
 /* Datacheck */
 
 inline void Waypoint::duplicate_label(DatacheckEntryList *datacheckerrors, std::unordered_set<std::string> &all_route_labels)
-{	// duplicate labels		//FIXME *MAYBE* see if the list changes could help siteupdate.py a tiny bit?
+{	// duplicate labels
 	// first, check primary label
 	std::string lower_label = lower(label);
 	while (lower_label[0] == '+' || lower_label[0] == '*') lower_label.erase(lower_label.begin());
@@ -248,7 +248,7 @@ inline void Waypoint::duplicate_coords(DatacheckEntryList *datacheckerrors, std:
 	if (!coords_used.insert(w).second)
 	  for (Waypoint *other_w : route->point_list)
 	  {	if (this == other_w) break;
-		if (lat == other_w->lat && lng == other_w->lng /*&& label != other_w->label*/) //FIXME necessary? Try eliminating from siteupdate.py
+		if (lat == other_w->lat && lng == other_w->lng)
 		{	sprintf(fstr, "(%.15g,%.15g)", lat, lng);
 			datacheckerrors->add(route, other_w->label, label, "", "DUPLICATE_COORDS", fstr);
 		}
