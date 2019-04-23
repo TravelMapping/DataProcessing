@@ -727,6 +727,8 @@ class HighwaySegment:
         # The 2nd character stores traveler 4 thru traveler 7, etc.
         # For each character, the low-order bit stores traveler n, and the high bit traveler n+3.
 
+        if len(traveler_lists) == 0:
+            return "0"
         code = ""
         clinch_array = [0]*( math.ceil(len(traveler_lists)/4) )
         for t in self.clinched_by:
@@ -1901,7 +1903,8 @@ class HighwayGraph:
         tmgfile = open(filename, 'w')
         tmgfile.write("TMG 2.0 traveled\n")
         tmgfile.write(str(self.num_traveled_vertices()) + " " +
-                      str(self.traveled_edge_count()) + "\n")
+                      str(self.traveled_edge_count()) + " " +
+                      str(len(traveler_lists)) + "\n")
 
         # write visible vertices
         t_vertex_num = 0
@@ -1940,7 +1943,7 @@ class HighwayGraph:
     # or to within a given area if placeradius is given
     def write_subgraphs_tmg(self, graph_list, path, root, descr, category, regions, systems, placeradius):
         simplefile = open(path+root+"-simple.tmg","w",encoding='utf-8')
-        collapfile = open(path+root+".tmg","w",encoding='utf-8')
+        collapfile = open(path+root+"-collapsed.tmg","w",encoding='utf-8')
         travelfile = open(path+root+"-traveled.tmg","w",encoding='utf-8')
         (mv, cv_count, tv_count) = self.matching_vertices(regions, systems, placeradius, self.rg_vset_hash)
         mse = self.matching_simple_edges(mv, regions, systems, placeradius)
@@ -1961,7 +1964,7 @@ class HighwayGraph:
         travelfile.write("TMG 2.0 traveled\n")
         simplefile.write(str(len(mv)) + ' ' + str(len(mse)) + '\n')
         collapfile.write(str(cv_count) + ' ' + str(len(mce)) + '\n')
-        travelfile.write(str(tv_count) + ' ' + str(len(mte)) + '\n')
+        travelfile.write(str(tv_count) + ' ' + str(len(mte)) + ' ' + str(len(traveler_lists)) + '\n')
 
         # write vertices
         sv = 0
@@ -2000,9 +2003,9 @@ class HighwayGraph:
         collapfile.close()
         travelfile.close()
 
-        graph_list.append(GraphListEntry(root+  "-simple.tmg", descr, len(mv),  len(mse), "simple",    category))
-        graph_list.append(GraphListEntry(root+         ".tmg", descr, cv_count, len(mce), "collapsed", category))
-        graph_list.append(GraphListEntry(root+"-traveled.tmg", descr, tv_count, len(mte), "traveled",  category))
+        graph_list.append(GraphListEntry(root+   "-simple.tmg", descr, len(mv),  len(mse), "simple",    category))
+        graph_list.append(GraphListEntry(root+"-collapsed.tmg", descr, cv_count, len(mce), "collapsed", category))
+        graph_list.append(GraphListEntry(root+ "-traveled.tmg", descr, tv_count, len(mte), "traveled",  category))
 
 def format_clinched_mi(clinched,total):
     """return a nicely-formatted string for a given number of miles
@@ -3028,9 +3031,9 @@ else:
     (sv, se) = graph_data.write_master_tmg_simple(args.graphfilepath+'/tm-master-simple.tmg')
     graph_list.append(GraphListEntry('tm-master-simple.tmg', 'All Travel Mapping Data', sv, se, 'simple', 'master'))
 
-    print(et.et() + "Writing master TM collapsed graph file, tm-master.tmg.", flush=True)
-    (cv, ce) = graph_data.write_master_tmg_collapsed(args.graphfilepath+'/tm-master.tmg')
-    graph_list.append(GraphListEntry('tm-master.tmg', 'All Travel Mapping Data', cv, ce, 'collapsed', 'master'))
+    print(et.et() + "Writing master TM collapsed graph file, tm-master-collapsed.tmg.", flush=True)
+    (cv, ce) = graph_data.write_master_tmg_collapsed(args.graphfilepath+'/tm-master-collapsed.tmg')
+    graph_list.append(GraphListEntry('tm-master-collapsed.tmg', 'All Travel Mapping Data', cv, ce, 'collapsed', 'master'))
 
     print(et.et() + "Writing master TM traveled graph file, tm-master-traveled.tmg.", flush=True)
     (tv, te) = graph_data.write_master_tmg_traveled(args.graphfilepath+'/tm-master-traveled.tmg', traveler_lists)
