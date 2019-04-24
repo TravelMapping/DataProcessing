@@ -23,23 +23,30 @@ class TravelerList
 	std::unordered_map<Route*, double> routes_traveled;						// mileage per traveled route
 	std::unordered_map<HighwaySystem*, unsigned int> con_routes_clinched;				// clinch count per system
 	//std::unordered_map<HighwaySystem*, unsigned int> routes_clinched;				// commented out in original siteupdate.py
+	unsigned int *traveler_num;
 	unsigned int active_systems_traveled;
 	unsigned int active_systems_clinched;
 	unsigned int preview_systems_traveled;
 	unsigned int preview_systems_clinched;
+	static std::mutex alltrav_mtx;	// for locking the traveler_lists list when reading .lists from disk
 
 	TravelerList(std::string travname, std::unordered_map<std::string, Route*> *route_hash, Arguments *args, std::mutex *strtok_mtx)
 	{	active_systems_traveled = 0;
 		active_systems_clinched = 0;
 		preview_systems_traveled = 0;
 		preview_systems_clinched = 0;
+		traveler_num = new unsigned int[args->numthreads];
+			       // deleted on termination of program
 		traveler_name = travname.substr(0, travname.size()-5); // strip ".list" from end of travname
 		std::string filename = args->logfilepath+"/users/"+traveler_name+".log";
 		std::ofstream log(filename.data());
+		std::ofstream splist;
+		if (args->splitregionpath != "") splist.open((args->splitregionpath+"/list_files/"+travname).data());
 		time_t StartTime = time(0);
 		log << "Log file created at: " << ctime(&StartTime);
 		filename = args->userlistfilepath+"/"+travname;
 		std::vector<char*> lines;
+		std::vector<std::string> endlines;
 		std::ifstream file(filename.data());
 		// we can't getline here because it only allows one delimiter, and we need two; '\r' and '\n'.
 		// at least one .list file contains newlines using only '\r' (0x0D):
@@ -51,13 +58,35 @@ class TravelerList
 		file.read(listdata, listdatasize);
 		listdata[listdatasize] = 0; // add null terminator
 		file.close();
-		strtok_mtx->lock();
-		for (char *token = strtok(listdata, "\r\n"); token; token = strtok(0, "\r\n") ) lines.push_back(token);
-		strtok_mtx->unlock();
+
+		// get canonical newline for writing splitregion .list files
+		std::string newline;
+		unsigned long c = 0;
+		while (listdata[c] != '\r' && listdata[c] != '\n' && c < listdatasize) c++;
+		if (listdata[c] == '\r')
+			if (listdata[c+1] == '\n')	newline = "\r\n";
+			else				newline = "\r";
+		else	if (listdata[c] == '\n')	newline = "\n";
+		// Use CRLF as failsafe if .list file contains no newlines.
+			else				newline = "\r\n";
+
+		// separate listdata into series of lines & newlines
+		size_t spn = 0;
+		for (char *c = listdata; *c; c += spn)
+		{	endlines.push_back("");
+			spn = strcspn(c, "\r\n");
+			while (c[spn] == '\r' || c[spn] == '\n')
+			{	endlines.back().push_back(c[spn]);
+				c[spn] = 0;
+				spn++;
+			}
+			lines.push_back(c);
+		}
 		lines.push_back(listdata+listdatasize+1); // add a dummy "past-the-end" element to make lines[l+1]-2 work
 
 		for (unsigned int l = 0; l < lines.size()-1; l++)
-		{	// strip whitespace
+		{	std::string orig_line(lines[l]);
+			// strip whitespace
 			while (lines[l][0] == ' ' || lines[l][0] == '\t') lines[l]++;
 			char * endchar = lines[l+1]-2; // -2 skips over the 0 inserted by strtok
 			if (*endchar == 0) endchar--;  // skip back one more for CRLF cases FIXME what about lines followed by blank lines?
@@ -65,9 +94,12 @@ class TravelerList
 			{	*endchar = 0;
 				endchar--;
 			}
-			std::string origline(lines[l]);
+			std::string trim_line(lines[l]);
 			// ignore empty or "comment" lines
-			if (lines[l][0] == 0 || lines[l][0] == '#') continue;
+			if (lines[l][0] == 0 || lines[l][0] == '#')
+			{	splist << orig_line << endlines[l];
+				continue;
+			}
 			// process fields in line
 			std::vector<char*> fields;
 			strtok_mtx->lock();
@@ -76,9 +108,10 @@ class TravelerList
 			if (fields.size() != 4)
 			  // OK if 5th field exists and starts with #
 			  if (fields.size() < 5 || fields[4][0] != '#')
-			  {	for (size_t c = 0; c < origline.size(); c++)
-				  if (origline[c] < 0x20 || origline[c] >= 0x7F) origline[c] = '?';
-				log << "Incorrect format line: " << origline << '\n';
+			  {	for (size_t c = 0; c < trim_line.size(); c++)
+				  if (trim_line[c] < 0x20 || trim_line[c] >= 0x7F) trim_line[c] = '?';
+				log << "Incorrect format line: " << trim_line << '\n';
+				splist << orig_line << endlines[l];
 				continue;
 			  }
 
@@ -89,11 +122,12 @@ class TravelerList
 				for (std:: string a : r->alt_route_names)
 				  if (route_entry == lower(a))
 				  {	log << "Note: deprecated route name " << fields[1]
-					    << " -> canonical name " << r->list_entry_name() << " in line " << origline << '\n';
+					    << " -> canonical name " << r->list_entry_name() << " in line " << trim_line << '\n';
 					break;
 				  }
 				if (r->system->devel())
-				{	log << "Ignoring line matching highway in system in development: " << origline << '\n';
+				{	log << "Ignoring line matching highway in system in development: " << trim_line << '\n';
+					splist << orig_line << endlines[l];
 					continue;
 				}
 				// r is a route match, r.root is our root, and we need to find
@@ -134,14 +168,15 @@ class TravelerList
 				}
 				if (canonical_waypoints.size() != 2)
 				{	bool invalid_char = 0;
-					for (size_t c = 0; c < origline.size(); c++)
-					  if (origline[c] < 0x20 || origline[c] >= 0x7F)
-					  {	origline[c] = '?';
+					for (size_t c = 0; c < trim_line.size(); c++)
+					  if (trim_line[c] < 0x20 || trim_line[c] >= 0x7F)
+					  {	trim_line[c] = '?';
 						invalid_char = 1;
 					  }
-					log << "Waypoint label(s) not found in line: " << origline;
+					log << "Waypoint label(s) not found in line: " << trim_line;
 					if (invalid_char) log << " [line contains invalid character(s)]";
 					log << '\n';
+					splist << orig_line << endlines[l];
 				}
 				else {	list_entries.emplace_back(/**line,*/ r, canonical_waypoint_indices[0], canonical_waypoint_indices[1]);
 					// find the segments we just matched and store this traveler with the
@@ -152,23 +187,26 @@ class TravelerList
 						hs->add_clinched_by(this);
 						clinched_segments.insert(hs);
 					}
+					#include "splitregion.cpp"
 				     }
 			    }
 			catch (const std::out_of_range& oor)
 			    {	bool invalid_char = 0;
-				for (size_t c = 0; c < origline.size(); c++)
-				  if (origline[c] < 0x20 || origline[c] >= 0x7F)
-				  {	origline[c] = '?';
+				for (size_t c = 0; c < trim_line.size(); c++)
+				  if (trim_line[c] < 0x20 || trim_line[c] >= 0x7F)
+				  {	trim_line[c] = '?';
 					invalid_char = 1;
 				  }
-				log << "Unknown region/highway combo in line: " << origline;
+				log << "Unknown region/highway combo in line: " << trim_line;
 				if (invalid_char) log << " [line contains invalid character(s)]";
 				log << '\n';
+				splist << orig_line << endlines[l];
 			    }
 		}
 		delete[] listdata;
 		log << "Processed " << list_entries.size() << " good lines marking " << clinched_segments.size() << " segments traveled.\n";
 		log.close();
+		splist.close();
 	}
 
 	/* Return active mileage across all regions */
@@ -194,6 +232,8 @@ class TravelerList
 
 	#include "userlog.cpp"
 };
+
+std::mutex TravelerList::alltrav_mtx;
 
 bool sort_travelers_by_name(const TravelerList *t1, const TravelerList *t2)
 {	return t1->traveler_name < t2->traveler_name;

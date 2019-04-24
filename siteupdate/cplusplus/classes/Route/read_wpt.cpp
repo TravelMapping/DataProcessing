@@ -46,6 +46,7 @@ void Route::read_wpt
 		}
 		if (lines[l][0] == 0) continue;
 		Waypoint *w = new Waypoint(lines[l], this, strtok_mtx, datacheckerrors);
+			      // deleted on termination of program
 		point_list.push_back(w);
 		// populate unused alt labels
 		for (size_t i = 0; i < w->alt_labels.size(); i++)
@@ -64,6 +65,7 @@ void Route::read_wpt
 		{	// see if this is the first point colocated with other_w
 			if (!other_w->colocated)
 			{	other_w->colocated = new std::list<Waypoint*>;
+						     // deleted on termination of program
 				other_w->colocated->push_front(other_w);
 			}
 			other_w->colocated->push_front(w);
@@ -89,6 +91,7 @@ void Route::read_wpt
 		{	w->distance_update(datacheckerrors, fstr, vis_dist, point_list[point_list.size()-2]);
 			// add HighwaySegment, if not first point
 			segment_list.push_back(new HighwaySegment(point_list[point_list.size()-2], w, this));
+					       // deleted on termination of program
 		}
 		// checks for visible points
 		if (!w->is_hidden)
@@ -104,6 +107,7 @@ void Route::read_wpt
 			w->label_looks_hidden(datacheckerrors);
 		}
 	}
+	delete[] wptdata;
 
 	// per-route datachecks
 

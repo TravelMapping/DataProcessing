@@ -40,8 +40,8 @@ class Region
 	double active_preview_mileage;
 	double overall_mileage;
 	std::mutex *ao_mi_mtx, *ap_mi_mtx, *ov_mi_mtx;
-	std::unordered_set<HighwayGraphVertexInfo*> vertices;
-	std::unordered_set<HighwayGraphEdgeInfo*> edges;
+	std::unordered_set<HGVertex*> vertices;
+	std::unordered_set<HGEdge*> edges;
 
 	Region (std::string &line,
 		std::list<std::pair<std::string, std::string>> &countries,
@@ -53,6 +53,7 @@ class Region
 		ao_mi_mtx = new std::mutex;
 		ap_mi_mtx = new std::mutex;
 		ov_mi_mtx = new std::mutex;
+			    // deleted on termination of program
 		char *c_country = 0;
 		char *c_continent = 0;
 		// parse CSV line
@@ -91,13 +92,6 @@ class Region
 	{	return country && continent;
 	}
 };
-
-Region *region_by_code(std::string code, std::list<Region> &all_regions)
-//FIXME replace with an unordered_map
-{	for (std::list<Region>::iterator r = all_regions.begin(); r != all_regions.end(); r++)
-		if (r->code == code) return &*r;
-	return 0;
-}
 
 bool sort_regions_by_code(const Region *r1, const Region *r2)
 {	return r1->code < r2->code;

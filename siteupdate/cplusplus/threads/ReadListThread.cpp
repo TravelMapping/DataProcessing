@@ -13,6 +13,10 @@ void ReadListThread(std::list<std::string> *traveler_ids, std::list<TravelerList
 		//std::cout << "Thread " << id << " traveler_ids->pop_front() successful." << std::endl;
 		std::cout << ' ' << tl << std::flush;
 		tl_mtx->unlock();
-		traveler_lists->push_back(new TravelerList(tl, route_hash, args, strtok_mtx));
+		TravelerList *t = new TravelerList(tl, route_hash, args, strtok_mtx);
+				  // deleted on termination of program
+		TravelerList::alltrav_mtx.lock();
+		traveler_lists->push_back(t);
+		TravelerList::alltrav_mtx.unlock();
 	}
 }

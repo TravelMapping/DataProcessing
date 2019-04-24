@@ -1,32 +1,39 @@
-class HighwayGraphVertexInfo
+class HGVertex
 {   /* This class encapsulates information needed for a highway graph
     vertex.
     */
 	public:
 	double lat, lng;
 	const std::string *unique_name;
-	bool is_hidden;
+	char visibility;
 	Waypoint *first_waypoint;
 	std::unordered_set<Region*> regions;
 	std::unordered_set<HighwaySystem*> systems;
-	std::list<HighwayGraphEdgeInfo*> incident_edges;
-	std::list<HighwayGraphCollapsedEdgeInfo*> incident_collapsed_edges;
-	int *vertex_num;
-	int *vis_vertex_num;
+	std::list<HGEdge*> incident_s_edges; // simple
+	std::list<HGEdge*> incident_c_edges; // collapsed
+	std::list<HGEdge*> incident_t_edges; // traveled
+	int *s_vertex_num;
+	int *c_vertex_num;
+	int *t_vertex_num;
 
-	HighwayGraphVertexInfo(Waypoint *wpt, const std::string *n, DatacheckEntryList *datacheckerrors, unsigned int numthreads)
+	HGVertex(Waypoint *wpt, const std::string *n, DatacheckEntryList *datacheckerrors, unsigned int numthreads)
 	{	lat = wpt->lat;
 		lng = wpt->lng;
-		vertex_num = new int[numthreads];
-		vis_vertex_num = new int[numthreads];
+		s_vertex_num = new int[numthreads];
+		c_vertex_num = new int[numthreads];
+		t_vertex_num = new int[numthreads];
+			       // deleted by ~HGVertex, called by HighwayGraph::clear
 		unique_name = n;
-		// will consider hidden iff all colocated waypoints are hidden
-		is_hidden = 1;
+		visibility = 0;
+		    // permitted values:
+		    // 0: never visible outside of simple graphs
+		    // 1: visible only in traveled graph; hidden in collapsed graph
+		    // 2: visible in both traveled & collapsed graphs
 		// note: if saving the first waypoint, no longer need
 		// lat & lng and can replace with methods
 		first_waypoint = wpt;
 		if (!wpt->colocated)
-		{	if (!wpt->is_hidden) is_hidden = 0;
+		{	if (!wpt->is_hidden) visibility = 2;
 			regions.insert(wpt->route->region);
 			systems.insert(wpt->route->system);
 			wpt->route->region->vertices.insert(this);
@@ -34,7 +41,8 @@ class HighwayGraphVertexInfo
 			return;
 		}
 		for (Waypoint *w : *(wpt->colocated))
-		{	if (!w->is_hidden) is_hidden = 0;
+		{	// will consider hidden iff all colocated waypoints are hidden
+			if (!w->is_hidden) visibility = 2;
 			regions.insert(w->route->region);
 			systems.insert(w->route->system);
 			w->route->region->vertices.insert(this);
@@ -57,12 +65,12 @@ class HighwayGraphVertexInfo
 		  }
 	}
 
-	~HighwayGraphVertexInfo()
+	~HGVertex()
 	{	//std::cout << "deleting vertex at " << first_waypoint->str() << std::endl;
-		while (incident_edges.size()) delete incident_edges.front();
-		while (incident_collapsed_edges.size()) delete incident_collapsed_edges.front();
-		delete[] vertex_num;
-		delete[] vis_vertex_num;
+		while (incident_s_edges.size()) delete incident_s_edges.front();
+		while (incident_c_edges.size()) delete incident_c_edges.front();
+		delete[] s_vertex_num;
+		delete[] c_vertex_num;
 		regions.clear();
 		systems.clear();
 	}

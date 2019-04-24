@@ -135,7 +135,7 @@ std::string Waypoint::canonical_waypoint_name(std::list<std::string> &log)
 							suffixes[other_index] = suffix;
 					}
 				}
-				else if (ap_coloc[check_index]->label.find(ap_coloc[other_index]->route->name_no_abbrev()) == 0) //FIXME -> elif in siteupdate.py
+				else if (ap_coloc[check_index]->label.find(ap_coloc[other_index]->route->name_no_abbrev()) == 0)
 				{	this_match = 1;
 					if (strchr(ap_coloc[check_index]->label.data(), '_'))
 					{	std::string suffix = strchr(ap_coloc[check_index]->label.data(), '_');

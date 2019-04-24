@@ -26,6 +26,7 @@ void WaypointQuadtree::refine()
 	ne_child = new WaypointQuadtree(mid_lat, mid_lng, max_lat, max_lng);
 	sw_child = new WaypointQuadtree(min_lat, min_lng, mid_lat, mid_lng);
 	se_child = new WaypointQuadtree(min_lat, mid_lng, mid_lat, max_lng);
+		   // deleted on termination of program
 	for (Waypoint *p : points) insert(p);
 	points.clear();
 }
@@ -34,7 +35,7 @@ void WaypointQuadtree::insert(Waypoint *w)
 {	// insert Waypoint *w into this quadtree node
 	//std::cout << "QTDEBUG: " << str() << " insert " << w->str() << std::endl;
 	if (!refined())
-	{	if (!waypoint_at_same_point(w))	//FIXME Try (!w->colocated) instead. Efficiency increase?
+	{	if (!waypoint_at_same_point(w))
 		{	//std::cout << "QTDEBUG: " << str() << " at " << unique_locations << " unique locations" << std::endl;
 			unique_locations++;
 		}
@@ -113,20 +114,19 @@ std::forward_list<Waypoint*> WaypointQuadtree::near_miss_waypoints(Waypoint *w, 
 	return near_miss_points;
 }
 
-std::string WaypointQuadtree::str() //FIXME use sprintf
-{	std::string s = "WaypointQuadtree at (" + \
-		std::to_string(min_lat) + "," + std::to_string(min_lng) + ") to (" + \
-		std::to_string(max_lat) + "," + std::to_string(max_lng) + ")";
+std::string WaypointQuadtree::str()
+{	char s[139];
+	sprintf(s, "WaypointQuadtree at (%.15g,%.15g) to (%.15g,%.15g)", min_lat, min_lng, max_lat, max_lng);
 	if (refined())
-		return s + " REFINED";
-	else	return s + " contains " + std::to_string(std::distance(points.begin(), points.end())) + " waypoints";
+		return std::string(s) + " REFINED";
+	else	return std::string(s) + " contains " + std::to_string(std::distance(points.begin(), points.end())) + " waypoints";
 }
 
 unsigned int WaypointQuadtree::size()
 {	// return the number of Waypoints in the tree
 	if (refined())
 		return nw_child->size() + ne_child->size() + sw_child->size() + se_child->size();
-	else	return std::distance(points.begin(), points.end()); //FIXME std::list faster here? Where & how often is WaypointQuadtree::size() used?
+	else	return std::distance(points.begin(), points.end());
 }
 
 std::forward_list<Waypoint*> WaypointQuadtree::point_list()
