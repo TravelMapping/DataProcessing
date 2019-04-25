@@ -33,7 +33,6 @@ class Waypoint
 	std::string canonical_waypoint_name(std::list<std::string> &);
 	std::string simple_waypoint_name();
 	bool is_or_colocated_with_active_or_preview();
-	void add_first_colocated(ErrorList *);
 	std::string root_at_label();
 	void nmplogs(std::list<std::string> &, std::ofstream &, std::list<std::string> &);
 	inline Waypoint* hashpoint();
