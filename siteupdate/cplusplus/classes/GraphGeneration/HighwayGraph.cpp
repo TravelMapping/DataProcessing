@@ -107,12 +107,9 @@ class HighwayGraph
 				}
 				// if >2 edges, flag HIDDEN_JUNCTION, mark as visible, and do not compress
 				if (wv.second->incident_c_edges.size() > 2)
-				{	std::list<Waypoint*>::iterator it = wv.second->first_waypoint->colocated->begin();
-					Waypoint *dcw = *it; // "datacheck waypoint"
-					for (it++; it != wv.second->first_waypoint->colocated->end(); it++)
-					    if (dcw->root_at_label() > (*it)->root_at_label())
-						dcw->root_at_label() = (*it)->root_at_label(); //TODO: WHAT THE...? How is this actually working? (Or is it?)
-					datacheckerrors->add(dcw->route, dcw->label, "", "", "HIDDEN_JUNCTION", std::to_string(wv.second->incident_c_edges.size()));
+				{	datacheckerrors->add(wv.first->colocated->front()->route,
+							     wv.first->colocated->front()->label,
+							     "", "", "HIDDEN_JUNCTION", std::to_string(wv.second->incident_c_edges.size()));
 					wv.second->visibility = 2;
 					continue;
 				}
