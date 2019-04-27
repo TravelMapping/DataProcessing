@@ -61,7 +61,6 @@ class HGEdge;
 #include "classes/Waypoint/Waypoint.h"
 #include "classes/Waypoint/Waypoint.cpp"
 #include "classes/WaypointQuadtree/WaypointQuadtree.cpp"
-#include "classes/ClinchedSegmentEntry.cpp"
 #include "classes/HighwaySegment/HighwaySegment.h"
 #include "classes/ClinchedDBValues.cpp"
 #include "classes/Route/Route.cpp"

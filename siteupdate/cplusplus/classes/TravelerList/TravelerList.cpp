@@ -12,7 +12,6 @@ class TravelerList
 	public:
 	std::mutex ap_mi_mtx, ao_mi_mtx, sr_mi_mtx;
 	std::unordered_set<HighwaySegment*> clinched_segments;
-	std::list<ClinchedSegmentEntry> list_entries;
 	std::string traveler_name;
 	std::unordered_map<Region*, double> active_preview_mileage_by_region;				// total mileage per region, active+preview only
 	std::unordered_map<Region*, double> active_only_mileage_by_region;				// total mileage per region, active only
@@ -35,6 +34,7 @@ class TravelerList
 		active_systems_clinched = 0;
 		preview_systems_traveled = 0;
 		preview_systems_clinched = 0;
+		unsigned int list_entries = 0;
 		traveler_num = new unsigned int[args->numthreads];
 			       // deleted on termination of program
 		traveler_name = travname.substr(0, travname.size()-5); // strip ".list" from end of travname
@@ -133,8 +133,7 @@ class TravelerList
 				// r is a route match, r.root is our root, and we need to find
 				// canonical waypoint labels, ignoring case and leading
 				// "+" or "*" when matching
-				std::list<Waypoint*> canonical_waypoints;
-				std::vector<unsigned int> canonical_waypoint_indices;
+				std::vector<unsigned int> point_indices;
 				unsigned int checking_index = 0;
 				for (Waypoint *w : r->point_list)
 				{	std::string lower_label = lower(w->label);
@@ -142,8 +141,7 @@ class TravelerList
 					lower(fields[3]);
 					while (lower_label.front() == '+' || lower_label.front() == '*') lower_label.erase(lower_label.begin());
 					if (fields[2] == lower_label || fields[3] == lower_label)
-					     {	canonical_waypoints.push_back(w);
-						canonical_waypoint_indices.push_back(checking_index);
+					     {	point_indices.push_back(checking_index);
 						r->liu_mtx.lock();
 						r->labels_in_use.insert(upper(lower_label));
 						r->liu_mtx.unlock();
@@ -152,8 +150,7 @@ class TravelerList
 						{	lower_label = lower(alt);
 							while (lower_label.front() == '+') lower_label.erase(lower_label.begin());
 							if (fields[2] == lower_label || fields[3] == lower_label)
-							{	canonical_waypoints.push_back(w);
-								canonical_waypoint_indices.push_back(checking_index);
+							{	point_indices.push_back(checking_index);
 								r->liu_mtx.lock();
 								r->labels_in_use.insert(upper(lower_label));
 								r->liu_mtx.unlock();
@@ -166,7 +163,7 @@ class TravelerList
 					     }
 					checking_index++;
 				}
-				if (canonical_waypoints.size() != 2)
+				if (point_indices.size() != 2)
 				{	bool invalid_char = 0;
 					for (size_t c = 0; c < trim_line.size(); c++)
 					  if (trim_line[c] < 0x20 || trim_line[c] >= 0x7F)
@@ -178,11 +175,11 @@ class TravelerList
 					log << '\n';
 					splist << orig_line << endlines[l];
 				}
-				else {	list_entries.emplace_back(/**line,*/ r, canonical_waypoint_indices[0], canonical_waypoint_indices[1]);
+				else {	list_entries++;
 					// find the segments we just matched and store this traveler with the
 					// segments and the segments with the traveler (might not need both
 					// ultimately)
-					for (unsigned int wp_pos = canonical_waypoint_indices[0]; wp_pos < canonical_waypoint_indices[1]; wp_pos++)
+					for (unsigned int wp_pos = point_indices[0]; wp_pos < point_indices[1]; wp_pos++)
 					{	HighwaySegment *hs = r->segment_list[wp_pos];
 						hs->add_clinched_by(this);
 						clinched_segments.insert(hs);
@@ -204,7 +201,7 @@ class TravelerList
 			    }
 		}
 		delete[] listdata;
-		log << "Processed " << list_entries.size() << " good lines marking " << clinched_segments.size() << " segments traveled.\n";
+		log << "Processed " << list_entries << " good lines marking " << clinched_segments.size() << " segments traveled.\n";
 		log.close();
 		splist.close();
 	}
