@@ -4,10 +4,8 @@ std::string lower(std::string str)
 	return str;
 }
 
-//#ifdef TravelerList__cstr
 char *lower(char *str)
 {	for (char *c = str; *c != 0; c++)
 	  if (*c >= 'A' && *c <= 'Z') *c += 32;
 	return str;
 }
-//#endif
