@@ -82,10 +82,10 @@ double Waypoint::distance_to(Waypoint *other)
 	including the factor defined by the CHM project to adjust for
 	unplotted curves in routes */
 	// convert to radians
-	double rlat1 = lat * pi/180;
-	double rlng1 = lng * pi/180;
-	double rlat2 = other->lat * pi/180;
-	double rlng2 = other->lng * pi/180;
+	double rlat1 = lat * (pi/180);
+	double rlng1 = lng * (pi/180);
+	double rlat2 = other->lat * (pi/180);
+	double rlng2 = other->lng * (pi/180);
 
 	double ans = acos(cos(rlat1)*cos(rlng1)*cos(rlat2)*cos(rlng2) +\
 			  cos(rlat1)*sin(rlng1)*cos(rlat2)*sin(rlng2) +\
@@ -97,12 +97,12 @@ double Waypoint::angle(Waypoint *pred, Waypoint *succ)
 {	/* return the angle in degrees formed by the waypoints between the
 	line from pred to self and self to succ */
 	// convert to radians
-	double rlatself = lat * pi/180;
-	double rlngself = lng * pi/180;
-	double rlatpred = pred->lat * pi/180;
-	double rlngpred = pred->lng * pi/180;
-	double rlatsucc = succ->lat * pi/180;
-	double rlngsucc = succ->lng * pi/180;
+	double rlatself = lat * (pi/180);
+	double rlngself = lng * (pi/180);
+	double rlatpred = pred->lat * (pi/180);
+	double rlngpred = pred->lng * (pi/180);
+	double rlatsucc = succ->lat * (pi/180);
+	double rlngsucc = succ->lng * (pi/180);
 
 	double x0 = cos(rlngpred)*cos(rlatpred);
 	double x1 = cos(rlngself)*cos(rlatself);

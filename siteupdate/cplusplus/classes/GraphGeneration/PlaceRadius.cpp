@@ -22,10 +22,10 @@ class PlaceRadius
 	bool contains_vertex(HGVertex *v)
 	{	/* return whether v's coordinates are within this area */
 		// convert to radians to compute distance
-		double rlat1 = lat * Waypoint::pi/180;
-		double rlng1 = lng * Waypoint::pi/180;
-		double rlat2 = v->lat * Waypoint::pi/180;
-		double rlng2 = v->lng * Waypoint::pi/180;
+		double rlat1 = lat * (Waypoint::pi/180);
+		double rlng1 = lng * (Waypoint::pi/180);
+		double rlat2 = v->lat * (Waypoint::pi/180);
+		double rlng2 = v->lng * (Waypoint::pi/180);
 
 		double ans = acos(cos(rlat1)*cos(rlng1)*cos(rlat2)*cos(rlng2) +\
 				  cos(rlat1)*sin(rlng1)*cos(rlat2)*sin(rlng2) +\
