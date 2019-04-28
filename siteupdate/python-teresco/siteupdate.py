@@ -1005,7 +1005,7 @@ class TravelerList:
     """
 
     def __init__(self,travelername,route_hash,path="../../../UserData/list_files"):
-        self.list_entries = []
+        list_entries = 0
         self.clinched_segments = set()
         self.traveler_name = travelername[:-5]
         with open(path+"/"+travelername,"rt", encoding='UTF-8') as file:
@@ -1044,49 +1044,40 @@ class TravelerList:
                 # r is a route match, r.root is our root, and we need to find
                 # canonical waypoint labels, ignoring case and leading
                 # "+" or "*" when matching
-                canonical_waypoints = []
-                canonical_waypoint_indices = []
+                point_indices = []
                 checking_index = 0;
                 for w in r.point_list:
                     lower_label = w.label.lower().strip("+*")
                     list_label_1 = fields[2].lower().strip("+*")
                     list_label_2 = fields[3].lower().strip("+*")
                     if list_label_1 == lower_label or list_label_2 == lower_label:
-                        canonical_waypoints.append(w)
-                        canonical_waypoint_indices.append(checking_index)
+                        point_indices.append(checking_index)
                         r.labels_in_use.add(lower_label.upper())
                     else:
                         for alt in w.alt_labels:
                             lower_label = alt.lower().strip("+")
                             if list_label_1 == lower_label or list_label_2 == lower_label:
-                                canonical_waypoints.append(w)
-                                canonical_waypoint_indices.append(checking_index)
+                                point_indices.append(checking_index)
                                 r.labels_in_use.add(lower_label.upper())
                                 # if we have not yet used this alt label, remove it from the unused list
                                 if lower_label.upper() in r.unused_alt_labels:
                                     r.unused_alt_labels.remove(lower_label.upper())
                                             
                     checking_index += 1
-                if len(canonical_waypoints) != 2:
+                if len(point_indices) != 2:
                     self.log_entries.append("Waypoint label(s) not found in line: " + line)
                 else:
-                    self.list_entries.append(ClinchedSegmentEntry(line, r.root, \
-                                                                  canonical_waypoints[0].label, \
-                                                                  canonical_waypoints[1].label))
+                    list_entries += 1
                     # find the segments we just matched and store this traveler with the
                     # segments and the segments with the traveler (might not need both
                     # ultimately)
-                    #start = r.point_list.index(canonical_waypoints[0])
-                    #end = r.point_list.index(canonical_waypoints[1])
-                    start = canonical_waypoint_indices[0]
-                    end = canonical_waypoint_indices[1]
-                    for wp_pos in range(start,end):
-                        hs = r.segment_list[wp_pos] #r.get_segment(r.point_list[wp_pos], r.point_list[wp_pos+1])
+                    for wp_pos in range(point_indices[0],point_indices[1]):
+                        hs = r.segment_list[wp_pos]
                         hs.add_clinched_by(self)
                         if hs not in self.clinched_segments:
                             self.clinched_segments.add(hs)
 
-        self.log_entries.append("Processed " + str(len(self.list_entries)) + \
+        self.log_entries.append("Processed " + str(list_entries) + \
                                     " good lines marking " +str(len(self.clinched_segments)) + \
                                     " segments traveled.")
         # additional setup for later stats processing
@@ -1108,24 +1099,6 @@ class TravelerList:
         for line in self.log_entries:
             logfile.write(line + "\n")
         logfile.close()
-
-class ClinchedSegmentEntry:
-    """This class encapsulates one line of a traveler's list file
-
-    raw_line is the actual line from the list file for error reporting
-
-    root is the root name of the route clinched
-
-    canonical_start and canonical_end are waypoint labels, which must be
-    in the same order as they appear in the route decription file, and
-    must be primary labels
-    """
-
-    def __init__(self,line,root,canonical_start,canonical_end):
-        self.raw_line = line
-        self.root = root
-        self.canonical_start = canonical_start
-        self.canonical_end = canonical_end
 
 class DatacheckEntry:
     """This class encapsulates a datacheck log entry
@@ -3227,7 +3200,7 @@ print("!", flush=True)
 print(et.et() + "Matched " + str(fpcount) + " FP entries.", flush=True)
 
 # write log of unmatched false positives from the datacheckfps.csv
-print(et.et() + "Writing log of unmatched datacheck FP entries.")
+print(et.et() + "Writing log of unmatched datacheck FP entries.", flush=True)
 fpfile = open(args.logfilepath+'/unmatchedfps.log','w',encoding='utf-8')
 fpfile.write("Log file created at: " + str(datetime.datetime.now()) + "\n")
 if len(datacheckfps) > 0:
@@ -3238,7 +3211,7 @@ else:
 fpfile.close()
 
 # datacheck.log file
-print(et.et() + "Writing datacheck.log")
+print(et.et() + "Writing datacheck.log", flush=True)
 logfile = open(args.logfilepath + '/datacheck.log', 'w')
 logfile.write("Log file created at: " + str(datetime.datetime.now()) + "\n")
 logfile.write("Datacheck errors that have been flagged as false positives are not included.\n")
@@ -3253,9 +3226,9 @@ else:
 logfile.close()
     
 if args.errorcheck:
-    print(et.et() + "SKIPPING database file.")
+    print(et.et() + "SKIPPING database file.", flush=True)
 else:
-    print(et.et() + "Writing database file " + args.databasename + ".sql.")
+    print(et.et() + "Writing database file " + args.databasename + ".sql.", flush=True)
     # Once all data is read in and processed, create a .sql file that will
     # create all of the DB tables to be used by other parts of the project
     sqlfile = open(args.databasename+'.sql','w',encoding='UTF-8')
@@ -3593,7 +3566,7 @@ else:
     sqlfile.close()
 
 # print some statistics
-print(et.et() + "Processed " + str(len(highway_systems)) + " highway systems.")
+print(et.et() + "Processed " + str(len(highway_systems)) + " highway systems.", flush=True)
 routes = 0
 points = 0
 segments = 0
@@ -3603,14 +3576,14 @@ for h in highway_systems:
         points += len(r.point_list)
         segments += len(r.segment_list)
 print("Processed " + str(routes) + " routes with a total of " + \
-          str(points) + " points and " + str(segments) + " segments.")
+          str(points) + " points and " + str(segments) + " segments.", flush=True)
 if points != all_waypoints.size():
-    print("MISMATCH: all_waypoints contains " + str(all_waypoints.size()) + " waypoints!")
-print("WaypointQuadtree contains " + str(all_waypoints.total_nodes()) + " total nodes.")
+    print("MISMATCH: all_waypoints contains " + str(all_waypoints.size()) + " waypoints!", flush=True)
+print("WaypointQuadtree contains " + str(all_waypoints.total_nodes()) + " total nodes.", flush=True)
 
 if not args.errorcheck:
     # compute colocation of waypoints stats
-    print(et.et() + "Computing waypoint colocation stats, reporting all with 8 or more colocations:")
+    print(et.et() + "Computing waypoint colocation stats, reporting all with 8 or more colocations:", flush=True)
     largest_colocate_count = all_waypoints.max_colocated()
     colocate_counts = [0]*(largest_colocate_count+1)
     big_colocate_locations = dict()
@@ -3627,19 +3600,19 @@ if not args.errorcheck:
                 the_list = []
                 the_list.append(entry)
                 big_colocate_locations[point] = the_list
-            #print(str(w) + " with " + str(c) + " other points.")
+            #print(str(w) + " with " + str(c) + " other points.", flush=True)
         colocate_counts[c] += 1
     for place in big_colocate_locations:
         the_list = big_colocate_locations[place]
-        print(str(place) + " is occupied by " + str(len(the_list)) + " waypoints: " + str(the_list))
-    print("Waypoint colocation counts:")
+        print(str(place) + " is occupied by " + str(len(the_list)) + " waypoints: " + str(the_list), flush=True)
+    print("Waypoint colocation counts:", flush=True)
     unique_locations = 0
     for c in range(1,largest_colocate_count+1):
         unique_locations += colocate_counts[c]//c
-        print("{0:6d} are each occupied by {1:2d} waypoints.".format(colocate_counts[c]//c, c))
-    print("Unique locations: " + str(unique_locations))
+        print("{0:6d} are each occupied by {1:2d} waypoints.".format(colocate_counts[c]//c, c), flush=True)
+    print("Unique locations: " + str(unique_locations), flush=True)
 
 if args.errorcheck:
-    print("!!! DATA CHECK SUCCESSFUL !!!")
+    print("!!! DATA CHECK SUCCESSFUL !!!", flush=True)
 
 print("Total run time: " + et.et())
