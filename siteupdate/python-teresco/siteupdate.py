@@ -669,14 +669,14 @@ class HighwaySegment:
         self.waypoint2 = w2
         self.route = route
         self.concurrent = None
-        self.clinched_by = []
+        self.clinched_by = set()
 
     def __str__(self):
         return self.route.readable_name() + " " + self.waypoint1.label + " " + self.waypoint2.label
 
     def add_clinched_by(self,traveler):
         if traveler not in self.clinched_by:
-            self.clinched_by.append(traveler)
+            self.clinched_by.add(traveler)
             return True
         else:
             return False
@@ -1641,7 +1641,7 @@ class HighwayGraph:
                                            "HIDDEN_JUNCTION",str(len(v.incident_c_edges))))
                     v.visibility = 2
                     continue
-                # if edge clinched_by lists mismatch, set visibility to 1
+                # if edge clinched_by sets mismatch, set visibility to 1
                 # (visible in traveled graph; hidden in collapsed graph)
                 # first, the easy check, for whether list sizes mismatch
                 if len(v.incident_t_edges[0].segment.clinched_by) \
