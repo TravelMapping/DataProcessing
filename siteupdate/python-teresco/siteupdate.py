@@ -1907,7 +1907,9 @@ class HighwayGraph:
             print("ERROR: computed " + str(self.traveled_edge_count()) + " traveled edges, but wrote " + str(edge) + "\n")
 
         tmgfile.close()
-        return (self.num_traveled_vertices(), self.traveled_edge_count())
+        return (self.num_traveled_vertices(),
+                self.traveled_edge_count(),
+                len(traveler_lists))
 
     # write a subset of the data,
     # in simple, collapsed and traveled formats,
@@ -1976,9 +1978,9 @@ class HighwayGraph:
         collapfile.close()
         travelfile.close()
 
-        graph_list.append(GraphListEntry(root+   "-simple.tmg", descr, len(mv),  len(mse), "simple",    category))
-        graph_list.append(GraphListEntry(root+"-collapsed.tmg", descr, cv_count, len(mce), "collapsed", category))
-        graph_list.append(GraphListEntry(root+ "-traveled.tmg", descr, tv_count, len(mte), "traveled",  category))
+        graph_list.append(GraphListEntry(root+   "-simple.tmg", descr, len(mv),  len(mse), 0, "simple",    category))
+        graph_list.append(GraphListEntry(root+"-collapsed.tmg", descr, cv_count, len(mce), 0, "collapsed", category))
+        graph_list.append(GraphListEntry(root+ "-traveled.tmg", descr, tv_count, len(mte), len(traveler_lists), "traveled",  category))
 
 def format_clinched_mi(clinched,total):
     """return a nicely-formatted string for a given number of miles
@@ -1995,11 +1997,12 @@ class GraphListEntry:
     in the "graphs" DB table.
     """
 
-    def __init__(self,filename,descr,vertices,edges,format,category):
+    def __init__(self,filename,descr,vertices,edges,travelers,format,category):
         self.filename = filename
         self.descr = descr
         self.vertices = vertices
         self.edges = edges
+        self.travelers = travelers
         self.format = format
         self.category = category
     
@@ -3002,15 +3005,15 @@ if args.skipgraphs or args.errorcheck:
 else:
     print(et.et() + "Writing master TM simple graph file, tm-master-simple.tmg", flush=True)
     (sv, se) = graph_data.write_master_tmg_simple(args.graphfilepath+'/tm-master-simple.tmg')
-    graph_list.append(GraphListEntry('tm-master-simple.tmg', 'All Travel Mapping Data', sv, se, 'simple', 'master'))
+    graph_list.append(GraphListEntry('tm-master-simple.tmg', 'All Travel Mapping Data', sv, se, 0, 'simple', 'master'))
 
     print(et.et() + "Writing master TM collapsed graph file, tm-master-collapsed.tmg.", flush=True)
     (cv, ce) = graph_data.write_master_tmg_collapsed(args.graphfilepath+'/tm-master-collapsed.tmg')
-    graph_list.append(GraphListEntry('tm-master-collapsed.tmg', 'All Travel Mapping Data', cv, ce, 'collapsed', 'master'))
+    graph_list.append(GraphListEntry('tm-master-collapsed.tmg', 'All Travel Mapping Data', cv, ce, 0, 'collapsed', 'master'))
 
     print(et.et() + "Writing master TM traveled graph file, tm-master-traveled.tmg.", flush=True)
-    (tv, te) = graph_data.write_master_tmg_traveled(args.graphfilepath+'/tm-master-traveled.tmg', traveler_lists)
-    graph_list.append(GraphListEntry('tm-master-traveled.tmg', 'All Travel Mapping Data', tv, te, 'traveled', 'master'))
+    (tv, te, tt) = graph_data.write_master_tmg_traveled(args.graphfilepath+'/tm-master-traveled.tmg', traveler_lists)
+    graph_list.append(GraphListEntry('tm-master-traveled.tmg', 'All Travel Mapping Data', tv, te, tt, 'traveled', 'master'))
 
     graph_types.append(['master', 'All Travel Mapping Data',
                         'These graphs contain all routes currently plotted in the Travel Mapping project.'])
@@ -3724,7 +3727,7 @@ else:
                 sqlfile.write("('" + g[0] + "','" + g[1] + "','" + g[2] + "')\n")
             sqlfile.write(";\n")
 
-        sqlfile.write('CREATE TABLE graphs (filename VARCHAR(32), descr VARCHAR(100), vertices INTEGER, edges INTEGER, format VARCHAR(10), category VARCHAR(12), FOREIGN KEY (category) REFERENCES graphTypes(category));\n')
+        sqlfile.write('CREATE TABLE graphs (filename VARCHAR(32), descr VARCHAR(100), vertices INTEGER, edges INTEGER, travelers INTEGER, format VARCHAR(10), category VARCHAR(12), FOREIGN KEY (category) REFERENCES graphTypes(category));\n')
         if len(graph_list) > 0:
             sqlfile.write('INSERT INTO graphs VALUES\n')
             first = True
@@ -3732,7 +3735,7 @@ else:
                 if not first:
                     sqlfile.write(',')
                 first = False
-                sqlfile.write("('" + g.filename + "','" + g.descr.replace("'","''") + "','" + str(g.vertices) + "','" + str(g.edges) + "','" + g.format + "','" + g.category + "')\n")
+                sqlfile.write("('" + g.filename + "','" + g.descr.replace("'","''") + "','" + str(g.vertices) + "','" + str(g.edges) + "','" + str(g.travelers) + "','" + g.format + "','" + g.category + "')\n")
             sqlfile.write(";\n")
 
 
