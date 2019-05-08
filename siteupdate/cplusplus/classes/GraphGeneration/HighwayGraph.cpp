@@ -383,7 +383,7 @@ class HighwayGraph
 		// number waypoint entries as we go
 		int s_vertex_num = 0;
 		for (std::pair<const Waypoint*, HGVertex*> wv : vertices)
-		{	char fstr[42];
+		{	char fstr[56];
 			sprintf(fstr, "%.15g %.15g", wv.second->lat, wv.second->lng);
 			tmgfile << *(wv.second->unique_name) << ' ' << fstr << '\n';
 			wv.second->s_vertex_num[0] = s_vertex_num;
@@ -426,7 +426,7 @@ class HighwayGraph
 		int c_vertex_num = 0;
 		for (std::pair<const Waypoint*, HGVertex*> wv : vertices)
 		  if (wv.second->visibility == 2)
-		  {	char fstr[42];
+		  {	char fstr[56];
 			sprintf(fstr, "%.15g %.15g", wv.second->lat, wv.second->lng);
 			tmgfile << *(wv.second->unique_name) << ' ' << fstr << '\n';
 			wv.second->c_vertex_num[threadnum] = c_vertex_num;
@@ -462,7 +462,7 @@ class HighwayGraph
 		int t_vertex_num = 0;
 		for (std::pair<const Waypoint*, HGVertex*> wv : vertices)
 		  if (wv.second->visibility >= 1)
-		  {	char fstr[42];
+		  {	char fstr[56];
 			sprintf(fstr, "%.15g %.15g", wv.second->lat, wv.second->lng);
 			tmgfile << *(wv.second->unique_name) << ' ' << fstr << '\n';
 			wv.second->t_vertex_num[threadnum] = t_vertex_num;
@@ -530,7 +530,7 @@ class HighwayGraph
 		unsigned int cv = 0;
 		unsigned int tv = 0;
 		for (HGVertex *v : mv)
-		{	char fstr[43];
+		{	char fstr[57];
 			sprintf(fstr, " %.15g %.15g", v->lat, v->lng);
 			// all vertices for simple graph
 			simplefile << *(v->unique_name) << fstr << '\n';

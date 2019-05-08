@@ -224,7 +224,7 @@ std::string HGEdge::label(std::list<HighwaySystem*> *systems)
 // line appropriate for a tmg collapsed edge file
 std::string HGEdge::collapsed_tmg_line(std::list<HighwaySystem*> *systems, unsigned int threadnum)
 {	std::string line = std::to_string(vertex1->c_vertex_num[threadnum]) + " " + std::to_string(vertex2->c_vertex_num[threadnum]) + " " + label(systems);
-	char fstr[43];
+	char fstr[57];
 	for (HGVertex *intermediate : intermediate_points)
 	{	sprintf(fstr, " %.15g %.15g", intermediate->lat, intermediate->lng);
 		line += fstr;
@@ -236,7 +236,7 @@ std::string HGEdge::collapsed_tmg_line(std::list<HighwaySystem*> *systems, unsig
 std::string HGEdge::traveled_tmg_line(std::list<HighwaySystem*> *systems, std::list<TravelerList*> *traveler_lists, unsigned int threadnum)
 {	std::string line = std::to_string(vertex1->t_vertex_num[threadnum]) + " " + std::to_string(vertex2->t_vertex_num[threadnum]) + " " + label(systems);
 	line += " " + segment->clinchedby_code(traveler_lists, threadnum);
-	char fstr[43];
+	char fstr[57];
 	for (HGVertex *intermediate : intermediate_points)
 	{	sprintf(fstr, " %.15g %.15g", intermediate->lat, intermediate->lng);
 		line += fstr;
@@ -248,7 +248,7 @@ std::string HGEdge::traveled_tmg_line(std::list<HighwaySystem*> *systems, std::l
 std::string HGEdge::debug_tmg_line(std::list<HighwaySystem*> *systems, unsigned int threadnum)
 {	std::string line = std::to_string(vertex1->c_vertex_num[threadnum]) + " [" + *vertex1->unique_name + "] " \
 			 + std::to_string(vertex2->c_vertex_num[threadnum]) + " [" + *vertex2->unique_name + "] " + label(systems);
-	char fstr[44];
+	char fstr[58];
 	for (HGVertex *intermediate : intermediate_points)
 	{	sprintf(fstr, "] %.15g %.15g", intermediate->lat, intermediate->lng);
 		line += " [" + *intermediate->unique_name + fstr;
@@ -274,7 +274,7 @@ std::string HGEdge::str()
 std::string HGEdge::intermediate_point_string()
 {	if (intermediate_points.empty()) return " None";
 	std::string line = "";
-	char fstr[42];
+	char fstr[56];
 	for (HGVertex *i : intermediate_points)
 	{	sprintf(fstr, "%.15g %.15g", i->lat, i->lng);
 		line += " [" + *i->unique_name + "] " + fstr;
