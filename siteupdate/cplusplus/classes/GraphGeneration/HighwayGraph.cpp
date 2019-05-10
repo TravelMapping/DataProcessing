@@ -490,6 +490,7 @@ class HighwayGraph
 		tmgfile.close();
 		mtptr->vertices = num_traveled_vertices();
 		mtptr->edges = num_traveled_edges;
+		mtptr->travelers = traveler_lists.size();
 	}
 
 	// write a subset of the data,

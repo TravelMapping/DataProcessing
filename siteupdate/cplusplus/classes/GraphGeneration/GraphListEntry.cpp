@@ -7,6 +7,7 @@ class GraphListEntry
 	std::string descr;
 	unsigned int vertices;
 	unsigned int edges;
+	unsigned int travelers;
 	char form;
 	std::string format();
 	char cat;
@@ -18,9 +19,10 @@ class GraphListEntry
 	PlaceRadius *placeradius;
 	std::string tag();
 
-	GraphListEntry(std::string r, std::string d, char f, char c, std::list<Region*> *rg, std::list<HighwaySystem*> *sys, PlaceRadius *pr)
+	GraphListEntry(std::string r, std::string d, unsigned int t, char f, char c, std::list<Region*> *rg, std::list<HighwaySystem*> *sys, PlaceRadius *pr)
 	{	root = r;
 		descr = d;
+		travelers = t;
 		form = f;
 		cat = c;
 
