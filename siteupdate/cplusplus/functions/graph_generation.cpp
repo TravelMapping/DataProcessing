@@ -22,9 +22,12 @@ if (args.skipgraphs || args.errorcheck)
 else {	list<Region*> *regions;
 	list<HighwaySystem*> *systems;
 
-	graph_vector.emplace_back("tm-master", "All Travel Mapping Data", 's', 'M', (list<Region*>*)0, (list<HighwaySystem*>*)0, (PlaceRadius*)0);
-	graph_vector.emplace_back("tm-master", "All Travel Mapping Data", 'c', 'M', (list<Region*>*)0, (list<HighwaySystem*>*)0, (PlaceRadius*)0);
-	graph_vector.emplace_back("tm-master", "All Travel Mapping Data", 't', 'M', (list<Region*>*)0, (list<HighwaySystem*>*)0, (PlaceRadius*)0);
+	graph_vector.emplace_back("tm-master", "All Travel Mapping Data", 0,
+				  's', 'M', (list<Region*>*)0, (list<HighwaySystem*>*)0, (PlaceRadius*)0);
+	graph_vector.emplace_back("tm-master", "All Travel Mapping Data", 0,
+				  'c', 'M', (list<Region*>*)0, (list<HighwaySystem*>*)0, (PlaceRadius*)0);
+	graph_vector.emplace_back("tm-master", "All Travel Mapping Data", traveler_lists.size(),
+				  't', 'M', (list<Region*>*)0, (list<HighwaySystem*>*)0, (PlaceRadius*)0);
 
       /*#ifdef threading_enabled
 	if (args.numthreads <= 1)
@@ -75,11 +78,11 @@ else {	list<Region*> *regions;
 
 	// add entries to graph_vector
 	for (PlaceRadius &a : area_list)
-	{	graph_vector.emplace_back(a.base + to_string(a.r) + "-area", a.place + " (" + to_string(a.r) + " mi radius)",
+	{	graph_vector.emplace_back(a.base + to_string(a.r) + "-area", a.place + " (" + to_string(a.r) + " mi radius)", 0,
 					  's', 'a', (list<Region*>*)0, (list<HighwaySystem*>*)0, &a);
-		graph_vector.emplace_back(a.base + to_string(a.r) + "-area", a.place + " (" + to_string(a.r) + " mi radius)",
+		graph_vector.emplace_back(a.base + to_string(a.r) + "-area", a.place + " (" + to_string(a.r) + " mi radius)", 0,
 					  'c', 'a', (list<Region*>*)0, (list<HighwaySystem*>*)0, &a);
-		graph_vector.emplace_back(a.base + to_string(a.r) + "-area", a.place + " (" + to_string(a.r) + " mi radius)",
+		graph_vector.emplace_back(a.base + to_string(a.r) + "-area", a.place + " (" + to_string(a.r) + " mi radius)", traveler_lists.size(),
 					  't', 'a', (list<Region*>*)0, (list<HighwaySystem*>*)0, &a);
 	}
 	// write new graph_vector entries to disk
@@ -114,11 +117,11 @@ else {	list<Region*> *regions;
 	{	if (region.active_preview_mileage == 0) continue;
 		regions = new list<Region*>(1, &region);
 			  // deleted on termination of program
-		graph_vector.emplace_back(region.code + "-region", region.name + " (" + region.type + ")",
+		graph_vector.emplace_back(region.code + "-region", region.name + " (" + region.type + ")", 0,
 					  's', 'r', regions, (list<HighwaySystem*>*)0, (PlaceRadius*)0);
-		graph_vector.emplace_back(region.code + "-region", region.name + " (" + region.type + ")",
+		graph_vector.emplace_back(region.code + "-region", region.name + " (" + region.type + ")", 0,
 					  'c', 'r', (list<Region*>*)0, (list<HighwaySystem*>*)0, (PlaceRadius*)0);
-		graph_vector.emplace_back(region.code + "-region", region.name + " (" + region.type + ")",
+		graph_vector.emplace_back(region.code + "-region", region.name + " (" + region.type + ")", traveler_lists.size(),
 					  't', 'r', (list<Region*>*)0, (list<HighwaySystem*>*)0, (PlaceRadius*)0);
 	}
 	// write new graph_vector entries to disk
@@ -161,11 +164,11 @@ else {	list<Region*> *regions;
 		if (h)
 		{	systems = new list<HighwaySystem*>(1, h);
 				  // deleted on termination of program
-			graph_vector.emplace_back(h->systemname + "-system", h->systemname + " (" + h->fullname + ")",
+			graph_vector.emplace_back(h->systemname + "-system", h->systemname + " (" + h->fullname + ")", 0,
 						  's', 's', (list<Region*>*)0, systems, (PlaceRadius*)0);
-			graph_vector.emplace_back(h->systemname + "-system", h->systemname + " (" + h->fullname + ")",
+			graph_vector.emplace_back(h->systemname + "-system", h->systemname + " (" + h->fullname + ")", 0,
 						  'c', 's', (list<Region*>*)0, (list<HighwaySystem*>*)0, (PlaceRadius*)0);
-			graph_vector.emplace_back(h->systemname + "-system", h->systemname + " (" + h->fullname + ")",
+			graph_vector.emplace_back(h->systemname + "-system", h->systemname + " (" + h->fullname + ")",  traveler_lists.size(),
 						  't', 's', (list<Region*>*)0, (list<HighwaySystem*>*)0, (PlaceRadius*)0);
 		}
 	}
@@ -216,9 +219,12 @@ else {	list<Region*> *regions;
 		    {	systems->push_back(h);
 			break;
 		    }
-		graph_vector.emplace_back(fields[1], fields[0], 's', 'S', (list<Region*>*)0, systems, (PlaceRadius*)0);
-		graph_vector.emplace_back(fields[1], fields[0], 'c', 'S', (list<Region*>*)0, (list<HighwaySystem*>*)0, (PlaceRadius*)0);
-		graph_vector.emplace_back(fields[1], fields[0], 't', 'S', (list<Region*>*)0, (list<HighwaySystem*>*)0, (PlaceRadius*)0);
+		graph_vector.emplace_back(fields[1], fields[0], 0,
+					  's', 'S', (list<Region*>*)0, systems, (PlaceRadius*)0);
+		graph_vector.emplace_back(fields[1], fields[0], 0,
+					  'c', 'S', (list<Region*>*)0, (list<HighwaySystem*>*)0, (PlaceRadius*)0);
+		graph_vector.emplace_back(fields[1], fields[0], traveler_lists.size(),
+					  't', 'S', (list<Region*>*)0, (list<HighwaySystem*>*)0, (PlaceRadius*)0);
 		delete[] cline;
 	}
 	file.close();
@@ -267,9 +273,12 @@ else {	list<Region*> *regions;
 		    {	regions->push_back(&r);
 			break;
 		    }
-		graph_vector.emplace_back(fields[1], fields[0], 's', 'R', regions, (list<HighwaySystem*>*)0, (PlaceRadius*)0);
-		graph_vector.emplace_back(fields[1], fields[0], 'c', 'R', (list<Region*>*)0, (list<HighwaySystem*>*)0, (PlaceRadius*)0);
-		graph_vector.emplace_back(fields[1], fields[0], 't', 'R', (list<Region*>*)0, (list<HighwaySystem*>*)0, (PlaceRadius*)0);
+		graph_vector.emplace_back(fields[1], fields[0], 0,
+					  's', 'R', regions, (list<HighwaySystem*>*)0, (PlaceRadius*)0);
+		graph_vector.emplace_back(fields[1], fields[0], 0,
+					  'c', 'R', (list<Region*>*)0, (list<HighwaySystem*>*)0, (PlaceRadius*)0);
+		graph_vector.emplace_back(fields[1], fields[0], traveler_lists.size(),
+					  't', 'R', (list<Region*>*)0, (list<HighwaySystem*>*)0, (PlaceRadius*)0);
 		delete[] cline;
 	}
 	file.close();
@@ -307,11 +316,11 @@ else {	list<Region*> *regions;
 		// does it have at least two?  if none, no data,
 		// if 1 we already generated a graph for that one region
 		if (regions->size() < 2) delete regions;
-		else {	graph_vector.emplace_back(c.first + "-country", c.second + " All Routes in Country",
+		else {	graph_vector.emplace_back(c.first + "-country", c.second + " All Routes in Country", 0,
 						  's', 'c', regions, (list<HighwaySystem*>*)0, (PlaceRadius*)0);
-			graph_vector.emplace_back(c.first + "-country", c.second + " All Routes in Country",
+			graph_vector.emplace_back(c.first + "-country", c.second + " All Routes in Country", 0,
 						  'c', 'c', (list<Region*>*)0, (list<HighwaySystem*>*)0, (PlaceRadius*)0);
-			graph_vector.emplace_back(c.first + "-country", c.second + " All Routes in Country",
+			graph_vector.emplace_back(c.first + "-country", c.second + " All Routes in Country", traveler_lists.size(),
 						  't', 't', (list<Region*>*)0, (list<HighwaySystem*>*)0, (PlaceRadius*)0);
 		     }
 	}
@@ -349,11 +358,11 @@ else {	list<Region*> *regions;
 		    regions->push_back(&r);
 		// generate for any continent with at least 1 region with mileage
 		if (regions->size() < 1) delete regions;
-		else {	graph_vector.emplace_back(c.first + "-continent", c.second + " All Routes on Continent",
+		else {	graph_vector.emplace_back(c.first + "-continent", c.second + " All Routes on Continent", 0,
 						  's', 'C', regions, (list<HighwaySystem*>*)0, (PlaceRadius*)0);
-			graph_vector.emplace_back(c.first + "-continent", c.second + " All Routes on Continent",
+			graph_vector.emplace_back(c.first + "-continent", c.second + " All Routes on Continent", 0,
 						  'c', 'C', (list<Region*>*)0, (list<HighwaySystem*>*)0, (PlaceRadius*)0);
-			graph_vector.emplace_back(c.first + "-continent", c.second + " All Routes on Continent",
+			graph_vector.emplace_back(c.first + "-continent", c.second + " All Routes on Continent", traveler_lists.size(),
 						  't', 'C', (list<Region*>*)0, (list<HighwaySystem*>*)0, (PlaceRadius*)0);
 		     }
 	}

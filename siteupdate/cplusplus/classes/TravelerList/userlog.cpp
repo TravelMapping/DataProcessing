@@ -15,7 +15,7 @@ void userlog
 
 	log << "Overall by region: (each line reports active only then active+preview)\n";
 	std::list<Region*> travregions;
-	for (std::pair<Region*, double> rm : active_preview_mileage_by_region)
+	for (std::pair<Region* const, double> &rm : active_preview_mileage_by_region)
 		travregions.push_back(rm.first);
 	travregions.sort(sort_regions_by_code);
 	for (Region *region : travregions)
@@ -59,7 +59,7 @@ void userlog
 		{	if (h->mileage_by_region.size() > 1)
 				log << "System " << h->systemname << " by region:\n";
 			std::list<Region*> sysregions;
-			for (std::pair<Region*, double> rm : h->mileage_by_region)
+			for (std::pair<Region* const, double> &rm : h->mileage_by_region)
 				sysregions.push_back(rm.first);
 			sysregions.sort(sort_regions_by_code);
 			for (Region *region : sysregions)
@@ -83,11 +83,11 @@ void userlog
 		{	std::unordered_map<ConnectedRoute*, double> system_con_umap;
 			unsigned int num_con_rtes_clinched = 0;
 			log << "System " << h->systemname << " by route (traveled routes only):\n";
-			for (std::list<ConnectedRoute>::iterator cr = h->con_route_list.begin(); cr != h->con_route_list.end(); cr++)
+			for (ConnectedRoute &cr : h->con_route_list)
 			{	double con_total_miles = 0;
 				double con_clinched_miles = 0;
 				std::string to_write = "";
-				for (Route *r : cr->roots)
+				for (Route *r : cr.roots)
 				{	// find traveled mileage on this by this user
 					double miles = r->clinched_by_traveler(this);
 					if (miles)
@@ -103,10 +103,10 @@ void userlog
 					con_total_miles += r->mileage;
 				}
 				if (con_clinched_miles)
-				{	system_con_umap[&*cr] = con_clinched_miles;
+				{	system_con_umap[&cr] = con_clinched_miles;
 					char clinched = '0';
 					/*yDEBUG
-					if (traveler_name == "oscar" && cr->system->systemname == "usaus" && cr->route == "US85")
+					if (traveler_name == "oscar" && cr.system->systemname == "usaus" && cr.route == "US85")
 						printf("\nOscar on US85:\ncon_clinched_miles = %.17f\n   con_total_miles = %.17f\n",
 							con_clinched_miles, con_total_miles);//*/
 					if (con_clinched_miles == con_total_miles)
@@ -115,11 +115,11 @@ void userlog
 					}
 					sprintf(fstr, "%.15g", con_clinched_miles);
 					if (!strchr(fstr, '.')) strcat(fstr, ".0");
-					clin_db_val->add_ccr("('" + cr->roots[0]->root + "','" + traveler_name +
+					clin_db_val->add_ccr("('" + cr.roots[0]->root + "','" + traveler_name +
 							     "','" + std::string(fstr) + "','" + clinched + "')");
-					log << cr->readable_name() << ": " << format_clinched_mi(con_clinched_miles, con_total_miles) << '\n';
-					if (cr->roots.size() == 1)
-						log << " (" << cr->roots[0]->readable_name() << " only)\n";
+					log << cr.readable_name() << ": " << format_clinched_mi(con_clinched_miles, con_total_miles) << '\n';
+					if (cr.roots.size() == 1)
+						log << " (" << cr.roots[0]->readable_name() << " only)\n";
 					else	log << to_write << '\n';
 				}
 			}

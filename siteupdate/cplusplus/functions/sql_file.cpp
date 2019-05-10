@@ -328,14 +328,16 @@ else {	cout << et.et() << "Writing database file " << args.databasename << ".sql
 		}
 	}
 
-		sqlfile << "CREATE TABLE graphs (filename VARCHAR(32), descr VARCHAR(100), vertices INTEGER, edges INTEGER, ";
+		sqlfile << "CREATE TABLE graphs (filename VARCHAR(32), descr VARCHAR(100), vertices INTEGER, edges INTEGER, travelers INTEGER, ";
 		sqlfile << "format VARCHAR(10), category VARCHAR(12), FOREIGN KEY (category) REFERENCES graphTypes(category));\n";
 		if (graph_vector.size())
 		{	sqlfile << "INSERT INTO graphs VALUES\n";
 			for (size_t g = 0; g < graph_vector.size(); g++)
 			{	if (g) sqlfile << ',';
-				sqlfile << "('" << graph_vector[g].filename() << "','" << double_quotes(graph_vector[g].descr) << "','" << graph_vector[g].vertices
-					<< "','" << graph_vector[g].edges << "','" << graph_vector[g].format() << "','" << graph_vector[g].category() << "')\n";
+				sqlfile << "('"  << graph_vector[g].filename() << "','" << double_quotes(graph_vector[g].descr)
+					<< "','" << graph_vector[g].vertices   << "','" << graph_vector[g].edges
+					<< "','" << graph_vector[g].travelers  << "','" << graph_vector[g].format()
+					<< "','" << graph_vector[g].category() << "')\n";
 			}
 			sqlfile << ";\n";
 		}
