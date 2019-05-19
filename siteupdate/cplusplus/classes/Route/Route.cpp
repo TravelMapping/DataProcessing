@@ -142,7 +142,7 @@ std::string Route::csv_line()
 	std::string line = "'" + system->systemname + "','" + region->code + "','" + route + "','" + banner
 			 + "','" + abbrev + "','" + double_quotes(city) + "','" + root + "','";
 	char mstr[51];
-	sprintf(mstr, "%.15g", mileage);
+	sprintf(mstr, "%.17g", mileage);
 	if (!strchr(mstr, '.')) strcat(mstr, ".0"); // add single trailing zero to ints for compatibility with Python
 	line += mstr;
 	line += "','" + std::to_string(rootOrder) + "'";
