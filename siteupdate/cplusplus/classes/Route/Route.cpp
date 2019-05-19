@@ -171,7 +171,7 @@ double Route::clinched_by_traveler(TravelerList *t)
 {	double miles = 0;
 	for (HighwaySegment *s : segment_list)
 	{	std::unordered_set<TravelerList*>::iterator t_found = s->clinched_by.find(t);
-		if (t_found != s->clinched_by.end()) miles += s->length();
+		if (t_found != s->clinched_by.end()) miles += s->length;
 	}
 	return miles;
 }

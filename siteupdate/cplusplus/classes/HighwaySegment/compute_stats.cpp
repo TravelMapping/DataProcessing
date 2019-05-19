@@ -1,7 +1,6 @@
 void HighwaySegment::compute_stats()
-{	double segment_length = length();
-	// always add the segment mileage to the route
-	route->mileage += segment_length;
+{	// always add the segment mileage to the route
+	route->mileage += length;
 	//#include "../debug/RtMiSegLen.cpp"
 
 	// but we do need to check for concurrencies for others
@@ -27,14 +26,14 @@ void HighwaySegment::compute_stats()
 
 	// first, add to overall mileage for this region
 	route->region->ov_mi_mtx->lock();
-	route->region->overall_mileage += segment_length/overall_concurrency_count;
+	route->region->overall_mileage += length/overall_concurrency_count;
 	route->region->ov_mi_mtx->unlock();
 
 	// next, same thing for active_preview mileage for the region,
 	// if active or preview
 	if (route->system->active_or_preview())
 	{	route->region->ap_mi_mtx->lock();
-		route->region->active_preview_mileage += segment_length/active_preview_concurrency_count;
+		route->region->active_preview_mileage += length/active_preview_concurrency_count;
 		route->region->ap_mi_mtx->unlock();
 	}
 
@@ -42,17 +41,17 @@ void HighwaySegment::compute_stats()
 	// if active
 	if (route->system->active())
 	{	route->region->ao_mi_mtx->lock();
-		route->region->active_only_mileage += segment_length/active_only_concurrency_count;
+		route->region->active_only_mileage += length/active_only_concurrency_count;
 		route->region->ao_mi_mtx->unlock();
 	}
 
 	// now we move on to totals by region, only the
 	// overall since an entire highway system must be
 	// at the same level
-	try {	route->system->mileage_by_region.at(route->region) += segment_length/system_concurrency_count;
+	try {	route->system->mileage_by_region.at(route->region) += length/system_concurrency_count;
 	    }
 	catch (const std::out_of_range& oor)
-	    {	route->system->mileage_by_region[route->region] = segment_length/system_concurrency_count;
+	    {	route->system->mileage_by_region[route->region] = length/system_concurrency_count;
 	    }
 
 	// that's it for overall stats, now credit all travelers
@@ -64,10 +63,10 @@ void HighwaySegment::compute_stats()
 		// a traveler with miles in a devel system
 		if (route->system->active_or_preview())
 		{	t->ap_mi_mtx.lock();
-			try {	t->active_preview_mileage_by_region.at(route->region) += segment_length/active_preview_concurrency_count;
+			try {	t->active_preview_mileage_by_region.at(route->region) += length/active_preview_concurrency_count;
 			    }
 			catch (const std::out_of_range& oor)
-			    {	t->active_preview_mileage_by_region[route->region] = segment_length/active_preview_concurrency_count;
+			    {	t->active_preview_mileage_by_region[route->region] = length/active_preview_concurrency_count;
 			    }
 			t->ap_mi_mtx.unlock();
 		}
@@ -75,10 +74,10 @@ void HighwaySegment::compute_stats()
 		// credit active only for this region
 		if (route->system->active())
 		{	t->ao_mi_mtx.lock();
-			try {	t->active_only_mileage_by_region.at(route->region) += segment_length/active_only_concurrency_count;
+			try {	t->active_only_mileage_by_region.at(route->region) += length/active_only_concurrency_count;
 			    }
 			catch (const std::out_of_range& oor)
-			    {	t->active_only_mileage_by_region[route->region] = segment_length/active_only_concurrency_count;
+			    {	t->active_only_mileage_by_region[route->region] = length/active_only_concurrency_count;
 			    }
 			t->ao_mi_mtx.unlock();
 		}
@@ -87,10 +86,10 @@ void HighwaySegment::compute_stats()
 		// of unordered_maps, but skip devel system entries
 		if (route->system->active_or_preview())
 		{	t->sr_mi_mtx.lock();
-			try {	t->system_region_mileages[route->system].at(route->region) += segment_length/system_concurrency_count;
+			try {	t->system_region_mileages[route->system].at(route->region) += length/system_concurrency_count;
 			    }
 			catch (const std::out_of_range& oor)
-			    {	t->system_region_mileages[route->system][route->region] = segment_length/system_concurrency_count;
+			    {	t->system_region_mileages[route->system][route->region] = length/system_concurrency_count;
 			    }
 			t->sr_mi_mtx.unlock();
 		}
