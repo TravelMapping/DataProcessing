@@ -1501,12 +1501,12 @@ class PlaceRadius:
         rlng2 = math.radians(v.lng)
 
         # original formula
-        ans = math.acos(math.cos(rlat1)*math.cos(rlng1)*math.cos(rlat2)*math.cos(rlng2) +\
+        """ans = math.acos(math.cos(rlat1)*math.cos(rlng1)*math.cos(rlat2)*math.cos(rlng2) +\
                         math.cos(rlat1)*math.sin(rlng1)*math.cos(rlat2)*math.sin(rlng2) +\
                         math.sin(rlat1)*math.sin(rlat2)) * 3963.1 # EARTH_RADIUS """
 
         # spherical law of cosines formula (same as orig, with some terms factored out or removed via trig identity)
-        """ans = math.acos(math.cos(rlat1)*math.cos(rlat2)*math.cos(rlng2-rlng1)+math.sin(rlat1)*math.sin(rlat2)) * 3963.1 # EARTH_RADIUS """
+        ans = math.acos(math.cos(rlat1)*math.cos(rlat2)*math.cos(rlng2-rlng1)+math.sin(rlat1)*math.sin(rlat2)) * 3963.1 # EARTH_RADIUS """
 
         # Vincenty formula
         """ans = math.atan\

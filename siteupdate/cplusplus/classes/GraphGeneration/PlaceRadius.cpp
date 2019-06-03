@@ -27,12 +27,12 @@ class PlaceRadius
 		double rlat2 = v->lat * (Waypoint::pi/180);
 		double rlng2 = v->lng * (Waypoint::pi/180);
 
-		// original formula
+		/* original formula
 		double ans = acos(cos(rlat1)*cos(rlng1)*cos(rlat2)*cos(rlng2) +\
 				  cos(rlat1)*sin(rlng1)*cos(rlat2)*sin(rlng2) +\
 				  sin(rlat1)*sin(rlat2)) * 3963.1; // EARTH_RADIUS */
 
-		/* spherical law of cosines formula (same as orig, with some terms factored out or removed via trig identity)
+		// spherical law of cosines formula (same as orig, with some terms factored out or removed via trig identity)
 		double ans = acos(cos(rlat1)*cos(rlat2)*cos(rlng2-rlng1)+sin(rlat1)*sin(rlat2)) * 3963.1; /* EARTH_RADIUS */
 
 		/* Vincenty formula
