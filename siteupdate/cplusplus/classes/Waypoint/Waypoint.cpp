@@ -87,9 +87,24 @@ double Waypoint::distance_to(Waypoint *other)
 	double rlat2 = other->lat * (pi/180);
 	double rlng2 = other->lng * (pi/180);
 
+	// original formula
 	double ans = acos(cos(rlat1)*cos(rlng1)*cos(rlat2)*cos(rlng2) +\
 			  cos(rlat1)*sin(rlng1)*cos(rlat2)*sin(rlng2) +\
-			  sin(rlat1)*sin(rlat2)) * 3963.1; // EARTH_RADIUS
+			  sin(rlat1)*sin(rlat2)) * 3963.1; // EARTH_RADIUS */
+
+	/* spherical law of cosines formula (same as orig, with some terms factored out or removed via trig identity)
+	double ans = acos(cos(rlat1)*cos(rlat2)*cos(rlng2-rlng1)+sin(rlat1)*sin(rlat2)) * 3963.1; /* EARTH_RADIUS */
+
+	/* Vincenty formula
+	double ans = 
+	 atan (	sqrt(pow(cos(rlat2)*sin(rlng2-rlng1),2)+pow(cos(rlat1)*sin(rlat2)-sin(rlat1)*cos(rlat2)*cos(rlng2-rlng1),2))
+		/
+		(sin(rlat1)*sin(rlat2)+cos(rlat1)*cos(rlat2)*cos(rlng2-rlng1))
+	      ) * 3963.1; /* EARTH_RADIUS */
+
+	/* haversine formula
+	double ans = asin(sqrt(pow(sin((rlat2-rlat1)/2),2) + cos(rlat1) * cos(rlat2) * pow(sin((rlng2-rlng1)/2),2))) * 7926.2; /* EARTH_DIAMETER */
+
 	return ans * 1.02112; // CHM/TM distance fudge factor to compensate for imprecision of mapping
 }
 

@@ -2,6 +2,7 @@ HighwaySegment::HighwaySegment(Waypoint *w1, Waypoint *w2, Route *rte)
 {	waypoint1 = w1;
 	waypoint2 = w2;
 	route = rte;
+	length = waypoint1->distance_to(waypoint2);
 	concurrent = 0;
 }
 
@@ -19,11 +20,6 @@ bool HighwaySegment::add_clinched_by(TravelerList *traveler)
 std::string HighwaySegment::csv_line(unsigned int id)
 {	/* return csv line to insert into a table */
 	return "'" + std::to_string(id) + "','" + std::to_string(waypoint1->point_num) + "','" + std::to_string(waypoint2->point_num) + "','" + route->root + "'";
-}
-
-double HighwaySegment::length()
-{	/* return segment length in miles */
-	return waypoint1->distance_to(waypoint2);
 }
 
 std::string HighwaySegment::segment_name()

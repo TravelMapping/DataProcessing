@@ -377,9 +377,24 @@ class Waypoint:
         rlat2 = math.radians(other.lat)
         rlng2 = math.radians(other.lng)
 
+        # original formula
         ans = math.acos(math.cos(rlat1)*math.cos(rlng1)*math.cos(rlat2)*math.cos(rlng2) +\
                         math.cos(rlat1)*math.sin(rlng1)*math.cos(rlat2)*math.sin(rlng2) +\
-                        math.sin(rlat1)*math.sin(rlat2)) * 3963.1 # EARTH_RADIUS;
+                        math.sin(rlat1)*math.sin(rlat2)) * 3963.1 # EARTH_RADIUS """
+
+        # spherical law of cosines formula (same as orig, with some terms factored out or removed via trig identity)
+        """ans = math.acos(math.cos(rlat1)*math.cos(rlat2)*math.cos(rlng2-rlng1)+math.sin(rlat1)*math.sin(rlat2)) * 3963.1 # EARTH_RADIUS """
+
+        # Vincenty formula
+        """ans = math.atan\
+        (   math.sqrt(pow(math.cos(rlat2)*math.sin(rlng2-rlng1),2)+pow(math.cos(rlat1)*math.sin(rlat2)-math.sin(rlat1)*math.cos(rlat2)*math.cos(rlng2-rlng1),2))
+            /
+            (math.sin(rlat1)*math.sin(rlat2)+math.cos(rlat1)*math.cos(rlat2)*math.cos(rlng2-rlng1))
+        ) * 3963.1 # EARTH_RADIUS """
+
+        # haversine formula
+        """ans = math.asin(math.sqrt(pow(math.sin((rlat2-rlat1)/2),2) + math.cos(rlat1) * math.cos(rlat2) * pow(math.sin((rlng2-rlng1)/2),2))) * 7926.2 # EARTH_DIAMETER """
+
         return ans * 1.02112
 
     def angle(self,pred,succ):
@@ -668,6 +683,7 @@ class HighwaySegment:
         self.waypoint1 = w1
         self.waypoint2 = w2
         self.route = route
+        self.length = self.waypoint1.distance_to(self.waypoint2)
         self.concurrent = None
         self.clinched_by = set()
 
@@ -684,10 +700,6 @@ class HighwaySegment:
     def csv_line(self,id):
         """return csv line to insert into a table"""
         return "'" + str(id) + "','" + str(self.waypoint1.point_num) + "','" + str(self.waypoint2.point_num) + "','" + self.route.root + "'"
-
-    def length(self):
-        """return segment length in miles"""
-        return self.waypoint1.distance_to(self.waypoint2)
 
     def segment_name(self):
         """compute a segment name based on names of all
@@ -898,7 +910,7 @@ class Route:
         miles = 0.0
         for s in self.segment_list:
             if t in s.clinched_by:
-                miles += s.length()
+                miles += s.length
         return miles
 
 class ConnectedRoute:
@@ -1488,9 +1500,24 @@ class PlaceRadius:
         rlat2 = math.radians(v.lat)
         rlng2 = math.radians(v.lng)
 
-        ans = math.acos(math.cos(rlat1)*math.cos(rlng1)*math.cos(rlat2)*math.cos(rlng2) +\
+        # original formula
+        """ans = math.acos(math.cos(rlat1)*math.cos(rlng1)*math.cos(rlat2)*math.cos(rlng2) +\
                         math.cos(rlat1)*math.sin(rlng1)*math.cos(rlat2)*math.sin(rlng2) +\
-                        math.sin(rlat1)*math.sin(rlat2)) * 3963.1 # EARTH_RADIUS;
+                        math.sin(rlat1)*math.sin(rlat2)) * 3963.1 # EARTH_RADIUS """
+
+        # spherical law of cosines formula (same as orig, with some terms factored out or removed via trig identity)
+        ans = math.acos(math.cos(rlat1)*math.cos(rlat2)*math.cos(rlng2-rlng1)+math.sin(rlat1)*math.sin(rlat2)) * 3963.1 # EARTH_RADIUS """
+
+        # Vincenty formula
+        """ans = math.atan\
+        (   math.sqrt(pow(math.cos(rlat2)*math.sin(rlng2-rlng1),2)+pow(math.cos(rlat1)*math.sin(rlat2)-math.sin(rlat1)*math.cos(rlat2)*math.cos(rlng2-rlng1),2))
+            /
+            (math.sin(rlat1)*math.sin(rlat2)+math.cos(rlat1)*math.cos(rlat2)*math.cos(rlng2-rlng1))
+        ) * 3963.1 # EARTH_RADIUS """
+
+        # haversine formula
+        """ans = math.asin(math.sqrt(pow(math.sin((rlat2-rlat1)/2),2) + math.cos(rlat1) * math.cos(rlat2) * pow(math.sin((rlng2-rlng1)/2),2))) * 7926.2 # EARTH_DIAMETER """
+
         return ans <= self.r
 
     def contains_edge(self, e):
@@ -2573,9 +2600,8 @@ for h in highway_systems:
     print(".",end="",flush=True)
     for r in h.route_list:
         for s in r.segment_list:
-            segment_length = s.length()
             # always add the segment mileage to the route
-            r.mileage += segment_length
+            r.mileage += s.length
             # but we do need to check for concurrencies for others
             system_concurrency_count = 1
             active_only_concurrency_count = 1
@@ -2601,36 +2627,36 @@ for h in highway_systems:
             # if an entry already exists, create entry if not
             if r.region in overall_mileage_by_region:
                 overall_mileage_by_region[r.region] = overall_mileage_by_region[r.region] + \
-                    segment_length/overall_concurrency_count
+                    s.length/overall_concurrency_count
             else:
-                overall_mileage_by_region[r.region] = segment_length/overall_concurrency_count
+                overall_mileage_by_region[r.region] = s.length/overall_concurrency_count
 
             # next, same thing for active_preview mileage for the region,
             # if active or preview
             if r.system.active_or_preview():
                 if r.region in active_preview_mileage_by_region:
                     active_preview_mileage_by_region[r.region] = active_preview_mileage_by_region[r.region] + \
-                    segment_length/active_preview_concurrency_count
+                    s.length/active_preview_concurrency_count
                 else:
-                    active_preview_mileage_by_region[r.region] = segment_length/active_preview_concurrency_count
+                    active_preview_mileage_by_region[r.region] = s.length/active_preview_concurrency_count
 
             # now same thing for active_only mileage for the region,
             # if active
             if r.system.active():
                 if r.region in active_only_mileage_by_region:
                     active_only_mileage_by_region[r.region] = active_only_mileage_by_region[r.region] + \
-                    segment_length/active_only_concurrency_count
+                    s.length/active_only_concurrency_count
                 else:
-                    active_only_mileage_by_region[r.region] = segment_length/active_only_concurrency_count
+                    active_only_mileage_by_region[r.region] = s.length/active_only_concurrency_count
 
             # now we move on to totals by region, only the
             # overall since an entire highway system must be
             # at the same level
             if r.region in h.mileage_by_region:
                 h.mileage_by_region[r.region] = h.mileage_by_region[r.region] + \
-                        segment_length/system_concurrency_count
+                        s.length/system_concurrency_count
             else:
-                h.mileage_by_region[r.region] = segment_length/system_concurrency_count
+                h.mileage_by_region[r.region] = s.length/system_concurrency_count
 
             # that's it for overall stats, now credit all travelers
             # who have clinched this segment in their stats
@@ -2642,17 +2668,17 @@ for h in highway_systems:
                 if r.system.active_or_preview():
                     if r.region in t.active_preview_mileage_by_region:
                         t.active_preview_mileage_by_region[r.region] = t.active_preview_mileage_by_region[r.region] + \
-                            segment_length/active_preview_concurrency_count
+                            s.length/active_preview_concurrency_count
                     else:
-                        t.active_preview_mileage_by_region[r.region] = segment_length/active_preview_concurrency_count
+                        t.active_preview_mileage_by_region[r.region] = s.length/active_preview_concurrency_count
 
                 # credit active only for this region
                 if r.system.active():
                     if r.region in t.active_only_mileage_by_region:
                         t.active_only_mileage_by_region[r.region] = t.active_only_mileage_by_region[r.region] + \
-                            segment_length/active_only_concurrency_count
+                            s.length/active_only_concurrency_count
                     else:
-                        t.active_only_mileage_by_region[r.region] = segment_length/active_only_concurrency_count
+                        t.active_only_mileage_by_region[r.region] = s.length/active_only_concurrency_count
 
 
                 # credit this system in this region in the messy dictionary
@@ -2663,9 +2689,9 @@ for h in highway_systems:
                     t_system_dict = t.system_region_mileages[h.systemname]
                     if r.region in t_system_dict:
                         t_system_dict[r.region] = t_system_dict[r.region] + \
-                        segment_length/system_concurrency_count
+                        s.length/system_concurrency_count
                     else:
-                        t_system_dict[r.region] = segment_length/system_concurrency_count
+                        t_system_dict[r.region] = s.length/system_concurrency_count
 print("!", flush=True)
 
 print(et.et() + "Writing highway data stats log file (highwaydatastats.log).",flush=True)
