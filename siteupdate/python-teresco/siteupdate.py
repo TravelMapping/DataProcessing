@@ -378,7 +378,7 @@ class Waypoint:
         rlng2 = math.radians(other.lng)
 
         # original formula
-        ans = math.acos(math.cos(rlat1)*math.cos(rlng1)*math.cos(rlat2)*math.cos(rlng2) +\
+        """ans = math.acos(math.cos(rlat1)*math.cos(rlng1)*math.cos(rlat2)*math.cos(rlng2) +\
                         math.cos(rlat1)*math.sin(rlng1)*math.cos(rlat2)*math.sin(rlng2) +\
                         math.sin(rlat1)*math.sin(rlat2)) * 3963.1 # EARTH_RADIUS """
 
@@ -393,7 +393,7 @@ class Waypoint:
         ) * 3963.1 # EARTH_RADIUS """
 
         # haversine formula
-        """ans = math.asin(math.sqrt(pow(math.sin((rlat2-rlat1)/2),2) + math.cos(rlat1) * math.cos(rlat2) * pow(math.sin((rlng2-rlng1)/2),2))) * 7926.2 # EARTH_DIAMETER """
+        ans = math.asin(math.sqrt(pow(math.sin((rlat2-rlat1)/2),2) + math.cos(rlat1) * math.cos(rlat2) * pow(math.sin((rlng2-rlng1)/2),2))) * 7926.2 # EARTH_DIAMETER """
 
         return ans * 1.02112
 
