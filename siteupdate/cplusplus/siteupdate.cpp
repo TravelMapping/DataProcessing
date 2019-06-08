@@ -227,11 +227,13 @@ int main(int argc, char *argv[])
 		{	if (roots.find(r.root) == roots.end()) roots.insert(r.root);
 			else el.add_error("Duplicate root in route lists: " + r.root);
 			string list_name = r.readable_name();
+			// FIXME branch based on result of list_names.insert
 			if (list_names.find(list_name) == list_names.end()) list_names.insert(list_name);
 			else duplicate_list_names.insert(list_name);
 		}
 		for (ConnectedRoute cr : h->con_route_list)
 		  for (size_t r = 0; r < cr.roots.size(); r++)
+		    // FIXME branch based on result of list_names.insert
 		    if (con_roots.find(cr.roots[r]) == con_roots.end()) con_roots.insert(cr.roots[r]);
 		    else el.add_error("Duplicate root in con_route lists: " + cr.roots[r]->root);//*/
 	}
@@ -945,7 +947,6 @@ int main(int argc, char *argv[])
 	ofstream fpfile(filename.data());
 	timestamp = time(0);
 	fpfile << "Log file created at: " << ctime(&timestamp);
-	list<array<string, 6>> toremove;
 	unsigned int counter = 0;
 	unsigned int fpcount = 0;
 	for (list<DatacheckEntry>::iterator d = datacheckerrors->entries.begin(); d != datacheckerrors->entries.end(); d++)

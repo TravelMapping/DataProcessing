@@ -49,9 +49,7 @@ HGEdge::HGEdge(HighwaySegment *s, HighwayGraph *graph)
 }
 
 HGEdge::HGEdge(HGVertex *vertex, unsigned char fmt_mask)
-{	// build by collapsing two existing edges around a common
-	// hidden vertex waypoint, whose information is given in
-	// vertex
+{	// build by collapsing two existing edges around a common hidden vertex
 	c_written = 0;
 	t_written = 0;
 	format = fmt_mask;
