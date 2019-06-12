@@ -36,7 +36,7 @@ else {	list<Region*> *regions;
 		graph_data.write_master_tmg_simple(&graph_vector[0], args.graphfilepath+"/tm-master-simple.tmg");
 		cout << et.et() << "Writing master TM collapsed graph file, tm-master-collapsed.tmg." << endl;
 		graph_data.write_master_tmg_collapsed(&graph_vector[1], args.graphfilepath+"/tm-master-collapsed.tmg", 0);
-		cout << et.et() << "Writing master TM traveled graph file, tm-master.tmg." << endl;
+		cout << et.et() << "Writing master TM traveled graph file, tm-master-traveled.tmg." << endl;
 		graph_data.write_master_tmg_traveled(&graph_vector[2], args.graphfilepath+"/tm-master-traveled.tmg", &traveler_lists, 0);
 	     }
       /*#ifdef threading_enabled
