@@ -1532,7 +1532,7 @@ class PlaceRadius:
 
         # N/S sanity check: If lat is <= r/2 miles to the N or S pole, lngdelta calculation will fail.
         # In these cases, our place radius will span the entire "width" of the world, from -180 to +180 degrees.
-        if math.radians(90-abs(lat)) <= self.r/7926.2:
+        if math.radians(90-abs(self.lat)) <= self.r/7926.2:
             return self.v_search(qt, g, -180, +180)
 
         # width, in degrees longitude, of our bounding box for quadtree search
