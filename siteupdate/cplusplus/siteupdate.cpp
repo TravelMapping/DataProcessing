@@ -49,6 +49,7 @@ class HGEdge;
 #include "functions/format_clinched_mi.cpp"
 #include "functions/double_quotes.cpp"
 #include "functions/crawl_hwy_data.cpp"
+#include "functions/operators.cpp"
 #include "classes/Arguments.cpp"
 #include "classes/WaypointQuadtree/WaypointQuadtree.h"
 #include "classes/Route/Route.h"
@@ -69,10 +70,11 @@ class HGEdge;
 #include "classes/HighwaySegment/HighwaySegment.cpp"
 #include "classes/GraphGeneration/HGEdge.h"
 #include "classes/GraphGeneration/HGVertex.cpp"
-#include "classes/GraphGeneration/PlaceRadius.cpp"
+#include "classes/GraphGeneration/PlaceRadius.h"
 #include "classes/GraphGeneration/GraphListEntry.cpp"
 #include "classes/GraphGeneration/HighwayGraph.cpp"
 #include "classes/GraphGeneration/HGEdge.cpp"
+#include "classes/GraphGeneration/PlaceRadius.cpp"
 #include "threads/ReadWptThread.cpp"
 #include "threads/NmpMergedThread.cpp"
 #include "threads/ReadListThread.cpp"
@@ -1021,22 +1023,17 @@ int main(int argc, char *argv[])
 		cout << et.et() << "Computing waypoint colocation stats, reporting all with 8 or more colocations:" << endl;
 		unsigned int largest_colocate_count = all_waypoints.max_colocated();
 		vector<unsigned int> colocate_counts(largest_colocate_count+1, 0);
-		unordered_set<Waypoint*> big_colocate_locations;
 		for (Waypoint *w : all_waypoints.point_list())
 		{	unsigned int c = w->num_colocated();
-			if (c >= 8)
-			{	big_colocate_locations.insert(all_waypoints.waypoint_at_same_point(w));
-				//cout << w.str() << " with " << c-1 << " other points." << endl;
-			}
 			colocate_counts[c] += 1;
-		}
-		for (Waypoint *p : big_colocate_locations)
-		{	printf("(%.15g, %.15g) is occupied by %i waypoints: ['", p->lat, p->lng, p->num_colocated());
-			list<Waypoint*>::iterator w = p->colocated->begin();
-			cout << (*w)->route->root << ' ' << (*w)->label << '\'';
-			for (w++; w != p->colocated->end(); w++)
-				cout << ", '" << (*w)->route->root << ' ' << (*w)->label << '\'';
-			cout << "]\n";//*/
+			if (c >= 8 && w == w->colocated->front())
+			{	printf("(%.15g, %.15g) is occupied by %i waypoints: ['", w->lat, w->lng, c);
+				list<Waypoint*>::iterator p = w->colocated->begin();
+				cout << (*p)->route->root << ' ' << (*p)->label << '\'';
+				for (p++; p != w->colocated->end(); p++)
+					cout << ", '" << (*p)->route->root << ' ' << (*p)->label << '\'';
+				cout << "]\n";//*/
+			}
 		}
 		cout << "Waypoint colocation counts:" << endl;
 		unsigned int unique_locations = 0;
