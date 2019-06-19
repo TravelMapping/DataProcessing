@@ -1525,6 +1525,72 @@ class PlaceRadius:
         return (self.contains_vertex(e.vertex1) and
                 self.contains_vertex(e.vertex2))
         
+    def vertices(self, qt, g):
+        # Compute and return a set of graph vertices within r miles of (lat, lng).
+        # This function handles setup & sanity checks, passing control over
+        # to the recursive v_search function to do the actual searching.
+
+        # N/S sanity check: If lat is <= r/2 miles to the N or S pole, lngdelta calculation will fail.
+        # In these cases, our place radius will span the entire "width" of the world, from -180 to +180 degrees.
+        if math.radians(90-abs(lat)) <= self.r/7926.2:
+            return self.v_search(qt, g, -180, +180)
+
+        # width, in degrees longitude, of our bounding box for quadtree search
+        rlat = math.radians(self.lat)
+        lngdelta = math.degrees(math.acos((math.cos(self.r/3963.1) - math.sin(rlat)**2) / math.cos(rlat)**2))
+        w_bound = self.lng-lngdelta
+        e_bound = self.lng+lngdelta
+
+        # normal operation; search quadtree within calculated bounds
+        vertex_set = self.v_search(qt, g, w_bound, e_bound);
+
+        # If bounding box spans international date line to west of -180 degrees,
+        # search quadtree within the corresponding range of positive longitudes
+        if w_bound <= -180:
+            while w_bound <= -180:
+                w_bound += 360
+            vertex_set = vertex_set | self.v_search(qt, g, w_bound, 180)
+
+        # If bounding box spans international date line to east of +180 degrees,
+        # search quadtree within the corresponding range of negative longitudes
+        if e_bound >= 180:
+            while e_bound >= 180:
+                e_bound -= 360
+            vertex_set = vertex_set | self.v_search(qt, g, -180, e_bound)
+
+        return vertex_set
+
+    def v_search(self, qt, g, w_bound, e_bound):
+        # recursively search quadtree for waypoints within this PlaceRadius area, and return a set
+        # of their corresponding graph vertices to return to the PlaceRadius::vertices function
+        vertex_set = set()
+
+        # first check if this is a terminal quadrant, and if it is,
+        # we search for vertices within this quadrant
+        if qt.points is not None:
+            for p in qt.points:
+                if (p.colocated is None or p == p.colocated[0]) and self.contains_vertex(p):
+                    vertex_set.add(g.vertices[p])
+        # if we're not a terminal quadrant, we need to determine which
+        # of our child quadrants we need to search and recurse into each
+        else:
+            #print("DEBUG: recursive case, mid_lat="+str(qt.mid_lat)+" mid_lng="+str(qt.mid_lng), flush=True)
+            look_n = (self.lat + math.degrees(self.r/3963.1)) >= qt.mid_lat
+            look_s = (self.lat - math.degrees(self.r/3963.1)) <= qt.mid_lat
+            look_e = e_bound >= qt.mid_lng
+            look_w = w_bound <= qt.mid_lng
+            #print("DEBUG: recursive case, " + str(look_n) + " " + str(look_s) + " " + str(look_e) + " " + str(look_w))
+            # now look in the appropriate child quadrants
+            if look_n and look_w:
+                vertex_set = vertex_set | self.v_search(qt.nw_child, g, w_bound, e_bound)
+            if look_n and look_e:
+                vertex_set = vertex_set | self.v_search(qt.ne_child, g, w_bound, e_bound)
+            if look_s and look_w:
+                vertex_set = vertex_set | self.v_search(qt.sw_child, g, w_bound, e_bound)
+            if look_s and look_e:
+                vertex_set = vertex_set | self.v_search(qt.se_child, g, w_bound, e_bound)
+        return vertex_set;
+
 class HighwayGraph:
     """This class implements the capability to create graph
     data structures representing the highway data.
@@ -1706,7 +1772,7 @@ class HighwayGraph:
                 edges += len(v.incident_t_edges)
         return edges//2
 
-    def matching_vertices(self, regions, systems, placeradius, rg_vset_hash):
+    def matching_vertices(self, regions, systems, placeradius, rg_vset_hash, qt):
         # return a tuple containing
         # 1st, a set of vertices from the graph, optionally
         # restricted by region or system or placeradius area
@@ -1715,43 +1781,36 @@ class HighwayGraph:
         cv_count = 0
         tv_count = 0
         vertex_set = set()
-        rg_vertex_set = set()
-        sys_vertex_set = set()
-        # rg_vertex_set is the union of all sets in regions
+        rvset = set()
+        svset = set()
+        # rvset is the union of all sets in regions
         if regions is not None:
             for r in regions:
-                rg_vertex_set = rg_vertex_set | rg_vset_hash[r]
-        # sys_vertex_set is the union of all sets in systems
+                rvset = rvset | rg_vset_hash[r]
+        # svset is the union of all sets in systems
         if systems is not None:
             for h in systems:
-                sys_vertex_set = sys_vertex_set | h.vertices
+                svset = svset | h.vertices
+        # pvset is the set of vertices within placeradius
+        if placeradius is not None:
+            pvset = placeradius.vertices(qt, self)
+
         # determine which vertices are within our region(s) and/or system(s)
         if regions is not None:
+            vertex_set = rvset
+            if placeradius is not None:
+                vertex_set = vertex_set & prset
             if systems is not None:
-                # both regions & systems populated: vertex_set is
-                # intersection of rg_vertex_set & sys_vertex_set
-                vertex_set = rg_vertex_set & sys_vertex_set
-            else:
-                # only regions populated
-                vertex_set = rg_vertex_set
-        else:
-            if systems is not None:
-                # only systems populated
-                vertex_set = sys_vertex_set
-            else:
-                # neither are populated; include all vertices...
-                for v in self.vertices.values():
-                    # ...unless a PlaceRadius is specified
-                    if placeradius is None or placeradius.contains_vertex(v):
-                        vertex_set.add(v)
-        # if placeradius is provided along with non-empty region
-        # or system parameters, erase vertices outside placeradius
-        if placeradius is not None and (systems is not None or regions is not None):
-            pr_vertex_set = set()
-            for v in vertex_set:
-                if placeradius.contains_vertex(v):
-                    pr_vertex_set.add(v)
-            vertex_set = pr_vertex_set
+                vertex_set = vertex_set & svset
+        elif systems is not None:
+            vertex_set = svset
+            if placeradius is not None:
+                vertex_set = vertex_set & prset
+        elif placeradius is not None:
+            vertex_set = pvset
+        else: # no restrictions via region, system, or placeradius, so include everything
+            for v in self.vertices.values():
+                vertex_set.add(v)
         # find number of collapsed vertices
         for v in vertex_set:
             if v.visibility >= 1:
@@ -1943,11 +2002,11 @@ class HighwayGraph:
     # restricted by regions in the list if given,
     # by systems in the list if given,
     # or to within a given area if placeradius is given
-    def write_subgraphs_tmg(self, graph_list, path, root, descr, category, regions, systems, placeradius):
+    def write_subgraphs_tmg(self, graph_list, path, root, descr, category, regions, systems, placeradius, qt):
         simplefile = open(path+root+"-simple.tmg","w",encoding='utf-8')
         collapfile = open(path+root+"-collapsed.tmg","w",encoding='utf-8')
         travelfile = open(path+root+"-traveled.tmg","w",encoding='utf-8')
-        (mv, cv_count, tv_count) = self.matching_vertices(regions, systems, placeradius, self.rg_vset_hash)
+        (mv, cv_count, tv_count) = self.matching_vertices(regions, systems, placeradius, self.rg_vset_hash, qt)
         mse = self.matching_simple_edges(mv, regions, systems, placeradius)
         mce = self.matching_collapsed_edges(mv, regions, systems, placeradius)
         (mte, traveler_lists) = self.matching_traveled_edges(mv, regions, systems, placeradius)
@@ -3061,7 +3120,8 @@ else:
     for a in area_list:
         print(a.base + '(' + str(a.r) + ') ', end="", flush=True)
         graph_data.write_subgraphs_tmg(graph_list, args.graphfilepath + "/", a.base + str(a.r) + "-area",
-                                       a.place + " (" + str(a.r) + " mi radius)", "area", None, None, a)
+                                       a.place + " (" + str(a.r) + " mi radius)", "area",
+                                       None, None, a, all_waypoints)
     graph_types.append(['area', 'Routes Within a Given Radius of a Place',
                         'These graphs contain all routes currently plotted within the given distance radius of the given place.'])
     print("!")
@@ -3079,7 +3139,8 @@ else:
         region_type = r[4]
         print(region_code + ' ', end="",flush=True)
         graph_data.write_subgraphs_tmg(graph_list, args.graphfilepath + "/", region_code + "-region",
-                                       region_name + " (" + region_type + ")", "region", [ region_code ], None, None)
+                                       region_name + " (" + region_type + ")", "region",
+                                       [ region_code ], None, None, all_waypoints)
     graph_types.append(['region', 'Routes Within a Single Region',
                         'These graphs contain all routes currently plotted within the given region.'])
     print("!")
@@ -3103,7 +3164,8 @@ else:
         if h is not None:
             print(h.systemname + ' ', end="",flush=True)
             graph_data.write_subgraphs_tmg(graph_list, args.graphfilepath + "/", h.systemname+"-system",
-                                           h.systemname + " (" + h.fullname + ")", "system", None, [ h ], None)
+                                           h.systemname + " (" + h.fullname + ")", "system",
+                                           None, [ h ], None, all_waypoints)
     if h is not None:
         graph_types.append(['system', 'Routes Within a Single Highway System',
                             'These graphs contain the routes within a single highway system and are not restricted by region.'])
@@ -3128,7 +3190,8 @@ else:
             if h.systemname in selected_systems:
                 systems.append(h)
         graph_data.write_subgraphs_tmg(graph_list, args.graphfilepath + "/", fields[1],
-                                       fields[0], "multisystem", None, systems, None)
+                                       fields[0], "multisystem",
+                                       None, systems, None, all_waypoints)
     graph_types.append(['multisystem', 'Routes Within Multiple Highway Systems',
                         'These graphs contain the routes within a set of highway systems.'])
     print("!")
@@ -3152,7 +3215,8 @@ else:
             if r[0] in selected_regions and r[0] in active_preview_mileage_by_region:
                 region_list.append(r[0])
         graph_data.write_subgraphs_tmg(graph_list, args.graphfilepath + "/", fields[1],
-                                       fields[0], "multiregion", region_list, None, None)
+                                       fields[0], "multiregion",
+                                       region_list, None, None, all_waypoints)
     graph_types.append(['multiregion', 'Routes Within Multiple Regions',
                         'These graphs contain the routes within a set of regions.'])
     print("!")
@@ -3171,7 +3235,8 @@ else:
         if len(region_list) >= 2:
             print(c[0] + " ", end="", flush=True)
             graph_data.write_subgraphs_tmg(graph_list, args.graphfilepath + "/", c[0] + "-country",
-                                           c[1] + " All Routes in Country", "country", region_list, None, None)
+                                           c[1] + " All Routes in Country", "country",
+                                           region_list, None, None, all_waypoints)
     graph_types.append(['country', 'Routes Within a Single Multi-Region Country',
                         'These graphs contain the routes within a single country that is composed of multiple regions that contain plotted routes.  Countries consisting of a single region are represented by their regional graph.'])
     print("!")
@@ -3188,7 +3253,8 @@ else:
         if len(region_list) >= 1:
             print(c[0] + " ", end="", flush=True)
             graph_data.write_subgraphs_tmg(graph_list, args.graphfilepath + "/", c[0] + "-continent",
-                                           c[1] + " All Routes on Continent", "continent", region_list, None, None)
+                                           c[1] + " All Routes on Continent", "continent",
+                                           region_list, None, None, all_waypoints)
     graph_types.append(['continent', 'Routes Within a Continent',
                         'These graphs contain the routes on a continent.'])
     print("!")

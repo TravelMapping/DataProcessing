@@ -22,11 +22,11 @@ if (args.skipgraphs || args.errorcheck)
 else {	list<Region*> *regions;
 	list<HighwaySystem*> *systems;
 
-	graph_vector.emplace_back("tm-master", "All Travel Mapping Data", 0,
+	graph_vector.emplace_back("tm-master", "All Travel Mapping Data",
 				  's', 'M', (list<Region*>*)0, (list<HighwaySystem*>*)0, (PlaceRadius*)0);
-	graph_vector.emplace_back("tm-master", "All Travel Mapping Data", 0,
+	graph_vector.emplace_back("tm-master", "All Travel Mapping Data",
 				  'c', 'M', (list<Region*>*)0, (list<HighwaySystem*>*)0, (PlaceRadius*)0);
-	graph_vector.emplace_back("tm-master", "All Travel Mapping Data", traveler_lists.size(),
+	graph_vector.emplace_back("tm-master", "All Travel Mapping Data",
 				  't', 'M', (list<Region*>*)0, (list<HighwaySystem*>*)0, (PlaceRadius*)0);
 
       /*#ifdef threading_enabled
@@ -78,25 +78,25 @@ else {	list<Region*> *regions;
 
 	// add entries to graph_vector
 	for (PlaceRadius &a : area_list)
-	{	graph_vector.emplace_back(a.base + to_string(a.r) + "-area", a.place + " (" + to_string(a.r) + " mi radius)", 0,
+	{	graph_vector.emplace_back(a.base + to_string(a.r) + "-area", a.place + " (" + to_string(a.r) + " mi radius)",
 					  's', 'a', (list<Region*>*)0, (list<HighwaySystem*>*)0, &a);
-		graph_vector.emplace_back(a.base + to_string(a.r) + "-area", a.place + " (" + to_string(a.r) + " mi radius)", 0,
+		graph_vector.emplace_back(a.base + to_string(a.r) + "-area", a.place + " (" + to_string(a.r) + " mi radius)",
 					  'c', 'a', (list<Region*>*)0, (list<HighwaySystem*>*)0, &a);
-		graph_vector.emplace_back(a.base + to_string(a.r) + "-area", a.place + " (" + to_string(a.r) + " mi radius)", traveler_lists.size(),
+		graph_vector.emplace_back(a.base + to_string(a.r) + "-area", a.place + " (" + to_string(a.r) + " mi radius)",
 					  't', 'a', (list<Region*>*)0, (list<HighwaySystem*>*)0, &a);
 	}
 	// write new graph_vector entries to disk
       #ifdef threading_enabled
 	// set up for threaded subgraph generation
 	for (unsigned int t = 0; t < args.numthreads; t++)
-		thr[t] = new thread(SubgraphThread, t, &graph_data, &graph_vector, &graphnum, &list_mtx, args.graphfilepath + "/");
+		thr[t] = new thread(SubgraphThread, t, &graph_data, &graph_vector, &graphnum, &list_mtx, args.graphfilepath + "/", &all_waypoints);
 	for (unsigned int t = 0; t < args.numthreads; t++)
 		thr[t]->join();
 	for (unsigned int t = 0; t < args.numthreads; t++)
 		delete thr[t];
       #else
 	while (graphnum < graph_vector.size())
-	{	graph_data.write_subgraphs_tmg(graph_vector, args.graphfilepath + "/", graphnum, 0);
+	{	graph_data.write_subgraphs_tmg(graph_vector, args.graphfilepath + "/", graphnum, 0, &all_waypoints);
 		graphnum += 3;
 	}
       #endif
@@ -117,25 +117,25 @@ else {	list<Region*> *regions;
 	{	if (region.active_preview_mileage == 0) continue;
 		regions = new list<Region*>(1, &region);
 			  // deleted on termination of program
-		graph_vector.emplace_back(region.code + "-region", region.name + " (" + region.type + ")", 0,
+		graph_vector.emplace_back(region.code + "-region", region.name + " (" + region.type + ")",
 					  's', 'r', regions, (list<HighwaySystem*>*)0, (PlaceRadius*)0);
-		graph_vector.emplace_back(region.code + "-region", region.name + " (" + region.type + ")", 0,
+		graph_vector.emplace_back(region.code + "-region", region.name + " (" + region.type + ")",
 					  'c', 'r', (list<Region*>*)0, (list<HighwaySystem*>*)0, (PlaceRadius*)0);
-		graph_vector.emplace_back(region.code + "-region", region.name + " (" + region.type + ")", traveler_lists.size(),
+		graph_vector.emplace_back(region.code + "-region", region.name + " (" + region.type + ")",
 					  't', 'r', (list<Region*>*)0, (list<HighwaySystem*>*)0, (PlaceRadius*)0);
 	}
 	// write new graph_vector entries to disk
       #ifdef threading_enabled
 	// set up for threaded subgraph generation
 	for (unsigned int t = 0; t < args.numthreads; t++)
-		thr[t] = new thread(SubgraphThread, t, &graph_data, &graph_vector, &graphnum, &list_mtx, args.graphfilepath + "/");
+		thr[t] = new thread(SubgraphThread, t, &graph_data, &graph_vector, &graphnum, &list_mtx, args.graphfilepath + "/", &all_waypoints);
 	for (unsigned int t = 0; t < args.numthreads; t++)
 		thr[t]->join();
 	for (unsigned int t = 0; t < args.numthreads; t++)
 		delete thr[t];
       #else
 	while (graphnum < graph_vector.size())
-	{	graph_data.write_subgraphs_tmg(graph_vector, args.graphfilepath + "/", graphnum, 0);
+	{	graph_data.write_subgraphs_tmg(graph_vector, args.graphfilepath + "/", graphnum, 0, &all_waypoints);
 		graphnum += 3;
 	}
       #endif
@@ -164,11 +164,11 @@ else {	list<Region*> *regions;
 		if (h)
 		{	systems = new list<HighwaySystem*>(1, h);
 				  // deleted on termination of program
-			graph_vector.emplace_back(h->systemname + "-system", h->systemname + " (" + h->fullname + ")", 0,
+			graph_vector.emplace_back(h->systemname + "-system", h->systemname + " (" + h->fullname + ")",
 						  's', 's', (list<Region*>*)0, systems, (PlaceRadius*)0);
-			graph_vector.emplace_back(h->systemname + "-system", h->systemname + " (" + h->fullname + ")", 0,
+			graph_vector.emplace_back(h->systemname + "-system", h->systemname + " (" + h->fullname + ")",
 						  'c', 's', (list<Region*>*)0, (list<HighwaySystem*>*)0, (PlaceRadius*)0);
-			graph_vector.emplace_back(h->systemname + "-system", h->systemname + " (" + h->fullname + ")",  traveler_lists.size(),
+			graph_vector.emplace_back(h->systemname + "-system", h->systemname + " (" + h->fullname + ")",
 						  't', 's', (list<Region*>*)0, (list<HighwaySystem*>*)0, (PlaceRadius*)0);
 		}
 	}
@@ -177,14 +177,14 @@ else {	list<Region*> *regions;
       #ifdef threading_enabled
 	// set up for threaded subgraph generation
 	for (unsigned int t = 0; t < args.numthreads; t++)
-		thr[t] = new thread(SubgraphThread, t, &graph_data, &graph_vector, &graphnum, &list_mtx, args.graphfilepath + "/");
+		thr[t] = new thread(SubgraphThread, t, &graph_data, &graph_vector, &graphnum, &list_mtx, args.graphfilepath + "/", &all_waypoints);
 	for (unsigned int t = 0; t < args.numthreads; t++)
 		thr[t]->join();
 	for (unsigned int t = 0; t < args.numthreads; t++)
 		delete thr[t];
       #else
 	while (graphnum < graph_vector.size())
-	{	graph_data.write_subgraphs_tmg(graph_vector, args.graphfilepath + "/", graphnum, 0);
+	{	graph_data.write_subgraphs_tmg(graph_vector, args.graphfilepath + "/", graphnum, 0, &all_waypoints);
 		graphnum += 3;
 	}
       #endif
@@ -219,11 +219,11 @@ else {	list<Region*> *regions;
 		    {	systems->push_back(h);
 			break;
 		    }
-		graph_vector.emplace_back(fields[1], fields[0], 0,
+		graph_vector.emplace_back(fields[1], fields[0],
 					  's', 'S', (list<Region*>*)0, systems, (PlaceRadius*)0);
-		graph_vector.emplace_back(fields[1], fields[0], 0,
+		graph_vector.emplace_back(fields[1], fields[0],
 					  'c', 'S', (list<Region*>*)0, (list<HighwaySystem*>*)0, (PlaceRadius*)0);
-		graph_vector.emplace_back(fields[1], fields[0], traveler_lists.size(),
+		graph_vector.emplace_back(fields[1], fields[0],
 					  't', 'S', (list<Region*>*)0, (list<HighwaySystem*>*)0, (PlaceRadius*)0);
 		delete[] cline;
 	}
@@ -232,14 +232,14 @@ else {	list<Region*> *regions;
       #ifdef threading_enabled
 	// set up for threaded subgraph generation
 	for (unsigned int t = 0; t < args.numthreads; t++)
-		thr[t] = new thread(SubgraphThread, t, &graph_data, &graph_vector, &graphnum, &list_mtx, args.graphfilepath + "/");
+		thr[t] = new thread(SubgraphThread, t, &graph_data, &graph_vector, &graphnum, &list_mtx, args.graphfilepath + "/", &all_waypoints);
 	for (unsigned int t = 0; t < args.numthreads; t++)
 		thr[t]->join();
 	for (unsigned int t = 0; t < args.numthreads; t++)
 		delete thr[t];
       #else
 	while (graphnum < graph_vector.size())
-	{	graph_data.write_subgraphs_tmg(graph_vector, args.graphfilepath + "/", graphnum, 0);
+	{	graph_data.write_subgraphs_tmg(graph_vector, args.graphfilepath + "/", graphnum, 0, &all_waypoints);
 		graphnum += 3;
 	}
       #endif
@@ -273,11 +273,11 @@ else {	list<Region*> *regions;
 		    {	regions->push_back(&r);
 			break;
 		    }
-		graph_vector.emplace_back(fields[1], fields[0], 0,
+		graph_vector.emplace_back(fields[1], fields[0],
 					  's', 'R', regions, (list<HighwaySystem*>*)0, (PlaceRadius*)0);
-		graph_vector.emplace_back(fields[1], fields[0], 0,
+		graph_vector.emplace_back(fields[1], fields[0],
 					  'c', 'R', (list<Region*>*)0, (list<HighwaySystem*>*)0, (PlaceRadius*)0);
-		graph_vector.emplace_back(fields[1], fields[0], traveler_lists.size(),
+		graph_vector.emplace_back(fields[1], fields[0],
 					  't', 'R', (list<Region*>*)0, (list<HighwaySystem*>*)0, (PlaceRadius*)0);
 		delete[] cline;
 	}
@@ -286,14 +286,14 @@ else {	list<Region*> *regions;
       #ifdef threading_enabled
 	// set up for threaded subgraph generation
 	for (unsigned int t = 0; t < args.numthreads; t++)
-		thr[t] = new thread(SubgraphThread, t, &graph_data, &graph_vector, &graphnum, &list_mtx, args.graphfilepath + "/");
+		thr[t] = new thread(SubgraphThread, t, &graph_data, &graph_vector, &graphnum, &list_mtx, args.graphfilepath + "/", &all_waypoints);
 	for (unsigned int t = 0; t < args.numthreads; t++)
 		thr[t]->join();
 	for (unsigned int t = 0; t < args.numthreads; t++)
 		delete thr[t];
       #else
 	while (graphnum < graph_vector.size())
-	{	graph_data.write_subgraphs_tmg(graph_vector, args.graphfilepath + "/", graphnum, 0);
+	{	graph_data.write_subgraphs_tmg(graph_vector, args.graphfilepath + "/", graphnum, 0, &all_waypoints);
 		graphnum += 3;
 	}
       #endif
@@ -316,11 +316,11 @@ else {	list<Region*> *regions;
 		// does it have at least two?  if none, no data,
 		// if 1 we already generated a graph for that one region
 		if (regions->size() < 2) delete regions;
-		else {	graph_vector.emplace_back(c.first + "-country", c.second + " All Routes in Country", 0,
+		else {	graph_vector.emplace_back(c.first + "-country", c.second + " All Routes in Country",
 						  's', 'c', regions, (list<HighwaySystem*>*)0, (PlaceRadius*)0);
-			graph_vector.emplace_back(c.first + "-country", c.second + " All Routes in Country", 0,
+			graph_vector.emplace_back(c.first + "-country", c.second + " All Routes in Country",
 						  'c', 'c', (list<Region*>*)0, (list<HighwaySystem*>*)0, (PlaceRadius*)0);
-			graph_vector.emplace_back(c.first + "-country", c.second + " All Routes in Country", traveler_lists.size(),
+			graph_vector.emplace_back(c.first + "-country", c.second + " All Routes in Country",
 						  't', 't', (list<Region*>*)0, (list<HighwaySystem*>*)0, (PlaceRadius*)0);
 		     }
 	}
@@ -328,14 +328,14 @@ else {	list<Region*> *regions;
       #ifdef threading_enabled
 	// set up for threaded subgraph generation
 	for (unsigned int t = 0; t < args.numthreads; t++)
-		thr[t] = new thread(SubgraphThread, t, &graph_data, &graph_vector, &graphnum, &list_mtx, args.graphfilepath + "/");
+		thr[t] = new thread(SubgraphThread, t, &graph_data, &graph_vector, &graphnum, &list_mtx, args.graphfilepath + "/", &all_waypoints);
 	for (unsigned int t = 0; t < args.numthreads; t++)
 		thr[t]->join();
 	for (unsigned int t = 0; t < args.numthreads; t++)
 		delete thr[t];
       #else
 	while (graphnum < graph_vector.size())
-	{	graph_data.write_subgraphs_tmg(graph_vector, args.graphfilepath + "/", graphnum, 0);
+	{	graph_data.write_subgraphs_tmg(graph_vector, args.graphfilepath + "/", graphnum, 0, &all_waypoints);
 		graphnum += 3;
 	}
       #endif
@@ -358,11 +358,11 @@ else {	list<Region*> *regions;
 		    regions->push_back(&r);
 		// generate for any continent with at least 1 region with mileage
 		if (regions->size() < 1) delete regions;
-		else {	graph_vector.emplace_back(c.first + "-continent", c.second + " All Routes on Continent", 0,
+		else {	graph_vector.emplace_back(c.first + "-continent", c.second + " All Routes on Continent",
 						  's', 'C', regions, (list<HighwaySystem*>*)0, (PlaceRadius*)0);
-			graph_vector.emplace_back(c.first + "-continent", c.second + " All Routes on Continent", 0,
+			graph_vector.emplace_back(c.first + "-continent", c.second + " All Routes on Continent",
 						  'c', 'C', (list<Region*>*)0, (list<HighwaySystem*>*)0, (PlaceRadius*)0);
-			graph_vector.emplace_back(c.first + "-continent", c.second + " All Routes on Continent", traveler_lists.size(),
+			graph_vector.emplace_back(c.first + "-continent", c.second + " All Routes on Continent",
 						  't', 'C', (list<Region*>*)0, (list<HighwaySystem*>*)0, (PlaceRadius*)0);
 		     }
 	}
@@ -370,14 +370,14 @@ else {	list<Region*> *regions;
       #ifdef threading_enabled
 	// set up for threaded subgraph generation
 	for (unsigned int t = 0; t < args.numthreads; t++)
-		thr[t] = new thread(SubgraphThread, t, &graph_data, &graph_vector, &graphnum, &list_mtx, args.graphfilepath + "/");
+		thr[t] = new thread(SubgraphThread, t, &graph_data, &graph_vector, &graphnum, &list_mtx, args.graphfilepath + "/", &all_waypoints);
 	for (unsigned int t = 0; t < args.numthreads; t++)
 		thr[t]->join();
 	for (unsigned int t = 0; t < args.numthreads; t++)
 		delete thr[t];
       #else
 	while (graphnum < graph_vector.size())
-	{	graph_data.write_subgraphs_tmg(graph_vector, args.graphfilepath + "/", graphnum, 0);
+	{	graph_data.write_subgraphs_tmg(graph_vector, args.graphfilepath + "/", graphnum, 0, &all_waypoints);
 		graphnum += 3;
 	}
       #endif
