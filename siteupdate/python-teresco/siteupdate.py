@@ -1569,7 +1569,7 @@ class PlaceRadius:
         # we search for vertices within this quadrant
         if qt.points is not None:
             for p in qt.points:
-                if (p.colocated is None or p == p.colocated[0]) and self.contains_vertex(p):
+                if (p.colocated is None or p == p.colocated[0]) and p.is_or_colocated_with_active_or_preview() and self.contains_vertex(p):
                     vertex_set.add(g.vertices[p])
         # if we're not a terminal quadrant, we need to determine which
         # of our child quadrants we need to search and recurse into each
