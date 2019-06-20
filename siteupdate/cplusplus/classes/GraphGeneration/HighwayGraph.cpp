@@ -491,7 +491,8 @@ class HighwayGraph
 	// restricted by regions in the list if given,
 	// by systems in the list if given,
 	// or to within a given area if placeradius is given
-	void write_subgraphs_tmg(std::vector<GraphListEntry> &graph_vector, std::string path, size_t graphnum, unsigned int threadnum, WaypointQuadtree *qt)
+	void write_subgraphs_tmg(	std::vector<GraphListEntry> &graph_vector, std::string path, size_t graphnum,
+					unsigned int threadnum, WaypointQuadtree *qt, ElapsedTime *et)
 	{	unsigned int cv_count, tv_count;
 		std::ofstream simplefile((path+graph_vector[graphnum].filename()).data());
 		std::ofstream collapfile((path+graph_vector[graphnum+1].filename()).data());
@@ -508,6 +509,10 @@ class HighwayGraph
 		{	t->traveler_num[threadnum] = travnum;
 			travnum++;
 		}
+	      #ifdef threading_enabled
+		if (graph_vector[graphnum].cat != graph_vector[graphnum-1].cat)
+			std::cout << '\n' + et->et() + "Writing " + graph_vector[graphnum].category() + " graphs.\n";
+	      #endif
 		std::cout << graph_vector[graphnum].tag()
 			  << '(' << mv.size() << ',' << mse.size() << ") "
 			  << '(' << cv_count << ',' << mce.size() << ") "
