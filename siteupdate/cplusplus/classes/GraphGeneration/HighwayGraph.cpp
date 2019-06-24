@@ -30,7 +30,7 @@ class HighwayGraph
 		// or preview system, or is colocated and not at the front
 		// of its colocation list
 		unsigned int counter = 0;
-		std::cout << et.et() << "Creating unique names and vertices" << std::flush;
+		std::cout << et.et() + "Creating unique names and vertices" << std::flush;
 		for (Waypoint *w : all_waypoints.point_list())
 		{	if (counter % 10000 == 0) std::cout << '.' << std::flush;
 			counter++;
@@ -80,7 +80,7 @@ class HighwayGraph
 
 		// create edges
 		counter = 0;
-		std::cout << et.et() << "Creating edges" << std::flush;
+		std::cout << et.et() + "Creating edges" << std::flush;
 		for (HighwaySystem *h : highway_systems)
 		{	if (h->devel()) continue;
 			if (counter % 6 == 0) std::cout << '.' << std::flush;
@@ -95,7 +95,7 @@ class HighwayGraph
 
 		// compress edges adjacent to hidden vertices
 		counter = 0;
-		std::cout << et.et() << "Compressing collapsed edges" << std::flush;
+		std::cout << et.et() + "Compressing collapsed edges" << std::flush;
 		for (std::pair<const Waypoint*, HGVertex*> wv : vertices)
 		{	if (counter % 10000 == 0) std::cout << '.' << std::flush;
 			counter++;
