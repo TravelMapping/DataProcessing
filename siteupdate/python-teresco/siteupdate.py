@@ -2511,12 +2511,12 @@ for h in highway_systems:
 # Create a list of TravelerList objects, one per person
 traveler_lists = []
 
-print(et.et() + "Processing traveler list files:",end="",flush=True)
+print(et.et() + "Processing traveler list files:",flush=True)
 for t in traveler_ids:
     if t.endswith('.list'):
-        print(" " + t,end="",flush=True)
+        print(t + " ",end="",flush=True)
         traveler_lists.append(TravelerList(t,route_hash,args.userlistfilepath))
-print(" processed " + str(len(traveler_lists)) + " traveler list files.")
+print('\n' + et.et() + "Processed " + str(len(traveler_lists)) + " traveler list files.")
 traveler_lists.sort(key=lambda TravelerList: TravelerList.traveler_name)
 # assign traveler numbers
 travnum = 0
@@ -3524,6 +3524,7 @@ else:
     sqlfile.write('DROP TABLE IF EXISTS continents;\n')
     
     # first, continents, countries, and regions
+    print(et.et() + "...continents, countries, regions", flush=True)
     sqlfile.write('CREATE TABLE continents (code VARCHAR(3), name VARCHAR(15), PRIMARY KEY(code));\n')
     sqlfile.write('INSERT INTO continents VALUES\n')
     first = True
@@ -3559,6 +3560,7 @@ else:
     # color for its mapping, a level (one of active, preview, devel), and
     # a boolean indicating if the system is active for mapping in the
     # project in the field 'active'
+    print(et.et() + "...systems", flush=True)
     sqlfile.write('CREATE TABLE systems (systemName VARCHAR(10), countryCode CHAR(3), fullName VARCHAR(60), color VARCHAR(16), level VARCHAR(10), tier INTEGER, csvOrder INTEGER, PRIMARY KEY(systemName));\n')
     sqlfile.write('INSERT INTO systems VALUES\n')
     first = True
@@ -3574,6 +3576,7 @@ else:
     sqlfile.write(";\n")
 
     # next, a table of highways, with the same fields as in the first line
+    print(et.et() + "...routes", flush=True)
     sqlfile.write('CREATE TABLE routes (systemName VARCHAR(10), region VARCHAR(8), route VARCHAR(16), banner VARCHAR(6), abbrev VARCHAR(3), city VARCHAR(100), root VARCHAR(32), mileage FLOAT, rootOrder INTEGER, csvOrder INTEGER, PRIMARY KEY(root), FOREIGN KEY (systemName) REFERENCES systems(systemName));\n')
     sqlfile.write('INSERT INTO routes VALUES\n')
     first = True
@@ -3588,6 +3591,7 @@ else:
     sqlfile.write(";\n")
 
     # connected routes table, but only first "root" in each in this table
+    print(et.et() + "...connectedRoutes", flush=True)
     sqlfile.write('CREATE TABLE connectedRoutes (systemName VARCHAR(10), route VARCHAR(16), banner VARCHAR(6), groupName VARCHAR(100), firstRoot VARCHAR(32), mileage FLOAT, csvOrder INTEGER, PRIMARY KEY(firstRoot), FOREIGN KEY (firstRoot) REFERENCES routes(root));\n')
     sqlfile.write('INSERT INTO connectedRoutes VALUES\n')
     first = True
@@ -3603,6 +3607,7 @@ else:
 
     # This table has remaining roots for any connected route
     # that connects multiple routes/roots
+    print(et.et() + "...connectedRouteRoots", flush=True)
     sqlfile.write('CREATE TABLE connectedRouteRoots (firstRoot VARCHAR(32), root VARCHAR(32), FOREIGN KEY (firstRoot) REFERENCES connectedRoutes(firstRoot));\n')
     first = True
     for h in highway_systems:
@@ -3618,6 +3623,7 @@ else:
     sqlfile.write(";\n")
 
     # Now, a table with raw highway route data: list of points, in order, that define the route
+    print(et.et() + "...waypoints", flush=True)
     sqlfile.write('CREATE TABLE waypoints (pointId INTEGER, pointName VARCHAR(20), latitude DOUBLE, longitude DOUBLE, root VARCHAR(32), PRIMARY KEY(pointId), FOREIGN KEY (root) REFERENCES routes(root));\n')
     point_num = 0
     for h in highway_systems:
@@ -3638,6 +3644,7 @@ else:
     sqlfile.write('CREATE INDEX `longitude` ON waypoints(`longitude`);\n')
 
     # Table of all HighwaySegments.
+    print(et.et() + "...segments", flush=True)
     sqlfile.write('CREATE TABLE segments (segmentId INTEGER, waypoint1 INTEGER, waypoint2 INTEGER, root VARCHAR(32), PRIMARY KEY (segmentId), FOREIGN KEY (waypoint1) REFERENCES waypoints(pointId), FOREIGN KEY (waypoint2) REFERENCES waypoints(pointId), FOREIGN KEY (root) REFERENCES routes(root));\n')
     segment_num = 0
     clinched_list = []
@@ -3657,6 +3664,7 @@ else:
 
     # maybe a separate traveler table will make sense but for now, I'll just use
     # the name from the .list name
+    print(et.et() + "...clinched", flush=True)
     sqlfile.write('CREATE TABLE clinched (segmentId INTEGER, traveler VARCHAR(48), FOREIGN KEY (segmentId) REFERENCES segments(segmentId));\n')
     for start in range(0, len(clinched_list), 10000):
         sqlfile.write('INSERT INTO clinched VALUES\n')
@@ -3670,6 +3678,7 @@ else:
         
     # overall mileage by region data (with concurrencies accounted for,
     # active systems only then active+preview)
+    print(et.et() + "...overallMileageByRegion", flush=True)
     sqlfile.write('CREATE TABLE overallMileageByRegion (region VARCHAR(8), activeMileage FLOAT, activePreviewMileage FLOAT);\n')
     sqlfile.write('INSERT INTO overallMileageByRegion VALUES\n')
     first = True
@@ -3690,6 +3699,7 @@ else:
 
     # system mileage by region data (with concurrencies accounted for,
     # active systems and preview systems only)
+    print(et.et() + "...systemMileageByRegion", flush=True)
     sqlfile.write('CREATE TABLE systemMileageByRegion (systemName VARCHAR(10), region VARCHAR(8), mileage FLOAT, FOREIGN KEY (systemName) REFERENCES systems(systemName));\n')
     sqlfile.write('INSERT INTO systemMileageByRegion VALUES\n')
     first = True
@@ -3704,6 +3714,7 @@ else:
 
     # clinched overall mileage by region data (with concurrencies
     # accounted for, active systems and preview systems only)
+    print(et.et() + "...clinchedOverallMileageByRegion", flush=True)
     sqlfile.write('CREATE TABLE clinchedOverallMileageByRegion (region VARCHAR(8), traveler VARCHAR(48), activeMileage FLOAT, activePreviewMileage FLOAT);\n')
     sqlfile.write('INSERT INTO clinchedOverallMileageByRegion VALUES\n')
     first = True
@@ -3722,6 +3733,7 @@ else:
 
     # clinched system mileage by region data (with concurrencies accounted
     # for, active systems and preview systems only)
+    print(et.et() + "...clinchedSystemMileageByRegion", flush=True)
     sqlfile.write('CREATE TABLE clinchedSystemMileageByRegion (systemName VARCHAR(10), region VARCHAR(8), traveler VARCHAR(48), mileage FLOAT, FOREIGN KEY (systemName) REFERENCES systems(systemName));\n')
     sqlfile.write('INSERT INTO clinchedSystemMileageByRegion VALUES\n')
     first = True
@@ -3734,6 +3746,7 @@ else:
 
     # clinched mileage by connected route, active systems and preview
     # systems only
+    print(et.et() + "...clinchedConnectedRoutes", flush=True)
     sqlfile.write('CREATE TABLE clinchedConnectedRoutes (route VARCHAR(32), traveler VARCHAR(48), mileage FLOAT, clinched BOOLEAN, FOREIGN KEY (route) REFERENCES connectedRoutes(firstRoot));\n')
     for start in range(0, len(ccr_values), 10000):
         sqlfile.write('INSERT INTO clinchedConnectedRoutes VALUES\n')
@@ -3746,6 +3759,7 @@ else:
         sqlfile.write(";\n")
 
     # clinched mileage by route, active systems and preview systems only
+    print(et.et() + "...clinchedRoutes", flush=True)
     sqlfile.write('CREATE TABLE clinchedRoutes (route VARCHAR(32), traveler VARCHAR(48), mileage FLOAT, clinched BOOLEAN, FOREIGN KEY (route) REFERENCES routes(root));\n')
     for start in range(0, len(cr_values), 10000):
         sqlfile.write('INSERT INTO clinchedRoutes VALUES\n')
@@ -3758,6 +3772,7 @@ else:
         sqlfile.write(";\n")
 
     # updates entries
+    print(et.et() + "...updates", flush=True)
     sqlfile.write('CREATE TABLE updates (date VARCHAR(10), region VARCHAR(60), route VARCHAR(80), root VARCHAR(32), description VARCHAR(1024));\n')
     sqlfile.write('INSERT INTO updates VALUES\n')
     first = True
@@ -3769,6 +3784,7 @@ else:
     sqlfile.write(";\n")
 
     # systemUpdates entries
+    print(et.et() + "...systemUpdates", flush=True)
     sqlfile.write('CREATE TABLE systemUpdates (date VARCHAR(10), region VARCHAR(48), systemName VARCHAR(10), description VARCHAR(128), statusChange VARCHAR(16));\n')
     sqlfile.write('INSERT INTO systemUpdates VALUES\n')
     first = True
@@ -3780,6 +3796,7 @@ else:
     sqlfile.write(";\n")
 
     # datacheck errors into the db
+    print(et.et() + "...datacheckErrors", flush=True)
     sqlfile.write('CREATE TABLE datacheckErrors (route VARCHAR(32), label1 VARCHAR(50), label2 VARCHAR(20), label3 VARCHAR(20), code VARCHAR(20), value VARCHAR(32), falsePositive BOOLEAN, FOREIGN KEY (route) REFERENCES routes(root));\n')
     if len(datacheckerrors) > 0:
         sqlfile.write('INSERT INTO datacheckErrors VALUES\n')
@@ -3806,6 +3823,7 @@ else:
 
     # update graph info in DB if graphs were generated
     if not args.skipgraphs:
+        print(et.et() + "...graphs", flush=True)
         sqlfile.write('DROP TABLE IF EXISTS graphs;\n')
         sqlfile.write('DROP TABLE IF EXISTS graphTypes;\n')
         sqlfile.write('CREATE TABLE graphTypes (category VARCHAR(12), descr VARCHAR(100), longDescr TEXT, PRIMARY KEY(category));\n')

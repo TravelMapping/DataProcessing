@@ -402,7 +402,7 @@ int main(int argc, char *argv[])
 	list<TravelerList*> traveler_lists;
 	list<string>::iterator id_it = traveler_ids.begin();
 
-	cout << et.et() << "Processing traveler list files:";
+	cout << et.et() << "Processing traveler list files:" << endl;
       #ifdef threading_enabled
 	// set up for threaded .list file processing
 	for (unsigned int t = 0; t < args.numthreads; t++)
@@ -413,12 +413,12 @@ int main(int argc, char *argv[])
 		delete thr[t];
       #else
 	for (string &t : traveler_ids)
-	{	cout << ' ' << t << std::flush;
+	{	cout << t << ' ' << std::flush;
 		traveler_lists.push_back(new TravelerList(t, &route_hash, &args, &strtok_mtx));
 	}
 	traveler_ids.clear();
       #endif
-	cout << " processed " << traveler_lists.size() << " traveler list files." << endl;
+	cout << endl << et.et() << "Processed " << traveler_lists.size() << " traveler list files." << endl;
 	traveler_lists.sort(sort_travelers_by_name);
 	// assign traveler numbers for master traveled graph
 	unsigned int travnum = 0;
