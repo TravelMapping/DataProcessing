@@ -29,6 +29,7 @@ else {	cout << et.et() << "Writing database file " << args.databasename << ".sql
 	sqlfile << "DROP TABLE IF EXISTS continents;\n";
 
 	// first, continents, countries, and regions
+	cout << et.et() << "...continents, countries, regions" << endl;
 	sqlfile << "CREATE TABLE continents (code VARCHAR(3), name VARCHAR(15), PRIMARY KEY(code));\n";
 	sqlfile << "INSERT INTO continents VALUES\n";
 	bool first = 1;
@@ -65,6 +66,7 @@ else {	cout << et.et() << "Writing database file " << args.databasename << ".sql
 	// color for its mapping, a level (one of active, preview, devel), and
 	// a boolean indicating if the system is active for mapping in the
 	// project in the field 'active'
+	cout << et.et() << "...systems" << endl;
 	sqlfile << "CREATE TABLE systems (systemName VARCHAR(10), countryCode CHAR(3), fullName VARCHAR(60), color ";
 	sqlfile << "VARCHAR(16), level VARCHAR(10), tier INTEGER, csvOrder INTEGER, PRIMARY KEY(systemName));\n";
 	sqlfile << "INSERT INTO systems VALUES\n";
@@ -81,6 +83,7 @@ else {	cout << et.et() << "Writing database file " << args.databasename << ".sql
 	sqlfile << ";\n";
 
 	// next, a table of highways, with the same fields as in the first line
+	cout << et.et() << "...routes" << endl;
 	sqlfile << "CREATE TABLE routes (systemName VARCHAR(10), region VARCHAR(8), route VARCHAR(16), banner VARCHAR(6), abbrev VARCHAR(3), city VARCHAR(100), root ";
 	sqlfile << "VARCHAR(32), mileage FLOAT, rootOrder INTEGER, csvOrder INTEGER, PRIMARY KEY(root), FOREIGN KEY (systemName) REFERENCES systems(systemName));\n";
 	sqlfile << "INSERT INTO routes VALUES\n";
@@ -96,6 +99,7 @@ else {	cout << et.et() << "Writing database file " << args.databasename << ".sql
 	sqlfile << ";\n";
 
 	// connected routes table, but only first "root" in each in this table
+	cout << et.et() << "...connectedRoutes" << endl;
 	sqlfile << "CREATE TABLE connectedRoutes (systemName VARCHAR(10), route VARCHAR(16), banner VARCHAR(6), groupName VARCHAR(100), firstRoot ";
 	sqlfile << "VARCHAR(32), mileage FLOAT, csvOrder INTEGER, PRIMARY KEY(firstRoot), FOREIGN KEY (firstRoot) REFERENCES routes(root));\n";
 	sqlfile << "INSERT INTO connectedRoutes VALUES\n";
@@ -112,6 +116,7 @@ else {	cout << et.et() << "Writing database file " << args.databasename << ".sql
 
 	// This table has remaining roots for any connected route
 	// that connects multiple routes/roots
+	cout << et.et() << "...connectedRouteRoots" << endl;
 	sqlfile << "CREATE TABLE connectedRouteRoots (firstRoot VARCHAR(32), root VARCHAR(32), FOREIGN KEY (firstRoot) REFERENCES connectedRoutes(firstRoot));\n";
 	first = 1;
 	for (HighwaySystem *h : highway_systems)
@@ -125,6 +130,7 @@ else {	cout << et.et() << "Writing database file " << args.databasename << ".sql
 	sqlfile << ";\n";
 
 	// Now, a table with raw highway route data: list of points, in order, that define the route
+	cout << et.et() << "...waypoints" << endl;
 	sqlfile << "CREATE TABLE waypoints (pointId INTEGER, pointName VARCHAR(20), latitude DOUBLE, longitude DOUBLE, ";
 	sqlfile << "root VARCHAR(32), PRIMARY KEY(pointId), FOREIGN KEY (root) REFERENCES routes(root));\n";
 	unsigned int point_num = 0;
@@ -147,6 +153,7 @@ else {	cout << et.et() << "Writing database file " << args.databasename << ".sql
 	sqlfile << "CREATE INDEX `longitude` ON waypoints(`longitude`);\n";
 
 	// Table of all HighwaySegments.
+	cout << et.et() << "...segments" << endl;
 	sqlfile << "CREATE TABLE segments (segmentId INTEGER, waypoint1 INTEGER, waypoint2 INTEGER, root VARCHAR(32), PRIMARY KEY (segmentId), FOREIGN KEY (waypoint1) ";
 	sqlfile << "REFERENCES waypoints(pointId), FOREIGN KEY (waypoint2) REFERENCES waypoints(pointId), FOREIGN KEY (root) REFERENCES routes(root));\n";
 	unsigned int segment_num = 0;
@@ -168,6 +175,7 @@ else {	cout << et.et() << "Writing database file " << args.databasename << ".sql
 
 	// maybe a separate traveler table will make sense but for now, I'll just use
 	// the name from the .list name
+	cout << et.et() << "...clinched" << endl;
 	sqlfile << "CREATE TABLE clinched (segmentId INTEGER, traveler VARCHAR(48), FOREIGN KEY (segmentId) REFERENCES segments(segmentId));\n";
 	for (size_t start = 0; start < clinched_list.size(); start += 10000)
 	{	sqlfile << "INSERT INTO clinched VALUES\n";
@@ -182,6 +190,7 @@ else {	cout << et.et() << "Writing database file " << args.databasename << ".sql
 
 	// overall mileage by region data (with concurrencies accounted for,
 	// active systems only then active+preview)
+	cout << et.et() << "...overallMileageByRegion" << endl;
 	sqlfile << "CREATE TABLE overallMileageByRegion (region VARCHAR(8), activeMileage FLOAT, activePreviewMileage FLOAT);\n";
 	sqlfile << "INSERT INTO overallMileageByRegion VALUES\n";
 	first = 1;
@@ -197,6 +206,7 @@ else {	cout << et.et() << "Writing database file " << args.databasename << ".sql
 
 	// system mileage by region data (with concurrencies accounted for,
 	// active systems and preview systems only)
+	cout << et.et() << "...systemMileageByRegion" << endl;
 	sqlfile << "CREATE TABLE systemMileageByRegion (systemName VARCHAR(10), region VARCHAR(8), ";
 	sqlfile << "mileage FLOAT, FOREIGN KEY (systemName) REFERENCES systems(systemName));\n";
 	sqlfile << "INSERT INTO systemMileageByRegion VALUES\n";
@@ -214,6 +224,7 @@ else {	cout << et.et() << "Writing database file " << args.databasename << ".sql
 
 	// clinched overall mileage by region data (with concurrencies
 	// accounted for, active systems and preview systems only)
+	cout << et.et() << "...clinchedOverallMileageByRegion" << endl;
 	sqlfile << "CREATE TABLE clinchedOverallMileageByRegion (region VARCHAR(8), traveler VARCHAR(48), activeMileage FLOAT, activePreviewMileage FLOAT);\n";
 	sqlfile << "INSERT INTO clinchedOverallMileageByRegion VALUES\n";
 	first = 1;
@@ -232,6 +243,7 @@ else {	cout << et.et() << "Writing database file " << args.databasename << ".sql
 
 	// clinched system mileage by region data (with concurrencies accounted
 	// for, active systems and preview systems only)
+	cout << et.et() << "...clinchedSystemMileageByRegion" << endl;
 	sqlfile << "CREATE TABLE clinchedSystemMileageByRegion (systemName VARCHAR(10), region VARCHAR(8), traveler ";
 	sqlfile << "VARCHAR(48), mileage FLOAT, FOREIGN KEY (systemName) REFERENCES systems(systemName));\n";
 	sqlfile << "INSERT INTO clinchedSystemMileageByRegion VALUES\n";
@@ -245,6 +257,7 @@ else {	cout << et.et() << "Writing database file " << args.databasename << ".sql
 
 	// clinched mileage by connected route, active systems and preview
 	// systems only
+	cout << et.et() << "...clinchedConnectedRoutes" << endl;
 	sqlfile << "CREATE TABLE clinchedConnectedRoutes (route VARCHAR(32), traveler VARCHAR(48), mileage ";
 	sqlfile << "FLOAT, clinched BOOLEAN, FOREIGN KEY (route) REFERENCES connectedRoutes(firstRoot));\n";
 	for (size_t start = 0; start < clin_db_val.ccr_values.size(); start += 10000)
@@ -259,6 +272,7 @@ else {	cout << et.et() << "Writing database file " << args.databasename << ".sql
 	}
 
 	// clinched mileage by route, active systems and preview systems only
+	cout << et.et() << "...clinchedRoutes" << endl;
 	sqlfile << "CREATE TABLE clinchedRoutes (route VARCHAR(32), traveler VARCHAR(48), mileage FLOAT, clinched BOOLEAN, FOREIGN KEY (route) REFERENCES routes(root));\n";
 	for (size_t start = 0; start < clin_db_val.cr_values.size(); start += 10000)
 	{	sqlfile << "INSERT INTO clinchedRoutes VALUES\n";
@@ -272,6 +286,7 @@ else {	cout << et.et() << "Writing database file " << args.databasename << ".sql
 	}
 
 	// updates entries
+	cout << et.et() << "...updates" << endl;
 	sqlfile << "CREATE TABLE updates (date VARCHAR(10), region VARCHAR(60), route VARCHAR(80), root VARCHAR(32), description VARCHAR(1024));\n";
 	sqlfile << "INSERT INTO updates VALUES\n";
 	first = 1;
@@ -284,6 +299,7 @@ else {	cout << et.et() << "Writing database file " << args.databasename << ".sql
 	sqlfile << ";\n";
 
 	// systemUpdates entries
+	cout << et.et() << "...systemUpdates" << endl;
 	sqlfile << "CREATE TABLE systemUpdates (date VARCHAR(10), region VARCHAR(48), systemName VARCHAR(10), description VARCHAR(128), statusChange VARCHAR(16));\n";
 	sqlfile << "INSERT INTO systemUpdates VALUES\n";
 	first = 1;
@@ -296,6 +312,7 @@ else {	cout << et.et() << "Writing database file " << args.databasename << ".sql
 	sqlfile << ";\n";
 
 	// datacheck errors into the db
+	cout << et.et() << "...datacheckErrors" << endl;
 	sqlfile << "CREATE TABLE datacheckErrors (route VARCHAR(32), label1 VARCHAR(50), label2 VARCHAR(20), label3 VARCHAR(20), ";
 	sqlfile << "code VARCHAR(20), value VARCHAR(32), falsePositive BOOLEAN, FOREIGN KEY (route) REFERENCES routes(root));\n";
 	if (datacheckerrors->entries.size())
@@ -313,7 +330,8 @@ else {	cout << et.et() << "Writing database file " << args.databasename << ".sql
 
 	// update graph info in DB if graphs were generated
 	if (!args.skipgraphs)
-	{	sqlfile << "DROP TABLE IF EXISTS graphs;\n";
+	{	cout << et.et() << "...graphs" << endl;
+		sqlfile << "DROP TABLE IF EXISTS graphs;\n";
 		sqlfile << "DROP TABLE IF EXISTS graphTypes;\n";
 		sqlfile << "CREATE TABLE graphTypes (category VARCHAR(12), descr VARCHAR(100), longDescr TEXT, PRIMARY KEY(category));\n";
 		if (graph_types.size())
@@ -326,8 +344,6 @@ else {	cout << et.et() << "Writing database file " << args.databasename << ".sql
 			}
 			sqlfile << ";\n";
 		}
-	}
-
 		sqlfile << "CREATE TABLE graphs (filename VARCHAR(32), descr VARCHAR(100), vertices INTEGER, edges INTEGER, travelers INTEGER, ";
 		sqlfile << "format VARCHAR(10), category VARCHAR(12), FOREIGN KEY (category) REFERENCES graphTypes(category));\n";
 		if (graph_vector.size())
@@ -341,6 +357,7 @@ else {	cout << et.et() << "Writing database file " << args.databasename << ".sql
 			}
 			sqlfile << ";\n";
 		}
+	}
 
 	sqlfile.close();
      }
