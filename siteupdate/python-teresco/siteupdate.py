@@ -2511,12 +2511,12 @@ for h in highway_systems:
 # Create a list of TravelerList objects, one per person
 traveler_lists = []
 
-print(et.et() + "Processing traveler list files:",end="",flush=True)
+print(et.et() + "Processing traveler list files:",flush=True)
 for t in traveler_ids:
     if t.endswith('.list'):
-        print(" " + t,end="",flush=True)
+        print(t + " ",end="",flush=True)
         traveler_lists.append(TravelerList(t,route_hash,args.userlistfilepath))
-print(" processed " + str(len(traveler_lists)) + " traveler list files.")
+print('\n' + et.et() + "Processed " + str(len(traveler_lists)) + " traveler list files.")
 traveler_lists.sort(key=lambda TravelerList: TravelerList.traveler_name)
 # assign traveler numbers
 travnum = 0

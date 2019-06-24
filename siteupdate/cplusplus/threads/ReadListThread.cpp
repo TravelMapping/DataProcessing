@@ -14,7 +14,7 @@ void ReadListThread
 		//printf("ReadListThread %02i assigned %s\n", id, tl.data()); fflush(stdout);
 		(*it)++;
 		//printf("ReadListThread %02i (*it)++\n", id); fflush(stdout);
-		std::cout << ' ' << tl << std::flush;
+		std::cout << tl << ' ' << std::flush;
 		tl_mtx->unlock();
 		TravelerList *t = new TravelerList(tl, route_hash, args, strtok_mtx);
 				  // deleted on termination of program
