@@ -1,16 +1,15 @@
-void NmpMergedThread(std::list<HighwaySystem*> *hs_list, std::mutex *mtx, std::string *nmpmergepath)
-{	//std::cout << "Starting NMPMergedThread " << id << std::endl;
-	while (hs_list->size())
+void NmpMergedThread(unsigned int id, std::list<HighwaySystem*> *hs_list, std::list<HighwaySystem*>::iterator *it, std::mutex *mtx, std::string *nmpmergepath)
+{	//printf("Starting NMPMergedThread %02i\n", id); fflush(stdout);
+	while (*it != hs_list->end())
 	{	mtx->lock();
-		if (!hs_list->size())
+		if (*it == hs_list->end())
 		{	mtx->unlock();
 			return;
 		}
-		//std::cout << "Thread " << id << " with hs_list.size()=" << hs_list.size() << std::endl;
-		HighwaySystem *h(hs_list->front());
-		//std::cout << "Thread " << id << " assigned " << h->systemname << std::endl;
-		hs_list->pop_front();
-		//std::cout << "Thread " << id << " hs_list->pop_front() successful." << std::endl;
+		HighwaySystem *h(**it);
+		//printf("NmpMergedThread %02i assigned %s\n", id, h->systemname.data()); fflush(stdout);
+		(*it)++;
+		//printf("NmpMergedThread %02i (*it)++\n", id); fflush(stdout);
 		mtx->unlock();
 		for (Route &r : h->route_list)
 			r.write_nmp_merged(*nmpmergepath + "/" + r.region->code);
