@@ -1879,6 +1879,79 @@ class HighwayGraph:
                                 trav_set.add(t)
         return (edge_set, sorted(trav_set, key=lambda TravelerList: TravelerList.traveler_name))
 
+    # write the entire set of highway data in .tmg format.
+    # The first line is a header specifying the format and version number,
+    # The second line specifies the number of waypoints, w, the number of connections, c,
+    #     and for traveled graphs only, the number of travelers.
+    # Then, w lines describing waypoints (label, latitude, longitude).
+    # Then, c lines describing connections (endpoint 1 number, endpoint 2 number, route label),
+    #     followed on traveled graphs only by a hexadecimal code encoding travelers on that segment,
+    #     followed on both collapsed & traveled graphs by a list of latitude & longitude values
+    #     for intermediate "shaping points" along the edge, ordered from endpoint 1 to endpoint 2.
+    #
+    def write_master_graphs_tmg(self, graph_list, path, traveler_lists):
+        simplefile = open(path+"tm-master-simple.tmg","w",encoding='utf-8')
+        collapfile = open(path+"tm-master-collapsed.tmg","w",encoding='utf-8')
+        travelfile = open(path+"tm-master-traveled.tmg","w",encoding='utf-8')
+        num_collapsed_edges = self.collapsed_edge_count()
+        num_traveled_edges = self.traveled_edge_count()
+        simplefile.write("TMG 1.0 simple\n")
+        collapfile.write("TMG 1.0 collapsed\n")
+        travelfile.write("TMG 2.0 traveled\n")
+        simplefile.write(str(len(self.vertices)) + ' ' + str(self.simple_edge_count()) + '\n')
+        collapfile.write(str(self.num_collapsed_vertices()) + ' ' + str(num_collapsed_edges) + '\n')
+        travelfile.write(str(self.num_traveled_vertices()) + ' ' + str(num_traveled_edges) + ' ' + str(len(traveler_lists)) + '\n')
+
+        # write vertices
+        sv = 0
+        cv = 0
+        tv = 0
+        for v in self.vertices.values():
+            # all vertices for simple graph
+            simplefile.write(v.unique_name+' '+str(v.lat)+' '+str(v.lng)+'\n')
+            v.s_vertex_num = sv
+            sv += 1
+            # visible vertices...
+            if v.visibility >= 1:
+                # for traveled graph,
+                travelfile.write(v.unique_name+' '+str(v.lat)+' '+str(v.lng)+'\n')
+                v.t_vertex_num = tv
+                tv += 1
+                if v.visibility == 2:
+                    # and for collapsed graph
+                    collapfile.write(v.unique_name+' '+str(v.lat)+' '+str(v.lng)+'\n')
+                    v.c_vertex_num = cv
+                    cv += 1
+        # now edges, only write if not already written
+        for v in self.vertices.values():
+            for e in v.incident_s_edges:
+                if not e.s_written:
+                    e.s_written = 1
+                    simplefile.write(str(e.vertex1.s_vertex_num) + ' ' + str(e.vertex2.s_vertex_num) + ' ' + e.label() + '\n')
+            # write edges if vertex is visible...
+            if v.visibility >= 1:
+                # in traveled graph,
+                for e in v.incident_t_edges:
+                    if not e.t_written:
+                        e.t_written = 1
+                        travelfile.write(e.traveled_tmg_line(traveler_lists) + '\n')
+                if v.visibility == 2:
+                    # and in collapsed graph
+                    for e in v.incident_c_edges:
+                        if not e.c_written:
+                            e.c_written = 1
+                            collapfile.write(e.collapsed_tmg_line() + '\n')
+        # traveler names
+        for t in traveler_lists:
+            travelfile.write(t.traveler_name + ' ')
+        travelfile.write('\n')
+        simplefile.close()
+        collapfile.close()
+        travelfile.close()
+        graph_list.append(GraphListEntry('tm-master-simple.tmg', 'All Travel Mapping Data', sv, self.simple_edge_count(), 0, 'simple', 'master'))
+        graph_list.append(GraphListEntry('tm-master-collapsed.tmg', 'All Travel Mapping Data', cv, self.collapsed_edge_count(), 0, 'collapsed', 'master'))
+        graph_list.append(GraphListEntry('tm-master-traveled.tmg', 'All Travel Mapping Data', tv, self.traveled_edge_count(), len(traveler_lists), 'traveled', 'master'))
+
     # write the entire set of highway data a format very similar to
     # the original .gra format.  The first line is a header specifying
     # the format and version number, the second line specifying the
@@ -3088,18 +3161,8 @@ graph_types = []
 if args.skipgraphs or args.errorcheck:
     print(et.et() + "SKIPPING generation of subgraphs.", flush=True)
 else:
-    print(et.et() + "Writing master TM simple graph file, tm-master-simple.tmg", flush=True)
-    (sv, se) = graph_data.write_master_tmg_simple(args.graphfilepath+'/tm-master-simple.tmg')
-    graph_list.append(GraphListEntry('tm-master-simple.tmg', 'All Travel Mapping Data', sv, se, 0, 'simple', 'master'))
-
-    print(et.et() + "Writing master TM collapsed graph file, tm-master-collapsed.tmg.", flush=True)
-    (cv, ce) = graph_data.write_master_tmg_collapsed(args.graphfilepath+'/tm-master-collapsed.tmg')
-    graph_list.append(GraphListEntry('tm-master-collapsed.tmg', 'All Travel Mapping Data', cv, ce, 0, 'collapsed', 'master'))
-
-    print(et.et() + "Writing master TM traveled graph file, tm-master-traveled.tmg.", flush=True)
-    (tv, te, tt) = graph_data.write_master_tmg_traveled(args.graphfilepath+'/tm-master-traveled.tmg', traveler_lists)
-    graph_list.append(GraphListEntry('tm-master-traveled.tmg', 'All Travel Mapping Data', tv, te, tt, 'traveled', 'master'))
-
+    print(et.et() + "Writing master TM graph files.", flush=True)
+    graph_data.write_master_graphs_tmg(graph_list, args.graphfilepath+'/', traveler_lists)
     graph_types.append(['master', 'All Travel Mapping Data',
                         'These graphs contain all routes currently plotted in the Travel Mapping project.'])
 

@@ -358,6 +358,98 @@ class HighwayGraph
 	}
 
 	// write the entire set of highway data in .tmg format.
+	// The first line is a header specifying the format and version number,
+	// The second line specifies the number of waypoints, w, the number of connections, c,
+	//     and for traveled graphs only, the number of travelers.
+	// Then, w lines describing waypoints (label, latitude, longitude).
+	// Then, c lines describing connections (endpoint 1 number, endpoint 2 number, route label),
+	//     followed on traveled graphs only by a hexadecimal code encoding travelers on that segment,
+	//     followed on both collapsed & traveled graphs by a list of latitude & longitude values
+	//     for intermediate "shaping points" along the edge, ordered from endpoint 1 to endpoint 2.
+	//
+	void write_master_graphs_tmg(std::vector<GraphListEntry> &graph_vector, std::string path, std::list<TravelerList*> &traveler_lists)
+	{	std::ofstream simplefile(path+"tm-master-simple.tmg");
+		std::ofstream collapfile(path+"tm-master-collapsed.tmg");
+		std::ofstream travelfile(path+"tm-master-traveled.tmg");
+		unsigned int num_collapsed_edges = collapsed_edge_count();
+		unsigned int num_traveled_edges = traveled_edge_count();
+		simplefile << "TMG 1.0 simple\n";
+		collapfile << "TMG 1.0 collapsed\n";
+		travelfile << "TMG 2.0 traveled\n";
+		simplefile << vertices.size() << ' ' << simple_edge_count() << '\n';
+		collapfile << num_collapsed_vertices() << ' ' << num_collapsed_edges << '\n';
+		travelfile << num_traveled_vertices() << ' ' << num_traveled_edges << ' ' << traveler_lists.size() << '\n';
+
+		// write vertices
+		unsigned int sv = 0;
+		unsigned int cv = 0;
+		unsigned int tv = 0;
+		for (std::pair<Waypoint* const, HGVertex*> wv : vertices)
+		{	char fstr[57];
+			sprintf(fstr, " %.15g %.15g", wv.second->lat, wv.second->lng);
+			// all vertices for simple graph
+			simplefile << *(wv.second->unique_name) << fstr << '\n';
+			wv.second->s_vertex_num[0] = sv;
+			sv++;
+			// visible vertices...
+			if (wv.second->visibility >= 1)
+			{	// for traveled graph,
+				travelfile << *(wv.second->unique_name) << fstr << '\n';
+				wv.second->t_vertex_num[0] = tv;
+				tv++;
+				if (wv.second->visibility == 2)
+				{	// and for collapsed graph
+					collapfile << *(wv.second->unique_name) << fstr << '\n';
+					wv.second->c_vertex_num[0] = cv;
+					cv++;
+				}
+			}
+		}
+		// now edges, only write if not already written
+		for (std::pair<const Waypoint*, HGVertex*> wv : vertices)
+		{	for (HGEdge *e : wv.second->incident_s_edges)
+			  if (!e->s_written)
+			  {	e->s_written = 1;
+				simplefile << e->vertex1->s_vertex_num[0] << ' ' << e->vertex2->s_vertex_num[0] << ' ' << e->label(0) << '\n';
+			  }
+			// write edges if vertex is visible...
+			if (wv.second->visibility >= 1)
+			{	// in traveled graph,
+				for (HGEdge *e : wv.second->incident_t_edges)
+				  if (!e->t_written)
+				  {	e->t_written = 1;
+					travelfile << e->traveled_tmg_line(0, &traveler_lists, 0) << '\n';
+				  }
+				if (wv.second->visibility == 2)
+				{	// and in collapsed graph
+					for (HGEdge *e : wv.second->incident_c_edges)
+					  if (!e->c_written)
+					  {	e->c_written = 1;
+						collapfile << e->collapsed_tmg_line(0, 0) << '\n';
+					  }
+				}
+			}
+		}
+		// traveler names
+		for (TravelerList *t : traveler_lists)
+			travelfile << t->traveler_name << ' ';
+		travelfile << '\n';
+		simplefile.close();
+		collapfile.close();
+		travelfile.close();
+
+		graph_vector[0].vertices = vertices.size();
+		graph_vector[1].vertices = num_collapsed_vertices();
+		graph_vector[2].vertices = num_traveled_vertices();
+		graph_vector[0].edges = simple_edge_count();
+		graph_vector[1].edges = num_collapsed_edges;
+		graph_vector[2].edges = num_traveled_edges;
+		graph_vector[0].travelers = 0;
+		graph_vector[1].travelers = 0;
+		graph_vector[2].travelers = traveler_lists.size();
+	}
+
+	// write the entire set of highway data in .tmg format.
 	// The first line is a header specifying
 	// the format and version number, the second line specifying the
 	// number of waypoints, w, and the number of connections, c, then w

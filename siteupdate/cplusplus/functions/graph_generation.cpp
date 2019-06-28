@@ -28,33 +28,13 @@ else {	list<Region*> *regions;
 				  'c', 'M', (list<Region*>*)0, (list<HighwaySystem*>*)0, (PlaceRadius*)0);
 	graph_vector.emplace_back("tm-master", "All Travel Mapping Data",
 				  't', 'M', (list<Region*>*)0, (list<HighwaySystem*>*)0, (PlaceRadius*)0);
-
-      /*#ifdef threading_enabled
-	if (args.numthreads <= 1)
-      #endif//*/
-	     {	cout << et.et() << "Writing master TM simple graph file, tm-master-simple.tmg" << endl;
-		graph_data.write_master_tmg_simple(&graph_vector[0], args.graphfilepath+"/tm-master-simple.tmg");
-		cout << et.et() << "Writing master TM collapsed graph file, tm-master-collapsed.tmg." << endl;
-		graph_data.write_master_tmg_collapsed(&graph_vector[1], args.graphfilepath+"/tm-master-collapsed.tmg", 0);
-		cout << et.et() << "Writing master TM traveled graph file, tm-master-traveled.tmg." << endl;
-		graph_data.write_master_tmg_traveled(&graph_vector[2], args.graphfilepath+"/tm-master-traveled.tmg", &traveler_lists, 0);
-	     }
-      /*#ifdef threading_enabled
-	else {	cout << et.et() << "Writing master TM simple graph file, tm-master-simple.tmg" << endl;
-		thr[0] = new thread(MasterTmgSimpleThread, &graph_data, &graph_vector[0], args.graphfilepath+"/tm-master-simple.tmg");
-		cout << et.et() << "Writing master TM collapsed graph file, tm-master-collapsed.tmg." << endl;
-		thr[1] = new thread(MasterTmgCollapsedThread, &graph_data, &graph_vector[1], args.graphfilepath+"/tm-master-collapsed.tmg");
-		thr[0]->join();
-		thr[1]->join();
-		delete thr[0];
-		delete thr[1];
-	     }
-      #endif//*/
-
 	graph_types.push_back({"master", "All Travel Mapping Data", "These graphs contain all routes currently plotted in the Travel Mapping project."});
 	size_t graphnum = 3;
-      #ifdef threading_enabled
-	cout << et.et() << "Setting up subgraphs." << flush;
+      #ifndef threading_enabled
+	cout << et.et() << "Writing master TM graph files." << endl;
+	graph_data.write_master_graphs_tmg(graph_vector, args.graphfilepath + "/", traveler_lists);
+      #else
+	cout << et.et() << "Setting up subgraphs." << endl;
       #endif
 	#include "subgraphs/continent.cpp"
 	#include "subgraphs/multisystem.cpp"
@@ -64,10 +44,13 @@ else {	list<Region*> *regions;
 	#include "subgraphs/area.cpp"
 	#include "subgraphs/region.cpp"
       #ifdef threading_enabled
-	// write new graph_vector entries to disk
+	// write graph_vector entries to disk
+	cout << et.et() << "Writing master TM graph files." << flush;
+	thr[0] = new thread(MasterTmgThread, &graph_data, &graph_vector, args.graphfilepath+'/', &traveler_lists, &graphnum, &list_mtx, &all_waypoints, &et);
 	// set up for threaded subgraph generation
-	for (unsigned int t = 0; t < args.numthreads; t++)
-		thr[t] = new thread(SubgraphThread, t, &graph_data, &graph_vector, &graphnum, &list_mtx, args.graphfilepath + "/", &all_waypoints, &et);
+	// start at t=1, because MasterTmgThread will spawn another SubgraphThread when finished
+	for (unsigned int t = 1; t < args.numthreads; t++)
+		thr[t] = new thread(SubgraphThread, t, &graph_data, &graph_vector, &graphnum, &list_mtx, args.graphfilepath+'/', &all_waypoints, &et);
 	for (unsigned int t = 0; t < args.numthreads; t++)
 		thr[t]->join();
 	for (unsigned int t = 0; t < args.numthreads; t++)

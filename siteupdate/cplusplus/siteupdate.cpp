@@ -82,7 +82,7 @@ class HGEdge;
 #include "threads/ComputeStatsThread.cpp"
 #include "threads/UserLogThread.cpp"
 #include "threads/SubgraphThread.cpp"
-#include "threads/MasterTmgThreads.cpp"
+#include "threads/MasterTmgThread.cpp"
 #include "functions/sql_file.cpp"
 using namespace std;
 
