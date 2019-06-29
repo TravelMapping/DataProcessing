@@ -82,7 +82,8 @@ class HGEdge;
 #include "threads/ComputeStatsThread.cpp"
 #include "threads/UserLogThread.cpp"
 #include "threads/SubgraphThread.cpp"
-#include "threads/MasterTmgThreads.cpp"
+#include "threads/MasterTmgThread.cpp"
+#include "functions/sql_file.cpp"
 using namespace std;
 
 int main(int argc, char *argv[])
@@ -223,7 +224,7 @@ int main(int argc, char *argv[])
     {	cout << et.et() << "Checking for duplicate list names in routes, roots in routes and connected routes." << endl;
 	unordered_set<string> roots, list_names, duplicate_list_names;
 	unordered_set<Route*> con_roots;
-	
+
 	for (HighwaySystem *h : highway_systems)
 	{	for (Route r : h->route_list)
 		{	if (roots.find(r.root) == roots.end()) roots.insert(r.root);
@@ -677,7 +678,7 @@ int main(int argc, char *argv[])
 	list<string> region_entries;
 	for (Region region : all_regions)
 	  if (region.overall_mileage)
-	  {	sprintf(fstr, ": %.2f (active), %.2f (active, preview) %.2f (active, preview, devel)\n", 
+	  {	sprintf(fstr, ": %.2f (active), %.2f (active, preview) %.2f (active, preview, devel)\n",
 			region.active_only_mileage, region.active_preview_mileage, region.overall_mileage);
 		region_entries.push_back(region.code + fstr);
 	  }
@@ -943,6 +944,14 @@ int main(int argc, char *argv[])
 		return 0;
 	}
 
+      #ifdef threading_enabled
+	std::cout << et.et() << "Start writing database file " << args.databasename << ".sql.\n" << std::flush;
+	thread sqlthread;
+	if   (!args.errorcheck)
+	{	sqlthread=thread(sqlfile1, &et, &args, &all_regions, &continents, &countries, &highway_systems, &traveler_lists, &clin_db_val, &updates, &systemupdates);
+	}
+      #endif
+
 	#include "functions/graph_generation.cpp"
 
 	// now mark false positives
@@ -1002,7 +1011,18 @@ int main(int argc, char *argv[])
 		  if (!d.fp) logfile << d.str() << '\n';
 	logfile.close();
 
-	#include "functions/sql_file.cpp"
+	if   (args.errorcheck)
+		cout << et.et() << "SKIPPING database file." << endl;
+	else {
+	      #ifdef threading_enabled
+		sqlthread.join();
+		std::cout << et.et() << "Resume writing database file " << args.databasename << ".sql.\n" << std::flush;
+	      #else
+		std::cout << et.et() << "Writing database file " << args.databasename << ".sql.\n" << std::flush;
+		sqlfile1(&et, &args, &all_regions, &continents, &countries, &highway_systems, &traveler_lists, &clin_db_val, &updates, &systemupdates);
+	      #endif
+		sqlfile2(&et, &args, &graph_types, &graph_vector, datacheckerrors);
+	     }
 
 	// print some statistics
 	cout << et.et() << "Processed " << highway_systems.size() << " highway systems." << endl;
