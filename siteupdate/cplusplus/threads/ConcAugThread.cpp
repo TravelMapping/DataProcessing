@@ -1,16 +1,16 @@
-void ConcAugThread(unsigned int id, std::list<TravelerList*> *travlists, std::mutex *tl_mtx, std::mutex *log_mtx, std::ofstream *concurrencyfile)
-{	//std::cout << "Starting NMPMergedThread " << id << std::endl;
-	while (travlists->size())
+void ConcAugThread(unsigned int id, std::list<TravelerList*> *travlists, std::list<TravelerList*>::iterator *it,
+		   std::mutex *tl_mtx, std::mutex *log_mtx, std::ofstream *concurrencyfile)
+{	//printf("Starting ConcAugThread %02i\n", id); fflush(stdout);
+	while (*it != travlists->end())
 	{	tl_mtx->lock();
-		if (!travlists->size())
+		if (*it == travlists->end())
 		{	tl_mtx->unlock();
 			return;
 		}
-		//std::cout << "Thread " << id << " with travlists.size()=" << travlists->size() << std::endl;
-		TravelerList *t(travlists->front());
-		//std::cout << "Thread " << id << " assigned " << t->traveler_name << std::endl;
-		travlists->pop_front();
-		//std::cout << "Thread " << id << " travlists->pop_front() successful." << std::endl;
+		TravelerList *t(**it);
+		//printf("ConcAugThread %02i assigned %s\n", id, t->traveler_name.data()); fflush(stdout);
+		(*it)++;
+		//printf("ConcAugThread %02i (*it)++\n", id); fflush(stdout);
 		tl_mtx->unlock();
 		std::cout << '.' << std::flush;
 		for (HighwaySegment *s : t->clinched_segments)

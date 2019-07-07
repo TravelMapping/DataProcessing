@@ -49,6 +49,7 @@ class HGEdge;
 #include "functions/format_clinched_mi.cpp"
 #include "functions/double_quotes.cpp"
 #include "functions/crawl_hwy_data.cpp"
+#include "functions/operators.cpp"
 #include "classes/Arguments.cpp"
 #include "classes/WaypointQuadtree/WaypointQuadtree.h"
 #include "classes/Route/Route.h"
@@ -69,10 +70,11 @@ class HGEdge;
 #include "classes/HighwaySegment/HighwaySegment.cpp"
 #include "classes/GraphGeneration/HGEdge.h"
 #include "classes/GraphGeneration/HGVertex.cpp"
-#include "classes/GraphGeneration/PlaceRadius.cpp"
+#include "classes/GraphGeneration/PlaceRadius.h"
 #include "classes/GraphGeneration/GraphListEntry.cpp"
 #include "classes/GraphGeneration/HighwayGraph.cpp"
 #include "classes/GraphGeneration/HGEdge.cpp"
+#include "classes/GraphGeneration/PlaceRadius.cpp"
 #include "threads/ReadWptThread.cpp"
 #include "threads/NmpMergedThread.cpp"
 #include "threads/ReadListThread.cpp"
@@ -80,7 +82,8 @@ class HGEdge;
 #include "threads/ComputeStatsThread.cpp"
 #include "threads/UserLogThread.cpp"
 #include "threads/SubgraphThread.cpp"
-#include "threads/MasterTmgThreads.cpp"
+#include "threads/MasterTmgThread.cpp"
+#include "functions/sql_file.cpp"
 using namespace std;
 
 int main(int argc, char *argv[])
@@ -221,7 +224,7 @@ int main(int argc, char *argv[])
     {	cout << et.et() << "Checking for duplicate list names in routes, roots in routes and connected routes." << endl;
 	unordered_set<string> roots, list_names, duplicate_list_names;
 	unordered_set<Route*> con_roots;
-	
+
 	for (HighwaySystem *h : highway_systems)
 	{	for (Route r : h->route_list)
 		{	if (roots.find(r.root) == roots.end()) roots.insert(r.root);
@@ -290,11 +293,11 @@ int main(int argc, char *argv[])
 	cout << et.et() << "Reading waypoints for all routes." << endl;
       #ifdef threading_enabled
 	// set up for threaded processing of highway systems
-	list<HighwaySystem*> hs_list = highway_systems;
+	list<HighwaySystem*>::iterator hs_it = highway_systems.begin();
 
 	thread **thr = new thread*[args.numthreads];
 	for (unsigned int t = 0; t < args.numthreads; t++)
-		thr[t] = new thread(ReadWptThread, t, &hs_list, &list_mtx, args.highwaydatapath+"/hwy_data",
+		thr[t] = new thread(ReadWptThread, t, &highway_systems, &hs_it, &list_mtx, args.highwaydatapath+"/hwy_data",
 				    &el, &all_wpt_files, &all_waypoints, &strtok_mtx, datacheckerrors);
 	for (unsigned int t = 0; t < args.numthreads; t++)
 		thr[t]->join();
@@ -371,9 +374,9 @@ int main(int argc, char *argv[])
 	{	cout << et.et() << "Writing near-miss point merged wpt files." << endl; //FIXME output dots to indicate progress
 	      #ifdef threading_enabled
 		// set up for threaded nmp_merged file writes
-		hs_list = highway_systems;
+		hs_it = highway_systems.begin();
 		for (unsigned int t = 0; t < args.numthreads; t++)
-			thr[t] = new thread(NmpMergedThread, &hs_list, &list_mtx, &args.nmpmergepath);
+			thr[t] = new thread(NmpMergedThread, t, &highway_systems, &hs_it, &list_mtx, &args.nmpmergepath);
 		for (unsigned int t = 0; t < args.numthreads; t++)
 			thr[t]->join();
 		for (unsigned int t = 0; t < args.numthreads; t++)
@@ -398,24 +401,25 @@ int main(int argc, char *argv[])
 
 	// Create a list of TravelerList objects, one per person
 	list<TravelerList*> traveler_lists;
+	list<string>::iterator id_it = traveler_ids.begin();
 
-	cout << et.et() << "Processing traveler list files:";
+	cout << et.et() << "Processing traveler list files:" << endl;
       #ifdef threading_enabled
 	// set up for threaded .list file processing
 	for (unsigned int t = 0; t < args.numthreads; t++)
-		thr[t] = new thread(ReadListThread, &traveler_ids, &traveler_lists, &list_mtx, &strtok_mtx, &args, &route_hash);
+		thr[t] = new thread(ReadListThread, t, &traveler_ids, &id_it, &traveler_lists, &list_mtx, &strtok_mtx, &args, &route_hash);
 	for (unsigned int t = 0; t < args.numthreads; t++)
 		thr[t]->join();
 	for (unsigned int t = 0; t < args.numthreads; t++)
 		delete thr[t];
       #else
 	for (string &t : traveler_ids)
-	{	cout << ' ' << t << std::flush;
+	{	cout << t << ' ' << std::flush;
 		traveler_lists.push_back(new TravelerList(t, &route_hash, &args, &strtok_mtx));
 	}
 	traveler_ids.clear();
       #endif
-	cout << " processed " << traveler_lists.size() << " traveler list files." << endl;
+	cout << endl << et.et() << "Processed " << traveler_lists.size() << " traveler list files." << endl;
 	traveler_lists.sort(sort_travelers_by_name);
 	// assign traveler numbers for master traveled graph
 	unsigned int travnum = 0;
@@ -590,10 +594,10 @@ int main(int argc, char *argv[])
         //#include "debug/concurrency_augments.cpp"
       #ifdef threading_enabled
 	// set up for threaded concurrency augments
-	list<TravelerList*> travlists_copy = traveler_lists;
+	list<TravelerList*>::iterator tl_it = traveler_lists.begin();
 
 	for (unsigned int t = 0; t < args.numthreads; t++)
-		thr[t] = new thread(ConcAugThread, t, &travlists_copy, &list_mtx, &log_mtx, &concurrencyfile);
+		thr[t] = new thread(ConcAugThread, t, &traveler_lists, &tl_it, &list_mtx, &log_mtx, &concurrencyfile);
 	for (unsigned int t = 0; t < args.numthreads; t++)
 		thr[t]->join();
 	for (unsigned int t = 0; t < args.numthreads; t++)
@@ -629,9 +633,9 @@ int main(int argc, char *argv[])
 
       #ifdef threading_enabled
 	// set up for threaded stats computation
-	hs_list = highway_systems;
+	hs_it = highway_systems.begin();
 	for (unsigned int t = 0; t < args.numthreads; t++)
-		thr[t] = new thread(ComputeStatsThread, t, &hs_list, &list_mtx);
+		thr[t] = new thread(ComputeStatsThread, t, &highway_systems, &hs_it, &list_mtx);
 	for (unsigned int t = 0; t < args.numthreads; t++)
 		thr[t]->join();
 	for (unsigned int t = 0; t < args.numthreads; t++)
@@ -674,7 +678,7 @@ int main(int argc, char *argv[])
 	list<string> region_entries;
 	for (Region region : all_regions)
 	  if (region.overall_mileage)
-	  {	sprintf(fstr, ": %.2f (active), %.2f (active, preview) %.2f (active, preview, devel)\n", 
+	  {	sprintf(fstr, ": %.2f (active), %.2f (active, preview) %.2f (active, preview, devel)\n",
 			region.active_only_mileage, region.active_preview_mileage, region.overall_mileage);
 		region_entries.push_back(region.code + fstr);
 	  }
@@ -721,10 +725,12 @@ int main(int argc, char *argv[])
 	cout << et.et() << "Creating per-traveler stats logs and augmenting data structure." << flush;
       #ifdef threading_enabled
 	// set up for threaded user logs
-	list<TravelerList*> tl_list = traveler_lists;
+	tl_it = traveler_lists.begin();
 	for (unsigned int t = 0; t < args.numthreads; t++)
-		thr[t] = new thread \
-		(UserLogThread, t, &tl_list, &list_mtx, &clin_db_val, active_only_miles, active_preview_miles, &highway_systems, args.logfilepath+"/users/");
+		thr[t] = new thread
+		(	UserLogThread, t, &traveler_lists, &tl_it, &list_mtx, &clin_db_val, active_only_miles,
+			active_preview_miles, &highway_systems, args.logfilepath+"/users/"
+		);
 	for (unsigned int t = 0; t < args.numthreads; t++)
 		thr[t]->join();
 	for (unsigned int t = 0; t < args.numthreads; t++)
@@ -938,6 +944,14 @@ int main(int argc, char *argv[])
 		return 0;
 	}
 
+      #ifdef threading_enabled
+	std::cout << et.et() << "Start writing database file " << args.databasename << ".sql.\n" << std::flush;
+	thread sqlthread;
+	if   (!args.errorcheck)
+	{	sqlthread=thread(sqlfile1, &et, &args, &all_regions, &continents, &countries, &highway_systems, &traveler_lists, &clin_db_val, &updates, &systemupdates);
+	}
+      #endif
+
 	#include "functions/graph_generation.cpp"
 
 	// now mark false positives
@@ -997,7 +1011,18 @@ int main(int argc, char *argv[])
 		  if (!d.fp) logfile << d.str() << '\n';
 	logfile.close();
 
-	#include "functions/sql_file.cpp"
+	if   (args.errorcheck)
+		cout << et.et() << "SKIPPING database file." << endl;
+	else {
+	      #ifdef threading_enabled
+		sqlthread.join();
+		std::cout << et.et() << "Resume writing database file " << args.databasename << ".sql.\n" << std::flush;
+	      #else
+		std::cout << et.et() << "Writing database file " << args.databasename << ".sql.\n" << std::flush;
+		sqlfile1(&et, &args, &all_regions, &continents, &countries, &highway_systems, &traveler_lists, &clin_db_val, &updates, &systemupdates);
+	      #endif
+		sqlfile2(&et, &args, &graph_types, &graph_vector, datacheckerrors);
+	     }
 
 	// print some statistics
 	cout << et.et() << "Processed " << highway_systems.size() << " highway systems." << endl;
@@ -1021,22 +1046,17 @@ int main(int argc, char *argv[])
 		cout << et.et() << "Computing waypoint colocation stats, reporting all with 8 or more colocations:" << endl;
 		unsigned int largest_colocate_count = all_waypoints.max_colocated();
 		vector<unsigned int> colocate_counts(largest_colocate_count+1, 0);
-		unordered_set<Waypoint*> big_colocate_locations;
 		for (Waypoint *w : all_waypoints.point_list())
 		{	unsigned int c = w->num_colocated();
-			if (c >= 8)
-			{	big_colocate_locations.insert(all_waypoints.waypoint_at_same_point(w));
-				//cout << w.str() << " with " << c-1 << " other points." << endl;
-			}
 			colocate_counts[c] += 1;
-		}
-		for (Waypoint *p : big_colocate_locations)
-		{	printf("(%.15g, %.15g) is occupied by %i waypoints: ['", p->lat, p->lng, p->num_colocated());
-			list<Waypoint*>::iterator w = p->colocated->begin();
-			cout << (*w)->route->root << ' ' << (*w)->label << '\'';
-			for (w++; w != p->colocated->end(); w++)
-				cout << ", '" << (*w)->route->root << ' ' << (*w)->label << '\'';
-			cout << "]\n";//*/
+			if (c >= 8 && w == w->colocated->front())
+			{	printf("(%.15g, %.15g) is occupied by %i waypoints: ['", w->lat, w->lng, c);
+				list<Waypoint*>::iterator p = w->colocated->begin();
+				cout << (*p)->route->root << ' ' << (*p)->label << '\'';
+				for (p++; p != w->colocated->end(); p++)
+					cout << ", '" << (*p)->route->root << ' ' << (*p)->label << '\'';
+				cout << "]\n";//*/
+			}
 		}
 		cout << "Waypoint colocation counts:" << endl;
 		unsigned int unique_locations = 0;

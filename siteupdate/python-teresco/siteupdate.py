@@ -378,7 +378,7 @@ class Waypoint:
         rlng2 = math.radians(other.lng)
 
         # original formula
-        ans = math.acos(math.cos(rlat1)*math.cos(rlng1)*math.cos(rlat2)*math.cos(rlng2) +\
+        """ans = math.acos(math.cos(rlat1)*math.cos(rlng1)*math.cos(rlat2)*math.cos(rlng2) +\
                         math.cos(rlat1)*math.sin(rlng1)*math.cos(rlat2)*math.sin(rlng2) +\
                         math.sin(rlat1)*math.sin(rlat2)) * 3963.1 # EARTH_RADIUS """
 
@@ -393,7 +393,7 @@ class Waypoint:
         ) * 3963.1 # EARTH_RADIUS """
 
         # haversine formula
-        """ans = math.asin(math.sqrt(pow(math.sin((rlat2-rlat1)/2),2) + math.cos(rlat1) * math.cos(rlat2) * pow(math.sin((rlng2-rlng1)/2),2))) * 7926.2 # EARTH_DIAMETER """
+        ans = math.asin(math.sqrt(pow(math.sin((rlat2-rlat1)/2),2) + math.cos(rlat1) * math.cos(rlat2) * pow(math.sin((rlng2-rlng1)/2),2))) * 7926.2 # EARTH_DIAMETER """
 
         return ans * 1.02112
 
@@ -1525,6 +1525,72 @@ class PlaceRadius:
         return (self.contains_vertex(e.vertex1) and
                 self.contains_vertex(e.vertex2))
         
+    def vertices(self, qt, g):
+        # Compute and return a set of graph vertices within r miles of (lat, lng).
+        # This function handles setup & sanity checks, passing control over
+        # to the recursive v_search function to do the actual searching.
+
+        # N/S sanity check: If lat is <= r/2 miles to the N or S pole, lngdelta calculation will fail.
+        # In these cases, our place radius will span the entire "width" of the world, from -180 to +180 degrees.
+        if math.radians(90-abs(self.lat)) <= self.r/7926.2:
+            return self.v_search(qt, g, -180, +180)
+
+        # width, in degrees longitude, of our bounding box for quadtree search
+        rlat = math.radians(self.lat)
+        lngdelta = math.degrees(math.acos((math.cos(self.r/3963.1) - math.sin(rlat)**2) / math.cos(rlat)**2))
+        w_bound = self.lng-lngdelta
+        e_bound = self.lng+lngdelta
+
+        # normal operation; search quadtree within calculated bounds
+        vertex_set = self.v_search(qt, g, w_bound, e_bound);
+
+        # If bounding box spans international date line to west of -180 degrees,
+        # search quadtree within the corresponding range of positive longitudes
+        if w_bound <= -180:
+            while w_bound <= -180:
+                w_bound += 360
+            vertex_set = vertex_set | self.v_search(qt, g, w_bound, 180)
+
+        # If bounding box spans international date line to east of +180 degrees,
+        # search quadtree within the corresponding range of negative longitudes
+        if e_bound >= 180:
+            while e_bound >= 180:
+                e_bound -= 360
+            vertex_set = vertex_set | self.v_search(qt, g, -180, e_bound)
+
+        return vertex_set
+
+    def v_search(self, qt, g, w_bound, e_bound):
+        # recursively search quadtree for waypoints within this PlaceRadius area, and return a set
+        # of their corresponding graph vertices to return to the PlaceRadius::vertices function
+        vertex_set = set()
+
+        # first check if this is a terminal quadrant, and if it is,
+        # we search for vertices within this quadrant
+        if qt.points is not None:
+            for p in qt.points:
+                if (p.colocated is None or p == p.colocated[0]) and p.is_or_colocated_with_active_or_preview() and self.contains_vertex(p):
+                    vertex_set.add(g.vertices[p])
+        # if we're not a terminal quadrant, we need to determine which
+        # of our child quadrants we need to search and recurse into each
+        else:
+            #print("DEBUG: recursive case, mid_lat="+str(qt.mid_lat)+" mid_lng="+str(qt.mid_lng), flush=True)
+            look_n = (self.lat + math.degrees(self.r/3963.1)) >= qt.mid_lat
+            look_s = (self.lat - math.degrees(self.r/3963.1)) <= qt.mid_lat
+            look_e = e_bound >= qt.mid_lng
+            look_w = w_bound <= qt.mid_lng
+            #print("DEBUG: recursive case, " + str(look_n) + " " + str(look_s) + " " + str(look_e) + " " + str(look_w))
+            # now look in the appropriate child quadrants
+            if look_n and look_w:
+                vertex_set = vertex_set | self.v_search(qt.nw_child, g, w_bound, e_bound)
+            if look_n and look_e:
+                vertex_set = vertex_set | self.v_search(qt.ne_child, g, w_bound, e_bound)
+            if look_s and look_w:
+                vertex_set = vertex_set | self.v_search(qt.sw_child, g, w_bound, e_bound)
+            if look_s and look_e:
+                vertex_set = vertex_set | self.v_search(qt.se_child, g, w_bound, e_bound)
+        return vertex_set;
+
 class HighwayGraph:
     """This class implements the capability to create graph
     data structures representing the highway data.
@@ -1706,7 +1772,7 @@ class HighwayGraph:
                 edges += len(v.incident_t_edges)
         return edges//2
 
-    def matching_vertices(self, regions, systems, placeradius, rg_vset_hash):
+    def matching_vertices(self, regions, systems, placeradius, rg_vset_hash, qt):
         # return a tuple containing
         # 1st, a set of vertices from the graph, optionally
         # restricted by region or system or placeradius area
@@ -1715,43 +1781,36 @@ class HighwayGraph:
         cv_count = 0
         tv_count = 0
         vertex_set = set()
-        rg_vertex_set = set()
-        sys_vertex_set = set()
-        # rg_vertex_set is the union of all sets in regions
+        rvset = set()
+        svset = set()
+        # rvset is the union of all sets in regions
         if regions is not None:
             for r in regions:
-                rg_vertex_set = rg_vertex_set | rg_vset_hash[r]
-        # sys_vertex_set is the union of all sets in systems
+                rvset = rvset | rg_vset_hash[r]
+        # svset is the union of all sets in systems
         if systems is not None:
             for h in systems:
-                sys_vertex_set = sys_vertex_set | h.vertices
+                svset = svset | h.vertices
+        # pvset is the set of vertices within placeradius
+        if placeradius is not None:
+            pvset = placeradius.vertices(qt, self)
+
         # determine which vertices are within our region(s) and/or system(s)
         if regions is not None:
+            vertex_set = rvset
+            if placeradius is not None:
+                vertex_set = vertex_set & prset
             if systems is not None:
-                # both regions & systems populated: vertex_set is
-                # intersection of rg_vertex_set & sys_vertex_set
-                vertex_set = rg_vertex_set & sys_vertex_set
-            else:
-                # only regions populated
-                vertex_set = rg_vertex_set
-        else:
-            if systems is not None:
-                # only systems populated
-                vertex_set = sys_vertex_set
-            else:
-                # neither are populated; include all vertices...
-                for v in self.vertices.values():
-                    # ...unless a PlaceRadius is specified
-                    if placeradius is None or placeradius.contains_vertex(v):
-                        vertex_set.add(v)
-        # if placeradius is provided along with non-empty region
-        # or system parameters, erase vertices outside placeradius
-        if placeradius is not None and (systems is not None or regions is not None):
-            pr_vertex_set = set()
-            for v in vertex_set:
-                if placeradius.contains_vertex(v):
-                    pr_vertex_set.add(v)
-            vertex_set = pr_vertex_set
+                vertex_set = vertex_set & svset
+        elif systems is not None:
+            vertex_set = svset
+            if placeradius is not None:
+                vertex_set = vertex_set & prset
+        elif placeradius is not None:
+            vertex_set = pvset
+        else: # no restrictions via region, system, or placeradius, so include everything
+            for v in self.vertices.values():
+                vertex_set.add(v)
         # find number of collapsed vertices
         for v in vertex_set:
             if v.visibility >= 1:
@@ -1820,134 +1879,89 @@ class HighwayGraph:
                                 trav_set.add(t)
         return (edge_set, sorted(trav_set, key=lambda TravelerList: TravelerList.traveler_name))
 
-    # write the entire set of highway data a format very similar to
-    # the original .gra format.  The first line is a header specifying
-    # the format and version number, the second line specifying the
-    # number of waypoints, w, and the number of connections, c, then w
-    # lines describing waypoints (label, latitude, longitude), then c
-    # lines describing connections (endpoint 1 number, endpoint 2
-    # number, route label)
+    # write the entire set of highway data in .tmg format.
+    # The first line is a header specifying the format and version number,
+    # The second line specifies the number of waypoints, w, the number of connections, c,
+    #     and for traveled graphs only, the number of travelers.
+    # Then, w lines describing waypoints (label, latitude, longitude).
+    # Then, c lines describing connections (endpoint 1 number, endpoint 2 number, route label),
+    #     followed on traveled graphs only by a hexadecimal code encoding travelers on that segment,
+    #     followed on both collapsed & traveled graphs by a list of latitude & longitude values
+    #     for intermediate "shaping points" along the edge, ordered from endpoint 1 to endpoint 2.
     #
-    # returns tuple of number of vertices and number of edges written
-    #
-    def write_master_tmg_simple(self,filename):
-        tmgfile = open(filename, 'w')
-        tmgfile.write("TMG 1.0 simple\n")
-        tmgfile.write(str(len(self.vertices)) + ' ' + str(self.simple_edge_count()) + '\n')
-        # number waypoint entries as we go to support original .gra
-        # format output
-        s_vertex_num = 0
+    def write_master_graphs_tmg(self, graph_list, path, traveler_lists):
+        simplefile = open(path+"tm-master-simple.tmg","w",encoding='utf-8')
+        collapfile = open(path+"tm-master-collapsed.tmg","w",encoding='utf-8')
+        travelfile = open(path+"tm-master-traveled.tmg","w",encoding='utf-8')
+        num_collapsed_edges = self.collapsed_edge_count()
+        num_traveled_edges = self.traveled_edge_count()
+        simplefile.write("TMG 1.0 simple\n")
+        collapfile.write("TMG 1.0 collapsed\n")
+        travelfile.write("TMG 2.0 traveled\n")
+        simplefile.write(str(len(self.vertices)) + ' ' + str(self.simple_edge_count()) + '\n')
+        collapfile.write(str(self.num_collapsed_vertices()) + ' ' + str(num_collapsed_edges) + '\n')
+        travelfile.write(str(self.num_traveled_vertices()) + ' ' + str(num_traveled_edges) + ' ' + str(len(traveler_lists)) + '\n')
+
+        # write vertices
+        sv = 0
+        cv = 0
+        tv = 0
         for v in self.vertices.values():
-            tmgfile.write(v.unique_name + ' ' + str(v.lat) + ' ' + str(v.lng) + '\n')
-            v.s_vertex_num = s_vertex_num
-            s_vertex_num += 1
-
-        # sanity check
-        if len(self.vertices) != s_vertex_num:
-            print("ERROR: computed " + str(len(self.vertices)) + " waypoints but wrote " + str(s_vertex_num))
-
-        # now edges, only print if not already printed
-        edge = 0
+            # all vertices for simple graph
+            simplefile.write(v.unique_name+' '+str(v.lat)+' '+str(v.lng)+'\n')
+            v.s_vertex_num = sv
+            sv += 1
+            # visible vertices...
+            if v.visibility >= 1:
+                # for traveled graph,
+                travelfile.write(v.unique_name+' '+str(v.lat)+' '+str(v.lng)+'\n')
+                v.t_vertex_num = tv
+                tv += 1
+                if v.visibility == 2:
+                    # and for collapsed graph
+                    collapfile.write(v.unique_name+' '+str(v.lat)+' '+str(v.lng)+'\n')
+                    v.c_vertex_num = cv
+                    cv += 1
+        # now edges, only write if not already written
         for v in self.vertices.values():
             for e in v.incident_s_edges:
                 if not e.s_written:
-                    e.s_written = True
-                    tmgfile.write(str(e.vertex1.s_vertex_num) + ' ' + str(e.vertex2.s_vertex_num) + ' ' + e.label() + '\n')
-                    edge += 1
-
-        # sanity checks
-        for v in self.vertices.values():
-            for e in v.incident_s_edges:
-                if not e.s_written:
-                    print("ERROR: never wrote edge " + str(e.vertex1.s_vertex_num) + ' ' + str(e.vertex2.s_vertex_num) + ' ' + e.label() + '\n')
-        if self.simple_edge_count() != edge:
-            print("ERROR: computed " + str(self.simple_edge_count()) + " edges but wrote " + str(edge) + "\n")
-
-        tmgfile.close()
-        return (len(self.vertices), self.simple_edge_count())
-
-    # write the entire set of data in the tmg collapsed edge format
-    def write_master_tmg_collapsed(self, filename):
-        tmgfile = open(filename, 'w')
-        tmgfile.write("TMG 1.0 collapsed\n")
-        tmgfile.write(str(self.num_collapsed_vertices()) + " " +
-                      str(self.collapsed_edge_count()) + "\n")
-
-        # write visible vertices
-        c_vertex_num = 0
-        for v in self.vertices.values():
-            if v.visibility == 2:
-                v.c_vertex_num = c_vertex_num
-                tmgfile.write(v.unique_name + ' ' + str(v.lat) + ' ' + str(v.lng) + '\n')
-                c_vertex_num += 1
-
-        # write collapsed edges
-        edge = 0
-        for v in self.vertices.values():
-            if v.visibility == 2:
-                for e in v.incident_c_edges:
-                    if not e.c_written:
-                        e.c_written = True
-                        tmgfile.write(e.collapsed_tmg_line() + '\n')
-                        edge += 1
-
-        # sanity check on edges written
-        if self.collapsed_edge_count() != edge:
-            print("ERROR: computed " + str(self.collapsed_edge_count()) + " collapsed edges, but wrote " + str(edge) + "\n")
-
-        tmgfile.close()
-        return (self.num_collapsed_vertices(), self.collapsed_edge_count())
-
-    # write the entire set of data in the tmg traveled format
-    def write_master_tmg_traveled(self, filename, traveler_lists):
-        tmgfile = open(filename, 'w')
-        tmgfile.write("TMG 2.0 traveled\n")
-        tmgfile.write(str(self.num_traveled_vertices()) + " " +
-                      str(self.traveled_edge_count()) + " " +
-                      str(len(traveler_lists)) + "\n")
-
-        # write visible vertices
-        t_vertex_num = 0
-        for v in self.vertices.values():
+                    e.s_written = 1
+                    simplefile.write(str(e.vertex1.s_vertex_num) + ' ' + str(e.vertex2.s_vertex_num) + ' ' + e.label() + '\n')
+            # write edges if vertex is visible...
             if v.visibility >= 1:
-                v.t_vertex_num = t_vertex_num
-                tmgfile.write(v.unique_name + ' ' + str(v.lat) + ' ' + str(v.lng) + '\n')
-                t_vertex_num += 1
-
-        # write traveled edges
-        edge = 0
-        for v in self.vertices.values():
-            if v.visibility >= 1:
+                # in traveled graph,
                 for e in v.incident_t_edges:
                     if not e.t_written:
-                        e.t_written = True
-                        tmgfile.write(e.traveled_tmg_line(traveler_lists) + '\n')
-                        edge += 1
-
+                        e.t_written = 1
+                        travelfile.write(e.traveled_tmg_line(traveler_lists) + '\n')
+                if v.visibility == 2:
+                    # and in collapsed graph
+                    for e in v.incident_c_edges:
+                        if not e.c_written:
+                            e.c_written = 1
+                            collapfile.write(e.collapsed_tmg_line() + '\n')
         # traveler names
         for t in traveler_lists:
-            tmgfile.write(t.traveler_name + ' ')
-        tmgfile.write('\n')
-
-        # sanity check on edges written
-        if self.traveled_edge_count() != edge:
-            print("ERROR: computed " + str(self.traveled_edge_count()) + " traveled edges, but wrote " + str(edge) + "\n")
-
-        tmgfile.close()
-        return (self.num_traveled_vertices(),
-                self.traveled_edge_count(),
-                len(traveler_lists))
+            travelfile.write(t.traveler_name + ' ')
+        travelfile.write('\n')
+        simplefile.close()
+        collapfile.close()
+        travelfile.close()
+        graph_list.append(GraphListEntry('tm-master-simple.tmg', 'All Travel Mapping Data', sv, self.simple_edge_count(), 0, 'simple', 'master'))
+        graph_list.append(GraphListEntry('tm-master-collapsed.tmg', 'All Travel Mapping Data', cv, self.collapsed_edge_count(), 0, 'collapsed', 'master'))
+        graph_list.append(GraphListEntry('tm-master-traveled.tmg', 'All Travel Mapping Data', tv, self.traveled_edge_count(), len(traveler_lists), 'traveled', 'master'))
 
     # write a subset of the data,
     # in simple, collapsed and traveled formats,
     # restricted by regions in the list if given,
     # by systems in the list if given,
     # or to within a given area if placeradius is given
-    def write_subgraphs_tmg(self, graph_list, path, root, descr, category, regions, systems, placeradius):
+    def write_subgraphs_tmg(self, graph_list, path, root, descr, category, regions, systems, placeradius, qt):
         simplefile = open(path+root+"-simple.tmg","w",encoding='utf-8')
         collapfile = open(path+root+"-collapsed.tmg","w",encoding='utf-8')
         travelfile = open(path+root+"-traveled.tmg","w",encoding='utf-8')
-        (mv, cv_count, tv_count) = self.matching_vertices(regions, systems, placeradius, self.rg_vset_hash)
+        (mv, cv_count, tv_count) = self.matching_vertices(regions, systems, placeradius, self.rg_vset_hash, qt)
         mse = self.matching_simple_edges(mv, regions, systems, placeradius)
         mce = self.matching_collapsed_edges(mv, regions, systems, placeradius)
         (mte, traveler_lists) = self.matching_traveled_edges(mv, regions, systems, placeradius)
@@ -2454,12 +2468,12 @@ for h in highway_systems:
 # Create a list of TravelerList objects, one per person
 traveler_lists = []
 
-print(et.et() + "Processing traveler list files:",end="",flush=True)
+print(et.et() + "Processing traveler list files:",flush=True)
 for t in traveler_ids:
     if t.endswith('.list'):
-        print(" " + t,end="",flush=True)
+        print(t + " ",end="",flush=True)
         traveler_lists.append(TravelerList(t,route_hash,args.userlistfilepath))
-print(" processed " + str(len(traveler_lists)) + " traveler list files.")
+print('\n' + et.et() + "Processed " + str(len(traveler_lists)) + " traveler list files.")
 traveler_lists.sort(key=lambda TravelerList: TravelerList.traveler_name)
 # assign traveler numbers
 travnum = 0
@@ -3031,18 +3045,8 @@ graph_types = []
 if args.skipgraphs or args.errorcheck:
     print(et.et() + "SKIPPING generation of subgraphs.", flush=True)
 else:
-    print(et.et() + "Writing master TM simple graph file, tm-master-simple.tmg", flush=True)
-    (sv, se) = graph_data.write_master_tmg_simple(args.graphfilepath+'/tm-master-simple.tmg')
-    graph_list.append(GraphListEntry('tm-master-simple.tmg', 'All Travel Mapping Data', sv, se, 0, 'simple', 'master'))
-
-    print(et.et() + "Writing master TM collapsed graph file, tm-master-collapsed.tmg.", flush=True)
-    (cv, ce) = graph_data.write_master_tmg_collapsed(args.graphfilepath+'/tm-master-collapsed.tmg')
-    graph_list.append(GraphListEntry('tm-master-collapsed.tmg', 'All Travel Mapping Data', cv, ce, 0, 'collapsed', 'master'))
-
-    print(et.et() + "Writing master TM traveled graph file, tm-master-traveled.tmg.", flush=True)
-    (tv, te, tt) = graph_data.write_master_tmg_traveled(args.graphfilepath+'/tm-master-traveled.tmg', traveler_lists)
-    graph_list.append(GraphListEntry('tm-master-traveled.tmg', 'All Travel Mapping Data', tv, te, tt, 'traveled', 'master'))
-
+    print(et.et() + "Writing master TM graph files.", flush=True)
+    graph_data.write_master_graphs_tmg(graph_list, args.graphfilepath+'/', traveler_lists)
     graph_types.append(['master', 'All Travel Mapping Data',
                         'These graphs contain all routes currently plotted in the Travel Mapping project.'])
 
@@ -3063,7 +3067,8 @@ else:
     for a in area_list:
         print(a.base + '(' + str(a.r) + ') ', end="", flush=True)
         graph_data.write_subgraphs_tmg(graph_list, args.graphfilepath + "/", a.base + str(a.r) + "-area",
-                                       a.place + " (" + str(a.r) + " mi radius)", "area", None, None, a)
+                                       a.place + " (" + str(a.r) + " mi radius)", "area",
+                                       None, None, a, all_waypoints)
     graph_types.append(['area', 'Routes Within a Given Radius of a Place',
                         'These graphs contain all routes currently plotted within the given distance radius of the given place.'])
     print("!")
@@ -3081,7 +3086,8 @@ else:
         region_type = r[4]
         print(region_code + ' ', end="",flush=True)
         graph_data.write_subgraphs_tmg(graph_list, args.graphfilepath + "/", region_code + "-region",
-                                       region_name + " (" + region_type + ")", "region", [ region_code ], None, None)
+                                       region_name + " (" + region_type + ")", "region",
+                                       [ region_code ], None, None, all_waypoints)
     graph_types.append(['region', 'Routes Within a Single Region',
                         'These graphs contain all routes currently plotted within the given region.'])
     print("!")
@@ -3105,7 +3111,8 @@ else:
         if h is not None:
             print(h.systemname + ' ', end="",flush=True)
             graph_data.write_subgraphs_tmg(graph_list, args.graphfilepath + "/", h.systemname+"-system",
-                                           h.systemname + " (" + h.fullname + ")", "system", None, [ h ], None)
+                                           h.systemname + " (" + h.fullname + ")", "system",
+                                           None, [ h ], None, all_waypoints)
     if h is not None:
         graph_types.append(['system', 'Routes Within a Single Highway System',
                             'These graphs contain the routes within a single highway system and are not restricted by region.'])
@@ -3130,7 +3137,8 @@ else:
             if h.systemname in selected_systems:
                 systems.append(h)
         graph_data.write_subgraphs_tmg(graph_list, args.graphfilepath + "/", fields[1],
-                                       fields[0], "multisystem", None, systems, None)
+                                       fields[0], "multisystem",
+                                       None, systems, None, all_waypoints)
     graph_types.append(['multisystem', 'Routes Within Multiple Highway Systems',
                         'These graphs contain the routes within a set of highway systems.'])
     print("!")
@@ -3154,7 +3162,8 @@ else:
             if r[0] in selected_regions and r[0] in active_preview_mileage_by_region:
                 region_list.append(r[0])
         graph_data.write_subgraphs_tmg(graph_list, args.graphfilepath + "/", fields[1],
-                                       fields[0], "multiregion", region_list, None, None)
+                                       fields[0], "multiregion",
+                                       region_list, None, None, all_waypoints)
     graph_types.append(['multiregion', 'Routes Within Multiple Regions',
                         'These graphs contain the routes within a set of regions.'])
     print("!")
@@ -3173,7 +3182,8 @@ else:
         if len(region_list) >= 2:
             print(c[0] + " ", end="", flush=True)
             graph_data.write_subgraphs_tmg(graph_list, args.graphfilepath + "/", c[0] + "-country",
-                                           c[1] + " All Routes in Country", "country", region_list, None, None)
+                                           c[1] + " All Routes in Country", "country",
+                                           region_list, None, None, all_waypoints)
     graph_types.append(['country', 'Routes Within a Single Multi-Region Country',
                         'These graphs contain the routes within a single country that is composed of multiple regions that contain plotted routes.  Countries consisting of a single region are represented by their regional graph.'])
     print("!")
@@ -3190,7 +3200,8 @@ else:
         if len(region_list) >= 1:
             print(c[0] + " ", end="", flush=True)
             graph_data.write_subgraphs_tmg(graph_list, args.graphfilepath + "/", c[0] + "-continent",
-                                           c[1] + " All Routes on Continent", "continent", region_list, None, None)
+                                           c[1] + " All Routes on Continent", "continent",
+                                           region_list, None, None, all_waypoints)
     graph_types.append(['continent', 'Routes Within a Continent',
                         'These graphs contain the routes on a continent.'])
     print("!")
@@ -3460,6 +3471,7 @@ else:
     sqlfile.write('DROP TABLE IF EXISTS continents;\n')
     
     # first, continents, countries, and regions
+    print(et.et() + "...continents, countries, regions", flush=True)
     sqlfile.write('CREATE TABLE continents (code VARCHAR(3), name VARCHAR(15), PRIMARY KEY(code));\n')
     sqlfile.write('INSERT INTO continents VALUES\n')
     first = True
@@ -3495,6 +3507,7 @@ else:
     # color for its mapping, a level (one of active, preview, devel), and
     # a boolean indicating if the system is active for mapping in the
     # project in the field 'active'
+    print(et.et() + "...systems", flush=True)
     sqlfile.write('CREATE TABLE systems (systemName VARCHAR(10), countryCode CHAR(3), fullName VARCHAR(60), color VARCHAR(16), level VARCHAR(10), tier INTEGER, csvOrder INTEGER, PRIMARY KEY(systemName));\n')
     sqlfile.write('INSERT INTO systems VALUES\n')
     first = True
@@ -3510,6 +3523,7 @@ else:
     sqlfile.write(";\n")
 
     # next, a table of highways, with the same fields as in the first line
+    print(et.et() + "...routes", flush=True)
     sqlfile.write('CREATE TABLE routes (systemName VARCHAR(10), region VARCHAR(8), route VARCHAR(16), banner VARCHAR(6), abbrev VARCHAR(3), city VARCHAR(100), root VARCHAR(32), mileage FLOAT, rootOrder INTEGER, csvOrder INTEGER, PRIMARY KEY(root), FOREIGN KEY (systemName) REFERENCES systems(systemName));\n')
     sqlfile.write('INSERT INTO routes VALUES\n')
     first = True
@@ -3524,6 +3538,7 @@ else:
     sqlfile.write(";\n")
 
     # connected routes table, but only first "root" in each in this table
+    print(et.et() + "...connectedRoutes", flush=True)
     sqlfile.write('CREATE TABLE connectedRoutes (systemName VARCHAR(10), route VARCHAR(16), banner VARCHAR(6), groupName VARCHAR(100), firstRoot VARCHAR(32), mileage FLOAT, csvOrder INTEGER, PRIMARY KEY(firstRoot), FOREIGN KEY (firstRoot) REFERENCES routes(root));\n')
     sqlfile.write('INSERT INTO connectedRoutes VALUES\n')
     first = True
@@ -3539,6 +3554,7 @@ else:
 
     # This table has remaining roots for any connected route
     # that connects multiple routes/roots
+    print(et.et() + "...connectedRouteRoots", flush=True)
     sqlfile.write('CREATE TABLE connectedRouteRoots (firstRoot VARCHAR(32), root VARCHAR(32), FOREIGN KEY (firstRoot) REFERENCES connectedRoutes(firstRoot));\n')
     first = True
     for h in highway_systems:
@@ -3554,6 +3570,7 @@ else:
     sqlfile.write(";\n")
 
     # Now, a table with raw highway route data: list of points, in order, that define the route
+    print(et.et() + "...waypoints", flush=True)
     sqlfile.write('CREATE TABLE waypoints (pointId INTEGER, pointName VARCHAR(20), latitude DOUBLE, longitude DOUBLE, root VARCHAR(32), PRIMARY KEY(pointId), FOREIGN KEY (root) REFERENCES routes(root));\n')
     point_num = 0
     for h in highway_systems:
@@ -3574,6 +3591,7 @@ else:
     sqlfile.write('CREATE INDEX `longitude` ON waypoints(`longitude`);\n')
 
     # Table of all HighwaySegments.
+    print(et.et() + "...segments", flush=True)
     sqlfile.write('CREATE TABLE segments (segmentId INTEGER, waypoint1 INTEGER, waypoint2 INTEGER, root VARCHAR(32), PRIMARY KEY (segmentId), FOREIGN KEY (waypoint1) REFERENCES waypoints(pointId), FOREIGN KEY (waypoint2) REFERENCES waypoints(pointId), FOREIGN KEY (root) REFERENCES routes(root));\n')
     segment_num = 0
     clinched_list = []
@@ -3593,6 +3611,7 @@ else:
 
     # maybe a separate traveler table will make sense but for now, I'll just use
     # the name from the .list name
+    print(et.et() + "...clinched", flush=True)
     sqlfile.write('CREATE TABLE clinched (segmentId INTEGER, traveler VARCHAR(48), FOREIGN KEY (segmentId) REFERENCES segments(segmentId));\n')
     for start in range(0, len(clinched_list), 10000):
         sqlfile.write('INSERT INTO clinched VALUES\n')
@@ -3606,6 +3625,7 @@ else:
         
     # overall mileage by region data (with concurrencies accounted for,
     # active systems only then active+preview)
+    print(et.et() + "...overallMileageByRegion", flush=True)
     sqlfile.write('CREATE TABLE overallMileageByRegion (region VARCHAR(8), activeMileage FLOAT, activePreviewMileage FLOAT);\n')
     sqlfile.write('INSERT INTO overallMileageByRegion VALUES\n')
     first = True
@@ -3626,6 +3646,7 @@ else:
 
     # system mileage by region data (with concurrencies accounted for,
     # active systems and preview systems only)
+    print(et.et() + "...systemMileageByRegion", flush=True)
     sqlfile.write('CREATE TABLE systemMileageByRegion (systemName VARCHAR(10), region VARCHAR(8), mileage FLOAT, FOREIGN KEY (systemName) REFERENCES systems(systemName));\n')
     sqlfile.write('INSERT INTO systemMileageByRegion VALUES\n')
     first = True
@@ -3640,6 +3661,7 @@ else:
 
     # clinched overall mileage by region data (with concurrencies
     # accounted for, active systems and preview systems only)
+    print(et.et() + "...clinchedOverallMileageByRegion", flush=True)
     sqlfile.write('CREATE TABLE clinchedOverallMileageByRegion (region VARCHAR(8), traveler VARCHAR(48), activeMileage FLOAT, activePreviewMileage FLOAT);\n')
     sqlfile.write('INSERT INTO clinchedOverallMileageByRegion VALUES\n')
     first = True
@@ -3658,6 +3680,7 @@ else:
 
     # clinched system mileage by region data (with concurrencies accounted
     # for, active systems and preview systems only)
+    print(et.et() + "...clinchedSystemMileageByRegion", flush=True)
     sqlfile.write('CREATE TABLE clinchedSystemMileageByRegion (systemName VARCHAR(10), region VARCHAR(8), traveler VARCHAR(48), mileage FLOAT, FOREIGN KEY (systemName) REFERENCES systems(systemName));\n')
     sqlfile.write('INSERT INTO clinchedSystemMileageByRegion VALUES\n')
     first = True
@@ -3670,6 +3693,7 @@ else:
 
     # clinched mileage by connected route, active systems and preview
     # systems only
+    print(et.et() + "...clinchedConnectedRoutes", flush=True)
     sqlfile.write('CREATE TABLE clinchedConnectedRoutes (route VARCHAR(32), traveler VARCHAR(48), mileage FLOAT, clinched BOOLEAN, FOREIGN KEY (route) REFERENCES connectedRoutes(firstRoot));\n')
     for start in range(0, len(ccr_values), 10000):
         sqlfile.write('INSERT INTO clinchedConnectedRoutes VALUES\n')
@@ -3682,6 +3706,7 @@ else:
         sqlfile.write(";\n")
 
     # clinched mileage by route, active systems and preview systems only
+    print(et.et() + "...clinchedRoutes", flush=True)
     sqlfile.write('CREATE TABLE clinchedRoutes (route VARCHAR(32), traveler VARCHAR(48), mileage FLOAT, clinched BOOLEAN, FOREIGN KEY (route) REFERENCES routes(root));\n')
     for start in range(0, len(cr_values), 10000):
         sqlfile.write('INSERT INTO clinchedRoutes VALUES\n')
@@ -3694,6 +3719,7 @@ else:
         sqlfile.write(";\n")
 
     # updates entries
+    print(et.et() + "...updates", flush=True)
     sqlfile.write('CREATE TABLE updates (date VARCHAR(10), region VARCHAR(60), route VARCHAR(80), root VARCHAR(32), description VARCHAR(1024));\n')
     sqlfile.write('INSERT INTO updates VALUES\n')
     first = True
@@ -3705,6 +3731,7 @@ else:
     sqlfile.write(";\n")
 
     # systemUpdates entries
+    print(et.et() + "...systemUpdates", flush=True)
     sqlfile.write('CREATE TABLE systemUpdates (date VARCHAR(10), region VARCHAR(48), systemName VARCHAR(10), description VARCHAR(128), statusChange VARCHAR(16));\n')
     sqlfile.write('INSERT INTO systemUpdates VALUES\n')
     first = True
@@ -3716,6 +3743,7 @@ else:
     sqlfile.write(";\n")
 
     # datacheck errors into the db
+    print(et.et() + "...datacheckErrors", flush=True)
     sqlfile.write('CREATE TABLE datacheckErrors (route VARCHAR(32), label1 VARCHAR(50), label2 VARCHAR(20), label3 VARCHAR(20), code VARCHAR(20), value VARCHAR(32), falsePositive BOOLEAN, FOREIGN KEY (route) REFERENCES routes(root));\n')
     if len(datacheckerrors) > 0:
         sqlfile.write('INSERT INTO datacheckErrors VALUES\n')
@@ -3742,6 +3770,7 @@ else:
 
     # update graph info in DB if graphs were generated
     if not args.skipgraphs:
+        print(et.et() + "...graphs", flush=True)
         sqlfile.write('DROP TABLE IF EXISTS graphs;\n')
         sqlfile.write('DROP TABLE IF EXISTS graphTypes;\n')
         sqlfile.write('CREATE TABLE graphTypes (category VARCHAR(12), descr VARCHAR(100), longDescr TEXT, PRIMARY KEY(category));\n')
