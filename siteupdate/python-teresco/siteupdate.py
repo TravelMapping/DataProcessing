@@ -2053,7 +2053,7 @@ class GraphListEntry:
 # start a timer for including elapsed time reports in messages
 et = ElapsedTime()
 
-print("Start: " + str(datetime.datetime.now())
+print("Start: " + str(datetime.datetime.now()))
       
 # create a ErrorList
 el = ErrorList()
@@ -3848,5 +3848,5 @@ if not args.errorcheck:
 if args.errorcheck:
     print("!!! DATA CHECK SUCCESSFUL !!!", flush=True)
 
-print("Finish: " + str(datetime.datetime.now())      
+print("Finish: " + str(datetime.datetime.now()))
 print("Total run time: " + et.et())
