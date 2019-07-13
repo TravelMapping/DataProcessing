@@ -2026,9 +2026,9 @@ class HighwayGraph:
 def format_clinched_mi(clinched,total):
     """return a nicely-formatted string for a given number of miles
     clinched and total miles, including percentage"""
-    percentage = "-.-%"
+    percentage = "-.--%"
     if total != 0.0:
-        percentage = "({0:.1f}%)".format(100*clinched/total)
+        percentage = "({0:.2f}%)".format(100*clinched/total)
     return "{0:.2f}".format(clinched) + " of {0:.2f}".format(total) + \
         " mi " + percentage
 
