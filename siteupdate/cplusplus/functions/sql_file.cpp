@@ -1,10 +1,18 @@
-if (args.errorcheck)
-	cout << et.et() << "SKIPPING database file." << endl;
-else {	cout << et.et() << "Writing database file " << args.databasename << ".sql." << endl;
+void sqlfile1
+    (	ElapsedTime *et,
+	Arguments *args,
+	std::list<Region> *all_regions,
+	std::list<std::pair<std::string,std::string>> *continents,
+	std::list<std::pair<std::string,std::string>> *countries,
+	std::list<HighwaySystem*> *highway_systems,
+	std::list<TravelerList*> *traveler_lists,
+	ClinchedDBValues *clin_db_val,
+	std::list<std::array<std::string,5>> *updates,
+	std::list<std::array<std::string,5>> *systemupdates
+    ){
 	// Once all data is read in and processed, create a .sql file that will
 	// create all of the DB tables to be used by other parts of the project
-	filename = args.databasename+".sql";
-	ofstream sqlfile(filename.data());
+	std::ofstream sqlfile((args->databasename+".sql").data());
 	// Note: removed "USE" line, DB name must be specified on the mysql command line
 
 	// we have to drop tables in the right order to avoid foreign key errors
@@ -29,10 +37,13 @@ else {	cout << et.et() << "Writing database file " << args.databasename << ".sql
 	sqlfile << "DROP TABLE IF EXISTS continents;\n";
 
 	// first, continents, countries, and regions
+      #ifndef threading_enabled
+	std::cout << et->et() << "...continents, countries, regions" << std::endl;
+      #endif
 	sqlfile << "CREATE TABLE continents (code VARCHAR(3), name VARCHAR(15), PRIMARY KEY(code));\n";
 	sqlfile << "INSERT INTO continents VALUES\n";
 	bool first = 1;
-	for (pair<string,string> c : continents)
+	for (std::pair<std::string,std::string> c : *continents)
 	{	if (!first) sqlfile << ',';
 		first = 0;
 		sqlfile << "('" << c.first << "','" << c.second << "')\n";
@@ -42,7 +53,7 @@ else {	cout << et.et() << "Writing database file " << args.databasename << ".sql
 	sqlfile << "CREATE TABLE countries (code VARCHAR(3), name VARCHAR(32), PRIMARY KEY(code));\n";
 	sqlfile << "INSERT INTO countries VALUES\n";
 	first = 1;
-	for (pair<string,string> c : countries)
+	for (std::pair<std::string,std::string> c : *countries)
 	{	if (!first) sqlfile << ',';
 		first = 0;
 		sqlfile << "('" << c.first << "','" << double_quotes(c.second) << "')\n";
@@ -53,7 +64,7 @@ else {	cout << et.et() << "Writing database file " << args.databasename << ".sql
 	sqlfile << "PRIMARY KEY(code), FOREIGN KEY (country) REFERENCES countries(code), FOREIGN KEY (continent) REFERENCES continents(code));\n";
 	sqlfile << "INSERT INTO regions VALUES\n";
 	first = 1;
-	for (Region &r : all_regions)
+	for (Region &r : *all_regions)
 	{	if (!first) sqlfile << ',';
 		first = 0;
 		sqlfile << "('" << r.code << "','" + double_quotes(r.name) << "','" << r.country_code() + "','" + r.continent_code() + "','" << r.type << "')\n";
@@ -65,12 +76,15 @@ else {	cout << et.et() << "Writing database file " << args.databasename << ".sql
 	// color for its mapping, a level (one of active, preview, devel), and
 	// a boolean indicating if the system is active for mapping in the
 	// project in the field 'active'
+      #ifndef threading_enabled
+	std::cout << et->et() << "...systems" << std::endl;
+      #endif
 	sqlfile << "CREATE TABLE systems (systemName VARCHAR(10), countryCode CHAR(3), fullName VARCHAR(60), color ";
 	sqlfile << "VARCHAR(16), level VARCHAR(10), tier INTEGER, csvOrder INTEGER, PRIMARY KEY(systemName));\n";
 	sqlfile << "INSERT INTO systems VALUES\n";
 	first = 1;
 	unsigned int csvOrder = 0;
-	for (HighwaySystem *h : highway_systems)
+	for (HighwaySystem *h : *highway_systems)
 	{	if (!first) sqlfile << ',';
 		first = 0;
 		sqlfile << "('" << h->systemname << "','" << h->country->first << "','"
@@ -81,12 +95,15 @@ else {	cout << et.et() << "Writing database file " << args.databasename << ".sql
 	sqlfile << ";\n";
 
 	// next, a table of highways, with the same fields as in the first line
+      #ifndef threading_enabled
+	std::cout << et->et() << "...routes" << std::endl;
+      #endif
 	sqlfile << "CREATE TABLE routes (systemName VARCHAR(10), region VARCHAR(8), route VARCHAR(16), banner VARCHAR(6), abbrev VARCHAR(3), city VARCHAR(100), root ";
 	sqlfile << "VARCHAR(32), mileage FLOAT, rootOrder INTEGER, csvOrder INTEGER, PRIMARY KEY(root), FOREIGN KEY (systemName) REFERENCES systems(systemName));\n";
 	sqlfile << "INSERT INTO routes VALUES\n";
 	first = 1;
 	csvOrder = 0;
-	for (HighwaySystem *h : highway_systems)
+	for (HighwaySystem *h : *highway_systems)
 	  for (Route &r : h->route_list)
 	  {	if (!first) sqlfile << ',';
 		first = 0;
@@ -96,12 +113,15 @@ else {	cout << et.et() << "Writing database file " << args.databasename << ".sql
 	sqlfile << ";\n";
 
 	// connected routes table, but only first "root" in each in this table
+      #ifndef threading_enabled
+	std::cout << et->et() << "...connectedRoutes" << std::endl;
+      #endif
 	sqlfile << "CREATE TABLE connectedRoutes (systemName VARCHAR(10), route VARCHAR(16), banner VARCHAR(6), groupName VARCHAR(100), firstRoot ";
 	sqlfile << "VARCHAR(32), mileage FLOAT, csvOrder INTEGER, PRIMARY KEY(firstRoot), FOREIGN KEY (firstRoot) REFERENCES routes(root));\n";
 	sqlfile << "INSERT INTO connectedRoutes VALUES\n";
 	first = 1;
 	csvOrder = 0;
-	for (HighwaySystem *h : highway_systems)
+	for (HighwaySystem *h : *highway_systems)
 	  for (ConnectedRoute &cr : h->con_route_list)
 	  {	if (!first) sqlfile << ',';
 		first = 0;
@@ -112,9 +132,12 @@ else {	cout << et.et() << "Writing database file " << args.databasename << ".sql
 
 	// This table has remaining roots for any connected route
 	// that connects multiple routes/roots
+      #ifndef threading_enabled
+	std::cout << et->et() << "...connectedRouteRoots" << std::endl;
+      #endif
 	sqlfile << "CREATE TABLE connectedRouteRoots (firstRoot VARCHAR(32), root VARCHAR(32), FOREIGN KEY (firstRoot) REFERENCES connectedRoutes(firstRoot));\n";
 	first = 1;
-	for (HighwaySystem *h : highway_systems)
+	for (HighwaySystem *h : *highway_systems)
 	  for (ConnectedRoute &cr : h->con_route_list)
 	    for (unsigned int i = 1; i < cr.roots.size(); i++)
 	    {	if (first) sqlfile << "INSERT INTO connectedRouteRoots VALUES\n";
@@ -125,10 +148,13 @@ else {	cout << et.et() << "Writing database file " << args.databasename << ".sql
 	sqlfile << ";\n";
 
 	// Now, a table with raw highway route data: list of points, in order, that define the route
+      #ifndef threading_enabled
+	std::cout << et->et() << "...waypoints" << std::endl;
+      #endif
 	sqlfile << "CREATE TABLE waypoints (pointId INTEGER, pointName VARCHAR(20), latitude DOUBLE, longitude DOUBLE, ";
 	sqlfile << "root VARCHAR(32), PRIMARY KEY(pointId), FOREIGN KEY (root) REFERENCES routes(root));\n";
 	unsigned int point_num = 0;
-	for (HighwaySystem *h : highway_systems)
+	for (HighwaySystem *h : *highway_systems)
 	  for (Route &r : h->route_list)
 	  {	sqlfile << "INSERT INTO waypoints VALUES\n";
 		first = 1;
@@ -147,11 +173,14 @@ else {	cout << et.et() << "Writing database file " << args.databasename << ".sql
 	sqlfile << "CREATE INDEX `longitude` ON waypoints(`longitude`);\n";
 
 	// Table of all HighwaySegments.
+      #ifndef threading_enabled
+	std::cout << et->et() << "...segments" << std::endl;
+      #endif
 	sqlfile << "CREATE TABLE segments (segmentId INTEGER, waypoint1 INTEGER, waypoint2 INTEGER, root VARCHAR(32), PRIMARY KEY (segmentId), FOREIGN KEY (waypoint1) ";
 	sqlfile << "REFERENCES waypoints(pointId), FOREIGN KEY (waypoint2) REFERENCES waypoints(pointId), FOREIGN KEY (root) REFERENCES routes(root));\n";
 	unsigned int segment_num = 0;
-	vector<string> clinched_list;
-	for (HighwaySystem *h : highway_systems)
+	std::vector<std::string> clinched_list;
+	for (HighwaySystem *h : *highway_systems)
 	  for (Route &r : h->route_list)
 	  {	sqlfile << "INSERT INTO segments VALUES\n";
 		first = 1;
@@ -160,7 +189,7 @@ else {	cout << et.et() << "Writing database file " << args.databasename << ".sql
 			first = 0;
 			sqlfile << '(' << s->csv_line(segment_num) << ")\n";
 			for (TravelerList *t : s->clinched_by)
-			  clinched_list.push_back("'" + to_string(segment_num) + "','" + t->traveler_name + "'");
+			  clinched_list.push_back("'" + std::to_string(segment_num) + "','" + t->traveler_name + "'");
 			segment_num += 1;
 		}
 		sqlfile << ";\n";
@@ -168,6 +197,9 @@ else {	cout << et.et() << "Writing database file " << args.databasename << ".sql
 
 	// maybe a separate traveler table will make sense but for now, I'll just use
 	// the name from the .list name
+      #ifndef threading_enabled
+	std::cout << et->et() << "...clinched" << std::endl;
+      #endif
 	sqlfile << "CREATE TABLE clinched (segmentId INTEGER, traveler VARCHAR(48), FOREIGN KEY (segmentId) REFERENCES segments(segmentId));\n";
 	for (size_t start = 0; start < clinched_list.size(); start += 10000)
 	{	sqlfile << "INSERT INTO clinched VALUES\n";
@@ -182,10 +214,13 @@ else {	cout << et.et() << "Writing database file " << args.databasename << ".sql
 
 	// overall mileage by region data (with concurrencies accounted for,
 	// active systems only then active+preview)
+      #ifndef threading_enabled
+	std::cout << et->et() << "...overallMileageByRegion" << std::endl;
+      #endif
 	sqlfile << "CREATE TABLE overallMileageByRegion (region VARCHAR(8), activeMileage FLOAT, activePreviewMileage FLOAT);\n";
 	sqlfile << "INSERT INTO overallMileageByRegion VALUES\n";
 	first = 1;
-	for (Region &region : all_regions)
+	for (Region &region : *all_regions)
 	{	if (region.active_only_mileage+region.active_preview_mileage == 0) continue;
 		if (!first) sqlfile << ',';
 		first = 0;
@@ -197,13 +232,16 @@ else {	cout << et.et() << "Writing database file " << args.databasename << ".sql
 
 	// system mileage by region data (with concurrencies accounted for,
 	// active systems and preview systems only)
+      #ifndef threading_enabled
+	std::cout << et->et() << "...systemMileageByRegion" << std::endl;
+      #endif
 	sqlfile << "CREATE TABLE systemMileageByRegion (systemName VARCHAR(10), region VARCHAR(8), ";
 	sqlfile << "mileage FLOAT, FOREIGN KEY (systemName) REFERENCES systems(systemName));\n";
 	sqlfile << "INSERT INTO systemMileageByRegion VALUES\n";
 	first = 1;
-	for (HighwaySystem *h : highway_systems)
+	for (HighwaySystem *h : *highway_systems)
 	  if (h->active_or_preview())
-	    for (pair<Region*,double> rm : h->mileage_by_region)
+	    for (std::pair<Region*,double> rm : h->mileage_by_region)
 	    {	if (!first) sqlfile << ',';
 		first = 0;
 		char fstr[35];
@@ -214,11 +252,14 @@ else {	cout << et.et() << "Writing database file " << args.databasename << ".sql
 
 	// clinched overall mileage by region data (with concurrencies
 	// accounted for, active systems and preview systems only)
+      #ifndef threading_enabled
+	std::cout << et->et() << "...clinchedOverallMileageByRegion" << std::endl;
+      #endif
 	sqlfile << "CREATE TABLE clinchedOverallMileageByRegion (region VARCHAR(8), traveler VARCHAR(48), activeMileage FLOAT, activePreviewMileage FLOAT);\n";
 	sqlfile << "INSERT INTO clinchedOverallMileageByRegion VALUES\n";
 	first = 1;
-	for (TravelerList *t : traveler_lists)
-	  for (pair<Region*,double> rm : t->active_preview_mileage_by_region)
+	for (TravelerList *t : *traveler_lists)
+	  for (std::pair<Region*,double> rm : t->active_preview_mileage_by_region)
 	  {	if (!first) sqlfile << ',';
 		first = 0;
 		double active_miles = 0;
@@ -232,11 +273,14 @@ else {	cout << et.et() << "Writing database file " << args.databasename << ".sql
 
 	// clinched system mileage by region data (with concurrencies accounted
 	// for, active systems and preview systems only)
+      #ifndef threading_enabled
+	std::cout << et->et() << "...clinchedSystemMileageByRegion" << std::endl;
+      #endif
 	sqlfile << "CREATE TABLE clinchedSystemMileageByRegion (systemName VARCHAR(10), region VARCHAR(8), traveler ";
 	sqlfile << "VARCHAR(48), mileage FLOAT, FOREIGN KEY (systemName) REFERENCES systems(systemName));\n";
 	sqlfile << "INSERT INTO clinchedSystemMileageByRegion VALUES\n";
 	first = 1;
-	for (string &line : clin_db_val.csmbr_values)
+	for (std::string &line : clin_db_val->csmbr_values)
 	{	if (!first) sqlfile << ',';
 		first = 0;
 		sqlfile << line << '\n';
@@ -245,37 +289,46 @@ else {	cout << et.et() << "Writing database file " << args.databasename << ".sql
 
 	// clinched mileage by connected route, active systems and preview
 	// systems only
+      #ifndef threading_enabled
+	std::cout << et->et() << "...clinchedConnectedRoutes" << std::endl;
+      #endif
 	sqlfile << "CREATE TABLE clinchedConnectedRoutes (route VARCHAR(32), traveler VARCHAR(48), mileage ";
 	sqlfile << "FLOAT, clinched BOOLEAN, FOREIGN KEY (route) REFERENCES connectedRoutes(firstRoot));\n";
-	for (size_t start = 0; start < clin_db_val.ccr_values.size(); start += 10000)
+	for (size_t start = 0; start < clin_db_val->ccr_values.size(); start += 10000)
 	{	sqlfile << "INSERT INTO clinchedConnectedRoutes VALUES\n";
 		first = 1;
-		for (size_t line = start; line < start+10000 && line < clin_db_val.ccr_values.size(); line++)
+		for (size_t line = start; line < start+10000 && line < clin_db_val->ccr_values.size(); line++)
 		{	if (!first) sqlfile << ',';
 			first = 0;
-			sqlfile << clin_db_val.ccr_values[line] << '\n';
+			sqlfile << clin_db_val->ccr_values[line] << '\n';
 		}
 		sqlfile << ";\n";
 	}
 
 	// clinched mileage by route, active systems and preview systems only
+      #ifndef threading_enabled
+	std::cout << et->et() << "...clinchedRoutes" << std::endl;
+      #endif
 	sqlfile << "CREATE TABLE clinchedRoutes (route VARCHAR(32), traveler VARCHAR(48), mileage FLOAT, clinched BOOLEAN, FOREIGN KEY (route) REFERENCES routes(root));\n";
-	for (size_t start = 0; start < clin_db_val.cr_values.size(); start += 10000)
+	for (size_t start = 0; start < clin_db_val->cr_values.size(); start += 10000)
 	{	sqlfile << "INSERT INTO clinchedRoutes VALUES\n";
 		first = 1;
-		for (size_t line = start; line < start+10000 && line < clin_db_val.cr_values.size(); line++)
+		for (size_t line = start; line < start+10000 && line < clin_db_val->cr_values.size(); line++)
 		{	if (!first) sqlfile << ',';
 			first = 0;
-			sqlfile << clin_db_val.cr_values[line] << '\n';
+			sqlfile << clin_db_val->cr_values[line] << '\n';
 		}
 		sqlfile << ";\n";
 	}
 
 	// updates entries
+      #ifndef threading_enabled
+	std::cout << et->et() << "...updates" << std::endl;
+      #endif
 	sqlfile << "CREATE TABLE updates (date VARCHAR(10), region VARCHAR(60), route VARCHAR(80), root VARCHAR(32), description VARCHAR(1024));\n";
 	sqlfile << "INSERT INTO updates VALUES\n";
 	first = 1;
-	for (array<string,5> &update : updates)
+	for (std::array<std::string,5> &update : *updates)
 	{	if (!first) sqlfile << ',';
 		first = 0;
 		sqlfile << "('"  << update[0] << "','" << double_quotes(update[1]) << "','" << double_quotes(update[2])
@@ -284,23 +337,43 @@ else {	cout << et.et() << "Writing database file " << args.databasename << ".sql
 	sqlfile << ";\n";
 
 	// systemUpdates entries
+      #ifndef threading_enabled
+	std::cout << et->et() << "...systemUpdates" << std::endl;
+      #endif
 	sqlfile << "CREATE TABLE systemUpdates (date VARCHAR(10), region VARCHAR(48), systemName VARCHAR(10), description VARCHAR(128), statusChange VARCHAR(16));\n";
 	sqlfile << "INSERT INTO systemUpdates VALUES\n";
 	first = 1;
-	for (array<string,5> &systemupdate : systemupdates)
+	for (std::array<std::string,5> &systemupdate : *systemupdates)
 	{	if (!first) sqlfile << ',';
 		first = 0;
 		sqlfile << "('"  << systemupdate[0] << "','" << double_quotes(systemupdate[1])
 			<< "','" << systemupdate[2] << "','" << double_quotes(systemupdate[3]) << "','" << systemupdate[4] << "')\n";
 	}
 	sqlfile << ";\n";
+	sqlfile.close();
+      #ifdef threading_enabled
+	std::cout << '\n' + et->et() + "Pause writing database file " + args->databasename + ".sql.\n" << std::flush;
+      #endif
+     }
+
+void sqlfile2
+    (	ElapsedTime *et,
+	Arguments *args,
+	std::list<std::array<std::string,3>> *graph_types,
+	std::vector<GraphListEntry> *graph_vector,
+	DatacheckEntryList *datacheckerrors
+    )
+     {	std::ofstream sqlfile((args->databasename+".sql").data(), std::ios::app);
 
 	// datacheck errors into the db
+      #ifndef threading_enabled
+	std::cout << et->et() << "...datacheckErrors" << std::endl;
+      #endif
 	sqlfile << "CREATE TABLE datacheckErrors (route VARCHAR(32), label1 VARCHAR(50), label2 VARCHAR(20), label3 VARCHAR(20), ";
 	sqlfile << "code VARCHAR(20), value VARCHAR(32), falsePositive BOOLEAN, FOREIGN KEY (route) REFERENCES routes(root));\n";
 	if (datacheckerrors->entries.size())
 	{	sqlfile << "INSERT INTO datacheckErrors VALUES\n";
-		first = 1;
+		bool first = 1;
 		for (DatacheckEntry &d : datacheckerrors->entries)
 		{	if (!first) sqlfile << ',';
 			first = 0;
@@ -312,35 +385,38 @@ else {	cout << et.et() << "Writing database file " << args.databasename << ".sql
 	sqlfile << ";\n";
 
 	// update graph info in DB if graphs were generated
-	if (!args.skipgraphs)
-	{	sqlfile << "DROP TABLE IF EXISTS graphs;\n";
+	if (!args->skipgraphs)
+	{
+	      #ifndef threading_enabled
+		std::cout << et->et() << "...graphs" << std::endl;
+	      #endif
+		sqlfile << "DROP TABLE IF EXISTS graphs;\n";
 		sqlfile << "DROP TABLE IF EXISTS graphTypes;\n";
 		sqlfile << "CREATE TABLE graphTypes (category VARCHAR(12), descr VARCHAR(100), longDescr TEXT, PRIMARY KEY(category));\n";
-		if (graph_types.size())
+		if (graph_types->size())
 		{	sqlfile << "INSERT INTO graphTypes VALUES\n";
-			first = 1;
-			for (array<string,3> &g : graph_types)
+			bool first = 1;
+			for (std::array<std::string,3> &g : *graph_types)
 			{	if (!first) sqlfile << ',';
 				first = 0;
 				sqlfile << "('" << g[0] << "','" << g[1] << "','" << g[2] << "')\n";
 			}
 			sqlfile << ";\n";
 		}
-	}
-
 		sqlfile << "CREATE TABLE graphs (filename VARCHAR(32), descr VARCHAR(100), vertices INTEGER, edges INTEGER, travelers INTEGER, ";
 		sqlfile << "format VARCHAR(10), category VARCHAR(12), FOREIGN KEY (category) REFERENCES graphTypes(category));\n";
-		if (graph_vector.size())
+		if (graph_vector->size())
 		{	sqlfile << "INSERT INTO graphs VALUES\n";
-			for (size_t g = 0; g < graph_vector.size(); g++)
+			for (size_t g = 0; g < graph_vector->size(); g++)
 			{	if (g) sqlfile << ',';
-				sqlfile << "('"  << graph_vector[g].filename() << "','" << double_quotes(graph_vector[g].descr)
-					<< "','" << graph_vector[g].vertices   << "','" << graph_vector[g].edges
-					<< "','" << graph_vector[g].travelers  << "','" << graph_vector[g].format()
-					<< "','" << graph_vector[g].category() << "')\n";
+				sqlfile << "('"  << graph_vector->at(g).filename() << "','" << double_quotes(graph_vector->at(g).descr)
+					<< "','" << graph_vector->at(g).vertices   << "','" << graph_vector->at(g).edges
+					<< "','" << graph_vector->at(g).travelers  << "','" << graph_vector->at(g).format()
+					<< "','" << graph_vector->at(g).category() << "')\n";
 			}
 			sqlfile << ";\n";
 		}
+	}
 
 	sqlfile.close();
      }

@@ -30,7 +30,7 @@ class HighwayGraph
 		// or preview system, or is colocated and not at the front
 		// of its colocation list
 		unsigned int counter = 0;
-		std::cout << et.et() << "Creating unique names and vertices" << std::flush;
+		std::cout << et.et() + "Creating unique names and vertices" << std::flush;
 		for (Waypoint *w : all_waypoints.point_list())
 		{	if (counter % 10000 == 0) std::cout << '.' << std::flush;
 			counter++;
@@ -80,7 +80,7 @@ class HighwayGraph
 
 		// create edges
 		counter = 0;
-		std::cout << et.et() << "Creating edges" << std::flush;
+		std::cout << et.et() + "Creating edges" << std::flush;
 		for (HighwaySystem *h : highway_systems)
 		{	if (h->devel()) continue;
 			if (counter % 6 == 0) std::cout << '.' << std::flush;
@@ -95,7 +95,7 @@ class HighwayGraph
 
 		// compress edges adjacent to hidden vertices
 		counter = 0;
-		std::cout << et.et() << "Compressing collapsed edges" << std::flush;
+		std::cout << et.et() + "Compressing collapsed edges" << std::flush;
 		for (std::pair<const Waypoint*, HGVertex*> wv : vertices)
 		{	if (counter % 10000 == 0) std::cout << '.' << std::flush;
 			counter++;
@@ -194,7 +194,7 @@ class HighwayGraph
 		vertices.clear();
 	}
 
-	std::unordered_set<HGVertex*> matching_vertices(GraphListEntry &g, unsigned int &cv_count, unsigned int &tv_count)
+	std::unordered_set<HGVertex*> matching_vertices(GraphListEntry &g, unsigned int &cv_count, unsigned int &tv_count, WaypointQuadtree *qt)
 	{	// Return a set of vertices from the graph, optionally
 		// restricted by region or system or placeradius area.
 		// Keep a count of collapsed & traveled vertices as we
@@ -202,44 +202,35 @@ class HighwayGraph
 		cv_count = 0;
 		tv_count = 0;
 		std::unordered_set<HGVertex*> vertex_set;
-		std::unordered_set<HGVertex*> rg_vertex_set;
-		std::unordered_set<HGVertex*> sys_vertex_set;
-		// rg_vertex_set is the union of all sets in regions
+		std::unordered_set<HGVertex*> rvset;
+		std::unordered_set<HGVertex*> svset;
+		std::unordered_set<HGVertex*> pvset;
+		// rvset is the union of all sets in regions
 		if (g.regions) for (Region *r : *g.regions)
-			rg_vertex_set.insert(r->vertices.begin(), r->vertices.end());
-		// sys_vertex_set is the union of all sets in systems
+			rvset.insert(r->vertices.begin(), r->vertices.end());
+		// svset is the union of all sets in systems
 		if (g.systems) for (HighwaySystem *h : *g.systems)
-			sys_vertex_set.insert(h->vertices.begin(), h->vertices.end());
+			svset.insert(h->vertices.begin(), h->vertices.end());
+		// pvset is the set of vertices within placeradius
+		if (g.placeradius)
+			pvset = g.placeradius->vertices(qt, this);
 
 		// determine which vertices are within our region(s) and/or system(s)
 		if (g.regions)
-			if (g.systems)
-			{	// both regions & systems populated: vertex_set is
-				// intersection of rg_vertex_set & sys_vertex_set
-				for (HGVertex *v : sys_vertex_set)
-				  if (rg_vertex_set.find(v) != rg_vertex_set.end())
-				    vertex_set.insert(v);
-			}
-			else	// only regions populated
-				vertex_set = rg_vertex_set;
-		else	if (g.systems)
-				// only systems populated
-				vertex_set = sys_vertex_set;
-			else	// neither are populated; include all vertices...
-			  for (std::pair<const Waypoint*, HGVertex*> wv : vertices)
-				// ...unless a PlaceRadius is specified
-				if (!g.placeradius || g.placeradius->contains_vertex(wv.second))
-				  vertex_set.insert(wv.second);
-
-		// if placeradius is provided along with region or
-		// system parameters, erase vertices outside placeradius
-		if (g.placeradius && (g.systems || g.regions))
-		{	std::unordered_set<HGVertex*>::iterator v = vertex_set.begin();
-			while(v != vertex_set.end())
-			  if (!g.placeradius->contains_vertex(*v))
-				v = vertex_set.erase(v);
-			  else	v++;
+		{	vertex_set = rvset;
+			if (g.placeradius)	vertex_set = vertex_set & pvset;
+			if (g.systems)		vertex_set = vertex_set & svset;
 		}
+		else if (g.systems)
+		{	vertex_set = svset;
+			if (g.placeradius)	vertex_set = vertex_set & pvset;
+		}
+		else if (g.placeradius)
+			vertex_set = pvset;
+		else	// no restrictions via region, system, or placeradius, so include everything
+			for (std::pair<const Waypoint*, HGVertex*> wv : vertices)
+			  vertex_set.insert(wv.second);
+
 		// find number of collapsed/traveled vertices
 		for (HGVertex *v : vertex_set)
 		  if (v->visibility >= 1)
@@ -367,130 +358,95 @@ class HighwayGraph
 	}
 
 	// write the entire set of highway data in .tmg format.
-	// The first line is a header specifying
-	// the format and version number, the second line specifying the
-	// number of waypoints, w, and the number of connections, c, then w
-	// lines describing waypoints (label, latitude, longitude), then c
-	// lines describing connections (endpoint 1 number, endpoint 2
-	// number, route label)
+	// The first line is a header specifying the format and version number,
+	// The second line specifies the number of waypoints, w, the number of connections, c,
+	//     and for traveled graphs only, the number of travelers.
+	// Then, w lines describing waypoints (label, latitude, longitude).
+	// Then, c lines describing connections (endpoint 1 number, endpoint 2 number, route label),
+	//     followed on traveled graphs only by a hexadecimal code encoding travelers on that segment,
+	//     followed on both collapsed & traveled graphs by a list of latitude & longitude values
+	//     for intermediate "shaping points" along the edge, ordered from endpoint 1 to endpoint 2.
 	//
-	// passes number of vertices and number of edges written by reference
-	//
-	void write_master_tmg_simple(GraphListEntry *msptr, std::string filename)
-	{	std::ofstream tmgfile(filename.data());
-		tmgfile << "TMG 1.0 simple\n";
-		tmgfile << vertices.size() << ' ' << simple_edge_count() << '\n';
-		// number waypoint entries as we go
-		int s_vertex_num = 0;
-		for (std::pair<const Waypoint*, HGVertex*> wv : vertices)
-		{	char fstr[56];
-			sprintf(fstr, "%.15g %.15g", wv.second->lat, wv.second->lng);
-			tmgfile << *(wv.second->unique_name) << ' ' << fstr << '\n';
-			wv.second->s_vertex_num[0] = s_vertex_num;
-			s_vertex_num++;
-		}
-		// sanity check
-		if (vertices.size() != s_vertex_num)
-			std::cout << "ERROR: computed " << vertices.size() << " waypoints but wrote " << s_vertex_num << std::endl;
-
-		// now edges, only print if not already printed
-		int edge = 0;
-		for (std::pair<const Waypoint*, HGVertex*> wv : vertices)
-		  for (HGEdge *e : wv.second->incident_s_edges)
-		    if (!e->s_written)
-		    {	e->s_written = 1;
-			tmgfile << e->vertex1->s_vertex_num[0] << ' ' << e->vertex2->s_vertex_num[0] << ' ' << e->label(0) << '\n';
-			edge++;
-		    }
-		// sanity checks
-		for (std::pair<const Waypoint*, HGVertex*> wv : vertices)
-		  for (HGEdge *e : wv.second->incident_s_edges)
-		    if (!e->s_written)
-		      std::cout << "ERROR: never wrote edge " << e->vertex1->s_vertex_num << ' ' << e->vertex2->s_vertex_num[0] << ' ' << e->label(0) << std::endl;
-		if (simple_edge_count() != edge)
-		  std::cout << "ERROR: computed " << simple_edge_count() << " edges but wrote " << edge << std::endl;
-
-		tmgfile.close();
-		msptr->vertices = vertices.size();
-		msptr->edges = simple_edge_count();
-	}
-
-	// write the entire set of data in the tmg collapsed edge format
-	void write_master_tmg_collapsed(GraphListEntry *mcptr, std::string filename, unsigned int threadnum)
-	{	std::ofstream tmgfile(filename.data());
+	void write_master_graphs_tmg(std::vector<GraphListEntry> &graph_vector, std::string path, std::list<TravelerList*> &traveler_lists)
+	{	std::ofstream simplefile(path+"tm-master-simple.tmg");
+		std::ofstream collapfile(path+"tm-master-collapsed.tmg");
+		std::ofstream travelfile(path+"tm-master-traveled.tmg");
 		unsigned int num_collapsed_edges = collapsed_edge_count();
-		tmgfile << "TMG 1.0 collapsed\n";
-		tmgfile << num_collapsed_vertices() << " " << num_collapsed_edges << '\n';
-
-		// write visible vertices
-		int c_vertex_num = 0;
-		for (std::pair<const Waypoint*, HGVertex*> wv : vertices)
-		  if (wv.second->visibility == 2)
-		  {	char fstr[56];
-			sprintf(fstr, "%.15g %.15g", wv.second->lat, wv.second->lng);
-			tmgfile << *(wv.second->unique_name) << ' ' << fstr << '\n';
-			wv.second->c_vertex_num[threadnum] = c_vertex_num;
-			c_vertex_num++;
-		  }
-		// write collapsed edges
-		int edge = 0;
-		for (std::pair<const Waypoint*, HGVertex*> wv : vertices)
-		  if (wv.second->visibility == 2)
-		    for (HGEdge *e : wv.second->incident_c_edges)
-		      if (!e->c_written)
-		      {	e->c_written = 1;
-			tmgfile << e->collapsed_tmg_line(0, threadnum) << '\n';
-			edge++;
-		      }
-		// sanity check on edges written
-		if (num_collapsed_edges != edge)
-			std::cout << "ERROR: computed " << num_collapsed_edges << " collapsed edges, but wrote " << edge << '\n';
-
-		tmgfile.close();
-		mcptr->vertices = num_collapsed_vertices();
-		mcptr->edges = num_collapsed_edges;
-	}
-
-	// write the entire set of data in the tmg traveled format
-	void write_master_tmg_traveled(GraphListEntry *mtptr, std::string filename, std::list<TravelerList*> *traveler_lists, unsigned int threadnum)
-	{	std::ofstream tmgfile(filename.data());
 		unsigned int num_traveled_edges = traveled_edge_count();
-		tmgfile << "TMG 2.0 traveled\n";
-		tmgfile << num_traveled_vertices() << ' ' << num_traveled_edges << ' ' << traveler_lists->size() << '\n';
+		simplefile << "TMG 1.0 simple\n";
+		collapfile << "TMG 1.0 collapsed\n";
+		travelfile << "TMG 2.0 traveled\n";
+		simplefile << vertices.size() << ' ' << simple_edge_count() << '\n';
+		collapfile << num_collapsed_vertices() << ' ' << num_collapsed_edges << '\n';
+		travelfile << num_traveled_vertices() << ' ' << num_traveled_edges << ' ' << traveler_lists.size() << '\n';
 
-		// write visible vertices
-		int t_vertex_num = 0;
+		// write vertices
+		unsigned int sv = 0;
+		unsigned int cv = 0;
+		unsigned int tv = 0;
+		for (std::pair<Waypoint* const, HGVertex*> wv : vertices)
+		{	char fstr[57];
+			sprintf(fstr, " %.15g %.15g", wv.second->lat, wv.second->lng);
+			// all vertices for simple graph
+			simplefile << *(wv.second->unique_name) << fstr << '\n';
+			wv.second->s_vertex_num[0] = sv;
+			sv++;
+			// visible vertices...
+			if (wv.second->visibility >= 1)
+			{	// for traveled graph,
+				travelfile << *(wv.second->unique_name) << fstr << '\n';
+				wv.second->t_vertex_num[0] = tv;
+				tv++;
+				if (wv.second->visibility == 2)
+				{	// and for collapsed graph
+					collapfile << *(wv.second->unique_name) << fstr << '\n';
+					wv.second->c_vertex_num[0] = cv;
+					cv++;
+				}
+			}
+		}
+		// now edges, only write if not already written
 		for (std::pair<const Waypoint*, HGVertex*> wv : vertices)
-		  if (wv.second->visibility >= 1)
-		  {	char fstr[56];
-			sprintf(fstr, "%.15g %.15g", wv.second->lat, wv.second->lng);
-			tmgfile << *(wv.second->unique_name) << ' ' << fstr << '\n';
-			wv.second->t_vertex_num[threadnum] = t_vertex_num;
-			t_vertex_num++;
-		  }
-		// write traveled edges
-		int edge = 0;
-		for (std::pair<const Waypoint*, HGVertex*> wv : vertices)
-		  if (wv.second->visibility >= 1)
-		    for (HGEdge *e : wv.second->incident_t_edges)
-		      if (!e->t_written)
-		      {	e->t_written = 1;
-			tmgfile << e->traveled_tmg_line(0, traveler_lists, threadnum) << '\n';
-			edge++;
-		      }
+		{	for (HGEdge *e : wv.second->incident_s_edges)
+			  if (!e->s_written)
+			  {	e->s_written = 1;
+				simplefile << e->vertex1->s_vertex_num[0] << ' ' << e->vertex2->s_vertex_num[0] << ' ' << e->label(0) << '\n';
+			  }
+			// write edges if vertex is visible...
+			if (wv.second->visibility >= 1)
+			{	// in traveled graph,
+				for (HGEdge *e : wv.second->incident_t_edges)
+				  if (!e->t_written)
+				  {	e->t_written = 1;
+					travelfile << e->traveled_tmg_line(0, &traveler_lists, 0) << '\n';
+				  }
+				if (wv.second->visibility == 2)
+				{	// and in collapsed graph
+					for (HGEdge *e : wv.second->incident_c_edges)
+					  if (!e->c_written)
+					  {	e->c_written = 1;
+						collapfile << e->collapsed_tmg_line(0, 0) << '\n';
+					  }
+				}
+			}
+		}
 		// traveler names
-		for (TravelerList *t : *traveler_lists)
-			tmgfile << t->traveler_name << ' ';
-		tmgfile << '\n';
+		for (TravelerList *t : traveler_lists)
+			travelfile << t->traveler_name << ' ';
+		travelfile << '\n';
+		simplefile.close();
+		collapfile.close();
+		travelfile.close();
 
-		// sanity check on edges written
-		if (num_traveled_edges != edge)
-			std::cout << "ERROR: computed " << num_traveled_edges << " traveled edges, but wrote " << edge << '\n';
-
-		tmgfile.close();
-		mtptr->vertices = num_traveled_vertices();
-		mtptr->edges = num_traveled_edges;
-		mtptr->travelers = traveler_lists->size();
+		graph_vector[0].vertices = vertices.size();
+		graph_vector[1].vertices = num_collapsed_vertices();
+		graph_vector[2].vertices = num_traveled_vertices();
+		graph_vector[0].edges = simple_edge_count();
+		graph_vector[1].edges = num_collapsed_edges;
+		graph_vector[2].edges = num_traveled_edges;
+		graph_vector[0].travelers = 0;
+		graph_vector[1].travelers = 0;
+		graph_vector[2].travelers = traveler_lists.size();
 	}
 
 	// write a subset of the data,
@@ -498,12 +454,13 @@ class HighwayGraph
 	// restricted by regions in the list if given,
 	// by systems in the list if given,
 	// or to within a given area if placeradius is given
-	void write_subgraphs_tmg(std::vector<GraphListEntry> &graph_vector, std::string path, size_t graphnum, unsigned int threadnum)
+	void write_subgraphs_tmg(	std::vector<GraphListEntry> &graph_vector, std::string path, size_t graphnum,
+					unsigned int threadnum, WaypointQuadtree *qt, ElapsedTime *et)
 	{	unsigned int cv_count, tv_count;
 		std::ofstream simplefile((path+graph_vector[graphnum].filename()).data());
 		std::ofstream collapfile((path+graph_vector[graphnum+1].filename()).data());
 		std::ofstream travelfile((path+graph_vector[graphnum+2].filename()).data());
-		std::unordered_set<HGVertex*> mv = matching_vertices(graph_vector[graphnum], cv_count, tv_count);
+		std::unordered_set<HGVertex*> mv = matching_vertices(graph_vector[graphnum], cv_count, tv_count, qt);
 		std::unordered_set<HGEdge*> mse = matching_simple_edges(mv, graph_vector[graphnum]);
 		std::unordered_set<HGEdge*> mce = matching_collapsed_edges(mv, graph_vector[graphnum]);
 		std::unordered_set<HGEdge*> mte;
@@ -515,6 +472,10 @@ class HighwayGraph
 		{	t->traveler_num[threadnum] = travnum;
 			travnum++;
 		}
+	      #ifdef threading_enabled
+		if (graph_vector[graphnum].cat != graph_vector[graphnum-1].cat)
+			std::cout << '\n' + et->et() + "Writing " + graph_vector[graphnum].category() + " graphs.\n";
+	      #endif
 		std::cout << graph_vector[graphnum].tag()
 			  << '(' << mv.size() << ',' << mse.size() << ") "
 			  << '(' << cv_count << ',' << mce.size() << ") "
@@ -570,7 +531,12 @@ class HighwayGraph
 
 		graph_vector[graphnum].vertices = mv.size();
 		graph_vector[graphnum+1].vertices = cv_count;
+		graph_vector[graphnum+2].vertices = tv_count;
 		graph_vector[graphnum].edges = mse.size();
 		graph_vector[graphnum+1].edges = mce.size();
+		graph_vector[graphnum+2].edges = mte.size();
+		graph_vector[graphnum].travelers = 0;
+		graph_vector[graphnum+1].travelers = 0;
+		graph_vector[graphnum+2].travelers = traveler_lists.size();
 	}
 };

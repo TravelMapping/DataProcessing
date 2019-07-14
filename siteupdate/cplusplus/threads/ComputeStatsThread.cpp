@@ -1,16 +1,15 @@
-void ComputeStatsThread(unsigned int id, std::list<HighwaySystem*> *hs_list, std::mutex *mtx)
-{	//std::cout << "Starting ComputeStatsThread " << id << std::endl;
-	while (hs_list->size())
+void ComputeStatsThread(unsigned int id, std::list<HighwaySystem*> *hs_list, std::list<HighwaySystem*>::iterator *it, std::mutex *mtx)
+{	//printf("Starting ComputeStatsThread %02i\n", id); fflush(stdout);
+	while (*it != hs_list->end())
 	{	mtx->lock();
-		if (!hs_list->size())
+		if (*it == hs_list->end())
 		{	mtx->unlock();
 			return;
 		}
-		//std::cout << "Thread " << id << " with hs_list->size()=" << hs_list->size() << std::endl;
-		HighwaySystem *h(hs_list->front());
-		//std::cout << "Thread " << id << " assigned " << h->systemname << std::endl;
-		hs_list->pop_front();
-		//std::cout << "Thread " << id << " hs_list->pop_front() successful." << std::endl;
+		HighwaySystem *h(**it);
+		//printf("ComputeStatsThread %02i assigned %s\n", id, h->systemname.data()); fflush(stdout);
+		(*it)++;
+		//printf("ComputeStatsThread %02i (*it)++ OK. Releasing lock.\n", id); fflush(stdout);
 		mtx->unlock();
 		std::cout << '.' << std::flush;
 		for (Route &r : h->route_list)
