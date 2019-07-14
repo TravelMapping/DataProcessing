@@ -95,6 +95,9 @@ int main(int argc, char *argv[])
 	// start a timer for including elapsed time reports in messages
 	ElapsedTime et;
 
+	timestamp = time(0);
+	cout << "Start: " << ctime(&timestamp);
+
 	// create ErrorList
 	ErrorList el;
 
@@ -1093,6 +1096,8 @@ int main(int argc, char *argv[])
 	if (args.errorcheck)
 	    cout << "!!! DATA CHECK SUCCESSFUL !!!" << endl;
 
+	timestamp = time(0);
+	cout << "Finish: " << ctime(&timestamp);
 	cout << "Total run time: " << et.et() << endl;
 
 }
