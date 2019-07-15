@@ -941,7 +941,7 @@ int main(int argc, char *argv[])
 
 	// See if we have any errors that should be fatal to the site update process
 	if (el.error_list.size())
-	{	cout << "ABORTING due to " << el.error_list.size() + " errors:" << endl;
+	{	cout << "ABORTING due to " << el.error_list.size() << " errors:" << endl;
 		for (unsigned int i = 0; i < el.error_list.size(); i++)
 			cout << i+1 << ": " << el.error_list[i] << endl;
 		return 0;
