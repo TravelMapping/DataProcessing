@@ -16,6 +16,7 @@ import math
 import os
 import re
 import sys
+import string
 import time
 import threading
 
@@ -3323,8 +3324,9 @@ for h in highway_systems:
 
                 # look for too many characters after underscore in label
                 if '_' in w.label:
-                    if w.label.index('_') < len(w.label) - 5:
-                        datacheckerrors.append(DatacheckEntry(r,[w.label],'LONG_UNDERSCORE'))
+                    if w.label.index('_') < len(w.label) - 4:
+                        if w.label[-1] not in string.ascii_uppercase or w.label.index('_') < len(w.label) - 5:
+                            datacheckerrors.append(DatacheckEntry(r,[w.label],'LONG_UNDERSCORE'))
 
                 # look for too many slashes in label
                 if w.label.count('/') > 1:

@@ -351,7 +351,8 @@ inline void Waypoint::underscore_datachecks(DatacheckEntryList *datacheckerrors,
 		if (strchr(underscore+1, '_'))
 			datacheckerrors->add(route, label, "", "", "LABEL_UNDERSCORES", "");
 		// look for too many characters after underscore in label
-		if (label.data()+label.size() > underscore+5)
+		if (label.data()+label.size() > underscore+4)
+		    if (label.back() > 'Z' || label.back() < 'A' || label.data()+label.size() > underscore+5)
 			datacheckerrors->add(route, label, "", "", "LONG_UNDERSCORE", "");
 		// look for labels with a slash after an underscore
 		if (slash > underscore)
