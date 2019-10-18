@@ -102,7 +102,7 @@ class Arguments
 		std::cout <<	"		        specified)\n";
 		std::cout <<	"  -p SPLITREGIONPATH SPLITREGION, --splitregion SPLITREGIONPATH SPLITREGION\n";
 		std::cout <<	"		        Path to logs & .lists for a specific...\n";
-		std::cout <<	"		        Region being split into rubregions.\n";
+		std::cout <<	"		        Region being split into subregions.\n";
 		std::cout <<	"		        For Development.\n";
 		std::cout <<	"  -U USERLIST [USERLIST ...], --userlist USERLIST [USERLIST ...]\n";
 		std::cout <<	"		        For Development: list of users to use in dataset\n";
