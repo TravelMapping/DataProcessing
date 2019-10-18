@@ -66,7 +66,7 @@ if (args.splitregion != "")
 					  if (cs->route->name_no_abbrev() == s->route->name_no_abbrev() && cs->route->region != s->route->region)
 					    matches++;
 					if (matches != 1)
-					  fralog << matches << " concurrent segments with same name+banner in different region: " << s->str() << '\n';
+					  fralog << s->str() << " has " << matches << " concurrent segments with same name+banner in different region(s) (1 expected)" << '\n';
 				     }
 		}
 		fralog.close();
