@@ -143,49 +143,7 @@ class HighwayGraph
 			}
 		}
 		std::cout << '!' << std::endl;
-
-		// print summary info
-		std::cout << et.et() << "   Simple graph has " << vertices.size() << " vertices, " << simple_edge_count() << " edges." << std::endl;
-		std::cout << et.et() << "Collapsed graph has " << num_collapsed_vertices() << " vertices, " << collapsed_edge_count() << " edges." << std::endl;
-		std::cout << et.et() << " Traveled graph has " << num_traveled_vertices() << " vertices, " << traveled_edge_count() << " edges." << std::endl;
 	} // end ctor
-
-	unsigned int num_collapsed_vertices()
-	{	unsigned int count = 0;
-		for (std::pair<const Waypoint*, HGVertex*> wv : vertices)
-		  if (wv.second->visibility == 2) count ++;
-		return count;
-	}
-
-	unsigned int num_traveled_vertices()
-	{	unsigned int count = 0;
-		for (std::pair<const Waypoint*, HGVertex*> wv : vertices)
-		  if (wv.second->visibility >= 1) count ++;
-		return count;
-	}
-
-	unsigned int simple_edge_count()
-	{	unsigned int edges = 0;
-		for (std::pair<const Waypoint*, HGVertex*> wv : vertices)
-		  edges += wv.second->incident_s_edges.size();
-		return edges/2;
-	}
-
-	unsigned int collapsed_edge_count()
-	{	unsigned int edges = 0;
-		for (std::pair<const Waypoint*, HGVertex*> wv : vertices)
-		  if (wv.second->visibility == 2)
-		    edges += wv.second->incident_c_edges.size();
-		return edges/2;
-	}
-
-	unsigned int traveled_edge_count()
-	{	unsigned int edges = 0;
-		for (std::pair<const Waypoint*, HGVertex*> wv : vertices)
-		  if (wv.second->visibility >= 1)
-		    edges += wv.second->incident_t_edges.size();
-		return edges/2;
-	}
 
 	void clear()
 	{	for (std::pair<const Waypoint*, HGVertex*> wv : vertices) delete wv.second;
@@ -371,14 +329,12 @@ class HighwayGraph
 	{	std::ofstream simplefile(path+"tm-master-simple.tmg");
 		std::ofstream collapfile(path+"tm-master-collapsed.tmg");
 		std::ofstream travelfile(path+"tm-master-traveled.tmg");
-		unsigned int num_collapsed_edges = collapsed_edge_count();
-		unsigned int num_traveled_edges = traveled_edge_count();
 		simplefile << "TMG 1.0 simple\n";
 		collapfile << "TMG 1.0 collapsed\n";
 		travelfile << "TMG 2.0 traveled\n";
-		simplefile << vertices.size() << ' ' << simple_edge_count() << '\n';
-		collapfile << num_collapsed_vertices() << ' ' << num_collapsed_edges << '\n';
-		travelfile << num_traveled_vertices() << ' ' << num_traveled_edges << ' ' << traveler_lists.size() << '\n';
+		simplefile << graph_vector[0].vertices << ' ' << graph_vector[0].edges << '\n';
+		collapfile << graph_vector[1].vertices << ' ' << graph_vector[1].edges << '\n';
+		travelfile << graph_vector[2].vertices << ' ' << graph_vector[2].edges << ' ' << traveler_lists.size() << '\n';
 
 		// write vertices
 		unsigned int sv = 0;
@@ -438,12 +394,6 @@ class HighwayGraph
 		collapfile.close();
 		travelfile.close();
 
-		graph_vector[0].vertices = vertices.size();
-		graph_vector[1].vertices = num_collapsed_vertices();
-		graph_vector[2].vertices = num_traveled_vertices();
-		graph_vector[0].edges = simple_edge_count();
-		graph_vector[1].edges = num_collapsed_edges;
-		graph_vector[2].edges = num_traveled_edges;
 		graph_vector[0].travelers = 0;
 		graph_vector[1].travelers = 0;
 		graph_vector[2].travelers = traveler_lists.size();

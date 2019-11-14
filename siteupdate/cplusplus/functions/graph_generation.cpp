@@ -30,8 +30,31 @@ else {	list<Region*> *regions;
 				  't', 'M', (list<Region*>*)0, (list<HighwaySystem*>*)0, (PlaceRadius*)0);
 	graph_types.push_back({"master", "All Travel Mapping Data", "These graphs contain all routes currently plotted in the Travel Mapping project."});
 	size_t graphnum = 3;
-      #ifndef threading_enabled
+
 	cout << et.et() << "Writing master TM graph files." << endl;
+	graph_vector[0].edges = 0;	graph_vector[0].vertices = graph_data.vertices.size();
+	graph_vector[1].edges = 0;	graph_vector[1].vertices = 0;
+	graph_vector[2].edges = 0;	graph_vector[2].vertices = 0;
+	for (std::pair<const Waypoint*, HGVertex*> wv : graph_data.vertices)
+	{	graph_vector[0].edges += wv.second->incident_s_edges.size();
+		if (wv.second->visibility >= 1)
+		{	graph_vector[2].vertices++;
+			graph_vector[2].edges += wv.second->incident_t_edges.size();
+			if (wv.second->visibility == 2)
+			{	graph_vector[1].vertices++;
+				graph_vector[1].edges += wv.second->incident_c_edges.size();
+			}
+		}
+	}
+	graph_vector[0].edges /= 2;
+	graph_vector[1].edges /= 2;
+	graph_vector[2].edges /= 2;
+	// print summary info
+	std::cout << "   Simple graph has " << graph_vector[0].vertices << " vertices, " << graph_vector[0].edges << " edges." << std::endl;
+	std::cout << "Collapsed graph has " << graph_vector[1].vertices << " vertices, " << graph_vector[1].edges << " edges." << std::endl;
+	std::cout << " Traveled graph has " << graph_vector[2].vertices << " vertices, " << graph_vector[2].edges << " edges." << std::endl;
+
+      #ifndef threading_enabled
 	graph_data.write_master_graphs_tmg(graph_vector, args.graphfilepath + "/", traveler_lists);
       #else
 	cout << et.et() << "Setting up subgraphs." << endl;
@@ -45,7 +68,6 @@ else {	list<Region*> *regions;
 	#include "subgraphs/region.cpp"
       #ifdef threading_enabled
 	// write graph_vector entries to disk
-	cout << et.et() << "Writing master TM graph files." << flush;
 	thr[0] = new thread(MasterTmgThread, &graph_data, &graph_vector, args.graphfilepath+'/', &traveler_lists, &graphnum, &list_mtx, &all_waypoints, &et);
 	// set up for threaded subgraph generation
 	// start at t=1, because MasterTmgThread will spawn another SubgraphThread when finished
