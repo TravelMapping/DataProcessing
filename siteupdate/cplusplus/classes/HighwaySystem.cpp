@@ -28,7 +28,6 @@ class HighwaySystem
 	std::list<ConnectedRoute> con_route_list;
 	std::unordered_map<Region*, double> mileage_by_region;
 	std::unordered_set<HGVertex*> vertices;
-	std::unordered_set<HGEdge*> edges;
 
 	HighwaySystem(std::string &line, ErrorList &el, std::string path, std::string &systemsfile,
 		      std::list<std::pair<std::string,std::string>> &countries,

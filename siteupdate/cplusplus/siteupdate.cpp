@@ -50,6 +50,7 @@ class HGEdge;
 #include "functions/double_quotes.cpp"
 #include "functions/crawl_hwy_data.cpp"
 #include "functions/operators.cpp"
+#include "functions/list_contains.cpp"
 #include "classes/Arguments.cpp"
 #include "classes/WaypointQuadtree/WaypointQuadtree.h"
 #include "classes/Route/Route.h"

@@ -1732,58 +1732,50 @@ class HighwayGraph:
                         HGEdge(vertex=v, fmt_mask=2)
         print("!")
 
-    def matching_vertices(self, regions, systems, placeradius, rg_vset_hash, qt):
-        # return a tuple containing
-        # 1st, a set of vertices from the graph, optionally
-        # restricted by region or system or placeradius area
-        # 2nd, the number of collapsed vertices in this set
-        # 3rd, the number of traveled vertices in this set
-        cv_count = 0
-        tv_count = 0
-        vertex_set = set()
-        rvset = set()
-        svset = set()
-        # rvset is the union of all sets in regions
+    def matching_vertices_and_edges(self, qt, regions, systems, placeradius, rg_vset_hash):
+        # return seven items:
+        # mvset		 # a set of vertices, optionally restricted by region or system or placeradius area
+        cv_count = 0	 # the number of collapsed vertices in this set
+        tv_count = 0	 # the number of traveled vertices in this set
+        mse = set()	 # matching    simple edges
+        mce = set()	 # matching collapsed edges
+        mte = set()	 # matching  traveled edges
+        trav_set = set() # sorted into a list of travelers for traveled graphs
+        # ...as a tuple
+
+        rvset = set()	# union of all sets in regions
+        svset = set()	# union of all sets in systems
         if regions is not None:
             for r in regions:
                 rvset = rvset | rg_vset_hash[r]
-        # svset is the union of all sets in systems
         if systems is not None:
             for h in systems:
                 svset = svset | h.vertices
-        # pvset is the set of vertices within placeradius
         if placeradius is not None:
             pvset = placeradius.vertices(qt, self)
 
         # determine which vertices are within our region(s) and/or system(s)
         if regions is not None:
-            vertex_set = rvset
+            mvset = rvset
             if placeradius is not None:
-                vertex_set = vertex_set & prset
+                mvset = mvset & pvset
             if systems is not None:
-                vertex_set = vertex_set & svset
+                mvset = mvset & svset
         elif systems is not None:
-            vertex_set = svset
+            mvset = svset
             if placeradius is not None:
-                vertex_set = vertex_set & prset
+                mvset = mvset & pvset
         elif placeradius is not None:
-            vertex_set = pvset
+            mvset = pvset
         else: # no restrictions via region, system, or placeradius, so include everything
+            mvset = set()
             for v in self.vertices.values():
-                vertex_set.add(v)
-        # find number of collapsed vertices
-        for v in vertex_set:
-            if v.visibility >= 1:
-                tv_count += 1
-                if v.visibility == 2:
-                    cv_count += 1
-        return (vertex_set, cv_count, tv_count)
-
-    def matching_simple_edges(self, mv, regions=None, systems=None, placeradius=None):
-        # return a set of edges from the graph, optionally
-        # restricted by region or system or placeradius area
-        edge_set = set()
-        for v in mv:
+                mvset.add(v)
+        
+        # Compute sets of edges for subgraphs, optionally
+        # restricted by region or system or placeradius.
+        # Keep a count of collapsed & traveled vertices as we go.
+        for v in mvset:
             for e in v.incident_s_edges:
                 if placeradius is None or placeradius.contains_edge(e):
                     if regions is None or e.segment.route.region in regions:
@@ -1792,39 +1784,12 @@ class HighwayGraph:
                             for (r, s) in e.route_names_and_systems:
                                 if s in systems:
                                     system_match = True
+                                    break
                         if system_match:
-                            edge_set.add(e)
-        return edge_set
-
-    def matching_collapsed_edges(self, mv, regions=None, systems=None,
-                                 placeradius=None):
-        # return a set of edges for the collapsed edge graph format,
-        # optionally restricted by region or system or placeradius
-        edge_set = set()
-        for v in mv:
-            if v.visibility < 2:
-                continue
-            for e in v.incident_c_edges:
-                if placeradius is None or placeradius.contains_edge(e):
-                    if regions is None or e.segment.route.region in regions:
-                        system_match = systems is None
-                        if not system_match:
-                            for (r, s) in e.route_names_and_systems:
-                                if s in systems:
-                                    system_match = True
-                        if system_match:
-                            edge_set.add(e)
-        return edge_set
-
-    def matching_traveled_edges(self, mv, regions=None, systems=None,
-                                 placeradius=None):
-        # return a set of edges for the traveled graph format,
-        # optionally restricted by region or system or placeradius
-        edge_set = set()
-        trav_set = set()
-        for v in mv:
+                            mse.add(e)
             if v.visibility < 1:
                 continue
+            tv_count += 1
             for e in v.incident_t_edges:
                 if placeradius is None or placeradius.contains_edge(e):
                     if regions is None or e.segment.route.region in regions:
@@ -1833,11 +1798,26 @@ class HighwayGraph:
                             for (r, s) in e.route_names_and_systems:
                                 if s in systems:
                                     system_match = True
+                                    break
                         if system_match:
-                            edge_set.add(e)
+                            mte.add(e)
                             for t in e.segment.clinched_by:
                                 trav_set.add(t)
-        return (edge_set, sorted(trav_set, key=lambda TravelerList: TravelerList.traveler_name))
+            if v.visibility < 2:
+                continue
+            cv_count += 1
+            for e in v.incident_c_edges:
+                if placeradius is None or placeradius.contains_edge(e):
+                    if regions is None or e.segment.route.region in regions:
+                        system_match = systems is None
+                        if not system_match:
+                            for (r, s) in e.route_names_and_systems:
+                                if s in systems:
+                                    system_match = True
+                                    break
+                        if system_match:
+                            mce.add(e)
+        return (mvset, cv_count, tv_count, mse, mce, mte, sorted(trav_set, key=lambda TravelerList: TravelerList.traveler_name))
 
     # write the entire set of highway data in .tmg format.
     # The first line is a header specifying the format and version number,
@@ -1946,10 +1926,7 @@ class HighwayGraph:
         simplefile = open(path+root+"-simple.tmg","w",encoding='utf-8')
         collapfile = open(path+root+"-collapsed.tmg","w",encoding='utf-8')
         travelfile = open(path+root+"-traveled.tmg","w",encoding='utf-8')
-        (mv, cv_count, tv_count) = self.matching_vertices(regions, systems, placeradius, self.rg_vset_hash, qt)
-        mse = self.matching_simple_edges(mv, regions, systems, placeradius)
-        mce = self.matching_collapsed_edges(mv, regions, systems, placeradius)
-        (mte, traveler_lists) = self.matching_traveled_edges(mv, regions, systems, placeradius)
+        (mv, cv_count, tv_count, mse, mce, mte, traveler_lists) = self.matching_vertices_and_edges(qt, regions, systems, placeradius, self.rg_vset_hash)
         """if len(traveler_lists) == 0:
             print("\n\nNo travelers in " + root + "\n", flush=True)#"""
         # assign traveler numbers
