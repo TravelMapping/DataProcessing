@@ -1,5 +1,5 @@
-template <class item>
-inline bool list_contains(const std::list<item> *haystack, const item &needle)
+template <class container, class item>
+inline bool list_contains(const container *haystack, const item &needle)
 {	for (const item &i : *haystack)
 	  if (i == needle)
 	    return 1;

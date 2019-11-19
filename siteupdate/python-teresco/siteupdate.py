@@ -624,6 +624,33 @@ class Waypoint:
                 log.append("Exit number: " + name + " -> " + label)
                 return label
 
+        # Check for reversed border labels
+        # DE491@DE/PA&PA491@PA/DE                                             would become   DE491/PA491@PA/DE
+        # NB2@QC/NB&TCHMai@QC/NB&A-85Not@NB/QC&TCHMai@QC/NB                   would become   NB2/TCHMai/A-85Not/@QC/NB
+        # US12@IL/IN&US20@IL/IN&US41@IN/IL&US12@IL/IN&US20@IL/IN&US41@IN/IL   would become   US12/US20/US41@IL/IN
+        if '/' in self.label:
+            slash = self.label.index('/')
+            reverse = self.label[slash+1:]+'/'+self.label[:slash]
+            matches = 1
+            # colocated[0].label *IS* label, so no need to check that
+            for i in range(1, len(colocated)):
+              if colocated[i].label == self.label or colocated[i].label == reverse:
+                matches += 1
+              else:
+                  break
+            if matches == len(colocated):
+                routes = []
+                for w in colocated:
+                    if w.route.list_entry_name() not in routes:
+                        routes.append(w.route.list_entry_name())
+
+                newname = routes[0]
+                for i in range(1, len(routes)):
+                    newname += '/' + routes[i]
+                newname += '@' + self.label
+                log.append("Reversed border labels: " + name + " -> " + newname)
+                return newname
+
         # TODO: I-20@76&I-77@16
         # should become I-20/I-77 or maybe I-20(76)/I-77(16)
         # not shorter, so maybe who cares about this one?
@@ -638,9 +665,6 @@ class Waypoint:
 
         # TODO: I-610@TX288&I-610@38&TX288@I-610
         # this is the overlap point of a loop
-
-        # TODO: boundaries where order is reversed on colocated points
-        # Vt4@FIN/NOR&E75@NOR/FIN&E75@NOR/FIN
 
         log.append("Keep failsafe: " + name)
         return name
