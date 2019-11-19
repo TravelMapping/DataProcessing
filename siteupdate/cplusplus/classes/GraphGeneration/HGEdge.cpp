@@ -35,17 +35,13 @@ HGEdge::HGEdge(HighwaySegment *s, HighwayGraph *graph)
 	// and a 'multi-edge' would not be able to span regions as there
 	// would be a required visible waypoint at the border
 	segment = s;
-	s->route->region->edges.insert(this);
 	// a list of route name/system pairs
 	if (!s->concurrent)
-	{	route_names_and_systems.emplace_back(s->route->list_entry_name(), s->route->system);
-		s->route->system->edges.insert(this);
-	}
-	else	for (HighwaySegment *cs : *(s->concurrent))
-		{	if (cs->route->system->devel()) continue;
-			route_names_and_systems.emplace_back(cs->route->list_entry_name(), cs->route->system);
-			cs->route->system->edges.insert(this);
-		}
+		route_names_and_systems.emplace_back(s->route->list_entry_name(), s->route->system);
+	else for (HighwaySegment *cs : *(s->concurrent))
+	     {	if (cs->route->system->devel()) continue;
+		route_names_and_systems.emplace_back(cs->route->list_entry_name(), cs->route->system);
+	     }
 }
 
 HGEdge::HGEdge(HGVertex *vertex, unsigned char fmt_mask)
@@ -205,13 +201,7 @@ std::string HGEdge::label(std::list<HighwaySystem*> *systems)
 {	std::string the_label;
 	for (std::pair<std::string, HighwaySystem*> &ns : route_names_and_systems)
 	{	// test whether system in systems
-		bool sys_in_sys = 0;
-		if (systems) for (HighwaySystem *h : *systems)
-		  if (h == ns.second)
-		  {	sys_in_sys = 1;
-			break;
-		  }
-		if (!systems || sys_in_sys)
+		if (!systems || list_contains(systems, ns.second))
 		  if (the_label.empty())
 			the_label = ns.first;
 		  else	the_label += "," + ns.first;
