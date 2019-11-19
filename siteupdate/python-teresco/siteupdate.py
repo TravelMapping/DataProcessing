@@ -451,23 +451,23 @@ class Waypoint:
         # TODO: compress when some but not all labels match, such as
         # E127@Kan&AH60@Kan_N&AH64@Kan&AH67@Kan&M38@Kan
         # or possibly just compress ignoring the _ suffixes here
-        routes = ""
-        pointname = ""
+        routes = []
         matches = 0
         for w in colocated:
-            if routes == "":
-                routes = w.route.list_entry_name()
-                pointname = w.label
-                matches = 1
-            elif pointname == w.label or w.label.startswith('+'):
-                # this check seems odd, but avoids double route names
-                # at border crossings
-                if routes != w.route.list_entry_name():
-                    routes += "/" + w.route.list_entry_name()
+            if colocated[0].label == w.label or w.label[0] == '+':
+                # avoid double route names at border crossings
+                if w.route.list_entry_name() not in routes:
+                    routes.append(w.route.list_entry_name())
                 matches += 1
+            else:
+                break
         if matches == len(colocated):
-            log.append("Straightforward concurrency: " + name + " -> " + routes + "@" + pointname)
-            return routes + "@" + pointname
+            newname = ""
+            for r in routes:
+                newname += '/' + r
+            newname += '@' + colocated[0].label
+            log.append("Straightforward concurrency: " + name + " -> " + newname[1:])
+            return newname[1:]
 
         # straightforward 2-route intersection with matching labels
         # NY30@US20&US20@NY30 would become NY30/US20
@@ -624,6 +624,33 @@ class Waypoint:
                 log.append("Exit number: " + name + " -> " + label)
                 return label
 
+        # Check for reversed border labels
+        # DE491@DE/PA&PA491@PA/DE                                             would become   DE491/PA491@PA/DE
+        # NB2@QC/NB&TCHMai@QC/NB&A-85Not@NB/QC&TCHMai@QC/NB                   would become   NB2/TCHMai/A-85Not/@QC/NB
+        # US12@IL/IN&US20@IL/IN&US41@IN/IL&US12@IL/IN&US20@IL/IN&US41@IN/IL   would become   US12/US20/US41@IL/IN
+        if '/' in self.label:
+            slash = self.label.index('/')
+            reverse = self.label[slash+1:]+'/'+self.label[:slash]
+            matches = 1
+            # colocated[0].label *IS* label, so no need to check that
+            for i in range(1, len(colocated)):
+              if colocated[i].label == self.label or colocated[i].label == reverse:
+                matches += 1
+              else:
+                  break
+            if matches == len(colocated):
+                routes = []
+                for w in colocated:
+                    if w.route.list_entry_name() not in routes:
+                        routes.append(w.route.list_entry_name())
+
+                newname = routes[0]
+                for i in range(1, len(routes)):
+                    newname += '/' + routes[i]
+                newname += '@' + self.label
+                log.append("Reversed border labels: " + name + " -> " + newname)
+                return newname
+
         # TODO: I-20@76&I-77@16
         # should become I-20/I-77 or maybe I-20(76)/I-77(16)
         # not shorter, so maybe who cares about this one?
@@ -638,9 +665,6 @@ class Waypoint:
 
         # TODO: I-610@TX288&I-610@38&TX288@I-610
         # this is the overlap point of a loop
-
-        # TODO: boundaries where order is reversed on colocated points
-        # Vt4@FIN/NOR&E75@NOR/FIN&E75@NOR/FIN
 
         log.append("Keep failsafe: " + name)
         return name

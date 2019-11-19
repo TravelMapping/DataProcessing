@@ -140,7 +140,7 @@ double Waypoint::angle(Waypoint *pred, Waypoint *succ)
 	*180/pi;
 }
 
-#include "canonical_waypoint_name.cpp"
+#include "canonical_waypoint_name/canonical_waypoint_name.cpp"
 
 std::string Waypoint::simple_waypoint_name()
 {	/* Failsafe name for a point, simply the string of route name @
