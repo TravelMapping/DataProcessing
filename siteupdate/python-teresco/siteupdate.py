@@ -451,23 +451,23 @@ class Waypoint:
         # TODO: compress when some but not all labels match, such as
         # E127@Kan&AH60@Kan_N&AH64@Kan&AH67@Kan&M38@Kan
         # or possibly just compress ignoring the _ suffixes here
-        routes = ""
-        pointname = ""
+        routes = []
         matches = 0
         for w in colocated:
-            if routes == "":
-                routes = w.route.list_entry_name()
-                pointname = w.label
-                matches = 1
-            elif pointname == w.label or w.label.startswith('+'):
-                # this check seems odd, but avoids double route names
-                # at border crossings
-                if routes != w.route.list_entry_name():
-                    routes += "/" + w.route.list_entry_name()
+            if colocated[0].label == w.label or w.label[0] == '+':
+                # avoid double route names at border crossings
+                if w.route.list_entry_name() not in routes:
+                    routes.append(w.route.list_entry_name())
                 matches += 1
+            else:
+                break
         if matches == len(colocated):
-            log.append("Straightforward concurrency: " + name + " -> " + routes + "@" + pointname)
-            return routes + "@" + pointname
+            newname = ""
+            for r in routes:
+                newname += '/' + r
+            newname += '@' + colocated[0].label
+            log.append("Straightforward concurrency: " + name + " -> " + newname[1:])
+            return newname[1:]
 
         # straightforward 2-route intersection with matching labels
         # NY30@US20&US20@NY30 would become NY30/US20
