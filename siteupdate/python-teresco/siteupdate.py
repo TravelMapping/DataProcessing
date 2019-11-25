@@ -269,7 +269,7 @@ class Waypoint:
         url_parts = parts[-1].split('=')
         if len(url_parts) < 3:
             #print("\nWARNING: Malformed URL in " + route.root + ", line: " + line, end="", flush=True)
-            datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_URL', parts[-1]))
+            datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_URL', 'MISSING_ARG(S)'))
             self.lat = 0
             self.lng = 0
             self.colocated = None
@@ -286,21 +286,21 @@ class Waypoint:
                 point_count += 1
                 if point_count > 1:
                     #print("\nWARNING: Malformed URL in " + route.root + ", line: " + line, end="", flush=True)
-                    datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_URL', parts[-1]))
+                    datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_URL', lat_string))
                     lat_string = "0"
                     lng_string = "0"
                     break
             # check for minus sign not at beginning
             if lat_string[c] == '-' and c > 0:
                 #print("\nWARNING: Malformed URL in " + route.root + ", line: " + line, end="", flush=True)
-                datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_URL', parts[-1]))
+                datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_URL', lat_string))
                 lat_string = "0"
                 lng_string = "0"
                 break
             # check for invalid characters
             if lat_string[c] not in "-.0123456789":
                 #print("\nWARNING: Malformed URL in " + route.root + ", line: " + line, end="", flush=True)
-                datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_URL', parts[-1]))
+                datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_URL', lat_string))
                 lat_string = "0"
                 lng_string = "0"
                 break
@@ -313,21 +313,21 @@ class Waypoint:
                 point_count += 1
                 if point_count > 1:
                     #print("\nWARNING: Malformed URL in " + route.root + ", line: " + line, end="", flush=True)
-                    datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_URL', parts[-1]))
+                    datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_URL', lng_string))
                     lat_string = "0"
                     lng_string = "0"
                     break
             # check for minus sign not at beginning
             if lng_string[c] == '-' and c > 0:
                 #print("\nWARNING: Malformed URL in " + route.root + ", line: " + line, end="", flush=True)
-                datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_URL', parts[-1]))
+                datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_URL', lng_string))
                 lat_string = "0"
                 lng_string = "0"
                 break
             # check for invalid characters
             if lng_string[c] not in "-.0123456789":
                 #print("\nWARNING: Malformed URL in " + route.root + ", line: " + line, end="", flush=True)
-                datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_URL', parts[-1]))
+                datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_URL', lng_string))
                 lat_string = "0"
                 lng_string = "0"
                 break
