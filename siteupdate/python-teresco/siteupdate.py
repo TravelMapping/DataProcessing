@@ -3004,9 +3004,9 @@ file.close()
 
 lines.pop(0)  # ignore header line
 datacheckfps = []
-datacheck_always_error = [ 'DUPLICATE_LABEL', 'HIDDEN_TERMINUS',
+datacheck_always_error = [ 'BAD_ANGLE', 'DUPLICATE_LABEL', 'HIDDEN_TERMINUS',
                            'LABEL_INVALID_CHAR', 'LABEL_SLASHES',
-                           'LONG_UNDERSCORE', 'MALFORMED_URL',
+                           'LABEL_UNDERSCORES', 'LONG_UNDERSCORE', 'MALFORMED_URL',
                            'NONTERMINAL_UNDERSCORE' ]
 for line in lines:
     fields = line.rstrip('\n').split(';')
