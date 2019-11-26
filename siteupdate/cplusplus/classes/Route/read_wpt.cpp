@@ -46,7 +46,12 @@ void Route::read_wpt
 		}
 		if (lines[l][0] == 0) continue;
 		Waypoint *w = new Waypoint(lines[l], this, strtok_mtx, datacheckerrors);
-			      // deleted on termination of program
+			      // deleted on termination of program, or immediately below if invalid
+		// lat & lng both equal to 0 marks a point as invalid. These cases are set by the MALFORMED_URL datacheck.
+		if (w->lat == 0 && w->lng == 0)
+		{	delete w;
+			continue;
+		}
 		point_list.push_back(w);
 		// populate unused alt labels
 		for (size_t i = 0; i < w->alt_labels.size(); i++)
