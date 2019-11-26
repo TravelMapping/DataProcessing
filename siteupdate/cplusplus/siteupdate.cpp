@@ -873,7 +873,8 @@ int main(int argc, char *argv[])
 	unordered_set<string> datacheck_always_error
 	({	"BAD_ANGLE", "DUPLICATE_LABEL", "HIDDEN_TERMINUS",
 		"LABEL_INVALID_CHAR", "LABEL_SLASHES",
-		"LABEL_UNDERSCORES", "LONG_UNDERSCORE", "NONTERMINAL_UNDERSCORE"
+		"LABEL_UNDERSCORES", "LONG_UNDERSCORE", "MALFORMED_URL",
+		"NONTERMINAL_UNDERSCORE"
 	});
 	while (getline(file, line))
 	{	if (line.back() == 0x0D) line.erase(line.end()-1);	// trim DOS newlines
