@@ -270,13 +270,14 @@ class Waypoint:
         if len(url_parts) < 3:
             #print("\nWARNING: Malformed URL in " + route.root + ", line: " + line, end="", flush=True)
             datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_URL', 'MISSING_ARG(S)'))
-            self.lat = 0
-            self.lng = 0
+            self.lat = 0.0
+            self.lng = 0.0
             self.colocated = None
             self.near_miss_points = None
             return
         lat_string = url_parts[1].split("&")[0] # chop off "&lon"
         lng_string = url_parts[2].split("&")[0] # chop off possible "&zoom"
+        valid_coords = True
 
         # make sure lat_string is valid
         point_count = 0
@@ -287,22 +288,25 @@ class Waypoint:
                 if point_count > 1:
                     #print("\nWARNING: Malformed URL in " + route.root + ", line: " + line, end="", flush=True)
                     datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_URL', lat_string))
-                    lat_string = "0"
-                    lng_string = "0"
+                    self.lat = 0.0
+                    self.lng = 0.0
+                    valid_coords = False
                     break
             # check for minus sign not at beginning
             if lat_string[c] == '-' and c > 0:
                 #print("\nWARNING: Malformed URL in " + route.root + ", line: " + line, end="", flush=True)
                 datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_URL', lat_string))
-                lat_string = "0"
-                lng_string = "0"
+                self.lat = 0.0
+                self.lng = 0.0
+                valid_coords = False
                 break
             # check for invalid characters
             if lat_string[c] not in "-.0123456789":
                 #print("\nWARNING: Malformed URL in " + route.root + ", line: " + line, end="", flush=True)
                 datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_URL', lat_string))
-                lat_string = "0"
-                lng_string = "0"
+                self.lat = 0.0
+                self.lng = 0.0
+                valid_coords = False
                 break
 
         # make sure lng_string is valid
@@ -314,26 +318,30 @@ class Waypoint:
                 if point_count > 1:
                     #print("\nWARNING: Malformed URL in " + route.root + ", line: " + line, end="", flush=True)
                     datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_URL', lng_string))
-                    lat_string = "0"
-                    lng_string = "0"
+                    self.lat = 0.0
+                    self.lng = 0.0
+                    valid_coords = False
                     break
             # check for minus sign not at beginning
             if lng_string[c] == '-' and c > 0:
                 #print("\nWARNING: Malformed URL in " + route.root + ", line: " + line, end="", flush=True)
                 datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_URL', lng_string))
-                lat_string = "0"
-                lng_string = "0"
+                self.lat = 0.0
+                self.lng = 0.0
+                valid_coords = False
                 break
             # check for invalid characters
             if lng_string[c] not in "-.0123456789":
                 #print("\nWARNING: Malformed URL in " + route.root + ", line: " + line, end="", flush=True)
                 datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_URL', lng_string))
-                lat_string = "0"
-                lng_string = "0"
+                self.lat = 0.0
+                self.lng = 0.0
+                valid_coords = False
                 break
 
-        self.lat = float(lat_string)
-        self.lng = float(lng_string)
+        if valid_coords:
+            self.lat = float(lat_string)
+            self.lng = float(lng_string)
         # also keep track of a list of colocated waypoints, if any
         self.colocated = None
         # and keep a list of "near-miss points", if any
