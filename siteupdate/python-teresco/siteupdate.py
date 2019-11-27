@@ -3013,7 +3013,7 @@ file.close()
 lines.pop(0)  # ignore header line
 datacheckfps = []
 datacheck_always_error = [ 'BAD_ANGLE', 'DUPLICATE_LABEL', 'HIDDEN_TERMINUS',
-                           'LABEL_INVALID_CHAR', 'LABEL_SLASHES',
+                           'LABEL_INVALID_CHAR', 'LABEL_PARENS', 'LABEL_SLASHES',
                            'LABEL_UNDERSCORES', 'LONG_UNDERSCORE', 'MALFORMED_URL',
                            'NONTERMINAL_UNDERSCORE' ]
 for line in lines:
