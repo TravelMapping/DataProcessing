@@ -370,7 +370,7 @@ void sqlfile2
 	std::cout << et->et() << "...datacheckErrors" << std::endl;
       #endif
 	sqlfile << "CREATE TABLE datacheckErrors (route VARCHAR(32), label1 VARCHAR(50), label2 VARCHAR(20), label3 VARCHAR(20), ";
-	sqlfile << "code VARCHAR(20), value VARCHAR(32), falsePositive BOOLEAN, FOREIGN KEY (route) REFERENCES routes(root));\n";
+	sqlfile << "code VARCHAR(22), value VARCHAR(32), falsePositive BOOLEAN, FOREIGN KEY (route) REFERENCES routes(root));\n";
 	if (datacheckerrors->entries.size())
 	{	sqlfile << "INSERT INTO datacheckErrors VALUES\n";
 		bool first = 1;

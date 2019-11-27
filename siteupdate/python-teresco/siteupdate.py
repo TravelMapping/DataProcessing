@@ -3754,7 +3754,7 @@ else:
 
     # datacheck errors into the db
     print(et.et() + "...datacheckErrors", flush=True)
-    sqlfile.write('CREATE TABLE datacheckErrors (route VARCHAR(32), label1 VARCHAR(50), label2 VARCHAR(20), label3 VARCHAR(20), code VARCHAR(20), value VARCHAR(32), falsePositive BOOLEAN, FOREIGN KEY (route) REFERENCES routes(root));\n')
+    sqlfile.write('CREATE TABLE datacheckErrors (route VARCHAR(32), label1 VARCHAR(50), label2 VARCHAR(20), label3 VARCHAR(20), code VARCHAR(22), value VARCHAR(32), falsePositive BOOLEAN, FOREIGN KEY (route) REFERENCES routes(root));\n')
     if len(datacheckerrors) > 0:
         sqlfile.write('INSERT INTO datacheckErrors VALUES\n')
         first = True
