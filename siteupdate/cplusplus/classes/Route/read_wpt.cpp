@@ -108,6 +108,7 @@ void Route::read_wpt
 			w->label_parens(datacheckerrors);
 			w->label_invalid_char(datacheckerrors, w->label);
 			  for (std::string &a : w->alt_labels) w->label_invalid_char(datacheckerrors, a);
+			w->label_invalid_ends(datacheckerrors);
 			w->bus_with_i(datacheckerrors);
 			w->label_looks_hidden(datacheckerrors);
 		}
