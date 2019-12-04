@@ -26,10 +26,81 @@ Waypoint::Waypoint(char *line, Route *rte, std::mutex *strtok_mtx, DatacheckEntr
 	colocated = 0;
 
 	// parse URL
-	size_t latBeg = URL.find("lat=")+4;	if (latBeg == 3) latBeg = URL.size();
-	size_t lonBeg = URL.find("lon=")+4;	if (lonBeg == 3) lonBeg = URL.size();
-	lat = strtod(&URL[latBeg], 0);
-	lng = strtod(&URL[lonBeg], 0);
+	size_t latBeg = URL.find("lat=")+4;
+	size_t lonBeg = URL.find("lon=")+4;
+	if (latBeg == 3 || lonBeg == 3)
+	{	datacheckerrors->add(route, label, "", "", "MALFORMED_URL", "MISSING_ARG(S)");
+		lat = 0;	lng = 0;	return;
+	}
+	bool valid_coords = 1;
+
+	// make sure lat= string is valid
+	size_t point_count = 0;
+	for (const char *c = URL.data()+latBeg; *c != '&' && *c != 0; c++)
+	{	// check for multiple decimal points
+		if (*c == '.')
+		{	point_count += 1;
+			if (point_count > 1)
+			{	//std::cout << ("\nWARNING: Malformed URL in " + route->root + ", line: ") + line << std::endl;
+				size_t ampersand = URL.find('&', latBeg);
+				datacheckerrors->add(route, label, "", "", "MALFORMED_URL",
+				  (ampersand == -1) ? URL.data()+latBeg : URL.substr(latBeg, ampersand-latBeg));
+				lat = 0;	lng = 0;	valid_coords = 0;	break;
+			}
+		}
+		// check for minus sign not at beginning
+		if (*c == '-' and c > URL.data()+latBeg)
+		{	//std::cout << ("\nWARNING: Malformed URL in " + route->root + ", line: ") + line << std::endl;
+			size_t ampersand = URL.find('&', latBeg);
+			datacheckerrors->add(route, label, "", "", "MALFORMED_URL",
+			  (ampersand == -1) ? URL.data()+latBeg : URL.substr(latBeg, ampersand-latBeg));
+			lat = 0;	lng = 0;	valid_coords = 0;	break;
+		}
+		// check for invalid characters
+		if (!strchr("-.0123456789", *c))
+		{	//std::cout << ("\nWARNING: Malformed URL in " + route->root + ", line: ") + line << std::endl;
+			size_t ampersand = URL.find('&', latBeg);
+			datacheckerrors->add(route, label, "", "", "MALFORMED_URL",
+			  (ampersand == -1) ? URL.data()+latBeg : URL.substr(latBeg, ampersand-latBeg));
+			lat = 0;	lng = 0;	valid_coords = 0;	break;
+		}
+	}
+	// make sure lon= string is valid
+	point_count = 0;
+	for (const char *c = URL.data()+lonBeg; *c != '&' && *c != 0; c++)
+	{	// check for multiple decimal points
+		if (*c == '.')
+		{	point_count += 1;
+			if (point_count > 1)
+			{	//std::cout << ("\nWARNING: Malformed URL in " + route->root + ", line: ") + line << std::endl;
+				size_t ampersand = URL.find('&', lonBeg);
+				datacheckerrors->add(route, label, "", "", "MALFORMED_URL",
+				  (ampersand == -1) ? URL.data()+lonBeg : URL.substr(lonBeg, ampersand-lonBeg));
+				lat = 0;	lng = 0;	valid_coords = 0;	break;
+			}
+		}
+		// check for minus sign not at beginning
+		if (*c == '-' and c > URL.data()+lonBeg)
+		{	//std::cout << ("\nWARNING: Malformed URL in " + route->root + ", line: ") + line << std::endl;
+			size_t ampersand = URL.find('&', lonBeg);
+			datacheckerrors->add(route, label, "", "", "MALFORMED_URL",
+			  (ampersand == -1) ? URL.data()+lonBeg : URL.substr(lonBeg, ampersand-lonBeg));
+			lat = 0;	lng = 0;	valid_coords = 0;	break;
+		}
+		// check for invalid characters
+		if (!strchr("-.0123456789", *c))
+		{	//std::cout << ("\nWARNING: Malformed URL in " + route->root + ", line: ") + line << std::endl;
+			size_t ampersand = URL.find('&', lonBeg);
+			datacheckerrors->add(route, label, "", "", "MALFORMED_URL",
+			  (ampersand == -1) ? URL.data()+lonBeg : URL.substr(lonBeg, ampersand-lonBeg));
+			lat = 0;	lng = 0;	valid_coords = 0;	break;
+		}
+	}
+
+	if (valid_coords)
+	{	lat = strtod(&URL[latBeg], 0);
+		lng = strtod(&URL[lonBeg], 0);
+	}
 }
 
 std::string Waypoint::str()
@@ -140,7 +211,7 @@ double Waypoint::angle(Waypoint *pred, Waypoint *succ)
 	*180/pi;
 }
 
-#include "canonical_waypoint_name.cpp"
+#include "canonical_waypoint_name/canonical_waypoint_name.cpp"
 
 std::string Waypoint::simple_waypoint_name()
 {	/* Failsafe name for a point, simply the string of route name @
@@ -332,16 +403,40 @@ inline void Waypoint::label_invalid_char(DatacheckEntryList *datacheckerrors, st
 		if (*c == 96)		{ datacheckerrors->add(route, lbl, "", "", "LABEL_INVALID_CHAR", ""); return; }
 		if (*c > 122)		{ datacheckerrors->add(route, lbl, "", "", "LABEL_INVALID_CHAR", ""); return; }
 	}
+	if (strpbrk(lbl.data()+1, "+*"))  datacheckerrors->add(route, lbl, "", "", "LABEL_INVALID_CHAR", "");
+}
+
+inline void Waypoint::label_invalid_ends(DatacheckEntryList *datacheckerrors)
+{	// look for labels with invalid characters
+	const char *c = label.data();
+	while (*c == '*') c++;
+	if (*c == '_' || *c == '/' || *c == '(')
+		datacheckerrors->add(route, label, "", "", "INVALID_FIRST_CHAR", std::string(1, *c));
+	if (label.back() == '_' || label.back() == '/')
+		datacheckerrors->add(route, label, "", "", "INVALID_FINAL_CHAR", std::string(1, label.back()));
 }
 
 inline void Waypoint::label_parens(DatacheckEntryList *datacheckerrors)
 {	// look for parenthesis balance in label
 	int parens = 0;
+	const char *left = 0;
+	const char* right = 0;
 	for (const char *c = label.data(); *c; c++)
-	{	if	(*c == '(')	parens++;
-		else if	(*c == ')')	parens--;
+	{	if (*c == '(')
+		     {	if (left)
+			{	datacheckerrors->add(route, label, "", "", "LABEL_PARENS", "");
+				return;
+			}
+			left = c;
+			parens++;
+		     }
+		else if	(*c == ')')
+		     {	right = c;
+			parens--;
+		     }
 	}
-	if (parens)	datacheckerrors->add(route, label, "", "", "LABEL_PARENS", "");
+	if (parens || right < left)
+		datacheckerrors->add(route, label, "", "", "LABEL_PARENS", "");
 }
 
 inline void Waypoint::underscore_datachecks(DatacheckEntryList *datacheckerrors, const char *slash)

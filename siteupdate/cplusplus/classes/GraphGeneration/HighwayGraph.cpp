@@ -152,164 +152,94 @@ class HighwayGraph
 		vertices.clear();
 	}
 
-	std::unordered_set<HGVertex*> matching_vertices(GraphListEntry &g, unsigned int &cv_count, unsigned int &tv_count, WaypointQuadtree *qt)
-	{	// Return a set of vertices from the graph, optionally
+	inline void matching_vertices_and_edges
+	(	GraphListEntry &g, WaypointQuadtree *qt,
+		std::list<TravelerList*> &traveler_lists,
+		std::unordered_set<HGVertex*> &mvset,	// final set of vertices matching all criteria
+		std::unordered_set<HGEdge*> &mse,	// matching    simple edges
+		std::unordered_set<HGEdge*> &mce,	// matching collapsed edges
+		std::unordered_set<HGEdge*> &mte,	// matching  traveled edges
+		unsigned int &cv_count, unsigned int &tv_count
+	)
+	{	// Find a set of vertices from the graph, optionally
 		// restricted by region or system or placeradius area.
-		// Keep a count of collapsed & traveled vertices as we
-		// go, and pass them by reference.
 		cv_count = 0;
 		tv_count = 0;
-		std::unordered_set<HGVertex*> vertex_set;
-		std::unordered_set<HGVertex*> rvset;
-		std::unordered_set<HGVertex*> svset;
-		std::unordered_set<HGVertex*> pvset;
-		// rvset is the union of all sets in regions
+		std::unordered_set<HGVertex*> rvset;	// union of all sets in regions
+		std::unordered_set<HGVertex*> svset;	// union of all sets in systems
+		std::unordered_set<HGVertex*> pvset;	// set of vertices within placeradius
+		std::unordered_set<TravelerList*> trav_set;
+
 		if (g.regions) for (Region *r : *g.regions)
 			rvset.insert(r->vertices.begin(), r->vertices.end());
-		// svset is the union of all sets in systems
 		if (g.systems) for (HighwaySystem *h : *g.systems)
 			svset.insert(h->vertices.begin(), h->vertices.end());
-		// pvset is the set of vertices within placeradius
 		if (g.placeradius)
 			pvset = g.placeradius->vertices(qt, this);
 
 		// determine which vertices are within our region(s) and/or system(s)
 		if (g.regions)
-		{	vertex_set = rvset;
-			if (g.placeradius)	vertex_set = vertex_set & pvset;
-			if (g.systems)		vertex_set = vertex_set & svset;
+		{	mvset = rvset;
+			if (g.placeradius)	mvset = mvset & pvset;
+			if (g.systems)		mvset = mvset & svset;
 		}
 		else if (g.systems)
-		{	vertex_set = svset;
-			if (g.placeradius)	vertex_set = vertex_set & pvset;
+		{	mvset = svset;
+			if (g.placeradius)	mvset = mvset & pvset;
 		}
 		else if (g.placeradius)
-			vertex_set = pvset;
+			mvset = pvset;
 		else	// no restrictions via region, system, or placeradius, so include everything
 			for (std::pair<const Waypoint*, HGVertex*> wv : vertices)
-			  vertex_set.insert(wv.second);
+			  mvset.insert(wv.second);
 
-		// find number of collapsed/traveled vertices
-		for (HGVertex *v : vertex_set)
-		  if (v->visibility >= 1)
-		  {	tv_count++;
-			if (v->visibility == 2) cv_count++;
-		  }
-		return vertex_set;
-	}//*/
-
-	std::unordered_set<HGEdge*> matching_simple_edges(std::unordered_set<HGVertex*> &mv, GraphListEntry &g)
-	{	// return a set of edges from the graph, optionally
-		// restricted by region or system or placeradius area
-		std::unordered_set<HGEdge*> edge_set;
-		std::unordered_set<HGEdge*> rg_edge_set;
-		std::unordered_set<HGEdge*> sys_edge_set;
-		// rg_edge_set is the union of all sets in regions
-		if (g.regions) for (Region *r : *g.regions)
-			rg_edge_set.insert(r->edges.begin(), r->edges.end());
-		// sys_edge_set is the union of all sets in systems
-		if (g.systems) for (HighwaySystem *h : *g.systems)
-			sys_edge_set.insert(h->edges.begin(), h->edges.end());
-
-		// determine which edges are within our region(s) and/or system(s)
-		if (g.regions)
-			if (g.systems)
-			{	// both regions & systems populated: edge_set is
-				// intersection of rg_edge_set & sys_edge_set
-				for (HGEdge *e : sys_edge_set)
-				  if (rg_edge_set.find(e) != rg_edge_set.end())
-				    edge_set.insert(e);
-			}
-			else	// only regions populated
-				edge_set = rg_edge_set;
-		else	if (g.systems)
-				// only systems populated
-				edge_set = sys_edge_set;
-			else	// neither are populated; include all edges///
-			  for (HGVertex *v : mv)
-			    for (HGEdge *e : v->incident_s_edges)
-				// ...unless a PlaceRadius is specified
-				if (!g.placeradius || g.placeradius->contains_edge(e))
-				  edge_set.insert(e);
-
-		// if placeradius is provided along with non-empty region
-		// or system parameters, erase edges outside placeradius
-		if (g.placeradius && (g.systems || g.regions))
-		{	std::unordered_set<HGEdge*>::iterator e = edge_set.begin();
-			while(e != edge_set.end())
-			  if (!g.placeradius->contains_edge(*e))
-				e = edge_set.erase(e);
-			  else	e++;
-		}
-		return edge_set;
-	}
-
-	std::unordered_set<HGEdge*> matching_collapsed_edges(std::unordered_set<HGVertex*> &mv, GraphListEntry &g)
-	{	// return a set of edges for the collapsed edge graph format,
-		// optionally restricted by region or system or placeradius
-		std::unordered_set<HGEdge*> edge_set;
-		for (HGVertex *v : mv)
-		{	if (v->visibility < 2) continue;
-			for (HGEdge *e : v->incident_c_edges)
+		// Compute sets of edges for subgraphs, optionally
+		// restricted by region or system or placeradius.
+		// Keep a count of collapsed & traveled vertices as we go.
+		for (HGVertex *v : mvset)
+		{	for (HGEdge *e : v->incident_s_edges)
 			  if (!g.placeradius || g.placeradius->contains_edge(e))
-			  {	bool rg_in_rg = 0;
-				if (g.regions) for (Region *r : *g.regions)
-				  if (r == e->segment->route->region)
-				  {	rg_in_rg = 1;
+			    if (!g.regions || list_contains(g.regions, e->segment->route->region))
+			    {	bool system_match = !g.systems;
+				if (!system_match)
+				  for (std::pair<std::string, HighwaySystem*> &rs : e->route_names_and_systems)
+				    if (list_contains(g.systems, rs.second))
+				    {	system_match = 1;
 					break;
-				  }
-				if (!g.regions || rg_in_rg)
-				{	bool system_match = !g.systems;
-					if (!system_match)
-					  for (std::pair<std::string, HighwaySystem*> &rs : e->route_names_and_systems)
-					  {	bool sys_in_sys = 0;
-						if (g.systems) for (HighwaySystem *s : *g.systems)
-						  if (s == rs.second)
-						  {	sys_in_sys = 1;
-							break;
-						  }
-						if (sys_in_sys) system_match = 1;
-					  }
-					if (system_match) edge_set.insert(e);
-				}
-			  }
-		}
-		return edge_set;
-	}
-
-	void matching_traveled_edges(std::unordered_set<HGVertex*> &mv, GraphListEntry &g,
-				     std::unordered_set<HGEdge*> &edge_set, std::list<TravelerList*> &traveler_lists)
-	{	// return a set of edges for the traveled graph format,
-		// optionally restricted by region or system or placeradius
-		std::unordered_set<TravelerList*> trav_set;
-		for (HGVertex *v : mv)
-		{	if (v->visibility < 1) continue;
+				    }
+				if (system_match) mse.insert(e);
+			    }
+			if (v->visibility < 1) continue;
+			tv_count++;
 			for (HGEdge *e : v->incident_t_edges)
 			  if (!g.placeradius || g.placeradius->contains_edge(e))
-			  {	bool rg_in_rg = 0;
-				if (g.regions) for (Region *r : *g.regions)
-				  if (r == e->segment->route->region)
-				  {	rg_in_rg = 1;
+			    if (!g.regions || list_contains(g.regions, e->segment->route->region))
+			    {	bool system_match = !g.systems;
+				if (!system_match)
+				  for (std::pair<std::string, HighwaySystem*> &rs : e->route_names_and_systems)
+				    if (list_contains(g.systems, rs.second))
+				    {	system_match = 1;
 					break;
-				  }
-				if (!g.regions || rg_in_rg)
-				{	bool system_match = !g.systems;
-					if (!system_match)
-					  for (std::pair<std::string, HighwaySystem*> &rs : e->route_names_and_systems)
-					  {	bool sys_in_sys = 0;
-						if (g.systems) for (HighwaySystem *s : *g.systems)
-						  if (s == rs.second)
-						  {	sys_in_sys = 1;
-							break;
-						  }
-						if (sys_in_sys) system_match = 1;
-					  }
-					if (system_match)
-					{	edge_set.insert(e);
-						for (TravelerList *t : e->segment->clinched_by) trav_set.insert(t);
-					}
+				    }
+				if (system_match)
+				{	mte.insert(e);
+					for (TravelerList *t : e->segment->clinched_by) trav_set.insert(t);
 				}
-			  }
+			    }
+			if (v->visibility < 2) continue;
+			cv_count++;
+			for (HGEdge *e : v->incident_c_edges)
+			  if (!g.placeradius || g.placeradius->contains_edge(e))
+			    if (!g.regions || list_contains(g.regions, e->segment->route->region))
+			    {	bool system_match = !g.systems;
+				if (!system_match)
+				  for (std::pair<std::string, HighwaySystem*> &rs : e->route_names_and_systems)
+				    if (list_contains(g.systems, rs.second))
+				    {	system_match = 1;
+					break;
+				    }
+				if (system_match) mce.insert(e);
+			    }
 		}
 		traveler_lists.assign(trav_set.begin(), trav_set.end());
 		traveler_lists.sort(sort_travelers_by_name);
@@ -410,12 +340,10 @@ class HighwayGraph
 		std::ofstream simplefile((path+graph_vector[graphnum].filename()).data());
 		std::ofstream collapfile((path+graph_vector[graphnum+1].filename()).data());
 		std::ofstream travelfile((path+graph_vector[graphnum+2].filename()).data());
-		std::unordered_set<HGVertex*> mv = matching_vertices(graph_vector[graphnum], cv_count, tv_count, qt);
-		std::unordered_set<HGEdge*> mse = matching_simple_edges(mv, graph_vector[graphnum]);
-		std::unordered_set<HGEdge*> mce = matching_collapsed_edges(mv, graph_vector[graphnum]);
-		std::unordered_set<HGEdge*> mte;
+		std::unordered_set<HGVertex*> mv;
+		std::unordered_set<HGEdge*> mse, mce, mte;
 		std::list<TravelerList*> traveler_lists;
-		matching_traveled_edges(mv, graph_vector[graphnum], mte, traveler_lists);
+		matching_vertices_and_edges(graph_vector[graphnum], qt, traveler_lists, mv, mse, mce, mte, cv_count, tv_count);
 		// assign traveler numbers
 		unsigned int travnum = 0;
 		for (TravelerList *t : traveler_lists)

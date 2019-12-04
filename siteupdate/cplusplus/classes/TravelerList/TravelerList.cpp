@@ -108,9 +108,15 @@ class TravelerList
 			if (fields.size() != 4)
 			  // OK if 5th field exists and starts with #
 			  if (fields.size() < 5 || fields[4][0] != '#')
-			  {	for (size_t c = 0; c < trim_line.size(); c++)
-				  if (trim_line[c] < 0x20 || trim_line[c] >= 0x7F) trim_line[c] = '?';
-				log << "Incorrect format line: " << trim_line << '\n';
+			  {	bool invalid_char = 0;
+				for (size_t c = 0; c < trim_line.size(); c++)
+				  if (trim_line[c] < 0x20 || trim_line[c] >= 0x7F)
+				  {	trim_line[c] = '?';
+					invalid_char = 1;
+				  }
+				log << "Incorrect format line: " << trim_line;
+				if (invalid_char) log << " [line contains invalid character(s)]";
+				log << '\n';
 				splist << orig_line << endlines[l];
 				continue;
 			  }

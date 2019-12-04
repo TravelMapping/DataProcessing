@@ -7,14 +7,31 @@ class DatacheckEntry
     as the endpoints of a too-long segment or the three points that
     form a sharp angle)
 
-    code is the error code string, one of SHARP_ANGLE, BAD_ANGLE,
-    DUPLICATE_LABEL, DUPLICATE_COORDS, LABEL_SELFREF,
-    LABEL_INVALID_CHAR, LONG_SEGMENT,
-    LABEL_UNDERSCORES, VISIBLE_DISTANCE, LABEL_PARENS, LACKS_GENERIC,
-    BUS_WITH_I, NONTERMINAL_UNDERSCORE,
-    LONG_UNDERSCORE, LABEL_SLASHES, US_BANNER, VISIBLE_HIDDEN_COLOC,
-    HIDDEN_JUNCTION, LABEL_LOOKS_HIDDEN, HIDDEN_TERMINUS,
+    code is the error code string, one of:
+    BAD_ANGLE
+    BUS_WITH_I
+    DUPLICATE_COORDS
+    DUPLICATE_LABEL
+    HIDDEN_JUNCTION
+    HIDDEN_TERMINUS
+    INVALID_FINAL_CHAR
+    INVALID_FIRST_CHAR
+    LABEL_INVALID_CHAR
+    LABEL_LOOKS_HIDDEN
+    LABEL_PARENS
+    LABEL_SELFREF
+    LABEL_SLASHES
+    LABEL_UNDERSCORES
+    LACKS_GENERIC
+    LONG_SEGMENT
+    LONG_UNDERSCORE
+    MALFORMED_URL
+    NONTERMINAL_UNDERSCORE
     OUT_OF_BOUNDS
+    SHARP_ANGLE
+    US_BANNER
+    VISIBLE_DISTANCE
+    VISIBLE_HIDDEN_COLOC
 
     info is additional information, at this time either a distance (in
     miles) for a long segment error, an angle (in degrees) for a sharp

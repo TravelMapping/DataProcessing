@@ -50,6 +50,7 @@ class HGEdge;
 #include "functions/double_quotes.cpp"
 #include "functions/crawl_hwy_data.cpp"
 #include "functions/operators.cpp"
+#include "functions/list_contains.cpp"
 #include "classes/Arguments.cpp"
 #include "classes/WaypointQuadtree/WaypointQuadtree.h"
 #include "classes/Route/Route.h"
@@ -871,9 +872,11 @@ int main(int argc, char *argv[])
 	getline(file, line); // ignore header line
 	list<array<string, 6>> datacheckfps; //FIXME try implementing as an unordered_multiset; see if speed increases
 	unordered_set<string> datacheck_always_error
-	({	"DUPLICATE_LABEL", "HIDDEN_TERMINUS",
-		"LABEL_INVALID_CHAR", "LABEL_SLASHES",
-		"LONG_UNDERSCORE", "NONTERMINAL_UNDERSCORE"
+	({	"BAD_ANGLE", "DUPLICATE_LABEL", "HIDDEN_TERMINUS",
+		"INVALID_FINAL_CHAR", "INVALID_FIRST_CHAR",
+		"LABEL_INVALID_CHAR", "LABEL_PARENS", "LABEL_SLASHES",
+		"LABEL_UNDERSCORES", "LONG_UNDERSCORE", "MALFORMED_URL",
+		"NONTERMINAL_UNDERSCORE"
 	});
 	while (getline(file, line))
 	{	if (line.back() == 0x0D) line.erase(line.end()-1);	// trim DOS newlines

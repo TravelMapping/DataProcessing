@@ -269,14 +269,15 @@ class Waypoint:
         url_parts = parts[-1].split('=')
         if len(url_parts) < 3:
             #print("\nWARNING: Malformed URL in " + route.root + ", line: " + line, end="", flush=True)
-            datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_URL', parts[-1]))
-            self.lat = 0
-            self.lng = 0
+            datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_URL', 'MISSING_ARG(S)'))
+            self.lat = 0.0
+            self.lng = 0.0
             self.colocated = None
             self.near_miss_points = None
             return
         lat_string = url_parts[1].split("&")[0] # chop off "&lon"
         lng_string = url_parts[2].split("&")[0] # chop off possible "&zoom"
+        valid_coords = True
 
         # make sure lat_string is valid
         point_count = 0
@@ -286,23 +287,26 @@ class Waypoint:
                 point_count += 1
                 if point_count > 1:
                     #print("\nWARNING: Malformed URL in " + route.root + ", line: " + line, end="", flush=True)
-                    datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_URL', parts[-1]))
-                    lat_string = "0"
-                    lng_string = "0"
+                    datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_URL', lat_string))
+                    self.lat = 0.0
+                    self.lng = 0.0
+                    valid_coords = False
                     break
             # check for minus sign not at beginning
             if lat_string[c] == '-' and c > 0:
                 #print("\nWARNING: Malformed URL in " + route.root + ", line: " + line, end="", flush=True)
-                datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_URL', parts[-1]))
-                lat_string = "0"
-                lng_string = "0"
+                datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_URL', lat_string))
+                self.lat = 0.0
+                self.lng = 0.0
+                valid_coords = False
                 break
             # check for invalid characters
             if lat_string[c] not in "-.0123456789":
                 #print("\nWARNING: Malformed URL in " + route.root + ", line: " + line, end="", flush=True)
-                datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_URL', parts[-1]))
-                lat_string = "0"
-                lng_string = "0"
+                datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_URL', lat_string))
+                self.lat = 0.0
+                self.lng = 0.0
+                valid_coords = False
                 break
 
         # make sure lng_string is valid
@@ -313,27 +317,31 @@ class Waypoint:
                 point_count += 1
                 if point_count > 1:
                     #print("\nWARNING: Malformed URL in " + route.root + ", line: " + line, end="", flush=True)
-                    datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_URL', parts[-1]))
-                    lat_string = "0"
-                    lng_string = "0"
+                    datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_URL', lng_string))
+                    self.lat = 0.0
+                    self.lng = 0.0
+                    valid_coords = False
                     break
             # check for minus sign not at beginning
             if lng_string[c] == '-' and c > 0:
                 #print("\nWARNING: Malformed URL in " + route.root + ", line: " + line, end="", flush=True)
-                datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_URL', parts[-1]))
-                lat_string = "0"
-                lng_string = "0"
+                datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_URL', lng_string))
+                self.lat = 0.0
+                self.lng = 0.0
+                valid_coords = False
                 break
             # check for invalid characters
             if lng_string[c] not in "-.0123456789":
                 #print("\nWARNING: Malformed URL in " + route.root + ", line: " + line, end="", flush=True)
-                datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_URL', parts[-1]))
-                lat_string = "0"
-                lng_string = "0"
+                datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_URL', lng_string))
+                self.lat = 0.0
+                self.lng = 0.0
+                valid_coords = False
                 break
 
-        self.lat = float(lat_string)
-        self.lng = float(lng_string)
+        if valid_coords:
+            self.lat = float(lat_string)
+            self.lng = float(lng_string)
         # also keep track of a list of colocated waypoints, if any
         self.colocated = None
         # and keep a list of "near-miss points", if any
@@ -451,23 +459,23 @@ class Waypoint:
         # TODO: compress when some but not all labels match, such as
         # E127@Kan&AH60@Kan_N&AH64@Kan&AH67@Kan&M38@Kan
         # or possibly just compress ignoring the _ suffixes here
-        routes = ""
-        pointname = ""
+        routes = []
         matches = 0
         for w in colocated:
-            if routes == "":
-                routes = w.route.list_entry_name()
-                pointname = w.label
-                matches = 1
-            elif pointname == w.label or w.label.startswith('+'):
-                # this check seems odd, but avoids double route names
-                # at border crossings
-                if routes != w.route.list_entry_name():
-                    routes += "/" + w.route.list_entry_name()
+            if colocated[0].label == w.label or w.label[0] == '+':
+                # avoid double route names at border crossings
+                if w.route.list_entry_name() not in routes:
+                    routes.append(w.route.list_entry_name())
                 matches += 1
+            else:
+                break
         if matches == len(colocated):
-            log.append("Straightforward concurrency: " + name + " -> " + routes + "@" + pointname)
-            return routes + "@" + pointname
+            newname = ""
+            for r in routes:
+                newname += '/' + r
+            newname += '@' + colocated[0].label
+            log.append("Straightforward concurrency: " + name + " -> " + newname[1:])
+            return newname[1:]
 
         # straightforward 2-route intersection with matching labels
         # NY30@US20&US20@NY30 would become NY30/US20
@@ -624,6 +632,33 @@ class Waypoint:
                 log.append("Exit number: " + name + " -> " + label)
                 return label
 
+        # Check for reversed border labels
+        # DE491@DE/PA&PA491@PA/DE                                             would become   DE491/PA491@PA/DE
+        # NB2@QC/NB&TCHMai@QC/NB&A-85Not@NB/QC&TCHMai@QC/NB                   would become   NB2/TCHMai/A-85Not/@QC/NB
+        # US12@IL/IN&US20@IL/IN&US41@IN/IL&US12@IL/IN&US20@IL/IN&US41@IN/IL   would become   US12/US20/US41@IL/IN
+        if '/' in self.label:
+            slash = self.label.index('/')
+            reverse = self.label[slash+1:]+'/'+self.label[:slash]
+            matches = 1
+            # colocated[0].label *IS* label, so no need to check that
+            for i in range(1, len(colocated)):
+              if colocated[i].label == self.label or colocated[i].label == reverse:
+                matches += 1
+              else:
+                  break
+            if matches == len(colocated):
+                routes = []
+                for w in colocated:
+                    if w.route.list_entry_name() not in routes:
+                        routes.append(w.route.list_entry_name())
+
+                newname = routes[0]
+                for i in range(1, len(routes)):
+                    newname += '/' + routes[i]
+                newname += '@' + self.label
+                log.append("Reversed border labels: " + name + " -> " + newname)
+                return newname
+
         # TODO: I-20@76&I-77@16
         # should become I-20/I-77 or maybe I-20(76)/I-77(16)
         # not shorter, so maybe who cares about this one?
@@ -638,9 +673,6 @@ class Waypoint:
 
         # TODO: I-610@TX288&I-610@38&TX288@I-610
         # this is the overlap point of a loop
-
-        # TODO: boundaries where order is reversed on colocated points
-        # Vt4@FIN/NOR&E75@NOR/FIN&E75@NOR/FIN
 
         log.append("Keep failsafe: " + name)
         return name
@@ -1155,14 +1187,31 @@ class DatacheckEntry:
     as the endpoints of a too-long segment or the three points that
     form a sharp angle)
 
-    code is the error code string, one of SHARP_ANGLE, BAD_ANGLE,
-    DUPLICATE_LABEL, DUPLICATE_COORDS, LABEL_SELFREF,
-    LABEL_INVALID_CHAR, LONG_SEGMENT, MALFORMED_URL,
-    LABEL_UNDERSCORES, VISIBLE_DISTANCE, LABEL_PARENS, LACKS_GENERIC,
-    BUS_WITH_I, NONTERMINAL_UNDERSCORE,
-    LONG_UNDERSCORE, LABEL_SLASHES, US_BANNER, VISIBLE_HIDDEN_COLOC,
-    HIDDEN_JUNCTION, LABEL_LOOKS_HIDDEN, HIDDEN_TERMINUS,
+    code is the error code string, one of:
+    BAD_ANGLE
+    BUS_WITH_I
+    DUPLICATE_COORDS
+    DUPLICATE_LABEL
+    HIDDEN_JUNCTION
+    HIDDEN_TERMINUS
+    INVALID_FINAL_CHAR
+    INVALID_FIRST_CHAR
+    LABEL_INVALID_CHAR
+    LABEL_LOOKS_HIDDEN
+    LABEL_PARENS
+    LABEL_SELFREF
+    LABEL_SLASHES
+    LABEL_UNDERSCORES
+    LACKS_GENERIC
+    LONG_SEGMENT
+    LONG_UNDERSCORE
+    MALFORMED_URL
+    NONTERMINAL_UNDERSCORE
     OUT_OF_BOUNDS
+    SHARP_ANGLE
+    US_BANNER
+    VISIBLE_DISTANCE
+    VISIBLE_HIDDEN_COLOC
 
     info is additional information, at this time either a distance (in
     miles) for a long segment error, an angle (in degrees) for a sharp
@@ -1732,58 +1781,50 @@ class HighwayGraph:
                         HGEdge(vertex=v, fmt_mask=2)
         print("!")
 
-    def matching_vertices(self, regions, systems, placeradius, rg_vset_hash, qt):
-        # return a tuple containing
-        # 1st, a set of vertices from the graph, optionally
-        # restricted by region or system or placeradius area
-        # 2nd, the number of collapsed vertices in this set
-        # 3rd, the number of traveled vertices in this set
-        cv_count = 0
-        tv_count = 0
-        vertex_set = set()
-        rvset = set()
-        svset = set()
-        # rvset is the union of all sets in regions
+    def matching_vertices_and_edges(self, qt, regions, systems, placeradius, rg_vset_hash):
+        # return seven items:
+        # mvset		 # a set of vertices, optionally restricted by region or system or placeradius area
+        cv_count = 0	 # the number of collapsed vertices in this set
+        tv_count = 0	 # the number of traveled vertices in this set
+        mse = set()	 # matching    simple edges
+        mce = set()	 # matching collapsed edges
+        mte = set()	 # matching  traveled edges
+        trav_set = set() # sorted into a list of travelers for traveled graphs
+        # ...as a tuple
+
+        rvset = set()	# union of all sets in regions
+        svset = set()	# union of all sets in systems
         if regions is not None:
             for r in regions:
                 rvset = rvset | rg_vset_hash[r]
-        # svset is the union of all sets in systems
         if systems is not None:
             for h in systems:
                 svset = svset | h.vertices
-        # pvset is the set of vertices within placeradius
         if placeradius is not None:
             pvset = placeradius.vertices(qt, self)
 
         # determine which vertices are within our region(s) and/or system(s)
         if regions is not None:
-            vertex_set = rvset
+            mvset = rvset
             if placeradius is not None:
-                vertex_set = vertex_set & prset
+                mvset = mvset & pvset
             if systems is not None:
-                vertex_set = vertex_set & svset
+                mvset = mvset & svset
         elif systems is not None:
-            vertex_set = svset
+            mvset = svset
             if placeradius is not None:
-                vertex_set = vertex_set & prset
+                mvset = mvset & pvset
         elif placeradius is not None:
-            vertex_set = pvset
+            mvset = pvset
         else: # no restrictions via region, system, or placeradius, so include everything
+            mvset = set()
             for v in self.vertices.values():
-                vertex_set.add(v)
-        # find number of collapsed vertices
-        for v in vertex_set:
-            if v.visibility >= 1:
-                tv_count += 1
-                if v.visibility == 2:
-                    cv_count += 1
-        return (vertex_set, cv_count, tv_count)
-
-    def matching_simple_edges(self, mv, regions=None, systems=None, placeradius=None):
-        # return a set of edges from the graph, optionally
-        # restricted by region or system or placeradius area
-        edge_set = set()
-        for v in mv:
+                mvset.add(v)
+        
+        # Compute sets of edges for subgraphs, optionally
+        # restricted by region or system or placeradius.
+        # Keep a count of collapsed & traveled vertices as we go.
+        for v in mvset:
             for e in v.incident_s_edges:
                 if placeradius is None or placeradius.contains_edge(e):
                     if regions is None or e.segment.route.region in regions:
@@ -1792,39 +1833,12 @@ class HighwayGraph:
                             for (r, s) in e.route_names_and_systems:
                                 if s in systems:
                                     system_match = True
+                                    break
                         if system_match:
-                            edge_set.add(e)
-        return edge_set
-
-    def matching_collapsed_edges(self, mv, regions=None, systems=None,
-                                 placeradius=None):
-        # return a set of edges for the collapsed edge graph format,
-        # optionally restricted by region or system or placeradius
-        edge_set = set()
-        for v in mv:
-            if v.visibility < 2:
-                continue
-            for e in v.incident_c_edges:
-                if placeradius is None or placeradius.contains_edge(e):
-                    if regions is None or e.segment.route.region in regions:
-                        system_match = systems is None
-                        if not system_match:
-                            for (r, s) in e.route_names_and_systems:
-                                if s in systems:
-                                    system_match = True
-                        if system_match:
-                            edge_set.add(e)
-        return edge_set
-
-    def matching_traveled_edges(self, mv, regions=None, systems=None,
-                                 placeradius=None):
-        # return a set of edges for the traveled graph format,
-        # optionally restricted by region or system or placeradius
-        edge_set = set()
-        trav_set = set()
-        for v in mv:
+                            mse.add(e)
             if v.visibility < 1:
                 continue
+            tv_count += 1
             for e in v.incident_t_edges:
                 if placeradius is None or placeradius.contains_edge(e):
                     if regions is None or e.segment.route.region in regions:
@@ -1833,11 +1847,26 @@ class HighwayGraph:
                             for (r, s) in e.route_names_and_systems:
                                 if s in systems:
                                     system_match = True
+                                    break
                         if system_match:
-                            edge_set.add(e)
+                            mte.add(e)
                             for t in e.segment.clinched_by:
                                 trav_set.add(t)
-        return (edge_set, sorted(trav_set, key=lambda TravelerList: TravelerList.traveler_name))
+            if v.visibility < 2:
+                continue
+            cv_count += 1
+            for e in v.incident_c_edges:
+                if placeradius is None or placeradius.contains_edge(e):
+                    if regions is None or e.segment.route.region in regions:
+                        system_match = systems is None
+                        if not system_match:
+                            for (r, s) in e.route_names_and_systems:
+                                if s in systems:
+                                    system_match = True
+                                    break
+                        if system_match:
+                            mce.add(e)
+        return (mvset, cv_count, tv_count, mse, mce, mte, sorted(trav_set, key=lambda TravelerList: TravelerList.traveler_name))
 
     # write the entire set of highway data in .tmg format.
     # The first line is a header specifying the format and version number,
@@ -1946,10 +1975,7 @@ class HighwayGraph:
         simplefile = open(path+root+"-simple.tmg","w",encoding='utf-8')
         collapfile = open(path+root+"-collapsed.tmg","w",encoding='utf-8')
         travelfile = open(path+root+"-traveled.tmg","w",encoding='utf-8')
-        (mv, cv_count, tv_count) = self.matching_vertices(regions, systems, placeradius, self.rg_vset_hash, qt)
-        mse = self.matching_simple_edges(mv, regions, systems, placeradius)
-        mce = self.matching_collapsed_edges(mv, regions, systems, placeradius)
-        (mte, traveler_lists) = self.matching_traveled_edges(mv, regions, systems, placeradius)
+        (mv, cv_count, tv_count, mse, mce, mte, traveler_lists) = self.matching_vertices_and_edges(qt, regions, systems, placeradius, self.rg_vset_hash)
         """if len(traveler_lists) == 0:
             print("\n\nNo travelers in " + root + "\n", flush=True)#"""
         # assign traveler numbers
@@ -2988,9 +3014,10 @@ file.close()
 
 lines.pop(0)  # ignore header line
 datacheckfps = []
-datacheck_always_error = [ 'DUPLICATE_LABEL', 'HIDDEN_TERMINUS',
-                           'LABEL_INVALID_CHAR', 'LABEL_SLASHES',
-                           'LONG_UNDERSCORE', 'MALFORMED_URL',
+datacheck_always_error = [ 'BAD_ANGLE', 'DUPLICATE_LABEL', 'HIDDEN_TERMINUS',
+                           'INVALID_FINAL_CHAR', 'INVALID_FIRST_CHAR',
+                           'LABEL_INVALID_CHAR', 'LABEL_PARENS', 'LABEL_SLASHES',
+                           'LABEL_UNDERSCORES', 'LONG_UNDERSCORE', 'MALFORMED_URL',
                            'NONTERMINAL_UNDERSCORE' ]
 for line in lines:
     fields = line.rstrip('\n').split(';')
@@ -3316,16 +3343,29 @@ for h in highway_systems:
                 if w.label.count('/') > 1:
                     datacheckerrors.append(DatacheckEntry(r,[w.label],'LABEL_SLASHES'))
 
-                # look for parenthesis balance in label
-                if w.label.count('(') != w.label.count(')'):
+                # check parentheses: only 0 of both or 1 of both, '(' before ')'
+                left_count = w.label.count('(')
+                right_count = w.label.count(')')
+                if left_count != right_count \
+                or left_count > 1 \
+                or (left_count == 1 and w.label.index('(') > w.label.index(')')):
                     datacheckerrors.append(DatacheckEntry(r,[w.label],'LABEL_PARENS'))
 
                 # look for labels with invalid characters
-                if not re.fullmatch('[a-zA-Z0-9()/\+\*_\-\.]+', w.label):
+                if not re.fullmatch('\*?[a-zA-Z0-9()/_\-\.]+', w.label):
                     datacheckerrors.append(DatacheckEntry(r,[w.label],'LABEL_INVALID_CHAR'))
                 for a in w.alt_labels:
-                    if not re.fullmatch('[a-zA-Z0-9()/\+\*_\-\.]+', a):
+                    if not re.fullmatch('\+?\*?[a-zA-Z0-9()/_\-\.]+', a):
                         datacheckerrors.append(DatacheckEntry(r,[a],'LABEL_INVALID_CHAR'))
+
+                # look for labels with invalid first or last character
+                index = 0
+                while w.label[index] == '*':
+                    index += 1
+                if index < len(w.label) and w.label[index] in "_/(":
+                    datacheckerrors.append(DatacheckEntry(r,[w.label],'INVALID_FIRST_CHAR', w.label[index]))
+                if w.label[-1] == "_" or w.label[-1] == "/":
+                    datacheckerrors.append(DatacheckEntry(r,[w.label],'INVALID_FINAL_CHAR', w.label[-1]))
 
                 # look for labels with a slash after an underscore
                 if '_' in w.label and '/' in w.label and \
@@ -3730,7 +3770,7 @@ else:
 
     # datacheck errors into the db
     print(et.et() + "...datacheckErrors", flush=True)
-    sqlfile.write('CREATE TABLE datacheckErrors (route VARCHAR(32), label1 VARCHAR(50), label2 VARCHAR(20), label3 VARCHAR(20), code VARCHAR(20), value VARCHAR(32), falsePositive BOOLEAN, FOREIGN KEY (route) REFERENCES routes(root));\n')
+    sqlfile.write('CREATE TABLE datacheckErrors (route VARCHAR(32), label1 VARCHAR(50), label2 VARCHAR(20), label3 VARCHAR(20), code VARCHAR(22), value VARCHAR(32), falsePositive BOOLEAN, FOREIGN KEY (route) REFERENCES routes(root));\n')
     if len(datacheckerrors) > 0:
         sqlfile.write('INSERT INTO datacheckErrors VALUES\n')
         first = True
