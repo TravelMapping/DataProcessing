@@ -403,16 +403,40 @@ inline void Waypoint::label_invalid_char(DatacheckEntryList *datacheckerrors, st
 		if (*c == 96)		{ datacheckerrors->add(route, lbl, "", "", "LABEL_INVALID_CHAR", ""); return; }
 		if (*c > 122)		{ datacheckerrors->add(route, lbl, "", "", "LABEL_INVALID_CHAR", ""); return; }
 	}
+	if (strpbrk(lbl.data()+1, "+*"))  datacheckerrors->add(route, lbl, "", "", "LABEL_INVALID_CHAR", "");
+}
+
+inline void Waypoint::label_invalid_ends(DatacheckEntryList *datacheckerrors)
+{	// look for labels with invalid characters
+	const char *c = label.data();
+	while (*c == '*') c++;
+	if (*c == '_' || *c == '/' || *c == '(')
+		datacheckerrors->add(route, label, "", "", "INVALID_FIRST_CHAR", std::string(1, *c));
+	if (label.back() == '_' || label.back() == '/')
+		datacheckerrors->add(route, label, "", "", "INVALID_FINAL_CHAR", std::string(1, label.back()));
 }
 
 inline void Waypoint::label_parens(DatacheckEntryList *datacheckerrors)
 {	// look for parenthesis balance in label
 	int parens = 0;
+	const char *left = 0;
+	const char* right = 0;
 	for (const char *c = label.data(); *c; c++)
-	{	if	(*c == '(')	parens++;
-		else if	(*c == ')')	parens--;
+	{	if (*c == '(')
+		     {	if (left)
+			{	datacheckerrors->add(route, label, "", "", "LABEL_PARENS", "");
+				return;
+			}
+			left = c;
+			parens++;
+		     }
+		else if	(*c == ')')
+		     {	right = c;
+			parens--;
+		     }
 	}
-	if (parens)	datacheckerrors->add(route, label, "", "", "LABEL_PARENS", "");
+	if (parens || right < left)
+		datacheckerrors->add(route, label, "", "", "LABEL_PARENS", "");
 }
 
 inline void Waypoint::underscore_datachecks(DatacheckEntryList *datacheckerrors, const char *slash)

@@ -1187,14 +1187,31 @@ class DatacheckEntry:
     as the endpoints of a too-long segment or the three points that
     form a sharp angle)
 
-    code is the error code string, one of SHARP_ANGLE, BAD_ANGLE,
-    DUPLICATE_LABEL, DUPLICATE_COORDS, LABEL_SELFREF,
-    LABEL_INVALID_CHAR, LONG_SEGMENT, MALFORMED_URL,
-    LABEL_UNDERSCORES, VISIBLE_DISTANCE, LABEL_PARENS, LACKS_GENERIC,
-    BUS_WITH_I, NONTERMINAL_UNDERSCORE,
-    LONG_UNDERSCORE, LABEL_SLASHES, US_BANNER, VISIBLE_HIDDEN_COLOC,
-    HIDDEN_JUNCTION, LABEL_LOOKS_HIDDEN, HIDDEN_TERMINUS,
+    code is the error code string, one of:
+    BAD_ANGLE
+    BUS_WITH_I
+    DUPLICATE_COORDS
+    DUPLICATE_LABEL
+    HIDDEN_JUNCTION
+    HIDDEN_TERMINUS
+    INVALID_FINAL_CHAR
+    INVALID_FIRST_CHAR
+    LABEL_INVALID_CHAR
+    LABEL_LOOKS_HIDDEN
+    LABEL_PARENS
+    LABEL_SELFREF
+    LABEL_SLASHES
+    LABEL_UNDERSCORES
+    LACKS_GENERIC
+    LONG_SEGMENT
+    LONG_UNDERSCORE
+    MALFORMED_URL
+    NONTERMINAL_UNDERSCORE
     OUT_OF_BOUNDS
+    SHARP_ANGLE
+    US_BANNER
+    VISIBLE_DISTANCE
+    VISIBLE_HIDDEN_COLOC
 
     info is additional information, at this time either a distance (in
     miles) for a long segment error, an angle (in degrees) for a sharp
@@ -2998,7 +3015,8 @@ file.close()
 lines.pop(0)  # ignore header line
 datacheckfps = []
 datacheck_always_error = [ 'BAD_ANGLE', 'DUPLICATE_LABEL', 'HIDDEN_TERMINUS',
-                           'LABEL_INVALID_CHAR', 'LABEL_SLASHES',
+                           'INVALID_FINAL_CHAR', 'INVALID_FIRST_CHAR',
+                           'LABEL_INVALID_CHAR', 'LABEL_PARENS', 'LABEL_SLASHES',
                            'LABEL_UNDERSCORES', 'LONG_UNDERSCORE', 'MALFORMED_URL',
                            'NONTERMINAL_UNDERSCORE' ]
 for line in lines:
@@ -3325,16 +3343,29 @@ for h in highway_systems:
                 if w.label.count('/') > 1:
                     datacheckerrors.append(DatacheckEntry(r,[w.label],'LABEL_SLASHES'))
 
-                # look for parenthesis balance in label
-                if w.label.count('(') != w.label.count(')'):
+                # check parentheses: only 0 of both or 1 of both, '(' before ')'
+                left_count = w.label.count('(')
+                right_count = w.label.count(')')
+                if left_count != right_count \
+                or left_count > 1 \
+                or (left_count == 1 and w.label.index('(') > w.label.index(')')):
                     datacheckerrors.append(DatacheckEntry(r,[w.label],'LABEL_PARENS'))
 
                 # look for labels with invalid characters
-                if not re.fullmatch('[a-zA-Z0-9()/\+\*_\-\.]+', w.label):
+                if not re.fullmatch('\*?[a-zA-Z0-9()/_\-\.]+', w.label):
                     datacheckerrors.append(DatacheckEntry(r,[w.label],'LABEL_INVALID_CHAR'))
                 for a in w.alt_labels:
-                    if not re.fullmatch('[a-zA-Z0-9()/\+\*_\-\.]+', a):
+                    if not re.fullmatch('\+?\*?[a-zA-Z0-9()/_\-\.]+', a):
                         datacheckerrors.append(DatacheckEntry(r,[a],'LABEL_INVALID_CHAR'))
+
+                # look for labels with invalid first or last character
+                index = 0
+                while w.label[index] == '*':
+                    index += 1
+                if index < len(w.label) and w.label[index] in "_/(":
+                    datacheckerrors.append(DatacheckEntry(r,[w.label],'INVALID_FIRST_CHAR', w.label[index]))
+                if w.label[-1] == "_" or w.label[-1] == "/":
+                    datacheckerrors.append(DatacheckEntry(r,[w.label],'INVALID_FINAL_CHAR', w.label[-1]))
 
                 # look for labels with a slash after an underscore
                 if '_' in w.label and '/' in w.label and \
@@ -3739,7 +3770,7 @@ else:
 
     # datacheck errors into the db
     print(et.et() + "...datacheckErrors", flush=True)
-    sqlfile.write('CREATE TABLE datacheckErrors (route VARCHAR(32), label1 VARCHAR(50), label2 VARCHAR(20), label3 VARCHAR(20), code VARCHAR(20), value VARCHAR(32), falsePositive BOOLEAN, FOREIGN KEY (route) REFERENCES routes(root));\n')
+    sqlfile.write('CREATE TABLE datacheckErrors (route VARCHAR(32), label1 VARCHAR(50), label2 VARCHAR(20), label3 VARCHAR(20), code VARCHAR(22), value VARCHAR(32), falsePositive BOOLEAN, FOREIGN KEY (route) REFERENCES routes(root));\n')
     if len(datacheckerrors) > 0:
         sqlfile.write('INSERT INTO datacheckErrors VALUES\n')
         first = True

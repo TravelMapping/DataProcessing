@@ -873,7 +873,8 @@ int main(int argc, char *argv[])
 	list<array<string, 6>> datacheckfps; //FIXME try implementing as an unordered_multiset; see if speed increases
 	unordered_set<string> datacheck_always_error
 	({	"BAD_ANGLE", "DUPLICATE_LABEL", "HIDDEN_TERMINUS",
-		"LABEL_INVALID_CHAR", "LABEL_SLASHES",
+		"INVALID_FINAL_CHAR", "INVALID_FIRST_CHAR",
+		"LABEL_INVALID_CHAR", "LABEL_PARENS", "LABEL_SLASHES",
 		"LABEL_UNDERSCORES", "LONG_UNDERSCORE", "MALFORMED_URL",
 		"NONTERMINAL_UNDERSCORE"
 	});
