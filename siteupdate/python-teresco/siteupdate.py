@@ -453,6 +453,25 @@ class Waypoint:
         if (len(colocated) == 1):
             return name
 
+        # straightforward 2-route intersection with matching labels
+        # NY30@US20&US20@NY30 would become NY30/US20
+        # or
+        # 2-route intersection with one or both labels having directional
+        # suffixes but otherwise matching route
+        # US24@CO21_N&CO21@US24_E would become US24_E/CO21_N
+
+        if len(colocated) == 2:
+            w0_list_entry = colocated[0].route.list_entry_name()
+            w1_list_entry = colocated[1].route.list_entry_name()
+            w0_label = colocated[0].label
+            w1_label = colocated[1].label
+            if (w0_list_entry == w1_label or \
+                w1_label.startswith(w0_list_entry + '_')) and \
+                (w1_list_entry == w0_label or \
+                w0_label.startswith(w1_list_entry + '_')):
+                log.append("Straightforward intersection: " + name + " -> " + w1_label + '/' + w0_label)
+                return w1_label + '/' + w0_label
+
         # straightforward concurrency example with matching waypoint
         # labels, use route/route/route@label, except also matches
         # any hidden label
@@ -476,25 +495,6 @@ class Waypoint:
             newname += '@' + colocated[0].label
             log.append("Straightforward concurrency: " + name + " -> " + newname[1:])
             return newname[1:]
-
-        # straightforward 2-route intersection with matching labels
-        # NY30@US20&US20@NY30 would become NY30/US20
-        # or
-        # 2-route intersection with one or both labels having directional
-        # suffixes but otherwise matching route
-        # US24@CO21_N&CO21@US24_E would become US24_E/CO21_N
-
-        if len(colocated) == 2:
-            w0_list_entry = colocated[0].route.list_entry_name()
-            w1_list_entry = colocated[1].route.list_entry_name()
-            w0_label = colocated[0].label
-            w1_label = colocated[1].label
-            if (w0_list_entry == w1_label or \
-                w1_label.startswith(w0_list_entry + '_')) and \
-                (w1_list_entry == w0_label or \
-                w0_label.startswith(w1_list_entry + '_')):
-                log.append("Straightforward intersection: " + name + " -> " + w1_label + '/' + w0_label)
-                return w1_label + '/' + w0_label
 
         # check for cases like
         # I-10@753B&US90@I-10(753B)
@@ -1660,13 +1660,6 @@ class HighwayGraph:
         # hash table containing a set of vertices for each region
         self.rg_vset_hash = {}
         all_waypoint_list = all_waypoints.point_list()
-
-        # add a unique name field to each waypoint, initialized to
-        # None, which should get filled in later for any waypoint that
-        # is or shares a location with any waypoint in an active or
-        # preview system
-        for w in all_waypoint_list:
-            w.unique_name = None
 
         # to track the waypoint name compressions, add log entries
         # to this list
