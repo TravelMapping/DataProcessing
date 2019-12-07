@@ -2,6 +2,14 @@ bool sort_root_at_label(Waypoint *w1, Waypoint *w2)
 {	return w1->root_at_label() < w2->root_at_label();
 }
 
+bool waypoint_simplification_sort(Waypoint *w1, Waypoint *w2)
+{	if (	w2->ap_coloc.size() != 2
+	     || w2->ap_coloc.front()->route->abbrev.size()
+	     || w2->ap_coloc.back()->route->abbrev.size()
+	   ) return 1;
+	else return 0;
+}
+
 const double Waypoint::pi = 3.141592653589793238;
 
 Waypoint::Waypoint(char *line, Route *rte, std::mutex *strtok_mtx, DatacheckEntryList *datacheckerrors)
@@ -306,6 +314,24 @@ inline Waypoint* Waypoint::hashpoint()
 {	// return a canonical waypoint for graph vertex hashtable lookup
 	if (!colocated) return this;
 	return colocated->front();
+}
+
+bool Waypoint::label_references_route(Route *r, DatacheckEntryList *datacheckerrors)
+{	std::string no_abbrev = r->name_no_abbrev();
+	if (label.substr(0, no_abbrev.size()) != no_abbrev)
+		return 0;
+	if (label[no_abbrev.size()] == 0 || label[no_abbrev.size()] == '_')
+		return 1;
+	if (label.substr(no_abbrev.size(), r->abbrev.size()) != r->abbrev)
+	{	/*if (label[no_abbrev.size()] == '/')
+			datacheckerrors->add(route, label, "", "", "UNEXPECTED_DESIGNATION", label.substr(no_abbrev.size()+1));//*/
+		return 0;
+	}
+	if (label[no_abbrev.size() + r->abbrev.size()] == 0 || label[no_abbrev.size() + r->abbrev.size()] == '_')
+		return 1;
+	/*if (label[no_abbrev.size() + r->abbrev.size()] == '/')
+		datacheckerrors->add(route, label, "", "", "UNEXPECTED_DESIGNATION", label.substr(no_abbrev.size()+r->abbrev.size()+1));//*/
+	return 0;
 }
 
 /* Datacheck */

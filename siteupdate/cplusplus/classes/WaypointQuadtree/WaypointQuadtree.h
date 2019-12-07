@@ -18,6 +18,7 @@ class WaypointQuadtree
 	std::string str();
 	unsigned int size();
 	std::forward_list<Waypoint*> point_list();
+	std::list<Waypoint*> graph_points();
 	bool is_valid(ErrorList &);
 	unsigned int max_colocated();
 	unsigned int total_nodes();

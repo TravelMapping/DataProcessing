@@ -31,18 +31,16 @@ class HighwayGraph
 		// of its colocation list
 		unsigned int counter = 0;
 		std::cout << et.et() + "Creating unique names and vertices" << std::flush;
-		for (Waypoint *w : all_waypoints.point_list())
+		std::list<Waypoint*> graph_points = all_waypoints.graph_points();
+		graph_points.sort(waypoint_simplification_sort);
+		for (Waypoint *w : graph_points)
 		{	if (counter % 10000 == 0) std::cout << '.' << std::flush;
 			counter++;
-			// skip if this point is occupied by only waypoints in devel systems
-			if (!w->is_or_colocated_with_active_or_preview()) continue;
-			// skip if colocated and not at front of list
-			if (w->colocated && w != w->colocated->front()) continue;
 
 			// come up with a unique name that brings in its meaning
 
 			// start with the canonical name
-			std::string point_name = w->canonical_waypoint_name(waypoint_naming_log);
+			std::string point_name = w->canonical_waypoint_name(waypoint_naming_log, vertex_names, datacheckerrors);
 			bool good_to_go = 1;
 
 			// if that's taken, append the region code
@@ -70,10 +68,11 @@ class HighwayGraph
 			}
 
 			// we're good; now construct a vertex
-			if (!w->colocated)
-				vertices[w] = new HGVertex(w, &*(vertex_names.insert(point_name).first), datacheckerrors, numthreads);
-			else	vertices[w] = new HGVertex(w->colocated->front(), &*(vertex_names.insert(point_name).first), datacheckerrors, numthreads);
-					      // deleted by HighwayGraph::clear
+			vertices[w] = new HGVertex(w, &*(vertex_names.insert(point_name).first), datacheckerrors, numthreads);
+				      // deleted by HighwayGraph::clear
+
+			// active/preview colocation lists are no longer needed; clear them
+			w->ap_coloc.clear();
 		}
 		std::cout << '!' << std::endl;
 		//#include "../../debug/unique_names.cpp"
