@@ -2,8 +2,7 @@
 #ifndef threading_enabled
 cout << et.et() << "Creating multiregion graphs." << endl;
 #endif
-filename = args.highwaydatapath+"/graphs/multiregion.csv";
-file.open(filename.data());
+file.open(args.highwaydatapath+"/graphs/multiregion.csv");
 getline(file, line);  // ignore header line
 
 // add entries to graph_vector

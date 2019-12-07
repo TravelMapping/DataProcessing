@@ -197,7 +197,7 @@ void Route::write_nmp_merged(std::string filename)
 	filename += "/" + system->systemname;
 	mkdir(filename.data(), 0777);
 	filename += "/" + root + ".wpt";
-	std::ofstream wptfile(filename.data());
+	std::ofstream wptfile(filename);
 	char fstr[12];
 	for (Waypoint *w : point_list)
 	{	wptfile << w->label << ' ';

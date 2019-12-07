@@ -7,8 +7,7 @@ void userlog
 )
 {	char fstr[112];
 	std::cout << "." << std::flush;
-	std::string filename = path+traveler_name+".log";
-	std::ofstream log(filename.data(), std::ios::app);
+	std::ofstream log(path+traveler_name+".log", std::ios::app);
 	log << "Clinched Highway Statistics\n";
 	log << "Overall in active systems: " << format_clinched_mi(active_only_miles(), total_active_only_miles) << '\n';
 	log << "Overall in active+preview systems: " << format_clinched_mi(active_preview_miles(), total_active_preview_miles) << '\n';

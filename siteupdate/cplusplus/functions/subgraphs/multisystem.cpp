@@ -2,8 +2,7 @@
 #ifndef threading_enabled
 cout << et.et() << "Creating multisystem graphs." << endl;
 #endif
-filename = args.highwaydatapath+"/graphs/multisystem.csv";
-file.open(filename.data());
+file.open(args.highwaydatapath+"/graphs/multisystem.csv");
 getline(file, line);  // ignore header line
 
 // add entries to graph_vector
