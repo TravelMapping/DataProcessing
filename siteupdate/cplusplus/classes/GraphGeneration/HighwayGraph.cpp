@@ -30,9 +30,10 @@ class HighwayGraph
 		// or preview system, or is colocated and not at the front
 		// of its colocation list
 		unsigned int counter = 0;
-		std::cout << et.et() + "Creating unique names and vertices" << std::flush;
 		std::list<Waypoint*> graph_points = all_waypoints.graph_points();
+		std::cout << et.et() + "Sorting graph index waypoints by name priority." << std::endl;
 		graph_points.sort(waypoint_simplification_sort);
+		std::cout << et.et() + "Creating unique names and vertices" << std::flush;
 		for (Waypoint *w : graph_points)
 		{	if (counter % 10000 == 0) std::cout << '.' << std::flush;
 			counter++;

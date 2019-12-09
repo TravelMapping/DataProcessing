@@ -179,6 +179,33 @@ class WaypointQuadtree:
         else:
             return self.points
 
+    def graph_points(self):
+        # return a list of points to be used as indices to HighwayGraph vertices
+        hg_points = []
+        if self.points is None:
+            hg_points.extend(self.ne_child.graph_points())
+            hg_points.extend(self.nw_child.graph_points())
+            hg_points.extend(self.se_child.graph_points())
+            hg_points.extend(self.sw_child.graph_points())
+        else:
+            for w in self.points:
+                # skip if this point is occupied by only waypoints in devel systems
+                if not w.is_or_colocated_with_active_or_preview():
+                    continue
+                # skip if colocated and not at front of list
+                if  w.colocated is not None and w != w.colocated[0]:
+                    continue
+                # store a colocated list with any devel system entries removed
+                if w.colocated is None:
+                    w.ap_coloc = [w]
+                else:
+                    w.ap_coloc = []
+                    for p in w.colocated:
+                        if p.route.system.active_or_preview():
+                            w.ap_coloc.append(p)
+                hg_points.append(w)
+        return hg_points
+
     def is_valid(self):
         """make sure the quadtree is valid"""
         if self.points is None:
@@ -431,7 +458,7 @@ class Waypoint:
 
         return math.degrees(math.acos(((x2 - x1)*(x1 - x0) + (y2 - y1)*(y1 - y0) + (z2 - z1)*(z1 - z0)) / math.sqrt(((x2 - x1)*(x2 - x1) + (y2 - y1)*(y2 - y1) + (z2 - z1)*(z2 - z1)) * ((x1 - x0)*(x1 - x0) + (y1 - y0)*(y1 - y0) + (z1 - z0)*(z1 - z0)))))
 
-    def canonical_waypoint_name(self,log):
+    def canonical_waypoint_name(self,log, vertex_names, datacheckerrors):
         """Best name we can come up with for this point bringing in
         information from itself and colocated points (if active/preview)
         """
@@ -444,13 +471,8 @@ class Waypoint:
         if self.colocated is None:
             return name
 
-        # get a colocated list that any devel system entries removed
-        colocated = []
-        for w in self.colocated:
-            if w.route.system.active_or_preview():
-                colocated.append(w)
         # just return the simple name if only one active/preview waypoint
-        if (len(colocated) == 1):
+        if (len(self.ap_coloc) == 1):
             return name
 
         # straightforward 2-route intersection with matching labels
@@ -460,17 +482,28 @@ class Waypoint:
         # suffixes but otherwise matching route
         # US24@CO21_N&CO21@US24_E would become US24_E/CO21_N
 
-        if len(colocated) == 2:
-            w0_list_entry = colocated[0].route.list_entry_name()
-            w1_list_entry = colocated[1].route.list_entry_name()
-            w0_label = colocated[0].label
-            w1_label = colocated[1].label
-            if (w0_list_entry == w1_label or \
-                w1_label.startswith(w0_list_entry + '_')) and \
-                (w1_list_entry == w0_label or \
-                w0_label.startswith(w1_list_entry + '_')):
-                log.append("Straightforward intersection: " + name + " -> " + w1_label + '/' + w0_label)
-                return w1_label + '/' + w0_label
+        if len(self.ap_coloc) == 2:
+            # check both refs independently, because datachecks are involved
+            one_ref_zero = self.ap_coloc[1].label_references_route(self.ap_coloc[0].route, datacheckerrors)
+            zero_ref_one = self.ap_coloc[0].label_references_route(self.ap_coloc[1].route, datacheckerrors)
+            if one_ref_zero and zero_ref_one:
+                newname = self.ap_coloc[1].label+"/"+self.ap_coloc[0].label
+                # if this is taken or if name_no_abbrev()s match, attempt to add in abbrevs if there's point in doing so
+                taken = newname in vertex_names
+                if (len(self.ap_coloc[0].route.abbrev) > 0 or len(self.ap_coloc[1].route.abbrev) > 0) \
+                and (taken or self.ap_coloc[0].route.name_no_abbrev() == self.ap_coloc[1].route.name_no_abbrev()):
+                    newname = self.ap_coloc[0].route.list_entry_name() \
+                            + (self.ap_coloc[1].label[self.ap_coloc[1].label.index('_'):] if '_' in self.ap_coloc[1].label else "") \
+                            + "/" \
+                            + self.ap_coloc[1].route.list_entry_name() \
+                            + (self.ap_coloc[0].label[self.ap_coloc[0].label.index('_'):] if '_' in self.ap_coloc[0].label else "")
+                    message = "Straightforward intersection: " + name + " -> " + newname
+                    if taken:
+                        message += " (" + self.ap_coloc[1].label+"/"+self.ap_coloc[0].label + " already taken)"
+                    log.append(message)
+                    return newname
+                log.append("Straightforward intersection: " + name + " -> " + newname)
+                return newname
 
         # straightforward concurrency example with matching waypoint
         # labels, use route/route/route@label, except also matches
@@ -480,19 +513,19 @@ class Waypoint:
         # or possibly just compress ignoring the _ suffixes here
         routes = []
         matches = 0
-        for w in colocated:
-            if colocated[0].label == w.label or w.label[0] == '+':
+        for w in self.ap_coloc:
+            if self.ap_coloc[0].label == w.label or w.label[0] == '+':
                 # avoid double route names at border crossings
                 if w.route.list_entry_name() not in routes:
                     routes.append(w.route.list_entry_name())
                 matches += 1
             else:
                 break
-        if matches == len(colocated):
+        if matches == len(self.ap_coloc):
             newname = ""
             for r in routes:
                 newname += '/' + r
-            newname += '@' + colocated[0].label
+            newname += '@' + self.ap_coloc[0].label
             log.append("Straightforward concurrency: " + name + " -> " + newname[1:])
             return newname[1:]
 
@@ -510,26 +543,26 @@ class Waypoint:
         # becomes
         # US20/NY30A/NY162
 
-        for match_index in range(0,len(colocated)):
-            lookfor1 = colocated[match_index].route.list_entry_name()
-            lookfor2 = colocated[match_index].route.list_entry_name() + \
-               '(' + colocated[match_index].label + ')'
+        for match_index in range(0,len(self.ap_coloc)):
+            lookfor1 = self.ap_coloc[match_index].route.list_entry_name()
+            lookfor2 = self.ap_coloc[match_index].route.list_entry_name() + \
+               '(' + self.ap_coloc[match_index].label + ')'
             all_match = True
-            for check_index in range(0,len(colocated)):
+            for check_index in range(0,len(self.ap_coloc)):
                 if match_index == check_index:
                     continue
-                if (colocated[check_index].label != lookfor1) and \
-                   (colocated[check_index].label != lookfor2):
+                if (self.ap_coloc[check_index].label != lookfor1) and \
+                   (self.ap_coloc[check_index].label != lookfor2):
                     all_match = False
             if all_match:
-                if (colocated[match_index].label[0:1].isnumeric()):
+                if (self.ap_coloc[match_index].label[0:1].isnumeric()):
                     label = lookfor2
                 else:
                     label = lookfor1
-                for add_index in range(0,len(colocated)):
+                for add_index in range(0,len(self.ap_coloc)):
                     if match_index == add_index:
                         continue
-                    label += '/' + colocated[add_index].route.list_entry_name()
+                    label += '/' + self.ap_coloc[add_index].route.list_entry_name()
                 log.append("Exit/Intersection: " + name + " -> " + label)
                 return label
 
@@ -549,35 +582,35 @@ class Waypoint:
         # suffixes to put in and reduce the chance of conflicting names
         # and a second check to find matches when labels do not include
         # the abbrev field (which they often do not)
-        if len(colocated) > 2:
+        if len(self.ap_coloc) > 2:
             all_match = True
-            suffixes = [""] * len(colocated)
-            for check_index in range(len(colocated)):
+            suffixes = [""] * len(self.ap_coloc)
+            for check_index in range(len(self.ap_coloc)):
                 this_match = False
-                for other_index in range(len(colocated)):
+                for other_index in range(len(self.ap_coloc)):
                     if other_index == check_index:
                         continue
-                    if colocated[check_index].label.startswith(colocated[other_index].route.list_entry_name()):
+                    if self.ap_coloc[check_index].label.startswith(self.ap_coloc[other_index].route.list_entry_name()):
                         # should check here for false matches, like
                         # NY50/67 would match startswith NY5
                         this_match = True
-                        if '_' in colocated[check_index].label:
-                            suffix = colocated[check_index].label[colocated[check_index].label.find('_'):]
-                            if colocated[other_index].route.list_entry_name() + suffix == colocated[check_index].label:
+                        if '_' in self.ap_coloc[check_index].label:
+                            suffix = self.ap_coloc[check_index].label[self.ap_coloc[check_index].label.find('_'):]
+                            if self.ap_coloc[other_index].route.list_entry_name() + suffix == self.ap_coloc[check_index].label:
                                 suffixes[other_index] = suffix
-                    elif colocated[check_index].label.startswith(colocated[other_index].route.name_no_abbrev()):
+                    elif self.ap_coloc[check_index].label.startswith(self.ap_coloc[other_index].route.name_no_abbrev()):
                         this_match = True
-                        if '_' in colocated[check_index].label:
-                            suffix = colocated[check_index].label[colocated[check_index].label.find('_'):]
-                            if colocated[other_index].route.name_no_abbrev() + suffix == colocated[check_index].label:
+                        if '_' in self.ap_coloc[check_index].label:
+                            suffix = self.ap_coloc[check_index].label[self.ap_coloc[check_index].label.find('_'):]
+                            if self.ap_coloc[other_index].route.name_no_abbrev() + suffix == self.ap_coloc[check_index].label:
                                 suffixes[other_index] = suffix
                 if not this_match:
                     all_match = False
                     break
             if all_match:
-                label = colocated[0].route.list_entry_name() + suffixes[0]
-                for index in range(1,len(colocated)):
-                    label += "/" + colocated[index].route.list_entry_name() + suffixes[index]
+                label = self.ap_coloc[0].route.list_entry_name() + suffixes[0]
+                for index in range(1,len(self.ap_coloc)):
+                    label += "/" + self.ap_coloc[index].route.list_entry_name() + suffixes[index]
                 log.append("3+ intersection: " + name + " -> " + label)
                 return label
 
@@ -586,20 +619,20 @@ class Waypoint:
         # Still TODO: I-39@171C(90)&I-90@171C&US14@I-39/90
         # try each as a possible route@exit type situation and look
         # for matches
-        for try_as_exit in range(len(colocated)):
+        for try_as_exit in range(len(self.ap_coloc)):
             # see if all colocated points are potential matches
             # when considering the one at try_as_exit as a primary
             # exit number
-            if not colocated[try_as_exit].label[0].isdigit():
+            if not self.ap_coloc[try_as_exit].label[0].isdigit():
                 continue
             all_match = True
             # get the route number only version for one of the checks below
-            route_number_only = colocated[try_as_exit].route.name_no_abbrev()
+            route_number_only = self.ap_coloc[try_as_exit].route.name_no_abbrev()
             for pos in range(len(route_number_only)):
                 if route_number_only[pos].isdigit():
                     route_number_only = route_number_only[pos:]
                     break
-            for try_as_match in range(len(colocated)):
+            for try_as_match in range(len(self.ap_coloc)):
                 if try_as_exit == try_as_match:
                     continue
                 this_match = False
@@ -608,26 +641,26 @@ class Waypoint:
                 # number in parens, match concurrency exit number format
                 # nn(rr), match with _ suffix (like _N), match with a slash
                 # match with exit number only
-                if (colocated[try_as_match].label == colocated[try_as_exit].route.list_entry_name()
-                    or colocated[try_as_match].label == colocated[try_as_exit].route.name_no_abbrev()
-                    or colocated[try_as_match].label == colocated[try_as_exit].route.list_entry_name() + "(" + colocated[try_as_exit].label + ")"
-                    or colocated[try_as_match].label == colocated[try_as_exit].label + "(" + route_number_only + ")"
-                    or colocated[try_as_match].label == colocated[try_as_exit].label + "(" + colocated[try_as_exit].route.name_no_abbrev() + ")"
-                    or colocated[try_as_match].label.startswith(colocated[try_as_exit].route.name_no_abbrev() + "_")
-                    or colocated[try_as_match].label.startswith(colocated[try_as_exit].route.name_no_abbrev() + "/")
-                    or colocated[try_as_match].label == colocated[try_as_exit].label):
+                if (self.ap_coloc[try_as_match].label == self.ap_coloc[try_as_exit].route.list_entry_name()
+                    or self.ap_coloc[try_as_match].label == self.ap_coloc[try_as_exit].route.name_no_abbrev()
+                    or self.ap_coloc[try_as_match].label == self.ap_coloc[try_as_exit].route.list_entry_name() + "(" + self.ap_coloc[try_as_exit].label + ")"
+                    or self.ap_coloc[try_as_match].label == self.ap_coloc[try_as_exit].label + "(" + route_number_only + ")"
+                    or self.ap_coloc[try_as_match].label == self.ap_coloc[try_as_exit].label + "(" + self.ap_coloc[try_as_exit].route.name_no_abbrev() + ")"
+                    or self.ap_coloc[try_as_match].label.startswith(self.ap_coloc[try_as_exit].route.name_no_abbrev() + "_")
+                    or self.ap_coloc[try_as_match].label.startswith(self.ap_coloc[try_as_exit].route.name_no_abbrev() + "/")
+                    or self.ap_coloc[try_as_match].label == self.ap_coloc[try_as_exit].label):
                     this_match = True
                 if not this_match:
                     all_match = False
 
             if all_match:
                 label = ""
-                for pos in range(len(colocated)):
+                for pos in range(len(self.ap_coloc)):
                     if pos == try_as_exit:
-                        label += colocated[pos].route.list_entry_name() + "(" + colocated[pos].label + ")"
+                        label += self.ap_coloc[pos].route.list_entry_name() + "(" + self.ap_coloc[pos].label + ")"
                     else:
-                        label += colocated[pos].route.list_entry_name()
-                    if pos < len(colocated) - 1:
+                        label += self.ap_coloc[pos].route.list_entry_name()
+                    if pos < len(self.ap_coloc) - 1:
                         label += "/"
                 log.append("Exit number: " + name + " -> " + label)
                 return label
@@ -640,15 +673,15 @@ class Waypoint:
             slash = self.label.index('/')
             reverse = self.label[slash+1:]+'/'+self.label[:slash]
             matches = 1
-            # colocated[0].label *IS* label, so no need to check that
-            for i in range(1, len(colocated)):
-              if colocated[i].label == self.label or colocated[i].label == reverse:
+            # self.ap_coloc[0].label *IS* label, so no need to check that
+            for i in range(1, len(self.ap_coloc)):
+              if self.ap_coloc[i].label == self.label or self.ap_coloc[i].label == reverse:
                 matches += 1
               else:
                   break
-            if matches == len(colocated):
+            if matches == len(self.ap_coloc):
                 routes = []
-                for w in colocated:
+                for w in self.ap_coloc:
                     if w.route.list_entry_name() not in routes:
                         routes.append(w.route.list_entry_name())
 
@@ -668,8 +701,6 @@ class Waypoint:
 
         # How about?
         # I-581@4&US220@I-581(4)&US460@I-581&US11AltRoa@I-581&US220AltRoa@US220_S&VA116@I-581(4)
-        # INVESTIGATE: VA262@US11&US11@VA262&VA262@US11_S
-        # should be 2 colocated, shows up as 3?
 
         # TODO: I-610@TX288&I-610@38&TX288@I-610
         # this is the overlap point of a loop
@@ -707,6 +738,32 @@ class Waypoint:
         if self.colocated is None:
             return self
         return self.colocated[0]
+
+    def waypoint_simplification_priority(self):
+        if len(self.ap_coloc) != 2 \
+        or len(self.ap_coloc[0].route.abbrev) > 0 \
+        or len(self.ap_coloc[1].route.abbrev) > 0:
+            return 1
+        else:
+            return 0
+
+    def label_references_route(self, r, datacheckerrors):
+        no_abbrev = r.name_no_abbrev()
+        if self.label[:len(no_abbrev)] != no_abbrev:
+            return False
+        if len(self.label) == len(no_abbrev) \
+        or self.label[len(no_abbrev)] == '_':
+            return True
+        if self.label[len(no_abbrev):len(no_abbrev)+len(r.abbrev)] != r.abbrev:
+            #if self.label[len(no_abbrev)] == '/':
+                #datacheckerrors.append(route, [self.label], "UNEXPECTED_DESIGNATION", self.label[len(no_abbrev)+1:])
+            return False
+        if len(self.label) == len(no_abbrev) + len(r.abbrev) \
+        or self.label[len(no_abbrev) + len(r.abbrev)] == '_':
+            return True
+        #if self.label[len(no_abbrev) + len(r.abbrev)] == '/':
+            #datacheckerrors.append(route, [self.label], "UNEXPECTED_DESIGNATION", self.label[len(no_abbrev)+len(r.abbrev)+1:])
+        return False
 
 class HighwaySegment:
     """This class represents one highway segment: the connection between two
@@ -1659,7 +1716,8 @@ class HighwayGraph:
         self.vertices = {}
         # hash table containing a set of vertices for each region
         self.rg_vset_hash = {}
-        all_waypoint_list = all_waypoints.point_list()
+        print(et.et() + "Sorting graph index waypoints by name priority.", flush=True)
+        graph_points = sorted(all_waypoints.graph_points(), key=lambda Waypoint: Waypoint.waypoint_simplification_priority())
 
         # to track the waypoint name compressions, add log entries
         # to this list
@@ -1671,23 +1729,15 @@ class HighwayGraph:
         # of its colocation list
         counter = 0
         print(et.et() + "Creating unique names and vertices", end="", flush=True)
-        for w in all_waypoint_list:
+        for w in graph_points:
             if counter % 10000 == 0:
                 print('.', end="", flush=True)
             counter += 1
-            # skip if this point is occupied by only waypoints in
-            # devel systems
-            if not w.is_or_colocated_with_active_or_preview():
-                continue
-
-            # skip if colocated and not at front of list
-            if w.colocated is not None and w != w.colocated[0]:
-                continue
 
             # come up with a unique name that brings in its meaning
 
             # start with the canonical name
-            point_name = w.canonical_waypoint_name(self.waypoint_naming_log)
+            point_name = w.canonical_waypoint_name(self.waypoint_naming_log, vertex_names, datacheckerrors)
 
             # if that's taken, append the region code
             if point_name in vertex_names:
@@ -1709,10 +1759,7 @@ class HighwayGraph:
 
             # we're good; now add point_name to the set and construct a vertex
             vertex_names.add(point_name)
-            if w.colocated is None:
-                self.vertices[w] = HGVertex(w, point_name, datacheckerrors, self.rg_vset_hash)
-            else:
-                self.vertices[w] = HGVertex(w.colocated[0], point_name, datacheckerrors, self.rg_vset_hash)
+            self.vertices[w] = HGVertex(w, point_name, datacheckerrors, self.rg_vset_hash)
 
         # now that vertices are in place with names, set of unique names is no longer needed
         vertex_names = None
