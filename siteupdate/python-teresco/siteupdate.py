@@ -497,12 +497,12 @@ class Waypoint:
                             + "/" \
                             + self.ap_coloc[1].route.list_entry_name() \
                             + (self.ap_coloc[0].label[self.ap_coloc[0].label.index('_'):] if '_' in self.ap_coloc[0].label else "")
-                    message = "Straightforward intersection: " + name + " -> " + newname
+                    message = "Straightforward_intersection: " + name + " -> " + newname
                     if taken:
                         message += " (" + self.ap_coloc[1].label+"/"+self.ap_coloc[0].label + " already taken)"
                     log.append(message)
                     return newname
-                log.append("Straightforward intersection: " + name + " -> " + newname)
+                log.append("Straightforward_intersection: " + name + " -> " + newname)
                 return newname
 
         # straightforward concurrency example with matching waypoint
@@ -526,7 +526,7 @@ class Waypoint:
             for r in routes:
                 newname += '/' + r
             newname += '@' + self.ap_coloc[0].label
-            log.append("Straightforward concurrency: " + name + " -> " + newname[1:])
+            log.append("Straightforward_concurrency: " + name + " -> " + newname[1:])
             return newname[1:]
 
         # check for cases like
@@ -611,7 +611,7 @@ class Waypoint:
                 label = self.ap_coloc[0].route.list_entry_name() + suffixes[0]
                 for index in range(1,len(self.ap_coloc)):
                     label += "/" + self.ap_coloc[index].route.list_entry_name() + suffixes[index]
-                log.append("3+ intersection: " + name + " -> " + label)
+                log.append("3+_intersection: " + name + " -> " + label)
                 return label
 
         # Exit number simplification: I-90@47B(94)&I-94@47B
@@ -662,7 +662,7 @@ class Waypoint:
                         label += self.ap_coloc[pos].route.list_entry_name()
                     if pos < len(self.ap_coloc) - 1:
                         label += "/"
-                log.append("Exit number: " + name + " -> " + label)
+                log.append("Exit_number: " + name + " -> " + label)
                 return label
 
         # Check for reversed border labels
@@ -689,7 +689,7 @@ class Waypoint:
                 for i in range(1, len(routes)):
                     newname += '/' + routes[i]
                 newname += '@' + self.label
-                log.append("Reversed border labels: " + name + " -> " + newname)
+                log.append("Reversed_border_labels: " + name + " -> " + newname)
                 return newname
 
         # TODO: I-20@76&I-77@16
@@ -705,7 +705,7 @@ class Waypoint:
         # TODO: I-610@TX288&I-610@38&TX288@I-610
         # this is the overlap point of a loop
 
-        log.append("Keep failsafe: " + name)
+        log.append("Keep_failsafe: " + name)
         return name
 
     def simple_waypoint_name(self):

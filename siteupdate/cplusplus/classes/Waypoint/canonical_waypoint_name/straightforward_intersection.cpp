@@ -18,12 +18,12 @@ if (ap_coloc.size() == 2)
 		   ) {	const char *u0 = strchr(ap_coloc[0]->label.data(), '_');
 			const char *u1 = strchr(ap_coloc[1]->label.data(), '_');
 			std::string newname = (ap_coloc[0]->route->list_entry_name() + (u1 ? u1 : "")) + "/" + (ap_coloc[1]->route->list_entry_name() + (u0 ? u0 : ""));
-			std::string message = "Straightforward intersection: " + name + " -> " + newname;
+			std::string message = "Straightforward_intersection: " + name + " -> " + newname;
 			if (taken) message += " (" + ap_coloc[1]->label+"/"+ap_coloc[0]->label + " already taken)";
 			log.push_back(message);
 			return newname;
 		     }
-		log.push_back("Straightforward intersection: " + name + " -> " + newname);
+		log.push_back("Straightforward_intersection: " + name + " -> " + newname);
 		return newname;
 	}
 }

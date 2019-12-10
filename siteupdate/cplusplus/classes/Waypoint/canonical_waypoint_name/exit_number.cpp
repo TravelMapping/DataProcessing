@@ -44,7 +44,7 @@ for (unsigned int try_as_exit = 0; try_as_exit < ap_coloc.size(); try_as_exit++)
 			if (pos < ap_coloc.size()-1)
 				newname += "/";
 		}
-		log.push_back("Exit number: " + name + " -> " + newname);
+		log.push_back("Exit_number: " + name + " -> " + newname);
 		return newname;
 	}
 }

@@ -33,6 +33,6 @@ std::string Waypoint::canonical_waypoint_name(std::list<std::string> &log, std::
 	// TODO: I-610@TX288&I-610@38&TX288@I-610
 	// this is the overlap point of a loop
 
-	log.push_back("Keep failsafe: " + name);
+	log.push_back("Keep_failsafe: " + name);
 	return name;
 }

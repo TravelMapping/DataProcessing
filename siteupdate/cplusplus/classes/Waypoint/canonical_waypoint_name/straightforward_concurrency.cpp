@@ -19,6 +19,6 @@ if (matches == ap_coloc.size())
 	for (std::string &r : routes)
 		newname += '/' + r;
 	newname += '@' + ap_coloc.front()->label;
-	log.push_back("Straightforward concurrency: " + name + " -> " + newname.substr(1));
+	log.push_back("Straightforward_concurrency: " + name + " -> " + newname.substr(1));
 	return newname.substr(1);
 }
