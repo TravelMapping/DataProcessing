@@ -61,7 +61,7 @@ class DatacheckEntry
 		fp = 0;
 	}
 
-	bool match_except_info(std::array<std::string, 6> fpentry)
+	bool match_except_info(std::array<std::string, 6> &fpentry)
 	{	// Check if the fpentry from the csv file matches in all fields
 		// except the info field
 		if (fpentry[0] != route->root)	return 0;
