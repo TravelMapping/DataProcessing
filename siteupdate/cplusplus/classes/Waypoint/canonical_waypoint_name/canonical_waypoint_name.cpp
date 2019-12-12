@@ -1,4 +1,4 @@
-std::string Waypoint::canonical_waypoint_name(std::list<std::string> &log)
+std::string Waypoint::canonical_waypoint_name(std::list<std::string> &log, std::unordered_set<std::string> &vertex_names, DatacheckEntryList *datacheckerrors)
 {	/* Best name we can come up with for this point bringing in
 	information from itself and colocated points (if active/preview)
 	*/
@@ -10,11 +10,6 @@ std::string Waypoint::canonical_waypoint_name(std::list<std::string> &log)
 	// the route@label form and deal with conflicts elsewhere
 	if (!colocated) return name;
 
-	// get a colocated list with any devel system entries removed
-	std::vector<Waypoint *> ap_coloc;
-	for (Waypoint *w : *colocated)
-	  if (w->route->system->active_or_preview())
-	    ap_coloc.push_back(w);
 	// just return the simple name if only one active/preview waypoint
 	if (ap_coloc.size() == 1) return name;
 
@@ -34,12 +29,10 @@ std::string Waypoint::canonical_waypoint_name(std::list<std::string> &log)
 
 	// How about?
 	// I-581@4&US220@I-581(4)&US460@I-581&US11AltRoa@I-581&US220AltRoa@US220_S&VA116@I-581(4)
-	// INVESTIGATE: VA262@US11&US11@VA262&VA262@US11_S
-	// should be 2 colocated, shows up as 3?
 
 	// TODO: I-610@TX288&I-610@38&TX288@I-610
 	// this is the overlap point of a loop
 
-	log.push_back("Keep failsafe: " + name);
+	log.push_back("Keep_failsafe: " + name);
 	return name;
 }

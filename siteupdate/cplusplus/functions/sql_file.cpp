@@ -12,7 +12,7 @@ void sqlfile1
     ){
 	// Once all data is read in and processed, create a .sql file that will
 	// create all of the DB tables to be used by other parts of the project
-	std::ofstream sqlfile((args->databasename+".sql").data());
+	std::ofstream sqlfile(args->databasename+".sql");
 	// Note: removed "USE" line, DB name must be specified on the mysql command line
 
 	// we have to drop tables in the right order to avoid foreign key errors
@@ -363,7 +363,7 @@ void sqlfile2
 	std::vector<GraphListEntry> *graph_vector,
 	DatacheckEntryList *datacheckerrors
     )
-     {	std::ofstream sqlfile((args->databasename+".sql").data(), std::ios::app);
+     {	std::ofstream sqlfile(args->databasename+".sql", std::ios::app);
 
 	// datacheck errors into the db
       #ifndef threading_enabled

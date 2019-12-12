@@ -6,14 +6,24 @@
 // US24@CO21_N&CO21@US24_E would become US24_E/CO21_N
 
 if (ap_coloc.size() == 2)
-{	std::string w0_list_entry = ap_coloc[0]->route->list_entry_name();
-	std::string w1_list_entry = ap_coloc[1]->route->list_entry_name();
-	std::string w0_label = ap_coloc[0]->label;
-	std::string w1_label = ap_coloc[1]->label;
-	if (	(w0_list_entry == w1_label or w1_label.find(w0_list_entry + '_') == 0)
-	     &&	(w1_list_entry == w0_label or w0_label.find(w1_list_entry + '_') == 0)
-	   )
-	   {	log.push_back("Straightforward intersection: " + name + " -> " + w1_label + "/" + w0_label);
-		return w1_label + "/" + w0_label;
-	   }
+{	// check both refs independently, because datachecks are involved
+	bool one_ref_zero = ap_coloc[1]->label_references_route(ap_coloc[0]->route, datacheckerrors);
+	bool zero_ref_one = ap_coloc[0]->label_references_route(ap_coloc[1]->route, datacheckerrors);
+	if (one_ref_zero && zero_ref_one)
+	{	std::string newname = ap_coloc[1]->label+"/"+ap_coloc[0]->label;
+		// if this is taken or if name_no_abbrev()s match, attempt to add in abbrevs if there's point in doing so
+		bool taken = vertex_names.find(newname) != vertex_names.end();
+		if ( 	(ap_coloc[0]->route->abbrev.size() || ap_coloc[1]->route->abbrev.size())
+		     && (taken || ap_coloc[0]->route->name_no_abbrev() == ap_coloc[1]->route->name_no_abbrev())
+		   ) {	const char *u0 = strchr(ap_coloc[0]->label.data(), '_');
+			const char *u1 = strchr(ap_coloc[1]->label.data(), '_');
+			std::string newname = (ap_coloc[0]->route->list_entry_name() + (u1 ? u1 : "")) + "/" + (ap_coloc[1]->route->list_entry_name() + (u0 ? u0 : ""));
+			std::string message = "Straightforward_intersection: " + name + " -> " + newname;
+			if (taken) message += " (" + ap_coloc[1]->label+"/"+ap_coloc[0]->label + " already taken)";
+			log.push_back(message);
+			return newname;
+		     }
+		log.push_back("Straightforward_intersection: " + name + " -> " + newname);
+		return newname;
+	}
 }

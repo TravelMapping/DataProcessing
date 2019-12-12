@@ -142,6 +142,31 @@ std::forward_list<Waypoint*> WaypointQuadtree::point_list()
 	else	return points;
 }
 
+std::list<Waypoint*> WaypointQuadtree::graph_points()
+{	// return a list of points to be used as indices to HighwayGraph vertices
+	std::list<Waypoint*> hg_points;
+	if (refined())
+	     {	std::list<Waypoint*> add_points;
+		add_points = sw_child->graph_points();	hg_points.splice(hg_points.begin(), add_points);
+		add_points = se_child->graph_points();	hg_points.splice(hg_points.begin(), add_points);
+		add_points = nw_child->graph_points();	hg_points.splice(hg_points.begin(), add_points);
+		add_points = ne_child->graph_points();	hg_points.splice(hg_points.begin(), add_points);
+	     }
+	else for (Waypoint *w : points)
+	     {	// skip if this point is occupied by only waypoints in devel systems
+		if (!w->is_or_colocated_with_active_or_preview()) continue;
+		// skip if colocated and not at front of list
+		if (w->colocated && w != w->colocated->front()) continue;
+		// store a colocated list with any devel system entries removed
+		if (!w->colocated) w->ap_coloc.push_back(w);
+		else for (Waypoint *p : *(w->colocated))
+		  if (p->route->system->active_or_preview())
+		    w->ap_coloc.push_back(p);
+		hg_points.push_back(w);
+	     }
+	return hg_points;
+}
+
 bool WaypointQuadtree::is_valid(ErrorList &el)
 {	// make sure the quadtree is valid
 	if (refined())

@@ -33,7 +33,6 @@ class HighwaySystem
 		      std::list<std::pair<std::string,std::string>> &countries,
 		      std::unordered_map<std::string, Region*> &region_hash)
 	{	char *c_country = 0;
-		std::string filename;
 		std::ifstream file;
 
 		// parse systems.csv line
@@ -56,9 +55,8 @@ class HighwaySystem
 		delete[] c_line;
 
 		// read chopped routes CSV
-		filename = path+"/"+systemname+".csv";
-		file.open(filename.data());
-		if (!file) el.add_error("Could not open " + filename);
+		file.open(path+"/"+systemname+".csv");
+		if (!file) el.add_error("Could not open "+path+"/"+systemname+".csv");
 		else {	getline(file, line); // ignore header line
 			while(getline(file, line))
 			{	if (line.back() == 0x0D) line.erase(line.end()-1);	// trim DOS newlines
@@ -69,9 +67,8 @@ class HighwaySystem
 		file.close();
 
 		// read connected routes CSV
-		filename = path+"/"+systemname+"_con.csv";
-		file.open(filename.data());
-		if (!file) el.add_error("Could not open " + filename);
+		file.open(path+"/"+systemname+"_con.csv");
+		if (!file) el.add_error("Could not open "+path+"/"+systemname+"_con.csv");
 		else {	getline(file, line); // ignore header line
 			while(getline(file, line))
 			{	if (line.back() == 0x0D) line.erase(line.end()-1);	// trim DOS newlines

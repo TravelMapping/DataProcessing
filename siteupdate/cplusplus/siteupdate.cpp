@@ -89,7 +89,7 @@ using namespace std;
 
 int main(int argc, char *argv[])
 {	ifstream file;
-	string filename, line;
+	string line;
 	mutex list_mtx, log_mtx, strtok_mtx;
 	time_t timestamp;
 
@@ -131,9 +131,8 @@ int main(int argc, char *argv[])
 
 	// continents
 	list<pair<string, string>> continents;
-	filename = args.highwaydatapath+"/continents.csv";
-	file.open(filename.data());
-	if (!file) el.add_error("Could not open " + filename);
+	file.open(args.highwaydatapath+"/continents.csv");
+	if (!file) el.add_error("Could not open "+args.highwaydatapath+"/continents.csv");
 	else {	getline(file, line); // ignore header line
 		while(getline(file, line))
 		{	if (line.back() == 0x0D) line.erase(line.end()-1);	// trim DOS newlines
@@ -155,9 +154,8 @@ int main(int argc, char *argv[])
 
 	// countries
 	list<pair<string, string>> countries;
-	filename = args.highwaydatapath+"/countries.csv";
-	file.open(filename.data());
-	if (!file) el.add_error("Could not open " + filename);
+	file.open(args.highwaydatapath+"/countries.csv");
+	if (!file) el.add_error("Could not open "+args.highwaydatapath+"/countries.csv");
 	else {	getline(file, line); // ignore header line
 		while(getline(file, line))
 		{	if (line.back() == 0x0D) line.erase(line.end()-1);	// trim DOS newlines
@@ -180,9 +178,8 @@ int main(int argc, char *argv[])
 	//regions
 	list<Region> all_regions;
 	unordered_map<string, Region*> region_hash;
-	filename = args.highwaydatapath+"/regions.csv";
-	file.open(filename.data());
-	if (!file) el.add_error("Could not open " + filename);
+	file.open(args.highwaydatapath+"/regions.csv");
+	if (!file) el.add_error("Could not open "+args.highwaydatapath+"/regions.csv");
 	else {	getline(file, line); // ignore header line
 		while(getline(file, line))
 		{	Region rg(line, countries, continents, el);
@@ -195,9 +192,8 @@ int main(int argc, char *argv[])
 	// Create a list of HighwaySystem objects, one per system in systems.csv file
 	list<HighwaySystem*> highway_systems;
 	cout << et.et() << "Reading systems list in " << args.highwaydatapath+"/"+args.systemsfile << "." << endl;
-	filename = args.highwaydatapath+"/"+args.systemsfile;
-	file.open(filename.data());
-	if (!file) el.add_error("Could not open " + filename);
+	file.open(args.highwaydatapath+"/"+args.systemsfile);
+	if (!file) el.add_error("Could not open "+args.highwaydatapath+"/"+args.systemsfile);
 	else {	getline(file, line); // ignore header line
 		list<string> ignoring;
 		while(getline(file, line))
@@ -328,9 +324,8 @@ int main(int argc, char *argv[])
 	//#include "debug/qt_and_colocate_check.cpp"
 
 	cout << et.et() << "Finding unprocessed wpt files." << endl;
-	filename = args.logfilepath+"/unprocessedwpts.log";
 	if (all_wpt_files.size())
-	{	ofstream unprocessedfile(filename.data());
+	{	ofstream unprocessedfile(args.logfilepath+"/unprocessedwpts.log");
 		cout << all_wpt_files.size() << " .wpt files in " << args.highwaydatapath + "/hwy_data not processed, see unprocessedwpts.log." << endl;
 		for (const string &f : all_wpt_files) unprocessedfile << strstr(f.data(), "hwy_data") << '\n';
 		unprocessedfile.close();
@@ -343,8 +338,7 @@ int main(int argc, char *argv[])
 
 	// read in fp file
 	list<string> nmpfplist;
-	filename = args.highwaydatapath+"/nmpfps.log";
-	file.open(filename.data());
+	file.open(args.highwaydatapath+"/nmpfps.log");
 	while (getline(file, line))
 	{	while (line.back() == 0x0D || line.back() == ' ') line.erase(line.end()-1);	// trim DOS newlines & whitespace
 		if (line.size()) nmpfplist.push_back(line);
@@ -352,10 +346,8 @@ int main(int argc, char *argv[])
 	file.close();
 
 	list<string> nmploglines;
-	filename = args.logfilepath+"/nearmisspoints.log";
-	ofstream nmplog(filename.data());
-	filename = args.logfilepath+"/tm-master.nmp";
-	ofstream nmpnmp(filename.data());
+	ofstream nmplog(args.logfilepath+"/nearmisspoints.log");
+	ofstream nmpnmp(args.logfilepath+"/tm-master.nmp");
 	for (Waypoint *w : all_waypoints.point_list()) w->nmplogs(nmpfplist, nmpnmp, nmploglines);
 	nmpnmp.close();
 
@@ -366,8 +358,7 @@ int main(int argc, char *argv[])
 	nmplog.close();
 
 	// report any unmatched nmpfps.log entries
-	filename = args.logfilepath+"/nmpfpsunmatched.log";
-	ofstream nmpfpsunmatchedfile(filename.data());
+	ofstream nmpfpsunmatchedfile(args.logfilepath+"/nmpfpsunmatched.log");
 	for (string &line : nmpfplist)
 		nmpfpsunmatchedfile << line << '\n';
 	nmpfpsunmatchedfile.close();
@@ -439,8 +430,7 @@ int main(int argc, char *argv[])
 	// just going to drop this into the DB later anyway
 	list<array<string, 5>> updates;
 	cout << et.et() << "Reading updates file." << endl;
-	filename = args.highwaydatapath+"/updates.csv";
-	file.open(filename.data());
+	file.open(args.highwaydatapath+"/updates.csv");
 	getline(file, line); // ignore header line
 	while (getline(file, line))
 	{	if (line.back() == 0x0D) line.erase(line.end()-1);	// trim DOS newlines
@@ -498,8 +488,7 @@ int main(int argc, char *argv[])
 	// anyway
 	list<array<string, 5>> systemupdates;
 	cout << et.et() << "Reading systemupdates file." << endl;
-	filename = args.highwaydatapath+"/systemupdates.csv";
-	file.open(filename.data());
+	file.open(args.highwaydatapath+"/systemupdates.csv");
 	getline(file, line);  // ignore header line
 	while (getline(file, line))
 	{	if (line.back() == 0x0D) line.erase(line.end()-1);	// trim DOS newlines
@@ -555,8 +544,7 @@ int main(int argc, char *argv[])
 	// write log file for points in use -- might be more useful in the DB later,
 	// or maybe in another format
 	cout << et.et() << "Writing points in use log." << endl;
-	filename = args.logfilepath+"/pointsinuse.log";
-	ofstream inusefile(filename.data());
+	ofstream inusefile(args.logfilepath+"/pointsinuse.log");
 	timestamp = time(0);
 	inusefile << "Log file created at: " << ctime(&timestamp);
 	for (HighwaySystem *h : highway_systems)
@@ -573,8 +561,7 @@ int main(int argc, char *argv[])
 
 	// write log file for alt labels not in use
 	cout << et.et() << "Writing unused alt labels log." << endl;
-	filename = args.logfilepath+"/unusedaltlabels.log";
-	ofstream unusedfile(filename.data());
+	ofstream unusedfile(args.logfilepath+"/unusedaltlabels.log");
 	timestamp = time(0);
 	unusedfile << "Log file created at: " << ctime(&timestamp);
 	unsigned int total_unused_alt_labels = 0;
@@ -620,8 +607,7 @@ int main(int argc, char *argv[])
 	cout << "!\n";
 	concurrencyfile.close();
 
-	/*filename = args.logfilepath+"/concurrent_travelers_sanity_check.log";
-	ofstream sanetravfile(filename.data());
+	/*ofstream sanetravfile(args.logfilepath+"/concurrent_travelers_sanity_check.log");
 	for (HighwaySystem *h : highway_systems)
 	    for (Route &r : h->route_list)
 		for (HighwaySegment *s : r.segment_list)
@@ -656,8 +642,7 @@ int main(int argc, char *argv[])
 
 	cout << et.et() << "Writing highway data stats log file (highwaydatastats.log)." << endl;
 	char fstr[112];
-	filename = args.logfilepath+"/highwaydatastats.log";
-	ofstream hdstatsfile(filename);
+	ofstream hdstatsfile(args.logfilepath+"/highwaydatastats.log");
 	timestamp = time(0);
 	hdstatsfile << "Travel Mapping highway mileage as of " << ctime(&timestamp);
 
@@ -749,8 +734,7 @@ int main(int argc, char *argv[])
 	double total_mi;
 
 	// first, overall per traveler by region, both active only and active+preview
-	filename = args.csvstatfilepath + "/allbyregionactiveonly.csv";
-	ofstream allfile(filename.data());
+	ofstream allfile(args.csvstatfilepath + "/allbyregionactiveonly.csv");
 	allfile << "Traveler,Total";
 	std::list<Region*> regions;
 	total_mi = 0;
@@ -788,8 +772,7 @@ int main(int argc, char *argv[])
 	allfile.close();
 
 	// active+preview
-	filename = args.csvstatfilepath + "/allbyregionactivepreview.csv";
-	allfile.open(filename.data());
+	allfile.open(args.csvstatfilepath + "/allbyregionactivepreview.csv");
 	allfile << "Traveler,Total";
 	regions.clear();
 	total_mi = 0;
@@ -828,8 +811,7 @@ int main(int argc, char *argv[])
 
 	// now, a file for each system, again per traveler by region
 	for (HighwaySystem *h : highway_systems)
-	{	filename = args.csvstatfilepath + "/" + h->systemname + "-all.csv";
-		ofstream sysfile(filename.data());
+	{	ofstream sysfile(args.csvstatfilepath + "/" + h->systemname + "-all.csv");
 		sysfile << "Traveler,Total";
 		regions.clear();
 		total_mi = 0;
@@ -867,8 +849,7 @@ int main(int argc, char *argv[])
 
 	// read in the datacheck false positives list
 	cout << et.et() << "Reading datacheckfps.csv." << endl;
-	filename = args.highwaydatapath+"/datacheckfps.csv";
-	file.open(filename.data());
+	file.open(args.highwaydatapath+"/datacheckfps.csv");
 	getline(file, line); // ignore header line
 	list<array<string, 6>> datacheckfps; //FIXME try implementing as an unordered_multiset; see if speed increases
 	unordered_set<string> datacheck_always_error
@@ -963,8 +944,7 @@ int main(int argc, char *argv[])
 	// now mark false positives
 	datacheckerrors->entries.sort();
 	cout << et.et() << "Marking datacheck false positives." << flush;
-	filename = args.logfilepath+"/nearmatchfps.log";
-	ofstream fpfile(filename.data());
+	ofstream fpfile(args.logfilepath+"/nearmatchfps.log");
 	timestamp = time(0);
 	fpfile << "Log file created at: " << ctime(&timestamp);
 	unsigned int counter = 0;
@@ -994,8 +974,7 @@ int main(int argc, char *argv[])
 
 	// write log of unmatched false positives from the datacheckfps.csv
 	cout << et.et() << "Writing log of unmatched datacheck FP entries." << endl;
-	filename = args.logfilepath+"/unmatchedfps.log";
-	fpfile.open(filename.data());
+	fpfile.open(args.logfilepath+"/unmatchedfps.log");
 	timestamp = time(0);
 	fpfile << "Log file created at: " << ctime(&timestamp);
 	if (datacheckfps.empty()) fpfile << "No unmatched FP entries.\n";
@@ -1005,8 +984,7 @@ int main(int argc, char *argv[])
 
 	// datacheck.log file
 	cout << et.et() << "Writing datacheck.log" << endl;
-	filename = args.logfilepath + "/datacheck.log";
-	ofstream logfile(filename.data());
+	ofstream logfile(args.logfilepath + "/datacheck.log");
 	timestamp = time(0);
 	logfile << "Log file created at: " << ctime(&timestamp);
 	logfile << "Datacheck errors that have been flagged as false positives are not included.\n";
