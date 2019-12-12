@@ -49,7 +49,7 @@ if (ap_coloc.size() > 2)
 	{	std::string newname = ap_coloc[0]->route->list_entry_name() + suffixes[0];
 		for (unsigned int index = 1; index < ap_coloc.size(); index++)
 			newname += "/" + ap_coloc[index]->route->list_entry_name() + suffixes[index];
-		log.push_back("3+ intersection: " + name + " -> " + newname);
+		log.push_back("3+_intersection: " + name + " -> " + newname);
 		return newname;
 	}
 }

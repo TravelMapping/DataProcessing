@@ -22,7 +22,7 @@ if (slash)
 		for (unsigned int i = 1; i < routes.size(); i++)
 			newname += '/' + routes[i];
 		newname += '@' + label;
-		log.push_back("Reversed border labels: " + name + " -> " + newname);
+		log.push_back("Reversed_border_labels: " + name + " -> " + newname);
 		return newname;
 	}
 }

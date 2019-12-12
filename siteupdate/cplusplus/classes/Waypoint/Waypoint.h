@@ -17,6 +17,7 @@ class Waypoint
 	std::string label;
 	std::deque<std::string> alt_labels;
 	std::list<Waypoint*> *colocated;
+	std::vector<Waypoint*> ap_coloc;
 	std::forward_list<Waypoint*> near_miss_points;
 	bool is_hidden;
 	static const double pi;
@@ -30,12 +31,13 @@ class Waypoint
 	unsigned int num_colocated();
 	double distance_to(Waypoint *);
 	double angle(Waypoint *, Waypoint *);
-	std::string canonical_waypoint_name(std::list<std::string> &);
+	std::string canonical_waypoint_name(std::list<std::string> &, std::unordered_set<std::string> &, DatacheckEntryList *);
 	std::string simple_waypoint_name();
 	bool is_or_colocated_with_active_or_preview();
 	std::string root_at_label();
 	void nmplogs(std::list<std::string> &, std::ofstream &, std::list<std::string> &);
 	inline Waypoint* hashpoint();
+	bool label_references_route(Route *, DatacheckEntryList *);
 
 	// Datacheck
 	inline void duplicate_label(DatacheckEntryList *, std::unordered_set<std::string> &);
