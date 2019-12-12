@@ -2,8 +2,7 @@
 #ifndef threading_enabled
 cout << et.et() << "Creating area data graphs." << endl;
 #endif
-filename = args.highwaydatapath+"/graphs/areagraphs.csv";
-file.open(filename.data());
+file.open(args.highwaydatapath+"/graphs/areagraphs.csv");
 getline(file, line);  // ignore header line
 list<PlaceRadius> area_list;
 while (getline(file, line))

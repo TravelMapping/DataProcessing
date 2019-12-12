@@ -337,9 +337,9 @@ class HighwayGraph
 	void write_subgraphs_tmg(	std::vector<GraphListEntry> &graph_vector, std::string path, size_t graphnum,
 					unsigned int threadnum, WaypointQuadtree *qt, ElapsedTime *et)
 	{	unsigned int cv_count, tv_count;
-		std::ofstream simplefile((path+graph_vector[graphnum].filename()).data());
-		std::ofstream collapfile((path+graph_vector[graphnum+1].filename()).data());
-		std::ofstream travelfile((path+graph_vector[graphnum+2].filename()).data());
+		std::ofstream simplefile(path+graph_vector[graphnum].filename());
+		std::ofstream collapfile(path+graph_vector[graphnum+1].filename());
+		std::ofstream travelfile(path+graph_vector[graphnum+2].filename());
 		std::unordered_set<HGVertex*> mv;
 		std::unordered_set<HGEdge*> mse, mce, mte;
 		std::list<TravelerList*> traveler_lists;

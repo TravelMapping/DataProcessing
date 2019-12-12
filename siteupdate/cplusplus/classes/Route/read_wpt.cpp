@@ -10,7 +10,7 @@ void Route::read_wpt
 	all_wpt_files->erase(filename);
 	awf_mtx.unlock();
 	std::vector<char*> lines;
-	std::ifstream file(filename.data());
+	std::ifstream file(filename);
 	if (!file)
 	{	el->add_error("Could not open " + filename);
 		file.close();

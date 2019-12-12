@@ -38,16 +38,14 @@ class TravelerList
 		traveler_num = new unsigned int[args->numthreads];
 			       // deleted on termination of program
 		traveler_name = travname.substr(0, travname.size()-5); // strip ".list" from end of travname
-		std::string filename = args->logfilepath+"/users/"+traveler_name+".log";
-		std::ofstream log(filename.data());
+		std::ofstream log(args->logfilepath+"/users/"+traveler_name+".log");
 		std::ofstream splist;
-		if (args->splitregionpath != "") splist.open((args->splitregionpath+"/list_files/"+travname).data());
+		if (args->splitregionpath != "") splist.open(args->splitregionpath+"/list_files/"+travname);
 		time_t StartTime = time(0);
 		log << "Log file created at: " << ctime(&StartTime);
-		filename = args->userlistfilepath+"/"+travname;
 		std::vector<char*> lines;
 		std::vector<std::string> endlines;
-		std::ifstream file(filename.data());
+		std::ifstream file(args->userlistfilepath+"/"+travname);
 		// we can't getline here because it only allows one delimiter, and we need two; '\r' and '\n'.
 		// at least one .list file contains newlines using only '\r' (0x0D):
 		// https://github.com/TravelMapping/UserData/blob/6309036c44102eb3325d49515b32c5eef3b3cb1e/list_files/whopperman.list

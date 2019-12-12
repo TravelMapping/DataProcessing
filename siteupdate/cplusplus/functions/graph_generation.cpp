@@ -4,8 +4,7 @@ cout << et.et() << "Setting up for graphs of highway data." << endl;
 HighwayGraph graph_data(all_waypoints, highway_systems, datacheckerrors, args.numthreads, et);
 
 cout << et.et() << "Writing graph waypoint simplification log." << endl;
-filename = args.logfilepath + "/waypointsimplification.log";
-ofstream wslogfile(filename.data());
+ofstream wslogfile(args.logfilepath + "/waypointsimplification.log");
 for (string line : graph_data.waypoint_naming_log)
 	wslogfile << line << '\n';
 wslogfile.close();
