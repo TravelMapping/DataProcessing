@@ -561,21 +561,25 @@ int main(int argc, char *argv[])
 
 	// write log file for alt labels not in use
 	cout << et.et() << "Writing unused alt labels log." << endl;
-	ofstream unusedfile(args.logfilepath+"/unusedaltlabels.log");
-	timestamp = time(0);
-	unusedfile << "Log file created at: " << ctime(&timestamp);
 	unsigned int total_unused_alt_labels = 0;
+	list<string> unused_alt_labels;
 	for (HighwaySystem *h : highway_systems)
 		for (Route &r : h->route_list)
 			if (r.unused_alt_labels.size())
 			{	total_unused_alt_labels += r.unused_alt_labels.size();
-				unusedfile << r.root << '(' << r.unused_alt_labels.size() << "):";
+				string ual_entry = r.root + '(' + to_string(r.unused_alt_labels.size()) + "):";
 				list<string> ual_list(r.unused_alt_labels.begin(), r.unused_alt_labels.end());
 				ual_list.sort();
-				for (string label : ual_list) unusedfile << ' ' << label;
-				unusedfile << '\n';
+				for (string label : ual_list) ual_entry += ' ' + label;
 				r.unused_alt_labels.clear();
+				unused_alt_labels.push_back(ual_entry);
 			}
+	unused_alt_labels.sort();
+	ofstream unusedfile(args.logfilepath+"/unusedaltlabels.log");
+	timestamp = time(0);
+	unusedfile << "Log file created at: " << ctime(&timestamp);
+	for (string &ual_entry : unused_alt_labels) unusedfile << ual_entry << '\n';
+	unused_alt_labels.clear();
 	unusedfile << "Total: " << total_unused_alt_labels << '\n';
 	unusedfile.close();
 
