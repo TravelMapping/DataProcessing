@@ -327,7 +327,9 @@ int main(int argc, char *argv[])
 	if (all_wpt_files.size())
 	{	ofstream unprocessedfile(args.logfilepath+"/unprocessedwpts.log");
 		cout << all_wpt_files.size() << " .wpt files in " << args.highwaydatapath + "/hwy_data not processed, see unprocessedwpts.log." << endl;
-		for (const string &f : all_wpt_files) unprocessedfile << strstr(f.data(), "hwy_data") << '\n';
+		list<string> all_wpts_list(all_wpt_files.begin(), all_wpt_files.end());
+		all_wpts_list.sort();
+		for (const string &f : all_wpts_list) unprocessedfile << strstr(f.data(), "hwy_data") << '\n';
 		unprocessedfile.close();
 		all_wpt_files.clear();
 	}

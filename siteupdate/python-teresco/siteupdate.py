@@ -2395,12 +2395,13 @@ unprocessedfile = open(args.logfilepath+'/unprocessedwpts.log','w',encoding='utf
 if len(all_wpt_files) > 0:
     print(str(len(all_wpt_files)) + " .wpt files in " + args.highwaydatapath +
           "/hwy_data not processed, see unprocessedwpts.log.")
-    for file in all_wpt_files:
+    for file in sorted(all_wpt_files):
         unprocessedfile.write(file[file.find('hwy_data'):] + '\n')
 else:
     print("All .wpt files in " + args.highwaydatapath +
           "/hwy_data processed.")
 unprocessedfile.close()
+all_wpt_files = None
 
 # Near-miss point log
 print(et.et() + "Near-miss point log and tm-master.nmp file.", flush=True)
