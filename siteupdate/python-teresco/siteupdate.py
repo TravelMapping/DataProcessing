@@ -314,7 +314,7 @@ class Waypoint:
                 point_count += 1
                 if point_count > 1:
                     #print("\nWARNING: Malformed URL in " + route.root + ", line: " + line, end="", flush=True)
-                    datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_URL', lat_string))
+                    datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_LAT', lat_string))
                     self.lat = 0.0
                     self.lng = 0.0
                     valid_coords = False
@@ -322,7 +322,7 @@ class Waypoint:
             # check for minus sign not at beginning
             if lat_string[c] == '-' and c > 0:
                 #print("\nWARNING: Malformed URL in " + route.root + ", line: " + line, end="", flush=True)
-                datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_URL', lat_string))
+                datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_LAT', lat_string))
                 self.lat = 0.0
                 self.lng = 0.0
                 valid_coords = False
@@ -330,7 +330,7 @@ class Waypoint:
             # check for invalid characters
             if lat_string[c] not in "-.0123456789":
                 #print("\nWARNING: Malformed URL in " + route.root + ", line: " + line, end="", flush=True)
-                datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_URL', lat_string))
+                datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_LAT', lat_string))
                 self.lat = 0.0
                 self.lng = 0.0
                 valid_coords = False
@@ -344,7 +344,7 @@ class Waypoint:
                 point_count += 1
                 if point_count > 1:
                     #print("\nWARNING: Malformed URL in " + route.root + ", line: " + line, end="", flush=True)
-                    datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_URL', lng_string))
+                    datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_LON', lng_string))
                     self.lat = 0.0
                     self.lng = 0.0
                     valid_coords = False
@@ -352,7 +352,7 @@ class Waypoint:
             # check for minus sign not at beginning
             if lng_string[c] == '-' and c > 0:
                 #print("\nWARNING: Malformed URL in " + route.root + ", line: " + line, end="", flush=True)
-                datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_URL', lng_string))
+                datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_LON', lng_string))
                 self.lat = 0.0
                 self.lng = 0.0
                 valid_coords = False
@@ -360,7 +360,7 @@ class Waypoint:
             # check for invalid characters
             if lng_string[c] not in "-.0123456789":
                 #print("\nWARNING: Malformed URL in " + route.root + ", line: " + line, end="", flush=True)
-                datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_URL', lng_string))
+                datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_LON', lng_string))
                 self.lat = 0.0
                 self.lng = 0.0
                 valid_coords = False
@@ -1262,6 +1262,8 @@ class DatacheckEntry:
     LACKS_GENERIC
     LONG_SEGMENT
     LONG_UNDERSCORE
+    MALFORMED_LAT
+    MALFORMED_LON
     MALFORMED_URL
     NONTERMINAL_UNDERSCORE
     OUT_OF_BOUNDS
@@ -3063,7 +3065,8 @@ datacheckfps = []
 datacheck_always_error = [ 'BAD_ANGLE', 'DUPLICATE_LABEL', 'HIDDEN_TERMINUS',
                            'INVALID_FINAL_CHAR', 'INVALID_FIRST_CHAR',
                            'LABEL_INVALID_CHAR', 'LABEL_PARENS', 'LABEL_SLASHES',
-                           'LABEL_UNDERSCORES', 'LONG_UNDERSCORE', 'MALFORMED_URL',
+                           'LABEL_UNDERSCORES', 'LONG_UNDERSCORE',
+                           'MALFORMED_LAT', 'MALFORMED_LON', 'MALFORMED_URL',
                            'NONTERMINAL_UNDERSCORE' ]
 for line in lines:
     fields = line.rstrip('\n').split(';')
