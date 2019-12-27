@@ -316,7 +316,7 @@ int main(int argc, char *argv[])
 
 	//#include "debug/qt_and_colocate_check.cpp"
 	cout << et.et() << "Writing WaypointQuadtree.tmg." << endl;
-	all_waypoints.write_qt_tmg(); //FIXME needs argument for file path
+	all_waypoints.write_qt_tmg(args.logfilepath+"/WaypointQuadtree.tmg");
 	cout << et.et() << "Sorting waypoints in Quadtree." << endl;
 	all_waypoints.sort();
 	cout << et.et() << "Sorting colocated point lists." << endl;
