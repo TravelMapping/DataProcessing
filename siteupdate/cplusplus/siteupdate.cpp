@@ -327,7 +327,9 @@ int main(int argc, char *argv[])
 	if (all_wpt_files.size())
 	{	ofstream unprocessedfile(args.logfilepath+"/unprocessedwpts.log");
 		cout << all_wpt_files.size() << " .wpt files in " << args.highwaydatapath + "/hwy_data not processed, see unprocessedwpts.log." << endl;
-		for (const string &f : all_wpt_files) unprocessedfile << strstr(f.data(), "hwy_data") << '\n';
+		list<string> all_wpts_list(all_wpt_files.begin(), all_wpt_files.end());
+		all_wpts_list.sort();
+		for (const string &f : all_wpts_list) unprocessedfile << strstr(f.data(), "hwy_data") << '\n';
 		unprocessedfile.close();
 		all_wpt_files.clear();
 	}
@@ -561,21 +563,25 @@ int main(int argc, char *argv[])
 
 	// write log file for alt labels not in use
 	cout << et.et() << "Writing unused alt labels log." << endl;
-	ofstream unusedfile(args.logfilepath+"/unusedaltlabels.log");
-	timestamp = time(0);
-	unusedfile << "Log file created at: " << ctime(&timestamp);
 	unsigned int total_unused_alt_labels = 0;
+	list<string> unused_alt_labels;
 	for (HighwaySystem *h : highway_systems)
 		for (Route &r : h->route_list)
 			if (r.unused_alt_labels.size())
 			{	total_unused_alt_labels += r.unused_alt_labels.size();
-				unusedfile << r.root << '(' << r.unused_alt_labels.size() << "):";
+				string ual_entry = r.root + '(' + to_string(r.unused_alt_labels.size()) + "):";
 				list<string> ual_list(r.unused_alt_labels.begin(), r.unused_alt_labels.end());
 				ual_list.sort();
-				for (string label : ual_list) unusedfile << ' ' << label;
-				unusedfile << '\n';
+				for (string label : ual_list) ual_entry += ' ' + label;
 				r.unused_alt_labels.clear();
+				unused_alt_labels.push_back(ual_entry);
 			}
+	unused_alt_labels.sort();
+	ofstream unusedfile(args.logfilepath+"/unusedaltlabels.log");
+	timestamp = time(0);
+	unusedfile << "Log file created at: " << ctime(&timestamp);
+	for (string &ual_entry : unused_alt_labels) unusedfile << ual_entry << '\n';
+	unused_alt_labels.clear();
 	unusedfile << "Total: " << total_unused_alt_labels << '\n';
 	unusedfile.close();
 
@@ -856,7 +862,8 @@ int main(int argc, char *argv[])
 	({	"BAD_ANGLE", "DUPLICATE_LABEL", "HIDDEN_TERMINUS",
 		"INVALID_FINAL_CHAR", "INVALID_FIRST_CHAR",
 		"LABEL_INVALID_CHAR", "LABEL_PARENS", "LABEL_SLASHES",
-		"LABEL_UNDERSCORES", "LONG_UNDERSCORE", "MALFORMED_URL",
+		"LABEL_UNDERSCORES", "LONG_UNDERSCORE",
+		"MALFORMED_LAT", "MALFORMED_LON", "MALFORMED_URL",
 		"NONTERMINAL_UNDERSCORE"
 	});
 	while (getline(file, line))

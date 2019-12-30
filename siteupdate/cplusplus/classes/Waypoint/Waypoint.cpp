@@ -54,7 +54,7 @@ Waypoint::Waypoint(char *line, Route *rte, std::mutex *strtok_mtx, DatacheckEntr
 			if (point_count > 1)
 			{	//std::cout << ("\nWARNING: Malformed URL in " + route->root + ", line: ") + line << std::endl;
 				size_t ampersand = URL.find('&', latBeg);
-				datacheckerrors->add(route, label, "", "", "MALFORMED_URL",
+				datacheckerrors->add(route, label, "", "", "MALFORMED_LAT",
 				  (ampersand == -1) ? URL.data()+latBeg : URL.substr(latBeg, ampersand-latBeg));
 				lat = 0;	lng = 0;	valid_coords = 0;	break;
 			}
@@ -63,7 +63,7 @@ Waypoint::Waypoint(char *line, Route *rte, std::mutex *strtok_mtx, DatacheckEntr
 		if (*c == '-' and c > URL.data()+latBeg)
 		{	//std::cout << ("\nWARNING: Malformed URL in " + route->root + ", line: ") + line << std::endl;
 			size_t ampersand = URL.find('&', latBeg);
-			datacheckerrors->add(route, label, "", "", "MALFORMED_URL",
+			datacheckerrors->add(route, label, "", "", "MALFORMED_LAT",
 			  (ampersand == -1) ? URL.data()+latBeg : URL.substr(latBeg, ampersand-latBeg));
 			lat = 0;	lng = 0;	valid_coords = 0;	break;
 		}
@@ -71,7 +71,7 @@ Waypoint::Waypoint(char *line, Route *rte, std::mutex *strtok_mtx, DatacheckEntr
 		if (!strchr("-.0123456789", *c))
 		{	//std::cout << ("\nWARNING: Malformed URL in " + route->root + ", line: ") + line << std::endl;
 			size_t ampersand = URL.find('&', latBeg);
-			datacheckerrors->add(route, label, "", "", "MALFORMED_URL",
+			datacheckerrors->add(route, label, "", "", "MALFORMED_LAT",
 			  (ampersand == -1) ? URL.data()+latBeg : URL.substr(latBeg, ampersand-latBeg));
 			lat = 0;	lng = 0;	valid_coords = 0;	break;
 		}
@@ -85,7 +85,7 @@ Waypoint::Waypoint(char *line, Route *rte, std::mutex *strtok_mtx, DatacheckEntr
 			if (point_count > 1)
 			{	//std::cout << ("\nWARNING: Malformed URL in " + route->root + ", line: ") + line << std::endl;
 				size_t ampersand = URL.find('&', lonBeg);
-				datacheckerrors->add(route, label, "", "", "MALFORMED_URL",
+				datacheckerrors->add(route, label, "", "", "MALFORMED_LON",
 				  (ampersand == -1) ? URL.data()+lonBeg : URL.substr(lonBeg, ampersand-lonBeg));
 				lat = 0;	lng = 0;	valid_coords = 0;	break;
 			}
@@ -94,7 +94,7 @@ Waypoint::Waypoint(char *line, Route *rte, std::mutex *strtok_mtx, DatacheckEntr
 		if (*c == '-' and c > URL.data()+lonBeg)
 		{	//std::cout << ("\nWARNING: Malformed URL in " + route->root + ", line: ") + line << std::endl;
 			size_t ampersand = URL.find('&', lonBeg);
-			datacheckerrors->add(route, label, "", "", "MALFORMED_URL",
+			datacheckerrors->add(route, label, "", "", "MALFORMED_LON",
 			  (ampersand == -1) ? URL.data()+lonBeg : URL.substr(lonBeg, ampersand-lonBeg));
 			lat = 0;	lng = 0;	valid_coords = 0;	break;
 		}
@@ -102,7 +102,7 @@ Waypoint::Waypoint(char *line, Route *rte, std::mutex *strtok_mtx, DatacheckEntr
 		if (!strchr("-.0123456789", *c))
 		{	//std::cout << ("\nWARNING: Malformed URL in " + route->root + ", line: ") + line << std::endl;
 			size_t ampersand = URL.find('&', lonBeg);
-			datacheckerrors->add(route, label, "", "", "MALFORMED_URL",
+			datacheckerrors->add(route, label, "", "", "MALFORMED_LON",
 			  (ampersand == -1) ? URL.data()+lonBeg : URL.substr(lonBeg, ampersand-lonBeg));
 			lat = 0;	lng = 0;	valid_coords = 0;	break;
 		}

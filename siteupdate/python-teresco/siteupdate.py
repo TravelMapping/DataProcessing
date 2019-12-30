@@ -314,7 +314,7 @@ class Waypoint:
                 point_count += 1
                 if point_count > 1:
                     #print("\nWARNING: Malformed URL in " + route.root + ", line: " + line, end="", flush=True)
-                    datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_URL', lat_string))
+                    datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_LAT', lat_string))
                     self.lat = 0.0
                     self.lng = 0.0
                     valid_coords = False
@@ -322,7 +322,7 @@ class Waypoint:
             # check for minus sign not at beginning
             if lat_string[c] == '-' and c > 0:
                 #print("\nWARNING: Malformed URL in " + route.root + ", line: " + line, end="", flush=True)
-                datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_URL', lat_string))
+                datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_LAT', lat_string))
                 self.lat = 0.0
                 self.lng = 0.0
                 valid_coords = False
@@ -330,7 +330,7 @@ class Waypoint:
             # check for invalid characters
             if lat_string[c] not in "-.0123456789":
                 #print("\nWARNING: Malformed URL in " + route.root + ", line: " + line, end="", flush=True)
-                datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_URL', lat_string))
+                datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_LAT', lat_string))
                 self.lat = 0.0
                 self.lng = 0.0
                 valid_coords = False
@@ -344,7 +344,7 @@ class Waypoint:
                 point_count += 1
                 if point_count > 1:
                     #print("\nWARNING: Malformed URL in " + route.root + ", line: " + line, end="", flush=True)
-                    datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_URL', lng_string))
+                    datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_LON', lng_string))
                     self.lat = 0.0
                     self.lng = 0.0
                     valid_coords = False
@@ -352,7 +352,7 @@ class Waypoint:
             # check for minus sign not at beginning
             if lng_string[c] == '-' and c > 0:
                 #print("\nWARNING: Malformed URL in " + route.root + ", line: " + line, end="", flush=True)
-                datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_URL', lng_string))
+                datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_LON', lng_string))
                 self.lat = 0.0
                 self.lng = 0.0
                 valid_coords = False
@@ -360,7 +360,7 @@ class Waypoint:
             # check for invalid characters
             if lng_string[c] not in "-.0123456789":
                 #print("\nWARNING: Malformed URL in " + route.root + ", line: " + line, end="", flush=True)
-                datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_URL', lng_string))
+                datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_LON', lng_string))
                 self.lat = 0.0
                 self.lng = 0.0
                 valid_coords = False
@@ -1262,6 +1262,8 @@ class DatacheckEntry:
     LACKS_GENERIC
     LONG_SEGMENT
     LONG_UNDERSCORE
+    MALFORMED_LAT
+    MALFORMED_LON
     MALFORMED_URL
     NONTERMINAL_UNDERSCORE
     OUT_OF_BOUNDS
@@ -2395,12 +2397,13 @@ unprocessedfile = open(args.logfilepath+'/unprocessedwpts.log','w',encoding='utf
 if len(all_wpt_files) > 0:
     print(str(len(all_wpt_files)) + " .wpt files in " + args.highwaydatapath +
           "/hwy_data not processed, see unprocessedwpts.log.")
-    for file in all_wpt_files:
+    for file in sorted(all_wpt_files):
         unprocessedfile.write(file[file.find('hwy_data'):] + '\n')
 else:
     print("All .wpt files in " + args.highwaydatapath +
           "/hwy_data processed.")
 unprocessedfile.close()
+all_wpt_files = None
 
 # Near-miss point log
 print(et.et() + "Near-miss point log and tm-master.nmp file.", flush=True)
@@ -2584,18 +2587,23 @@ inusefile.close()
 
 # write log file for alt labels not in use
 print(et.et() + "Writing unused alt labels log.")
-unusedfile = open(args.logfilepath+'/unusedaltlabels.log','w',encoding='UTF-8')
-unusedfile.write("Log file created at: " + str(datetime.datetime.now()) + "\n")
 total_unused_alt_labels = 0
+unused_alt_labels = []
 for h in highway_systems:
     for r in h.route_list:
         if len(r.unused_alt_labels) > 0:
             total_unused_alt_labels += len(r.unused_alt_labels)
-            unusedfile.write(r.root + "(" + str(len(r.unused_alt_labels)) + "):")
+            ual_entry = r.root + "(" + str(len(r.unused_alt_labels)) + "):"
             for label in sorted(r.unused_alt_labels):
-                unusedfile.write(" " + label)
-            unusedfile.write("\n")
+                ual_entry += " " + label
             r.unused_alt_labels = None
+            unused_alt_labels.append(ual_entry)
+unused_alt_labels.sort()
+unusedfile = open(args.logfilepath+'/unusedaltlabels.log','w',encoding='UTF-8')
+unusedfile.write("Log file created at: " + str(datetime.datetime.now()) + "\n")
+for ual_entry in unused_alt_labels:
+    unusedfile.write(ual_entry + "\n")
+unused_alt_labels = None
 unusedfile.write("Total: " + str(total_unused_alt_labels) + "\n")
 unusedfile.close()
 
@@ -3057,7 +3065,8 @@ datacheckfps = []
 datacheck_always_error = [ 'BAD_ANGLE', 'DUPLICATE_LABEL', 'HIDDEN_TERMINUS',
                            'INVALID_FINAL_CHAR', 'INVALID_FIRST_CHAR',
                            'LABEL_INVALID_CHAR', 'LABEL_PARENS', 'LABEL_SLASHES',
-                           'LABEL_UNDERSCORES', 'LONG_UNDERSCORE', 'MALFORMED_URL',
+                           'LABEL_UNDERSCORES', 'LONG_UNDERSCORE',
+                           'MALFORMED_LAT', 'MALFORMED_LON', 'MALFORMED_URL',
                            'NONTERMINAL_UNDERSCORE' ]
 for line in lines:
     fields = line.rstrip('\n').split(';')
