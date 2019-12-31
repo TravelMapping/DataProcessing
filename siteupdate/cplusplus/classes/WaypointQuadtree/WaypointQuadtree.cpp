@@ -1,5 +1,3 @@
-std::mutex WaypointQuadtree::mtx;
-
 bool WaypointQuadtree::WaypointQuadtree::refined()
 {	return nw_child;
 }
@@ -34,6 +32,7 @@ void WaypointQuadtree::refine()
 void WaypointQuadtree::insert(Waypoint *w, bool init)
 {	// insert Waypoint *w into this quadtree node
 	//std::cout << "QTDEBUG: " << str() << " insert " << w->str() << std::endl;
+	mtx.lock();
 	if (!refined())
 	     {	// look for colocated points during initial insertion
 		if (init)
@@ -61,14 +60,17 @@ void WaypointQuadtree::insert(Waypoint *w, bool init)
 		points.push_front(w);
 		if (unique_locations > 50)  // 50 unique points max per quadtree node
 			refine();
+		mtx.unlock();
 	     }
-	else	if (w->lat < mid_lat)
+	else {	mtx.unlock();
+		if (w->lat < mid_lat)
 			if (w->lng < mid_lng)
 				sw_child->insert(w, init);
 			else	se_child->insert(w, init);
 		else	if (w->lng < mid_lng)
 				nw_child->insert(w, init);
 			else	ne_child->insert(w, init);
+	     }
 }
 
 Waypoint *WaypointQuadtree::waypoint_at_same_point(Waypoint *w)

@@ -63,9 +63,7 @@ void Route::read_wpt
 			  if (al[c] >= 'a' && al[c] <= 'z') al[c] -= 32;
 			unused_alt_labels.insert(al);
 		}
-		all_waypoints->mtx.lock();
 		all_waypoints->insert(w, 1);
-		all_waypoints->mtx.unlock();
 
 		// single-point Datachecks, and HighwaySegment
 		w->out_of_bounds(datacheckerrors, fstr);

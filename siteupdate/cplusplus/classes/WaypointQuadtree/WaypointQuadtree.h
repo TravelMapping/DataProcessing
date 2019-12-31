@@ -7,7 +7,7 @@ class WaypointQuadtree
 	WaypointQuadtree *nw_child, *ne_child, *sw_child, *se_child;
 	std::forward_list<Waypoint*> points;
 	unsigned int unique_locations;
-	static std::mutex mtx;
+	std::recursive_mutex mtx;
 
 	bool refined();
 	WaypointQuadtree(double, double, double, double);
