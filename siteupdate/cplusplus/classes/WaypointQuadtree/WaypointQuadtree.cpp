@@ -27,15 +27,33 @@ void WaypointQuadtree::refine()
 	sw_child = new WaypointQuadtree(min_lat, min_lng, mid_lat, mid_lng);
 	se_child = new WaypointQuadtree(min_lat, mid_lng, mid_lat, max_lng);
 		   // deleted on termination of program
-	for (Waypoint *p : points) insert(p);
+	for (Waypoint *p : points) insert(p, 0);
 	points.clear();
 }
 
-void WaypointQuadtree::insert(Waypoint *w)
+void WaypointQuadtree::insert(Waypoint *w, bool init)
 {	// insert Waypoint *w into this quadtree node
 	//std::cout << "QTDEBUG: " << str() << " insert " << w->str() << std::endl;
 	if (!refined())
-	     {
+	     {	// look for colocated points during initial insertion
+		if (init)
+		{	Waypoint *other_w = 0;
+			for (Waypoint *p : points)
+			  if (p->same_coords(w))
+			  {	other_w = p;
+				break;
+			  }
+			if (other_w)
+			{	// see if this is the first point colocated with other_w
+				if (!other_w->colocated)
+				{	other_w->colocated = new std::list<Waypoint*>;
+							     // deleted on termination of program
+					other_w->colocated->push_front(other_w);
+				}
+				other_w->colocated->push_front(w);
+				w->colocated = other_w->colocated;
+			}
+		}
 		if (!w->colocated || w == w->colocated->back())
 		{	//std::cout << "QTDEBUG: " << str() << " at " << unique_locations << " unique locations" << std::endl;
 			unique_locations++;
@@ -46,11 +64,11 @@ void WaypointQuadtree::insert(Waypoint *w)
 	     }
 	else	if (w->lat < mid_lat)
 			if (w->lng < mid_lng)
-				sw_child->insert(w);
-			else	se_child->insert(w);
+				sw_child->insert(w, init);
+			else	se_child->insert(w, init);
 		else	if (w->lng < mid_lng)
-				nw_child->insert(w);
-			else	ne_child->insert(w);
+				nw_child->insert(w, init);
+			else	ne_child->insert(w, init);
 }
 
 Waypoint *WaypointQuadtree::waypoint_at_same_point(Waypoint *w)
