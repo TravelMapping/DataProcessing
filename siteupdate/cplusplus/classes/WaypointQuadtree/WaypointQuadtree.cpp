@@ -35,14 +35,15 @@ void WaypointQuadtree::insert(Waypoint *w)
 {	// insert Waypoint *w into this quadtree node
 	//std::cout << "QTDEBUG: " << str() << " insert " << w->str() << std::endl;
 	if (!refined())
-	{	if (!waypoint_at_same_point(w))
+	     {
+		if (!w->colocated || w == w->colocated->back())
 		{	//std::cout << "QTDEBUG: " << str() << " at " << unique_locations << " unique locations" << std::endl;
 			unique_locations++;
 		}
 		points.push_front(w);
 		if (unique_locations > 50)  // 50 unique points max per quadtree node
 			refine();
-	}
+	     }
 	else	if (w->lat < mid_lat)
 			if (w->lng < mid_lng)
 				sw_child->insert(w);

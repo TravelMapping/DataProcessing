@@ -77,7 +77,7 @@ class WaypointQuadtree:
         """insert Waypoint w into this quadtree node"""
         #print("QTDEBUG: " + str(self) + " insert " + str(w))
         if self.points is not None:
-            if self.waypoint_at_same_point(w) is None:
+            if w.colocated is None or w == w.colocated[0]:
                 #print("QTDEBUG: " + str(self) + " at " + str(self.unique_locations) + " unique locations")
                 self.unique_locations += 1
             self.points.append(w)
