@@ -76,15 +76,6 @@ void Route::read_wpt
 			other_w->colocated->push_front(w);
 			w->colocated = other_w->colocated;
 		}
-		// look for near-miss points (before we add this one in)
-		//cout << "DEBUG: START search for nmps for waypoint " << w->str() << " in quadtree of size " << all_waypoints.size() << endl;
-		w->near_miss_points = all_waypoints->near_miss_waypoints(w, 0.0005);
-		/*cout << "DEBUG: for waypoint " << w->str() << " got " << w->near_miss_points.size() << " nmps: ";
-		for (Waypoint *dbg_w : w->near_miss_points)
-			cout << dbg_w->str() << " ";
-		cout << endl;//*/
-		for (Waypoint *other_w : w->near_miss_points) other_w->near_miss_points.push_front(w);
-
 		all_waypoints->insert(w);
 		all_waypoints->mtx.unlock();
 

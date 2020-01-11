@@ -24,5 +24,5 @@ class WaypointQuadtree
 	unsigned int total_nodes();
 	void sort();
 	void get_tmg_lines(std::list<std::string> &, std::list<std::string> &, std::string);
-	void write_qt_tmg();
+	void write_qt_tmg(std::string);
 };

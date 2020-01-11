@@ -232,10 +232,10 @@ void WaypointQuadtree::get_tmg_lines(std::list<std::string> &vertices, std::list
 	}
 }
 
-void WaypointQuadtree::write_qt_tmg()
+void WaypointQuadtree::write_qt_tmg(std::string filename)
 {	std::list<std::string> vertices, edges;
 	get_tmg_lines(vertices, edges, "M");
-	std::ofstream tmgfile("WaypointQuadtree.tmg");
+	std::ofstream tmgfile(filename);
 	tmgfile << "TMG 1.0 simple\n";
 	tmgfile << vertices.size() << ' ' << edges.size() << '\n';
 	for (std::string v : vertices)	tmgfile << v << '\n';
