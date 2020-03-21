@@ -63,30 +63,7 @@ void Route::read_wpt
 			  if (al[c] >= 'a' && al[c] <= 'z') al[c] -= 32;
 			unused_alt_labels.insert(al);
 		}
-		// look for colocated points
-		all_waypoints->mtx.lock();
-		Waypoint *other_w = all_waypoints->waypoint_at_same_point(w);
-		if (other_w)
-		{	// see if this is the first point colocated with other_w
-			if (!other_w->colocated)
-			{	other_w->colocated = new std::list<Waypoint*>;
-						     // deleted on termination of program
-				other_w->colocated->push_front(other_w);
-			}
-			other_w->colocated->push_front(w);
-			w->colocated = other_w->colocated;
-		}
-		// look for near-miss points (before we add this one in)
-		//cout << "DEBUG: START search for nmps for waypoint " << w->str() << " in quadtree of size " << all_waypoints.size() << endl;
-		w->near_miss_points = all_waypoints->near_miss_waypoints(w, 0.0005);
-		/*cout << "DEBUG: for waypoint " << w->str() << " got " << w->near_miss_points.size() << " nmps: ";
-		for (Waypoint *dbg_w : w->near_miss_points)
-			cout << dbg_w->str() << " ";
-		cout << endl;//*/
-		for (Waypoint *other_w : w->near_miss_points) other_w->near_miss_points.push_front(w);
-
-		all_waypoints->insert(w);
-		all_waypoints->mtx.unlock();
+		all_waypoints->insert(w, 1);
 
 		// single-point Datachecks, and HighwaySegment
 		w->out_of_bounds(datacheckerrors, fstr);
