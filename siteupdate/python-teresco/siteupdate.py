@@ -71,13 +71,26 @@ class WaypointQuadtree:
         points = self.points
         self.points = None
         for p in points:
-            self.insert(p)
+            self.insert(p, False)
 
-    def insert(self,w):
+    def insert(self,w,init):
         """insert Waypoint w into this quadtree node"""
         #print("QTDEBUG: " + str(self) + " insert " + str(w))
         if self.points is not None:
-            if self.waypoint_at_same_point(w) is None:
+            # look for colocated points during initial insertion
+            if init:
+                other_w = None
+                for p in self.points:
+                    if p.same_coords(w):
+                        other_w = p
+                        break
+                if other_w is not None:
+                    # see if this is the first point colocated with other_w
+                    if other_w.colocated is None:
+                        other_w.colocated = [ other_w ]
+                    other_w.colocated.append(w)
+                    w.colocated = other_w.colocated
+            if w.colocated is None or w == w.colocated[0]:
                 #print("QTDEBUG: " + str(self) + " at " + str(self.unique_locations) + " unique locations")
                 self.unique_locations += 1
             self.points.append(w)
@@ -86,14 +99,14 @@ class WaypointQuadtree:
         else:
             if w.lat < self.mid_lat:
                 if w.lng < self.mid_lng:
-                    self.sw_child.insert(w)
+                    self.sw_child.insert(w, init)
                 else:
-                    self.se_child.insert(w)
+                    self.se_child.insert(w, init)
             else:
                 if w.lng < self.mid_lng:
-                    self.nw_child.insert(w)
+                    self.nw_child.insert(w, init)
                 else:
-                    self.ne_child.insert(w)
+                    self.ne_child.insert(w, init)
 
     def waypoint_at_same_point(self,w):
         """find an existing waypoint at the same coordinates as w"""
@@ -928,16 +941,8 @@ class Route:
                     # populate unused alt labels
                     for label in w.alt_labels:
                         self.unused_alt_labels.add(label.upper().strip("+"))
-                    # look for colocated points
-                    all_waypoints_lock.acquire()
-                    other_w = all_waypoints.waypoint_at_same_point(w)
-                    if other_w is not None:
-                        # see if this is the first point colocated with other_w
-                        if other_w.colocated is None:
-                            other_w.colocated = [ other_w ]
-                        other_w.colocated.append(w)
-                        w.colocated = other_w.colocated
 
+                    all_waypoints_lock.acquire()
                     # look for near-miss points (before we add this one in)
                     #print("DEBUG: START search for nmps for waypoint " + str(w) + " in quadtree of size " + str(all_waypoints.size()))
                     #if not all_waypoints.is_valid():
@@ -959,7 +964,7 @@ class Route:
                             else:
                                 other_w.near_miss_points.append(w)
     
-                    all_waypoints.insert(w)
+                    all_waypoints.insert(w, True)
                     all_waypoints_lock.release()
                     # add HighwaySegment, if not first point
                     if previous_point is not None:

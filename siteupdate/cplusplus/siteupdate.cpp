@@ -339,7 +339,7 @@ int main(int argc, char *argv[])
 	// create NMP lists
 	cout << et.et() << "Searching for near-miss points." << endl;
       #ifdef threading_enabled
-	// set up for threaded processing of highway systems
+	// set up for threaded NMP search
 	hs_it = highway_systems.begin();
 
 	for (unsigned int t = 0; t < args.numthreads; t++)
