@@ -249,66 +249,72 @@ std::string Waypoint::root_at_label()
 {	return route->root + "@" + label;
 }
 
-void Waypoint::nmplogs(std::list<std::string> &nmpfplist, std::ofstream &nmpnmp, std::list<std::string> &nmploglines)
+void Waypoint::nmplogs(std::unordered_set<std::string> &nmpfps, std::ofstream &nmpnmp, std::list<std::string> &nmploglines)
 {	if (!near_miss_points.empty())
 	{	// sort the near miss points for consistent ordering to facilitate NMP FP marking
 		near_miss_points.sort(sort_root_at_label);
-		bool nmplooksintentional = 0;
+		// construct string for nearmisspoints.log & FP matching
 		std::string nmpline = str() + " NMP";
-		std::list<std::string> nmpnmplines;
+		for (Waypoint *other_w : near_miss_points) nmpline += " " + other_w->str();
+		// check for string in fp list
+		std::unordered_set<std::string>::iterator fpit = nmpfps.find(nmpline);
+		if (fpit == nmpfps.end())		  fpit = nmpfps.find(nmpline+" [LOOKS INTENTIONAL]");
+		if (fpit == nmpfps.end())		  fpit = nmpfps.find(nmpline+" [SOME LOOK INTENTIONAL]");
+		bool fp = fpit != nmpfps.end();
+		// write lines to tm-master.nmp
+		size_t li_count = 0;
 		for (Waypoint *other_w : near_miss_points)
-		{	if ((fabs(lat - other_w->lat) < 0.0000015) && (fabs(lng - other_w->lng) < 0.0000015))
-				nmplooksintentional = 1;
-			nmpline += " " + other_w->str();
+		{	bool li = (fabs(lat - other_w->lat) < 0.0000015) && (fabs(lng - other_w->lng) < 0.0000015);
+			if (li) li_count++;
 			// make sure we only plot once, since the NMP should be listed
 			// both ways (other_w in w's list, w in other_w's list)
 			if (sort_root_at_label(this, other_w))
 			{	char coordstr[51];
 
-				std::string nmpnmpline = root_at_label();
+				nmpnmp << root_at_label();
 				sprintf(coordstr, " %.15g", lat);
 				if (!strchr(coordstr, '.')) strcat(coordstr, ".0"); // add single trailing zero to ints for compatibility with Python
-				nmpnmpline += coordstr;
+				nmpnmp << coordstr;
 				sprintf(coordstr, " %.15g", lng);
 				if (!strchr(coordstr, '.')) strcat(coordstr, ".0"); // add single trailing zero to ints for compatibility with Python
-				nmpnmpline += coordstr;
-				nmpnmplines.push_back(nmpnmpline);
+				nmpnmp << coordstr;
+				if (fp || li)
+				{	nmpnmp << ' ';
+					if (fp) nmpnmp << "FP";
+					if (li) nmpnmp << "LI";
+				}
+				nmpnmp << '\n';
 
-				nmpnmpline = other_w->root_at_label();
+				nmpnmp << other_w->root_at_label();
 				sprintf(coordstr, " %.15g", other_w->lat);
 				if (!strchr(coordstr, '.')) strcat(coordstr, ".0"); // add single trailing zero to ints for compatibility with Python
-				nmpnmpline += coordstr;
+				nmpnmp << coordstr;
 				sprintf(coordstr, " %.15g", other_w->lng);
 				if (!strchr(coordstr, '.')) strcat(coordstr, ".0"); // add single trailing zero to ints for compatibility with Python
-				nmpnmpline += coordstr;
-				nmpnmplines.push_back(nmpnmpline);
+				nmpnmp << coordstr;
+				if (fp || li)
+				{	nmpnmp << ' ';
+					if (fp) nmpnmp << "FP";
+					if (li) nmpnmp << "LI";
+				}
+				nmpnmp << '\n';
 			}
 		}
 		// indicate if this was in the FP list or if it's off by exact amt
 		// so looks like it's intentional, and detach near_miss_points list
 		// so it doesn't get a rewrite in nmp_merged WPT files
-		// also set the extra field to mark FP/LI items in the .nmp file
-		std::string extra_field;
-		std::list<std::string>::iterator fp = nmpfplist.begin();
-		while (fp != nmpfplist.end() && *fp != nmpline) fp++;
-		if (fp != nmpfplist.end())
-		{	nmpfplist.erase(fp);
+		if (li_count)
+		{	if ( li_count == std::distance(near_miss_points.begin(), near_miss_points.end()) )
+				nmpline += " [LOOKS INTENTIONAL]";
+			else	nmpline += " [SOME LOOK INTENTIONAL]";
+			near_miss_points.clear();
+		}
+		if (fp)
+		{	nmpfps.erase(fpit);
 			nmpline += " [MARKED FP]";
 			near_miss_points.clear();
-			extra_field += "FP";
 		}
-		if (nmplooksintentional)
-		{	nmpline += " [LOOKS INTENTIONAL]";
-			near_miss_points.clear();
-			extra_field += "LI";
-		}
-		if (extra_field != "") extra_field = " " + extra_field;
 		nmploglines.push_back(nmpline);
-
-		// write actual lines to .nmp file, indicating FP and/or LI
-		// for marked FPs or looks intentional items
-		for (std::string nmpnmpline : nmpnmplines)
-			nmpnmp << nmpnmpline << extra_field << '\n';
 	}
 }
 
