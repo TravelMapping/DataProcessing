@@ -1249,38 +1249,35 @@ class DatacheckEntry:
     as the endpoints of a too-long segment or the three points that
     form a sharp angle)
 
-    code is the error code string, one of:
-    BAD_ANGLE
-    BUS_WITH_I
-    DUPLICATE_COORDS
-    DUPLICATE_LABEL
-    HIDDEN_JUNCTION
-    HIDDEN_TERMINUS
-    INVALID_FINAL_CHAR
-    INVALID_FIRST_CHAR
-    LABEL_INVALID_CHAR
-    LABEL_LOOKS_HIDDEN
-    LABEL_PARENS
-    LABEL_SELFREF
-    LABEL_SLASHES
-    LABEL_UNDERSCORES
-    LACKS_GENERIC
-    LONG_SEGMENT
-    LONG_UNDERSCORE
-    MALFORMED_LAT
-    MALFORMED_LON
-    MALFORMED_URL
-    NONTERMINAL_UNDERSCORE
-    OUT_OF_BOUNDS
-    SHARP_ANGLE
-    US_BANNER
-    VISIBLE_DISTANCE
-    VISIBLE_HIDDEN_COLOC
-
-    info is additional information, at this time either a distance (in
-    miles) for a long segment error, an angle (in degrees) for a sharp
-    angle error, or a coordinate pair for duplicate coordinates, other
-    route/label for point pair errors
+    code is the error code | info is additional
+    string, one of:        | information, if used:
+    -----------------------+--------------------------------------------
+    BAD_ANGLE              |
+    BUS_WITH_I             |
+    DUPLICATE_COORDS       | coordinate pair
+    DUPLICATE_LABEL        |
+    HIDDEN_JUNCTION        | number of incident edges in TM master graph
+    HIDDEN_TERMINUS        |
+    INVALID_FINAL_CHAR     | final character in label
+    INVALID_FIRST_CHAR     | first character in label other than *
+    LABEL_INVALID_CHAR     |
+    LABEL_LOOKS_HIDDEN     |
+    LABEL_PARENS           |
+    LABEL_SELFREF          |
+    LABEL_SLASHES          |
+    LABEL_UNDERSCORES      |
+    LACKS_GENERIC          |
+    LONG_SEGMENT           | distance in miles
+    LONG_UNDERSCORE        |
+    MALFORMED_LAT          | malformed "lat=" parameter from OSM url
+    MALFORMED_LON          | malformed "lon=" parameter from OSM url
+    MALFORMED_URL          | always "MISSING_ARG(S)"
+    NONTERMINAL_UNDERSCORE |
+    OUT_OF_BOUNDS          | coordinate pair
+    SHARP_ANGLE            | angle in degrees
+    US_BANNER              |
+    VISIBLE_DISTANCE       | distance in miles
+    VISIBLE_HIDDEN_COLOC   | hidden point at same coordinates
 
     fp is a boolean indicating whether this has been reported as a
     false positive (would be set to true later)
