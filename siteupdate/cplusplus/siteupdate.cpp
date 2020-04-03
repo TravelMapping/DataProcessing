@@ -121,9 +121,7 @@ int main(int argc, char *argv[])
 			}
 			closedir(dir);
 		}
-		else {	cout << "Error opening directory " << args.userlistfilepath << ". (Not found?)" << endl;
-			return 0;
-		     }
+		else	el.add_error("Error opening user list file path \""+args.userlistfilepath+"\". (Not found?)");
 	}
 	else for (string &id : traveler_ids) id += ".list";
 
@@ -952,7 +950,7 @@ int main(int argc, char *argv[])
 	{	cout << "ABORTING due to " << el.error_list.size() << " errors:" << endl;
 		for (unsigned int i = 0; i < el.error_list.size(); i++)
 			cout << i+1 << ": " << el.error_list[i] << endl;
-		return 0;
+		return 1;
 	}
 
       #ifdef threading_enabled
