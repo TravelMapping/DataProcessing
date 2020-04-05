@@ -66,7 +66,7 @@ class HGEdge;
 #include "classes/HighwaySegment/HighwaySegment.h"
 #include "classes/ClinchedDBValues.cpp"
 #include "classes/Route/Route.cpp"
-#include "classes/ConnectedRoute.cpp"
+#include "classes/ConnectedRoute/ConnectedRoute.cpp"
 #include "classes/TravelerList/TravelerList.cpp"
 #include "classes/HighwaySegment/HighwaySegment.cpp"
 #include "classes/GraphGeneration/HGEdge.h"
