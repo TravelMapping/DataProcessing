@@ -4,7 +4,7 @@
 /* Code to read .csv and .wpt files and prepare for
 adding to the Travel Mapping Project database.
 
-(c) 2015-2019, Jim Teresco and Eric Bryant
+(c) 2015-2020, Jim Teresco and Eric Bryant
 Original Python version by Jim Teresco, with contributions from Eric Bryant and the TravelMapping team
 C++ translation by Eric Bryant
 
@@ -43,6 +43,13 @@ class HGEdge;
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
+#include "classes/WaypointQuadtree/WaypointQuadtree.h"
+#include "classes/Route/Route.h"
+#include "classes/ConnectedRoute/ConnectedRoute.h"
+#include "classes/Waypoint/Waypoint.h"
+#include "classes/HighwaySegment/HighwaySegment.h"
+#include "classes/GraphGeneration/HGEdge.h"
+#include "classes/GraphGeneration/PlaceRadius.h"
 #include "enable_threading.cpp"
 #include "functions/lower.cpp"
 #include "functions/upper.cpp"
@@ -51,27 +58,23 @@ class HGEdge;
 #include "functions/crawl_hwy_data.cpp"
 #include "functions/operators.cpp"
 #include "functions/list_contains.cpp"
+#include "functions/split.cpp"
+#include "classes/DBFieldLength.cpp"
 #include "classes/Arguments.cpp"
-#include "classes/WaypointQuadtree/WaypointQuadtree.h"
-#include "classes/Route/Route.h"
 #include "classes/ElapsedTime.cpp"
 #include "classes/ErrorList.cpp"
 #include "classes/Region.cpp"
 #include "classes/HighwaySystem.cpp"
 #include "classes/DatacheckEntry.cpp"
 #include "classes/DatacheckEntryList.cpp"
-#include "classes/Waypoint/Waypoint.h"
 #include "classes/Waypoint/Waypoint.cpp"
 #include "classes/WaypointQuadtree/WaypointQuadtree.cpp"
-#include "classes/HighwaySegment/HighwaySegment.h"
 #include "classes/ClinchedDBValues.cpp"
 #include "classes/Route/Route.cpp"
 #include "classes/ConnectedRoute/ConnectedRoute.cpp"
 #include "classes/TravelerList/TravelerList.cpp"
 #include "classes/HighwaySegment/HighwaySegment.cpp"
-#include "classes/GraphGeneration/HGEdge.h"
 #include "classes/GraphGeneration/HGVertex.cpp"
-#include "classes/GraphGeneration/PlaceRadius.h"
 #include "classes/GraphGeneration/GraphListEntry.cpp"
 #include "classes/GraphGeneration/HighwayGraph.cpp"
 #include "classes/GraphGeneration/HGEdge.cpp"
@@ -131,50 +134,74 @@ int main(int argc, char *argv[])
 	cout << et.et() << "Reading region, country, and continent descriptions." << endl;
 
 	// continents
-	list<pair<string, string>> continents;
+	vector<pair<string, string>> continents;
 	file.open(args.highwaydatapath+"/continents.csv");
 	if (!file) el.add_error("Could not open "+args.highwaydatapath+"/continents.csv");
 	else {	getline(file, line); // ignore header line
 		while(getline(file, line))
 		{	if (line.back() == 0x0D) line.erase(line.end()-1);	// trim DOS newlines
+			if (line.empty()) continue;
 			size_t delim = line.find(';');
 			if (delim == string::npos)
-			{	el.add_error("Could not parse continents.csv line: " + line);
+			{	el.add_error("Could not parse continents.csv line: [" + line
+					   + "], expected 2 fields, found 1");
 				continue;
 			}
 			string code = line.substr(0,delim);
 			string name = line.substr(delim+1);
 			if (name.find(';') != string::npos)
-			{	el.add_error("Could not parse continents.csv line: " + line);
+			{	el.add_error("Could not parse continents.csv line: [" + line
+					   + "], expected 2 fields, found 3");
 				continue;
 			}
-			continents.push_back(pair<string, string>(code, name));
+			// verify field lengths
+			if (code.size() > DBFieldLength::continentCode)
+				el.add_error("Continent code > " + std::to_string(DBFieldLength::continentCode)
+					   + " bytes in continents.csv line " + line);
+			if (name.size() > DBFieldLength::continentName)
+				el.add_error("Continent name > " + std::to_string(DBFieldLength::continentName)
+					   + " bytes in continents.csv line " + line);
+			continents.emplace_back(pair<string, string>(code, name));
 		}
 	     }
 	file.close();
+	// create a dummy continent to catch unrecognized continent codes in .csv files
+	continents.emplace_back(pair<string, string>("error", "unrecognized continent code"));
 
 	// countries
-	list<pair<string, string>> countries;
+	vector<pair<string, string>> countries;
 	file.open(args.highwaydatapath+"/countries.csv");
 	if (!file) el.add_error("Could not open "+args.highwaydatapath+"/countries.csv");
 	else {	getline(file, line); // ignore header line
 		while(getline(file, line))
 		{	if (line.back() == 0x0D) line.erase(line.end()-1);	// trim DOS newlines
+			if (line.empty()) continue;
 			size_t delim = line.find(';');
 			if (delim == string::npos)
-			{	el.add_error("Could not parse countries.csv line: " + line);
+			{	el.add_error("Could not parse countries.csv line: [" + line
+					   + "], expected 2 fields, found 1");
 				continue;
 			}
 			string code = line.substr(0,delim);
 			string name = line.substr(delim+1);
 			if (name.find(';') != string::npos)
-			{	el.add_error("Could not parse countries.csv line: " + line);
+			{	el.add_error("Could not parse countries.csv line: [" + line
+					   + "], expected 2 fields, found 3");
 				continue;
 			}
-			countries.push_back(pair<string, string>(code, name));
+			// verify field lengths
+			if (code.size() > DBFieldLength::countryCode)
+				el.add_error("Country code > " + std::to_string(DBFieldLength::countryCode)
+					   + " bytes in countries.csv line " + line);
+			if (name.size() > DBFieldLength::countryName)
+				el.add_error("Country name > " + std::to_string(DBFieldLength::countryName)
+					   + " bytes in countries.csv line " + line);
+			countries.emplace_back(pair<string, string>(code, name));
 		}
 	     }
 	file.close();
+	// create a dummy country to catch unrecognized country codes in .csv files
+	countries.emplace_back(pair<string, string>("error", "unrecognized country code"));
 
 	//regions
 	list<Region> all_regions;
@@ -183,9 +210,12 @@ int main(int argc, char *argv[])
 	if (!file) el.add_error("Could not open "+args.highwaydatapath+"/regions.csv");
 	else {	getline(file, line); // ignore header line
 		while(getline(file, line))
-		{	Region rg(line, countries, continents, el);
-			if (rg.is_valid()) all_regions.push_back(rg);
-			region_hash[all_regions.back().code] = &all_regions.back();
+		{	if (line.back() == 0x0D) line.erase(line.end()-1);	// trim DOS newlines
+			if (line.empty()) continue;
+			all_regions.emplace_back(line, countries, continents, el);
+			if (all_regions.back().is_valid)
+				region_hash[all_regions.back().code] = &all_regions.back();
+			else	all_regions.pop_back();
 		}
 	     }
 	file.close();
@@ -199,15 +229,17 @@ int main(int argc, char *argv[])
 		list<string> ignoring;
 		while(getline(file, line))
 		{	if (line.back() == 0x0D) line.erase(line.end()-1);	// trim DOS newlines
+			if (line.empty()) continue;
 			if (line[0] == '#')
 			{	ignoring.push_back("Ignored comment in " + args.systemsfile + ": " + line);
 				continue;
 			}
 			HighwaySystem *hs = new HighwaySystem(line, el, args.highwaydatapath+"/hwy_data/_systems", args.systemsfile, countries, region_hash);
 					    // deleted on termination of program
-			if (hs->is_valid()) highway_systems.push_back(hs);
-			else delete hs;
-			cout << hs->systemname << '.' << std::flush;
+			if (!hs->is_valid) delete hs;
+			else {	highway_systems.push_back(hs);
+				cout << hs->systemname << '.' << std::flush;
+			     }
 		}
 		cout << endl;
 		// at the end, print the lines ignored
@@ -421,7 +453,7 @@ int main(int argc, char *argv[])
       #ifdef threading_enabled
 	// set up for threaded .list file processing
 	for (unsigned int t = 0; t < args.numthreads; t++)
-		thr[t] = new thread(ReadListThread, t, &traveler_ids, &id_it, &traveler_lists, &list_mtx, &strtok_mtx, &args, &route_hash);
+		thr[t] = new thread(ReadListThread, t, &traveler_ids, &id_it, &traveler_lists, &list_mtx, &strtok_mtx, &args, &route_hash, &el);
 	for (unsigned int t = 0; t < args.numthreads; t++)
 		thr[t]->join();
 	for (unsigned int t = 0; t < args.numthreads; t++)
@@ -429,7 +461,7 @@ int main(int argc, char *argv[])
       #else
 	for (string &t : traveler_ids)
 	{	cout << t << ' ' << std::flush;
-		traveler_lists.push_back(new TravelerList(t, &route_hash, &args, &strtok_mtx));
+		traveler_lists.push_back(new TravelerList(t, &route_hash, &el, &args, &strtok_mtx));
 	}
 	traveler_ids.clear();
       #endif
@@ -453,51 +485,37 @@ int main(int argc, char *argv[])
 	getline(file, line); // ignore header line
 	while (getline(file, line))
 	{	if (line.back() == 0x0D) line.erase(line.end()-1);	// trim DOS newlines
+		if (line.empty()) continue;
+		// parse updates.csv line
+		size_t NumFields = 5;
 		array<string, 5> fields;
-
+		string* ptr_array[5] = {&fields[0], &fields[1], &fields[2], &fields[3], &fields[4]};
+		split(line, ptr_array, NumFields, ';');
+		if (NumFields != 5)
+		{	el.add_error("Could not parse updates.csv line: [" + line
+				   + "], expected 5 fields, found " + std::to_string(NumFields));
+			continue;
+		}
 		// date
-		size_t left = line.find(';');
-		if (left == std::string::npos)
-		{	el.add_error("Could not parse updates.csv line: [" + line + "], expected 5 fields, found 1");
-			continue;
-		}
-		fields[0] = line.substr(0,left);
-
+		if (fields[0].size() > DBFieldLength::date)
+			el.add_error("date > " + std::to_string(DBFieldLength::date)
+				   + " bytes in updates.csv line " + line);
 		// region
-		size_t right = line.find(';', left+1);
-		if (right == std::string::npos)
-		{	el.add_error("Could not parse updates.csv line: [" + line + "], expected 5 fields, found 2");
-			continue;
-		}
-		fields[1] = line.substr(left+1, right-left-1);
-
+		if (fields[1].size() > DBFieldLength::countryRegion)
+			el.add_error("region > " + std::to_string(DBFieldLength::countryRegion)
+				   + " bytes in updates.csv line " + line);
 		// route
-		left = right;
-		right = line.find(';', left+1);
-		if (right == std::string::npos)
-		{	el.add_error("Could not parse updates.csv line: [" + line + "], expected 5 fields, found 3");
-			continue;
-		}
-		fields[2] = line.substr(left+1, right-left-1);
-
+		if (fields[2].size() > DBFieldLength::routeLongName)
+			el.add_error("route > " + std::to_string(DBFieldLength::routeLongName)
+				   + " bytes in updates.csv line " + line);
 		// root
-		left = right;
-		right = line.find(';', left+1);
-		if (right == std::string::npos)
-		{	el.add_error("Could not parse updates.csv line: [" + line + "], expected 5 fields, found 4");
-			continue;
-		}
-		fields[3] = line.substr(left+1, right-left-1);
-
+		if (fields[3].size() > DBFieldLength::root)
+			el.add_error("root > " + std::to_string(DBFieldLength::root)
+				   + " bytes in updates.csv line " + line);
 		// description
-		left = right;
-		right = line.find(';', left+1);
-		if (right != std::string::npos)
-		{	el.add_error("Could not parse updates.csv line: [" + line + "], expected 5 fields, found more");
-			continue;
-		}
-		fields[4] = line.substr(left+1);
-
+		if (fields[4].size() > DBFieldLength::updateText)
+			el.add_error("description > " + std::to_string(DBFieldLength::updateText)
+				   + " bytes in updates.csv line " + line);
 		updates.push_back(fields);
 	}
 	file.close();
@@ -511,51 +529,37 @@ int main(int argc, char *argv[])
 	getline(file, line);  // ignore header line
 	while (getline(file, line))
 	{	if (line.back() == 0x0D) line.erase(line.end()-1);	// trim DOS newlines
+		if (line.empty()) continue;
+		// parse systemupdates.csv line
+		size_t NumFields = 5;
 		array<string, 5> fields;
-
+		string* ptr_array[5] = {&fields[0], &fields[1], &fields[2], &fields[3], &fields[4]};
+		split(line, ptr_array, NumFields, ';');
+		if (NumFields != 5)
+		{	el.add_error("Could not parse systemupdates.csv line: [" + line
+				   + "], expected 5 fields, found " + std::to_string(NumFields));
+			continue;
+		}
 		// date
-		size_t left = line.find(';');
-		if (left == std::string::npos)
-		{	el.add_error("Could not parse systemupdates.csv line: [" + line + "], expected 5 fields, found 1");
-			continue;
-		}
-		fields[0] = line.substr(0,left);
-
+		if (fields[0].size() > DBFieldLength::date)
+			el.add_error("date > " + std::to_string(DBFieldLength::date)
+				   + " bytes in systemupdates.csv line " + line);
 		// region
-		size_t right = line.find(';', left+1);
-		if (right == std::string::npos)
-		{	el.add_error("Could not parse systemupdates.csv line: [" + line + "], expected 5 fields, found 2");
-			continue;
-		}
-		fields[1] = line.substr(left+1, right-left-1);
-
+		if (fields[1].size() > DBFieldLength::countryRegion)
+			el.add_error("region > " + std::to_string(DBFieldLength::countryRegion)
+				   + " bytes in systemupdates.csv line " + line);
 		// systemName
-		left = right;
-		right = line.find(';', left+1);
-		if (right == std::string::npos)
-		{	el.add_error("Could not parse systemupdates.csv line: [" + line + "], expected 5 fields, found 3");
-			continue;
-		}
-		fields[2] = line.substr(left+1, right-left-1);
-
+		if (fields[2].size() > DBFieldLength::systemName)
+			el.add_error("systemName > " + std::to_string(DBFieldLength::systemName)
+				   + " bytes in systemupdates.csv line " + line);
 		// description
-		left = right;
-		right = line.find(';', left+1);
-		if (right == std::string::npos)
-		{	el.add_error("Could not parse systemupdates.csv line: [" + line + "], expected 5 fields, found 4");
-			continue;
-		}
-		fields[3] = line.substr(left+1, right-left-1);
-
+		if (fields[3].size() > DBFieldLength::systemFullName)
+			el.add_error("description > " + std::to_string(DBFieldLength::systemFullName)
+				   + " bytes in systemupdates.csv line " + line);
 		// statusChange
-		left = right;
-		right = line.find(';', left+1);
-		if (right != std::string::npos)
-		{	el.add_error("Could not parse systemupdates.csv line: [" + line + "], expected 5 fields, found more");
-			continue;
-		}
-		fields[4] = line.substr(left+1);
-
+		if (fields[4].size() > DBFieldLength::statusChange)
+			el.add_error("statusChange > " + std::to_string(DBFieldLength::statusChange)
+				   + " bytes in systemupdates.csv line " + line);
 		systemupdates.push_back(fields);
 	}
 	file.close();
@@ -879,87 +883,34 @@ int main(int argc, char *argv[])
 	({	"BAD_ANGLE", "DUPLICATE_LABEL", "HIDDEN_TERMINUS",
 		"INVALID_FINAL_CHAR", "INVALID_FIRST_CHAR",
 		"LABEL_INVALID_CHAR", "LABEL_PARENS", "LABEL_SLASHES",
-		"LABEL_UNDERSCORES", "LONG_UNDERSCORE",
+		"LABEL_TOO_LONG", "LABEL_UNDERSCORES", "LONG_UNDERSCORE",
 		"MALFORMED_LAT", "MALFORMED_LON", "MALFORMED_URL",
 		"NONTERMINAL_UNDERSCORE"
 	});
 	while (getline(file, line))
 	{	if (line.back() == 0x0D) line.erase(line.end()-1);	// trim DOS newlines
+		if (line.empty()) continue;
+		// parse system updates.csv line
+		size_t NumFields = 6;
 		array<string, 6> fields;
-
-		// Root
-		size_t left = line.find(';');
-		if (left == std::string::npos)
-		{	el.add_error("Could not parse datacheckfps.csv line: [" + line + "], expected 6 fields, found 1");
+		string* ptr_array[6] = {&fields[0], &fields[1], &fields[2], &fields[3], &fields[4], &fields[5]};
+		split(line, ptr_array, NumFields, ';');
+		if (NumFields != 6)
+		{	el.add_error("Could not parse datacheckfps.csv line: [" + line
+				   + "], expected 6 fields, found " + std::to_string(NumFields));
 			continue;
 		}
-		fields[0] = line.substr(0,left);
-
-		// Waypoint1
-		size_t right = line.find(';', left+1);
-		if (right == std::string::npos)
-		{	el.add_error("Could not parse datacheckfps.csv line: [" + line + "], expected 6 fields, found 2");
-			continue;
-		}
-		fields[1] = line.substr(left+1, right-left-1);
-
-		// Waypoint2
-		left = right;
-		right = line.find(';', left+1);
-		if (right == std::string::npos)
-		{	el.add_error("Could not parse datacheckfps.csv line: [" + line + "], expected 6 fields, found 3");
-			continue;
-		}
-		fields[2] = line.substr(left+1, right-left-1);
-
-		// Waypoint3
-		left = right;
-		right = line.find(';', left+1);
-		if (right == std::string::npos)
-		{	el.add_error("Could not parse datacheckfps.csv line: [" + line + "], expected 6 fields, found 4");
-			continue;
-		}
-		fields[3] = line.substr(left+1, right-left-1);
-
-		// Error
-		left = right;
-		right = line.find(';', left+1);
-		if (right == std::string::npos)
-		{	el.add_error("Could not parse datacheckfps.csv line: [" + line + "], expected 6 fields, found 5");
-			continue;
-		}
-		fields[4] = line.substr(left+1, right-left-1);
-
-		// Info
-		left = right;
-		right = line.find(';', left+1);
-		if (right != std::string::npos)
-		{	el.add_error("Could not parse datacheckfps.csv line: [" + line + "], expected 6 fields, found more");
-			continue;
-		}
-		fields[5] = line.substr(left+1);
-
 		if (datacheck_always_error.find(fields[4]) != datacheck_always_error.end())
-		{	cout << "datacheckfps.csv line not allowed (always error): " << line << endl;
-			continue;
-		}
-		datacheckfps.push_back(fields);
+			cout << "datacheckfps.csv line not allowed (always error): " << line << endl;
+		else	datacheckfps.push_back(fields);
 	}
 	file.close();
 
-	// See if we have any errors that should be fatal to the site update process
-	if (el.error_list.size())
-	{	cout << "ABORTING due to " << el.error_list.size() << " errors:" << endl;
-		for (unsigned int i = 0; i < el.error_list.size(); i++)
-			cout << i+1 << ": " << el.error_list[i] << endl;
-		return 0;
-	}
-
       #ifdef threading_enabled
-	std::cout << et.et() << "Start writing database file " << args.databasename << ".sql.\n" << std::flush;
 	thread sqlthread;
 	if   (!args.errorcheck)
-	{	sqlthread=thread(sqlfile1, &et, &args, &all_regions, &continents, &countries, &highway_systems, &traveler_lists, &clin_db_val, &updates, &systemupdates);
+	{	std::cout << et.et() << "Start writing database file " << args.databasename << ".sql.\n" << std::flush;
+		sqlthread=thread(sqlfile1, &et, &args, &all_regions, &continents, &countries, &highway_systems, &traveler_lists, &clin_db_val, &updates, &systemupdates);
 	}
       #endif
 
@@ -1031,6 +982,14 @@ int main(int argc, char *argv[])
 	      #endif
 		sqlfile2(&et, &args, &graph_types, &graph_vector, datacheckerrors);
 	     }
+
+	// See if we have any errors that should be fatal to the site update process
+	if (el.error_list.size())
+	{	cout << et.et() << "ABORTING due to " << el.error_list.size() << " errors:" << endl;
+		for (unsigned int i = 0; i < el.error_list.size(); i++)
+			cout << i+1 << ": " << el.error_list[i] << endl;
+		return 1;
+	}
 
 	// print some statistics
 	cout << et.et() << "Processed " << highway_systems.size() << " highway systems." << endl;

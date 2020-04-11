@@ -5,12 +5,12 @@ class PlaceRadius
 	*/
 
 	public:
-	std::string place;	// long description of area, E.G. "New York City"
-	std::string base;	// filename base, short name for area, E.G. "nyc"
+	std::string descr;	// long description of area, E.G. "New York City"
+	std::string title;	// filename title, short name for area, E.G. "nyc"
 	double lat, lng;	// center latitude, longitude
 	unsigned int r;		// radius in miles
 
-	PlaceRadius(const char *, const char *, const char *, const char *, const char *);
+	PlaceRadius(const char *, const char *, double &, double &, int &);
 
 	bool contains_vertex(HGVertex *);
 	bool contains_vertex(double, double);

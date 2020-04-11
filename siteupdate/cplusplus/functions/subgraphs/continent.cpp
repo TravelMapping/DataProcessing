@@ -3,20 +3,20 @@
 cout << et.et() << "Creating continent graphs." << endl;
 #endif
 // add entries to graph_vector
-for (pair<string, string> &c : continents)
+for (size_t c = 0; c < continents.size()-1; c++)
 {	regions = new list<Region*>;
 		  // deleted on termination of program
 	for (Region &r : all_regions)
 	  // does it match this continent and have routes?
-	  if (&c == r.continent && r.active_preview_mileage)
+	  if (&continents[c] == r.continent && r.active_preview_mileage)
 	    regions->push_back(&r);
 	// generate for any continent with at least 1 region with mileage
 	if (regions->size() < 1) delete regions;
-	else {	graph_vector.emplace_back(c.first + "-continent", c.second + " All Routes on Continent",
+	else {	graph_vector.emplace_back(continents[c].first + "-continent", continents[c].second + " All Routes on Continent",
 					  's', 'C', regions, (list<HighwaySystem*>*)0, (PlaceRadius*)0);
-		graph_vector.emplace_back(c.first + "-continent", c.second + " All Routes on Continent",
+		graph_vector.emplace_back(continents[c].first + "-continent", continents[c].second + " All Routes on Continent",
 					  'c', 'C', (list<Region*>*)0, (list<HighwaySystem*>*)0, (PlaceRadius*)0);
-		graph_vector.emplace_back(c.first + "-continent", c.second + " All Routes on Continent",
+		graph_vector.emplace_back(continents[c].first + "-continent", continents[c].second + " All Routes on Continent",
 					  't', 'C', (list<Region*>*)0, (list<HighwaySystem*>*)0, (PlaceRadius*)0);
 	     }
 }

@@ -70,7 +70,6 @@ class Route
 	std::string list_entry_name();
 	std::string name_no_abbrev();
 	double clinched_by_traveler(TravelerList *);
-	bool is_valid();
 	std::string list_line(int, int);
 	void write_nmp_merged(std::string);
 };

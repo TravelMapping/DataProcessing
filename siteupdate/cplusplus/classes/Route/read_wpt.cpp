@@ -47,8 +47,9 @@ void Route::read_wpt
 		if (lines[l][0] == 0) continue;
 		Waypoint *w = new Waypoint(lines[l], this, strtok_mtx, datacheckerrors);
 			      // deleted on termination of program, or immediately below if invalid
-		// lat & lng both equal to 0 marks a point as invalid. These cases are set by the MALFORMED_URL datacheck.
-		if (w->lat == 0 && w->lng == 0)
+		bool malformed_url = w->lat == 0 && w->lng == 0;
+		bool label_too_long = w->label_too_long(datacheckerrors);
+		if (malformed_url || label_too_long)
 		{	delete w;
 			continue;
 		}
