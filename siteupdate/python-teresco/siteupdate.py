@@ -1249,38 +1249,35 @@ class DatacheckEntry:
     as the endpoints of a too-long segment or the three points that
     form a sharp angle)
 
-    code is the error code string, one of:
-    BAD_ANGLE
-    BUS_WITH_I
-    DUPLICATE_COORDS
-    DUPLICATE_LABEL
-    HIDDEN_JUNCTION
-    HIDDEN_TERMINUS
-    INVALID_FINAL_CHAR
-    INVALID_FIRST_CHAR
-    LABEL_INVALID_CHAR
-    LABEL_LOOKS_HIDDEN
-    LABEL_PARENS
-    LABEL_SELFREF
-    LABEL_SLASHES
-    LABEL_UNDERSCORES
-    LACKS_GENERIC
-    LONG_SEGMENT
-    LONG_UNDERSCORE
-    MALFORMED_LAT
-    MALFORMED_LON
-    MALFORMED_URL
-    NONTERMINAL_UNDERSCORE
-    OUT_OF_BOUNDS
-    SHARP_ANGLE
-    US_BANNER
-    VISIBLE_DISTANCE
-    VISIBLE_HIDDEN_COLOC
-
-    info is additional information, at this time either a distance (in
-    miles) for a long segment error, an angle (in degrees) for a sharp
-    angle error, or a coordinate pair for duplicate coordinates, other
-    route/label for point pair errors
+    code is the error code | info is additional
+    string, one of:        | information, if used:
+    -----------------------+--------------------------------------------
+    BAD_ANGLE              |
+    BUS_WITH_I             |
+    DUPLICATE_COORDS       | coordinate pair
+    DUPLICATE_LABEL        |
+    HIDDEN_JUNCTION        | number of incident edges in TM master graph
+    HIDDEN_TERMINUS        |
+    INVALID_FINAL_CHAR     | final character in label
+    INVALID_FIRST_CHAR     | first character in label other than *
+    LABEL_INVALID_CHAR     |
+    LABEL_LOOKS_HIDDEN     |
+    LABEL_PARENS           |
+    LABEL_SELFREF          |
+    LABEL_SLASHES          |
+    LABEL_UNDERSCORES      |
+    LACKS_GENERIC          |
+    LONG_SEGMENT           | distance in miles
+    LONG_UNDERSCORE        |
+    MALFORMED_LAT          | malformed "lat=" parameter from OSM url
+    MALFORMED_LON          | malformed "lon=" parameter from OSM url
+    MALFORMED_URL          | always "MISSING_ARG(S)"
+    NONTERMINAL_UNDERSCORE |
+    OUT_OF_BOUNDS          | coordinate pair
+    SHARP_ANGLE            | angle in degrees
+    US_BANNER              |
+    VISIBLE_DISTANCE       | distance in miles
+    VISIBLE_HIDDEN_COLOC   | hidden point at same coordinates
 
     fp is a boolean indicating whether this has been reported as a
     false positive (would be set to true later)
@@ -2414,12 +2411,12 @@ all_wpt_files = None
 print(et.et() + "Near-miss point log and tm-master.nmp file.", flush=True)
 
 # read in fp file
-nmpfplist = []
+nmpfps = set()
 nmpfpfile = open(args.highwaydatapath+'/nmpfps.log','r')
 nmpfpfilelines = nmpfpfile.readlines()
 for line in nmpfpfilelines:
     if len(line.rstrip('\n ')) > 0:
-        nmpfplist.append(line.rstrip('\n '))
+        nmpfps.add(line.rstrip('\n '))
 nmpfpfile.close()
 
 nmploglines = []
@@ -2427,47 +2424,73 @@ nmplog = open(args.logfilepath+'/nearmisspoints.log','w')
 nmpnmp = open(args.logfilepath+'/tm-master.nmp','w')
 for w in all_waypoints.point_list():
     if w.near_miss_points is not None:
-        nmpline = str(w) + " NMP "
-        nmplooksintentional = False
-        nmpnmplines = []
         # sort the near miss points for consistent ordering to facilitate
         # NMP FP marking
-        for other_w in sorted(w.near_miss_points,
-                              key=lambda waypoint:
-                              waypoint.route.root + "@" + waypoint.label):
-            if (abs(w.lat - other_w.lat) < 0.0000015) and \
-               (abs(w.lng - other_w.lng) < 0.0000015):
-                nmplooksintentional = True
-            nmpline += str(other_w) + " "
+        w.near_miss_points.sort(key=lambda waypoint:
+                                waypoint.route.root + "@" + waypoint.label)
+        # construct string for nearmisspoints.log & FP matching
+        nmpline = str(w) + " NMP"
+        for other_w in w.near_miss_points:
+            nmpline += " " + str(other_w)
+        # check for string in fp list
+        fp = nmpline in nmpfps
+        lifp_tag = 0
+        if not fp:
+            if nmpline+" [LOOKS INTENTIONAL]" in nmpfps:
+                fp = True
+                lifp_tag = 1
+        if not fp:
+            if nmpline+" [SOME LOOK INTENTIONAL]" in nmpfps:
+                fp = True
+                lifp_tag = 2
+        #  write lines to tm-master.nmp
+        li_count = 0
+        for other_w in w.near_miss_points:
+            li = (abs(w.lat - other_w.lat) < 0.0000015) and \
+                 (abs(w.lng - other_w.lng) < 0.0000015)
+            if li:
+                li_count += 1
             w_label = w.route.root + "@" + w.label
             other_label = other_w.route.root + "@" + other_w.label
             # make sure we only plot once, since the NMP should be listed
             # both ways (other_w in w's list, w in other_w's list)
             if w_label < other_label:
-                nmpnmplines.append(w_label + " " + str(w.lat) + " " + str(w.lng))
-                nmpnmplines.append(other_label + " " + str(other_w.lat) + " " + str(other_w.lng))
+                nmpnmp.write(w_label + " " + str(w.lat) + " " + str(w.lng))
+                if fp or li:
+                    nmpnmp.write(' ')
+                    if fp:
+                        nmpnmp.write('FP')
+                    if li:
+                        nmpnmp.write('LI')
+                nmpnmp.write('\n')
+                nmpnmp.write(other_label + " " + str(other_w.lat) + " " + str(other_w.lng))
+                if fp or li:
+                    nmpnmp.write(' ')
+                    if fp:
+                        nmpnmp.write('FP')
+                    if li:
+                        nmpnmp.write('LI')
+                nmpnmp.write('\n')
         # indicate if this was in the FP list or if it's off by exact amt
         # so looks like it's intentional, and detach near_miss_points list
         # so it doesn't get a rewrite in nmp_merged WPT files
-        # also set the extra field to mark FP/LI items in the .nmp file
-        extra_field = ""
-        if nmpline.rstrip() in nmpfplist:
-            nmpfplist.remove(nmpline.rstrip())
-            nmpline += "[MARKED FP]"
+        logline = nmpline
+        if li_count:
+            if li_count == len(w.near_miss_points):
+                logline += " [LOOKS INTENTIONAL]"
+            else:
+                logline += " [SOME LOOK INTENTIONAL]"
             w.near_miss_points = None
-            extra_field += "FP"
-        if nmplooksintentional:
-            nmpline += "[LOOKS INTENTIONAL]"
+        if fp:
+            if lifp_tag == 0:
+                nmpfps.remove(nmpline)
+            elif lifp_tag == 1:
+                nmpfps.remove(nmpline+" [LOOKS INTENTIONAL]")
+            else:
+                nmpfps.remove(nmpline+" [SOME LOOK INTENTIONAL]")
+            logline += " [MARKED FP]"
             w.near_miss_points = None
-            extra_field += "LI"
-        if extra_field != "":
-            extra_field = " " + extra_field
-        nmploglines.append(nmpline.rstrip())
-
-        # write actual lines to .nmp file, indicating FP and/or LI
-        # for marked FPs or looks intentional items
-        for nmpnmpline in nmpnmplines:
-            nmpnmp.write(nmpnmpline + extra_field + "\n")
+        nmploglines.append(logline)
 nmpnmp.close()
 
 # sort and write actual lines to nearmisspoints.log
@@ -2479,9 +2502,10 @@ nmplog.close()
 
 # report any unmatched nmpfps.log entries
 nmpfpsunmatchedfile = open(args.logfilepath+'/nmpfpsunmatched.log','w')
-for line in nmpfplist:
+for line in sorted(nmpfps):
     nmpfpsunmatchedfile.write(line + '\n')
 nmpfpsunmatchedfile.close()
+nmpfps = None
 
 # if requested, rewrite data with near-miss points merged in
 if args.nmpmergepath != "" and not args.errorcheck:

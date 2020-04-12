@@ -121,9 +121,7 @@ int main(int argc, char *argv[])
 			}
 			closedir(dir);
 		}
-		else {	cout << "Error opening directory " << args.userlistfilepath << ". (Not found?)" << endl;
-			return 0;
-		     }
+		else	el.add_error("Error opening user list file path \""+args.userlistfilepath+"\". (Not found?)");
 	}
 	else for (string &id : traveler_ids) id += ".list";
 
@@ -356,18 +354,18 @@ int main(int argc, char *argv[])
 	cout << et.et() << "Near-miss point log and tm-master.nmp file." << endl;
 
 	// read in fp file
-	list<string> nmpfplist;
+	unordered_set<string> nmpfps;
 	file.open(args.highwaydatapath+"/nmpfps.log");
 	while (getline(file, line))
 	{	while (line.back() == 0x0D || line.back() == ' ') line.erase(line.end()-1);	// trim DOS newlines & whitespace
-		if (line.size()) nmpfplist.push_back(line);
+		if (line.size()) nmpfps.insert(line);
 	}
 	file.close();
 
 	list<string> nmploglines;
 	ofstream nmplog(args.logfilepath+"/nearmisspoints.log");
 	ofstream nmpnmp(args.logfilepath+"/tm-master.nmp");
-	for (Waypoint *w : all_waypoints.point_list()) w->nmplogs(nmpfplist, nmpnmp, nmploglines);
+	for (Waypoint *w : all_waypoints.point_list()) w->nmplogs(nmpfps, nmpnmp, nmploglines);
 	nmpnmp.close();
 
 	// sort and write actual lines to nearmisspoints.log
@@ -378,10 +376,13 @@ int main(int argc, char *argv[])
 
 	// report any unmatched nmpfps.log entries
 	ofstream nmpfpsunmatchedfile(args.logfilepath+"/nmpfpsunmatched.log");
+	list<string> nmpfplist(nmpfps.begin(), nmpfps.end());
+	nmpfplist.sort();
 	for (string &line : nmpfplist)
 		nmpfpsunmatchedfile << line << '\n';
 	nmpfpsunmatchedfile.close();
 	nmpfplist.clear();
+	nmpfps.clear();
 
 	// if requested, rewrite data with near-miss points merged in
 	if (args.nmpmergepath != "" && !args.errorcheck)
@@ -952,7 +953,7 @@ int main(int argc, char *argv[])
 	{	cout << "ABORTING due to " << el.error_list.size() << " errors:" << endl;
 		for (unsigned int i = 0; i < el.error_list.size(); i++)
 			cout << i+1 << ": " << el.error_list[i] << endl;
-		return 0;
+		return 1;
 	}
 
       #ifdef threading_enabled

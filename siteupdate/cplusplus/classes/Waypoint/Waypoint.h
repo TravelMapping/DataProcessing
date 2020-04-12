@@ -35,7 +35,7 @@ class Waypoint
 	std::string simple_waypoint_name();
 	bool is_or_colocated_with_active_or_preview();
 	std::string root_at_label();
-	void nmplogs(std::list<std::string> &, std::ofstream &, std::list<std::string> &);
+	void nmplogs(std::unordered_set<std::string> &, std::ofstream &, std::list<std::string> &);
 	inline Waypoint* hashpoint();
 	bool label_references_route(Route *, DatacheckEntryList *);
 
