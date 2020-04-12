@@ -12,6 +12,6 @@ void NmpMergedThread(unsigned int id, std::list<HighwaySystem*> *hs_list, std::l
 		//printf("NmpMergedThread %02i (*it)++\n", id); fflush(stdout);
 		mtx->unlock();
 		for (Route &r : h->route_list)
-			r.write_nmp_merged(*nmpmergepath + "/" + r.region->code);
+			r.write_nmp_merged(*nmpmergepath + "/" + r.rg_str);
 	}
 }

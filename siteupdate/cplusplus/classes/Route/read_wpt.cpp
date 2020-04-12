@@ -4,7 +4,7 @@ void Route::read_wpt
 )
 {	/* read data into the Route's waypoint list from a .wpt file */
 	//cout << "read_wpt on " << str() << endl;
-	std::string filename = path + "/" + region->code + "/" + system->systemname + "/" + root + ".wpt";
+	std::string filename = path + "/" + rg_str + "/" + system->systemname + "/" + root + ".wpt";
 	// remove full path from all_wpt_files list
 	awf_mtx.lock();
 	all_wpt_files->erase(filename);
@@ -47,8 +47,9 @@ void Route::read_wpt
 		if (lines[l][0] == 0) continue;
 		Waypoint *w = new Waypoint(lines[l], this, strtok_mtx, datacheckerrors);
 			      // deleted on termination of program, or immediately below if invalid
-		// lat & lng both equal to 0 marks a point as invalid. These cases are set by the MALFORMED_URL datacheck.
-		if (w->lat == 0 && w->lng == 0)
+		bool malformed_url = w->lat == 0 && w->lng == 0;
+		bool label_too_long = w->label_too_long(datacheckerrors);
+		if (malformed_url || label_too_long)
 		{	delete w;
 			continue;
 		}
