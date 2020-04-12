@@ -65,7 +65,7 @@ std::string GraphListEntry::category()
 
 std::string GraphListEntry::tag()
 {	switch (cat)
-	{	case 'a': return placeradius->base + '(' + std::to_string(placeradius->r) + ") ";
+	{	case 'a': return placeradius->title + '(' + std::to_string(placeradius->r) + ") ";
 		case 'r': return regions->front()->code + ' ';			// must have valid pointer
 		case 's': return systems->front()->systemname + ' ';		// must have valid pointer
 		case 'S':

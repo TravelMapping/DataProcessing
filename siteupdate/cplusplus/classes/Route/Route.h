@@ -38,14 +38,15 @@ class Route
 
 	public:
 	HighwaySystem *system;
-	Region *region;
-	ConnectedRoute *con_route;
+	Region *region;		// pointer to a valid Region object
+	std::string rg_str;	// region code string, retained for loading files in case no valid object is found
 	std::string route;
 	std::string banner;
 	std::string abbrev;
 	std::string city;
 	std::string root;
 	std::deque<std::string> alt_route_names;
+	ConnectedRoute *con_route;
 
 	std::vector<Waypoint*> point_list;
 	std::unordered_set<std::string> labels_in_use;
@@ -70,7 +71,6 @@ class Route
 	std::string list_entry_name();
 	std::string name_no_abbrev();
 	double clinched_by_traveler(TravelerList *);
-	bool is_valid();
 	std::string list_line(int, int);
 	void write_nmp_merged(std::string);
 };

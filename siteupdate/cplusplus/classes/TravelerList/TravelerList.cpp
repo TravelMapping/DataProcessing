@@ -29,7 +29,7 @@ class TravelerList
 	unsigned int preview_systems_clinched;
 	static std::mutex alltrav_mtx;	// for locking the traveler_lists list when reading .lists from disk
 
-	TravelerList(std::string travname, std::unordered_map<std::string, Route*> *route_hash, Arguments *args, std::mutex *strtok_mtx)
+	TravelerList(std::string travname, std::unordered_map<std::string, Route*> *route_hash, ErrorList *el, Arguments *args, std::mutex *strtok_mtx)
 	{	active_systems_traveled = 0;
 		active_systems_clinched = 0;
 		preview_systems_traveled = 0;
@@ -38,6 +38,8 @@ class TravelerList
 		traveler_num = new unsigned int[args->numthreads];
 			       // deleted on termination of program
 		traveler_name = travname.substr(0, travname.size()-5); // strip ".list" from end of travname
+		if (traveler_name.size() > DBFieldLength::traveler)
+		  el->add_error("Traveler name " + traveler_name + " > " + std::to_string(DBFieldLength::traveler) + "bytes");
 		std::ofstream log(args->logfilepath+"/users/"+traveler_name+".log");
 		std::ofstream splist;
 		if (args->splitregionpath != "") splist.open(args->splitregionpath+"/list_files/"+travname);

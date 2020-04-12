@@ -376,6 +376,32 @@ inline void Waypoint::duplicate_coords(DatacheckEntryList *datacheckerrors, std:
 	  }
 }
 
+inline bool Waypoint::label_too_long(DatacheckEntryList *datacheckerrors)
+{	// label longer than the DB can store
+	if (label.size() > DBFieldLength::label)
+	{	// save the excess beyond what can fit in a DB field, to put in the info/value column
+		std::string excess = label.substr(DBFieldLength::label-3);
+		// strip any partial multi-byte characters off the beginning
+		while (excess.front() < 0)	excess.erase(excess.begin());
+		// if it's too long for the info/value column,
+		if (excess.size() > DBFieldLength::dcErrValue-3)
+		{	// cut it down to what will fit,
+			excess = excess.substr(0, DBFieldLength::dcErrValue-6);
+			// strip any partial multi-byte characters off the end,
+			while (excess.back() < 0)	excess.erase(excess.end()-1);
+			// and append "..."
+			excess += "...";
+		}
+		// now truncate the label itself
+		label = label.substr(0, DBFieldLength::label-3);
+		// and strip any partial multi-byte characters off the end
+		while (label.back() < 0)	label.erase(label.end()-1);
+		datacheckerrors->add(route, label+"...", "", "", "LABEL_TOO_LONG", "..."+excess);
+		return 1;
+	}
+	return 0;
+}
+
 inline void Waypoint::out_of_bounds(DatacheckEntryList *datacheckerrors, char *fstr)
 {	// out-of-bounds coords
 	if (lat > 90 || lat < -90 || lng > 180 || lng < -180)
@@ -442,7 +468,7 @@ inline void Waypoint::label_invalid_char(DatacheckEntryList *datacheckerrors, st
 }
 
 inline void Waypoint::label_invalid_ends(DatacheckEntryList *datacheckerrors)
-{	// look for labels with invalid characters
+{	// look for labels with invalid first or final characters
 	const char *c = label.data();
 	while (*c == '*') c++;
 	if (*c == '_' || *c == '/' || *c == '(')

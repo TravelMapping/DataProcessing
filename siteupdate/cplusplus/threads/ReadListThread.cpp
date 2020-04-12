@@ -1,7 +1,7 @@
 void ReadListThread
 (	unsigned int id, std::list<std::string> *traveler_ids, std::list<std::string>::iterator *it,
 	std::list<TravelerList*> *traveler_lists, std::mutex *tl_mtx, std::mutex *strtok_mtx,
-	Arguments *args, std::unordered_map<std::string, Route*> *route_hash
+	Arguments *args, std::unordered_map<std::string, Route*> *route_hash, ErrorList *el
 )
 {	//printf("Starting ReadListThread %02i\n", id); fflush(stdout);
 	while (*it != traveler_ids->end())
@@ -16,7 +16,7 @@ void ReadListThread
 		//printf("ReadListThread %02i (*it)++\n", id); fflush(stdout);
 		std::cout << tl << ' ' << std::flush;
 		tl_mtx->unlock();
-		TravelerList *t = new TravelerList(tl, route_hash, args, strtok_mtx);
+		TravelerList *t = new TravelerList(tl, route_hash, el, args, strtok_mtx);
 				  // deleted on termination of program
 		TravelerList::alltrav_mtx.lock();
 		traveler_lists->push_back(t);

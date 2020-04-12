@@ -6,15 +6,15 @@ cout << et.et() << "Creating regional data graphs." << endl;
 // any active or preview systems
 
 // add entries to graph_vector
-for (Region &region : all_regions)
-{	if (region.active_preview_mileage == 0) continue;
-	regions = new list<Region*>(1, &region);
+for (Region* region : all_regions)
+{	if (region->active_preview_mileage == 0) continue;
+	regions = new list<Region*>(1, region);
 		  // deleted on termination of program
-	graph_vector.emplace_back(region.code + "-region", region.name + " (" + region.type + ")",
+	graph_vector.emplace_back(region->code + "-region", region->name + " (" + region->type + ")",
 				  's', 'r', regions, (list<HighwaySystem*>*)0, (PlaceRadius*)0);
-	graph_vector.emplace_back(region.code + "-region", region.name + " (" + region.type + ")",
+	graph_vector.emplace_back(region->code + "-region", region->name + " (" + region->type + ")",
 				  'c', 'r', (list<Region*>*)0, (list<HighwaySystem*>*)0, (PlaceRadius*)0);
-	graph_vector.emplace_back(region.code + "-region", region.name + " (" + region.type + ")",
+	graph_vector.emplace_back(region->code + "-region", region->name + " (" + region->type + ")",
 				  't', 'r', (list<Region*>*)0, (list<HighwaySystem*>*)0, (PlaceRadius*)0);
 }
 #ifndef threading_enabled

@@ -23,6 +23,7 @@ class DatacheckEntry
     LABEL_PARENS           |
     LABEL_SELFREF          |
     LABEL_SLASHES          |
+    LABEL_TOO_LONG         |
     LABEL_UNDERSCORES      |
     LACKS_GENERIC          |
     LONG_SEGMENT           | distance in miles
