@@ -4,7 +4,7 @@ void Route::read_wpt
 )
 {	/* read data into the Route's waypoint list from a .wpt file */
 	//cout << "read_wpt on " << str() << endl;
-	std::string filename = path + "/" + region->code + "/" + system->systemname + "/" + root + ".wpt";
+	std::string filename = path + "/" + rg_str + "/" + system->systemname + "/" + root + ".wpt";
 	// remove full path from all_wpt_files list
 	awf_mtx.lock();
 	all_wpt_files->erase(filename);

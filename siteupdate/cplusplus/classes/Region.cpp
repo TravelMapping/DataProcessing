@@ -43,7 +43,7 @@ class Region
 	std::unordered_set<HGVertex*> vertices;
 	bool is_valid;
 
-	Region (std::string &line,
+	Region (const std::string &line,
 		std::vector<std::pair<std::string, std::string>> &countries,
 		std::vector<std::pair<std::string, std::string>> &continents,
 		ErrorList &el)

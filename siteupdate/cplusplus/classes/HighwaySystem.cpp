@@ -86,8 +86,6 @@ class HighwaySystem
 				{	el.add_error("Unable to find root in " + systemname +".csv line: ["+line+"]");
 					route_list.pop_back();
 				}
-				else if (!route_list.back().region)
-					route_list.pop_back();
 			}
 		     }
 		file.close();

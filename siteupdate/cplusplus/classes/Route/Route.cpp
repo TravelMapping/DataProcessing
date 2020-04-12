@@ -12,7 +12,7 @@ Route::Route(std::string &line, HighwaySystem *sys, ErrorList &el, std::unordere
 
 	// parse chopped routes csv line
 	size_t NumFields = 8;
-	std::string sys_str, rg_str, arn_str;
+	std::string sys_str, arn_str;
 	std::string* fields[8] = {&sys_str, &rg_str, &route, &banner, &abbrev, &city, &root, &arn_str};
 	split(line, fields, NumFields, ';');
 	if (NumFields != 8)
@@ -32,7 +32,7 @@ Route::Route(std::string &line, HighwaySystem *sys, ErrorList &el, std::unordere
 	catch (const std::out_of_range& oor)
 	    {	el.add_error("Unrecognized region in " + system->systemname
 			   + ".csv line: " + line);
-		return;
+		region = region_hash.at("error");
 	    }
 	// route
 	if (route.size() > DBFieldLength::route)
@@ -109,7 +109,7 @@ std::string Route::csv_line()
 
 std::string Route::readable_name()
 {	/* return a string for a human-readable route name */
-	return region->code + " " + route + banner + abbrev;
+	return rg_str + " " + route + banner + abbrev;
 }
 
 std::string Route::list_entry_name()

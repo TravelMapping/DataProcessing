@@ -27,9 +27,9 @@ while (getline(file, line))
 	regions = new list<Region*>;
 		  // deleted on termination of program
 	for(char* rg = strtok(fields[2], ","); rg; rg = strtok(0, ","))
-	  for (Region &r : all_regions)
-	    if (rg == r.code)
-	    {	regions->push_back(&r);
+	  for (Region* r : all_regions)
+	    if (rg == r->code)
+	    {	regions->push_back(r);
 		break;
 	    }
 	graph_vector.emplace_back(fields[1], fields[0],

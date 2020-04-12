@@ -1,7 +1,7 @@
 void sqlfile1
     (	ElapsedTime *et,
 	Arguments *args,
-	std::list<Region> *all_regions,
+	std::vector<Region*> *all_regions,
 	std::vector<std::pair<std::string,std::string>> *continents,
 	std::vector<std::pair<std::string,std::string>> *countries,
 	std::list<HighwaySystem*> *highway_systems,
@@ -73,10 +73,12 @@ void sqlfile1
 	sqlfile << "PRIMARY KEY(code), FOREIGN KEY (country) REFERENCES countries(code), FOREIGN KEY (continent) REFERENCES continents(code));\n";
 	sqlfile << "INSERT INTO regions VALUES\n";
 	first = 1;
-	for (Region &r : *all_regions)
+	for (size_t r = 0; r < all_regions->size()-1; r++)
 	{	if (!first) sqlfile << ',';
 		first = 0;
-		sqlfile << "('" << r.code << "','" << double_quotes(r.name) << "','" << r.country_code() << "','" << r.continent_code() << "','" << r.type << "')\n";
+		sqlfile << "('" << (*all_regions)[r]->code << "','" << double_quotes((*all_regions)[r]->name)
+			<< "','" << (*all_regions)[r]->country_code() << "','" << (*all_regions)[r]->continent_code()
+			<< "','" << (*all_regions)[r]->type << "')\n";
 	}
 	sqlfile << ";\n";
 
@@ -249,13 +251,13 @@ void sqlfile1
 		<< "), activeMileage FLOAT, activePreviewMileage FLOAT);\n";
 	sqlfile << "INSERT INTO overallMileageByRegion VALUES\n";
 	first = 1;
-	for (Region &region : *all_regions)
-	{	if (region.active_only_mileage+region.active_preview_mileage == 0) continue;
+	for (Region* region : *all_regions)
+	{	if (region->active_only_mileage+region->active_preview_mileage == 0) continue;
 		if (!first) sqlfile << ',';
 		first = 0;
 		char fstr[65];
-		sprintf(fstr, "','%.15g','%.15g')\n", region.active_only_mileage, region.active_preview_mileage);
-		sqlfile << "('" << region.code << fstr;
+		sprintf(fstr, "','%.15g','%.15g')\n", region->active_only_mileage, region->active_preview_mileage);
+		sqlfile << "('" << region->code << fstr;
 	}
 	sqlfile << ";\n";
 

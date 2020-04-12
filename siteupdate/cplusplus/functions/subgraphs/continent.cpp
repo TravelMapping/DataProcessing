@@ -6,10 +6,10 @@ cout << et.et() << "Creating continent graphs." << endl;
 for (size_t c = 0; c < continents.size()-1; c++)
 {	regions = new list<Region*>;
 		  // deleted on termination of program
-	for (Region &r : all_regions)
+	for (Region* r : all_regions)
 	  // does it match this continent and have routes?
-	  if (&continents[c] == r.continent && r.active_preview_mileage)
-	    regions->push_back(&r);
+	  if (&continents[c] == r->continent && r->active_preview_mileage)
+	    regions->push_back(r);
 	// generate for any continent with at least 1 region with mileage
 	if (regions->size() < 1) delete regions;
 	else {	graph_vector.emplace_back(continents[c].first + "-continent", continents[c].second + " All Routes on Continent",

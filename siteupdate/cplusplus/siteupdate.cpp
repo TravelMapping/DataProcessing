@@ -204,7 +204,7 @@ int main(int argc, char *argv[])
 	countries.emplace_back(pair<string, string>("error", "unrecognized country code"));
 
 	//regions
-	list<Region> all_regions;
+	vector<Region*> all_regions;
 	unordered_map<string, Region*> region_hash;
 	file.open(args.highwaydatapath+"/regions.csv");
 	if (!file) el.add_error("Could not open "+args.highwaydatapath+"/regions.csv");
@@ -212,13 +212,18 @@ int main(int argc, char *argv[])
 		while(getline(file, line))
 		{	if (line.back() == 0x0D) line.erase(line.end()-1);	// trim DOS newlines
 			if (line.empty()) continue;
-			all_regions.emplace_back(line, countries, continents, el);
-			if (all_regions.back().is_valid)
-				region_hash[all_regions.back().code] = &all_regions.back();
-			else	all_regions.pop_back();
+			Region* r = new Region(line, countries, continents, el);
+				    // deleted on termination of program
+			if (r->is_valid)
+			{	all_regions.push_back(r);
+				region_hash[r->code] = r;
+			} else	delete r;
 		}
 	     }
 	file.close();
+	// create a dummy region to catch unrecognized region codes in .csv files
+	all_regions.push_back(new Region("error;unrecognized region code;error;error;unrecognized region code", countries, continents, el));
+	region_hash[all_regions.back()->code] = all_regions.back();
 
 	// Create a list of HighwaySystem objects, one per system in systems.csv file
 	list<HighwaySystem*> highway_systems;
@@ -430,7 +435,7 @@ int main(int argc, char *argv[])
 	      #else
 		for (HighwaySystem *h : highway_systems)
 		  for (Route &r : h->route_list)
-		    r.write_nmp_merged(args.nmpmergepath + "/" + r.region->code);
+		    r.write_nmp_merged(args.nmpmergepath + "/" + r.rg_str);
 	      #endif
 	}
 
@@ -442,7 +447,7 @@ int main(int argc, char *argv[])
 	for (HighwaySystem *h : highway_systems)
 	  for (list<Route>::iterator r = h->route_list.begin(); r != h->route_list.end(); r++) //FIXME use more compact syntax (&)
 	  {	route_hash[lower(r->readable_name())] = &*r;
-		for (string &a : r->alt_route_names) route_hash[lower(r->region->code + " " + a)] = &*r;
+		for (string &a : r->alt_route_names) route_hash[lower(r->rg_str + " " + a)] = &*r;
 	  }
 
 	// Create a list of TravelerList objects, one per person
@@ -676,7 +681,7 @@ int main(int argc, char *argv[])
 	double active_only_miles = 0;
 	double active_preview_miles = 0;
 	double overall_miles = 0;
-	for (list<Region>::iterator r = all_regions.begin(); r != all_regions.end(); r++)  //FIXME brevity
+	for (Region* r : all_regions)
 	{	active_only_miles += r->active_only_mileage;
 		active_preview_miles += r->active_preview_mileage;
 		overall_miles += r->overall_mileage;
@@ -692,11 +697,11 @@ int main(int argc, char *argv[])
 	// a nice enhancement later here might break down by continent, then country,
 	// then region
 	list<string> region_entries;
-	for (Region region : all_regions)
-	  if (region.overall_mileage)
+	for (Region* region : all_regions)
+	  if (region->overall_mileage)
 	  {	sprintf(fstr, ": %.2f (active), %.2f (active, preview) %.2f (active, preview, devel)\n",
-			region.active_only_mileage, region.active_preview_mileage, region.overall_mileage);
-		region_entries.push_back(region.code + fstr);
+			region->active_only_mileage, region->active_preview_mileage, region->overall_mileage);
+		region_entries.push_back(region->code + fstr);
 	  }
 	region_entries.sort();
 	for (string e : region_entries) hdstatsfile << e;
@@ -765,9 +770,9 @@ int main(int argc, char *argv[])
 	allfile << "Traveler,Total";
 	std::list<Region*> regions;
 	total_mi = 0;
-	for (list<Region>::iterator r = all_regions.begin(); r != all_regions.end(); r++)
+	for (Region* r : all_regions)
 	  if (r->active_only_mileage)
-	  {	regions.push_back(&*r);
+	  {	regions.push_back(r);
 		total_mi += r->active_only_mileage;
 	  }
 	regions.sort(sort_regions_by_code);
@@ -803,9 +808,9 @@ int main(int argc, char *argv[])
 	allfile << "Traveler,Total";
 	regions.clear();
 	total_mi = 0;
-	for (list<Region>::iterator r = all_regions.begin(); r != all_regions.end(); r++)
+	for (Region* r : all_regions)
 	  if (r->active_preview_mileage)
-	  {	regions.push_back(&*r);
+	  {	regions.push_back(r);
 		total_mi += r->active_preview_mileage;
 	  }
 	regions.sort(sort_regions_by_code);

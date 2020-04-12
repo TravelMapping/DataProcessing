@@ -1049,6 +1049,8 @@ class Route:
                     # add HighwaySegment, if not first point
                     if previous_point is not None:
                         self.segment_list.append(HighwaySegment(previous_point, w, self))
+            if len(self.point_list) < 2:
+                el.add_error("Route contains fewer than 2 points: " + str(self))
 
     def print_route(self):
         for point in self.point_list:
@@ -1111,12 +1113,12 @@ class ConnectedRoute:
                          "_con.csv line [" + line + "], expected " + system.systemname)
         self.route = fields[1]
         if len(self.route.encode('utf-8')) > DBFieldLength.route:
-            el.add_error("Route > " + str(DBFieldLength.route) +
+            el.add_error("route > " + str(DBFieldLength.route) +
                          " bytes in " + system.systemname +
                          "_con.csv line: " + line)
         self.banner = fields[2]
         if len(self.banner.encode('utf-8')) > DBFieldLength.banner:
-            el.add_error("Banner > " + str(DBFieldLength.banner) +
+            el.add_error("banner > " + str(DBFieldLength.banner) +
                          " bytes in " + system.systemname +
                          "_con.csv line: " + line)
         self.groupname = fields[3]
@@ -2519,8 +2521,6 @@ def read_wpts_for_highway_system(h):
             all_wpt_files.remove(wpt_path)
         r.read_wpt(all_waypoints,all_waypoints_lock,datacheckerrors,
                    el,args.highwaydatapath+"/hwy_data")
-        if len(r.point_list) < 2:
-            el.add_error("Route contains fewer than 2 points: " + str(r))
         print(".", end="",flush=True)
         #print(str(r))
         #r.print_route()
