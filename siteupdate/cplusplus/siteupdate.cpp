@@ -1,6 +1,6 @@
 // Tab Width = 8
 
-// Travel Mapping Project, Jim Teresco, 2015-2018
+// Travel Mapping Project, Jim Teresco and Eric Bryant, 2015-2020
 /* Code to read .csv and .wpt files and prepare for
 adding to the Travel Mapping Project database.
 
@@ -59,6 +59,7 @@ class HGEdge;
 #include "functions/operators.cpp"
 #include "functions/list_contains.cpp"
 #include "functions/split.cpp"
+#include "functions/valid_num_str.cpp"
 #include "classes/DBFieldLength.cpp"
 #include "classes/Arguments.cpp"
 #include "classes/ElapsedTime.cpp"
