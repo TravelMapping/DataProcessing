@@ -3,7 +3,7 @@
 """Python code to read .csv and .wpt files and prepare for
 adding to the Travel Mapping Project database.
 
-(c) 2015-2020, Jim Teresco
+(c) 2015-2020, Jim Teresco, Eric Bryant, and Travel Mapping Project contributors
 
 This module defines classes to represent the contents of a
 .csv file that lists the highways within a system, and a
@@ -350,70 +350,28 @@ class Waypoint:
         lat_string = url_parts[1].split("&")[0] # chop off "&lon"
         lng_string = url_parts[2].split("&")[0] # chop off possible "&zoom"
         valid_coords = True
-
-        # make sure lat_string is valid
-        point_count = 0
-        for c in range(len(lat_string)):
-            # check for multiple decimal points
-            if lat_string[c] == '.':
-                point_count += 1
-                if point_count > 1:
-                    #print("\nWARNING: Malformed URL in " + route.root + ", line: " + line, end="", flush=True)
-                    datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_LAT', lat_string))
-                    self.lat = 0.0
-                    self.lng = 0.0
-                    valid_coords = False
-                    break
-            # check for minus sign not at beginning
-            if lat_string[c] == '-' and c > 0:
-                #print("\nWARNING: Malformed URL in " + route.root + ", line: " + line, end="", flush=True)
-                datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_LAT', lat_string))
-                self.lat = 0.0
-                self.lng = 0.0
-                valid_coords = False
-                break
-            # check for invalid characters
-            if lat_string[c] not in "-.0123456789":
-                #print("\nWARNING: Malformed URL in " + route.root + ", line: " + line, end="", flush=True)
-                datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_LAT', lat_string))
-                self.lat = 0.0
-                self.lng = 0.0
-                valid_coords = False
-                break
-
-        # make sure lng_string is valid
-        point_count = 0
-        for c in range(len(lng_string)):
-            # check for multiple decimal points
-            if lng_string[c] == '.':
-                point_count += 1
-                if point_count > 1:
-                    #print("\nWARNING: Malformed URL in " + route.root + ", line: " + line, end="", flush=True)
-                    datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_LON', lng_string))
-                    self.lat = 0.0
-                    self.lng = 0.0
-                    valid_coords = False
-                    break
-            # check for minus sign not at beginning
-            if lng_string[c] == '-' and c > 0:
-                #print("\nWARNING: Malformed URL in " + route.root + ", line: " + line, end="", flush=True)
-                datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_LON', lng_string))
-                self.lat = 0.0
-                self.lng = 0.0
-                valid_coords = False
-                break
-            # check for invalid characters
-            if lng_string[c] not in "-.0123456789":
-                #print("\nWARNING: Malformed URL in " + route.root + ", line: " + line, end="", flush=True)
-                datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_LON', lng_string))
-                self.lat = 0.0
-                self.lng = 0.0
-                valid_coords = False
-                break
-
+        if not valid_num_str(lat_string):
+            if len(lat_string.encode('utf-8')) > DBFieldLength.dcErrValue:
+                slicepoint = DBFieldLength.dcErrValue-3
+                while len(lat_string[:slicepoint].encode('utf-8')) > DBFieldLength.dcErrValue-3:
+                        slicepoint -= 1
+                lat_string = lat_string[:slicepoint]+"..."
+            datacheckerrors.append(DatacheckEntry(route, [self.label], "MALFORMED_LAT", lat_string))
+            valid_coords = False
+        if not valid_num_str(lng_string):
+            if len(lng_string.encode('utf-8')) > DBFieldLength.dcErrValue:
+                slicepoint = DBFieldLength.dcErrValue-3
+                while len(lng_string[:slicepoint].encode('utf-8')) > DBFieldLength.dcErrValue-3:
+                        slicepoint -= 1
+                lng_string = lng_string[:slicepoint]+"..."
+            datacheckerrors.append(DatacheckEntry(route, [self.label], "MALFORMED_LON", lng_string))
+            valid_coords = False
         if valid_coords:
             self.lat = float(lat_string)
             self.lng = float(lng_string)
+        else:
+            self.lat = 0
+            self.lng = 0
         # also keep track of a list of colocated waypoints, if any
         self.colocated = None
         # and keep a list of "near-miss points", if any
@@ -2201,6 +2159,28 @@ def format_clinched_mi(clinched,total):
         percentage = "({0:.2f}%)".format(100*clinched/total)
     return "{0:.2f}".format(clinched) + " of {0:.2f}".format(total) + \
         " mi " + percentage
+
+def valid_num_str(data):
+    point_count = 0
+    # check initial character
+    if data[0] == '.':
+        point_count = 1
+    elif data[0] < '0' and data[0] != '-' or data[0] > '9':
+        return False
+    # check subsequent characters
+    for c in data[1:]:
+        # check for minus sign not at beginning
+        if c == '-':
+            return False
+        # check for multiple decimal points
+        if c == '.':
+            point_count += 1
+            if point_count > 1:
+                return False
+        # check for invalid characters
+        elif c < '0' or c > '9':
+            return False
+    return True
 
 class GraphListEntry:
     """This class encapsulates information about generated graphs for
