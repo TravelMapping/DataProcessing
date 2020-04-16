@@ -1223,15 +1223,16 @@ class TravelerList:
         with open(path+"/"+travelername,"rt", encoding='UTF-8') as file:
             lines = file.readlines()
         file.close()
-
+        # strip UTF-8 byte order mark if present
+        lines[0] = lines[0].encode('utf-8').decode("utf-8-sig")
         self.log_entries = []
 
         for line in lines:
-            line = line.strip().rstrip('\x00')
+            line = line.rstrip('\x00').strip()
             # ignore empty or "comment" lines
             if len(line) == 0 or line.startswith("#"):
                 continue
-            fields = re.split(' +',line)
+            fields = re.split('[ \t]+',line)
             if len(fields) != 4:
                 # OK if 5th field exists and starts with #
                 if len(fields) < 5 or not fields[4].startswith("#"):
@@ -1242,7 +1243,10 @@ class TravelerList:
             route_entry = fields[1].lower()
             lookup = fields[0].lower() + ' ' + route_entry
             if lookup not in route_hash:
+                (line, invchar) = no_control_chars(line)
                 self.log_entries.append("Unknown region/highway combo in line: " + line)
+                if invchar:
+                    self.log_entries[-1] += " [contains invalid character(s)]"
             else:
                 r = route_hash[lookup]
                 for a in r.alt_route_names:
@@ -1259,9 +1263,9 @@ class TravelerList:
                 point_indices = []
                 checking_index = 0;
                 for w in r.point_list:
-                    lower_label = w.label.lower().strip("+*")
-                    list_label_1 = fields[2].lower().strip("+*")
-                    list_label_2 = fields[3].lower().strip("+*")
+                    lower_label = w.label.lower().lstrip("+*")
+                    list_label_1 = fields[2].lower().lstrip("+*")
+                    list_label_2 = fields[3].lower().lstrip("+*")
                     if list_label_1 == lower_label or list_label_2 == lower_label:
                         point_indices.append(checking_index)
                         r.labels_in_use.add(lower_label.upper())
@@ -1277,7 +1281,10 @@ class TravelerList:
                                             
                     checking_index += 1
                 if len(point_indices) != 2:
+                    (line, invchar) = no_control_chars(line)
                     self.log_entries.append("Waypoint label(s) not found in line: " + line)
+                    if invchar:
+                        self.log_entries[-1] += " [contains invalid character(s)]"
                 else:
                     list_entries += 1
                     # find the segments we just matched and store this traveler with the
@@ -2181,6 +2188,17 @@ def valid_num_str(data):
         elif c < '0' or c > '9':
             return False
     return True
+
+def no_control_chars(input):
+    output = ""
+    invchar = False
+    for c in input:
+        if c < ' ' or c == '\x7F':
+            output += '?'
+            invchar = True
+        else:
+            output += c
+    return (output, invchar)
 
 class GraphListEntry:
     """This class encapsulates information about generated graphs for

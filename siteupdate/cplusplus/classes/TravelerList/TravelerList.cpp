@@ -83,13 +83,15 @@ class TravelerList
 			lines.push_back(c);
 		}
 		lines.push_back(listdata+listdatasize+1); // add a dummy "past-the-end" element to make lines[l+1]-2 work
+		// strip UTF-8 byte order mark if present
+		if (!strncmp(lines[0], "\xEF\xBB\xBF", 3)) lines[0] += 3;
 
 		for (unsigned int l = 0; l < lines.size()-1; l++)
 		{	std::string orig_line(lines[l]);
 			// strip whitespace
 			while (lines[l][0] == ' ' || lines[l][0] == '\t') lines[l]++;
-			char * endchar = lines[l+1]-2; // -2 skips over the 0 inserted by strtok
-			if (*endchar == 0) endchar--;  // skip back one more for CRLF cases FIXME what about lines followed by blank lines?
+			char * endchar = lines[l+1]-2; // -2 skips over the 0 inserted while separating listdata into lines
+			while (*endchar == 0) endchar--;  // skip back more for CRLF cases, and lines followed by blank lines
 			while (*endchar == ' ' || *endchar == '\t')
 			{	*endchar = 0;
 				endchar--;
@@ -103,20 +105,12 @@ class TravelerList
 			// process fields in line
 			std::vector<char*> fields;
 			strtok_mtx->lock();
-			for (char *token = strtok(lines[l], " *+"); token; token = strtok(0, " *+") ) fields.push_back(token);
+			for (char *token = strtok(lines[l], " \t"); token; token = strtok(0, " \t") ) fields.push_back(token);
 			strtok_mtx->unlock();
 			if (fields.size() != 4)
 			  // OK if 5th field exists and starts with #
 			  if (fields.size() < 5 || fields[4][0] != '#')
-			  {	bool invalid_char = 0;
-				for (size_t c = 0; c < trim_line.size(); c++)
-				  if (trim_line[c] < 0x20 || trim_line[c] >= 0x7F)
-				  {	trim_line[c] = '?';
-					invalid_char = 1;
-				  }
-				log << "Incorrect format line: " << trim_line;
-				if (invalid_char) log << " [line contains invalid character(s)]";
-				log << '\n';
+			  {	log << "Incorrect format line: " << trim_line << '\n';
 				splist << orig_line << endlines[l];
 				continue;
 			  }
@@ -143,8 +137,8 @@ class TravelerList
 				unsigned int checking_index = 0;
 				for (Waypoint *w : r->point_list)
 				{	std::string lower_label = lower(w->label);
-					lower(fields[2]);
-					lower(fields[3]);
+					while (*lower(fields[2]) == '*' || *fields[2] == '+') fields[2]++;
+					while (*lower(fields[3]) == '*' || *fields[3] == '+') fields[3]++;
 					while (lower_label.front() == '+' || lower_label.front() == '*') lower_label.erase(lower_label.begin());
 					if (fields[2] == lower_label || fields[3] == lower_label)
 					     {	point_indices.push_back(checking_index);
@@ -172,12 +166,12 @@ class TravelerList
 				if (point_indices.size() != 2)
 				{	bool invalid_char = 0;
 					for (size_t c = 0; c < trim_line.size(); c++)
-					  if (trim_line[c] < 0x20 || trim_line[c] >= 0x7F)
+					  if (iscntrl(trim_line[c]))
 					  {	trim_line[c] = '?';
 						invalid_char = 1;
 					  }
 					log << "Waypoint label(s) not found in line: " << trim_line;
-					if (invalid_char) log << " [line contains invalid character(s)]";
+					if (invalid_char) log << " [contains invalid character(s)]";
 					log << '\n';
 					splist << orig_line << endlines[l];
 				}
@@ -196,12 +190,12 @@ class TravelerList
 			catch (const std::out_of_range& oor)
 			    {	bool invalid_char = 0;
 				for (size_t c = 0; c < trim_line.size(); c++)
-				  if (trim_line[c] < 0x20 || trim_line[c] >= 0x7F)
+				  if (iscntrl(trim_line[c]))
 				  {	trim_line[c] = '?';
 					invalid_char = 1;
 				  }
 				log << "Unknown region/highway combo in line: " << trim_line;
-				if (invalid_char) log << " [line contains invalid character(s)]";
+				if (invalid_char) log << " [contains invalid character(s)]";
 				log << '\n';
 				splist << orig_line << endlines[l];
 			    }
