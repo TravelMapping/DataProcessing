@@ -1228,7 +1228,7 @@ class TravelerList:
         self.log_entries = []
 
         for line in lines:
-            line = line.rstrip('\x00').strip()
+            line = line.strip(" \t\r\n\x00")
             # ignore empty or "comment" lines
             if len(line) == 0 or line.startswith("#"):
                 continue
