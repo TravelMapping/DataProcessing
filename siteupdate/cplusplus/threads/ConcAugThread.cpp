@@ -1,5 +1,5 @@
 void ConcAugThread(unsigned int id, std::list<TravelerList*> *travlists, std::list<TravelerList*>::iterator *it,
-		   std::mutex *tl_mtx, std::mutex *log_mtx, std::ofstream *concurrencyfile)
+		   std::mutex *tl_mtx, std::mutex *log_mtx, std::list<std::string>* augment_list)
 {	//printf("Starting ConcAugThread %02i\n", id); fflush(stdout);
 	while (*it != travlists->end())
 	{	tl_mtx->lock();
@@ -16,10 +16,7 @@ void ConcAugThread(unsigned int id, std::list<TravelerList*> *travlists, std::li
 		for (HighwaySegment *s : t->clinched_segments)
 		  if (s->concurrent)
 		    for (HighwaySegment *hs : *(s->concurrent))
-		      if (hs->route->system->active_or_preview() && hs->add_clinched_by(t))
-		      {	log_mtx->lock();
-			*concurrencyfile << "Concurrency augment for traveler " << t->traveler_name << ": [" << hs->str() << "] based on [" << s->str() << "]\n";
-			log_mtx->unlock();
-		      }
+		      if (hs != s && hs->route->system->active_or_preview() && hs->add_clinched_by(t))
+			augment_list->push_back("Concurrency augment for traveler " + t->traveler_name + ": [" + hs->str() + "] based on [" + s->str() + ']');
 	}
 }
