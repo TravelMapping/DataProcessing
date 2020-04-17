@@ -2897,7 +2897,7 @@ for t in traveler_lists:
     for s in t.clinched_segments:
         if s.concurrent is not None:
             for hs in s.concurrent:
-                if hs.route.system.active_or_preview() and hs.add_clinched_by(t):
+                if hs != s and hs.route.system.active_or_preview() and hs.add_clinched_by(t):
                     concurrencyfile.write("Concurrency augment for traveler " + t.traveler_name + ": [" + str(hs) + "] based on [" + str(s) + "]\n")
 print("!")
 concurrencyfile.close()

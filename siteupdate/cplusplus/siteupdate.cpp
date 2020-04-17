@@ -619,26 +619,30 @@ int main(int argc, char *argv[])
         //#include "debug/concurrency_augments.cpp"
       #ifdef threading_enabled
 	// set up for threaded concurrency augments
+	list<string>* augment_lists = new list<string>[args.numthreads];
 	list<TravelerList*>::iterator tl_it = traveler_lists.begin();
 
 	for (unsigned int t = 0; t < args.numthreads; t++)
-		thr[t] = new thread(ConcAugThread, t, &traveler_lists, &tl_it, &list_mtx, &log_mtx, &concurrencyfile);
+		thr[t] = new thread(ConcAugThread, t, &traveler_lists, &tl_it, &list_mtx, &log_mtx, augment_lists+t);
 	for (unsigned int t = 0; t < args.numthreads; t++)
 		thr[t]->join();
+	cout << "!\n" << et.et() << "Writing to concurrencies.log." << endl;
 	for (unsigned int t = 0; t < args.numthreads; t++)
+	{	for (std::string& entry : augment_lists[t]) concurrencyfile << entry << '\n';
 		delete thr[t];//*/
+	}
+	delete[] augment_lists;
       #else
 	for (TravelerList *t : traveler_lists)
 	{	cout << '.' << flush;
 		for (HighwaySegment *s : t->clinched_segments)
 		  if (s->concurrent)
 		    for (HighwaySegment *hs : *(s->concurrent))
-		      if (hs->route->system->active_or_preview() && hs->add_clinched_by(t))
+		      if (hs != s && hs->route->system->active_or_preview() && hs->add_clinched_by(t))
 			concurrencyfile << "Concurrency augment for traveler " << t->traveler_name << ": [" << hs->str() << "] based on [" << s->str() << "]\n";
 	}
+	cout << '!' << endl;
       #endif
-
-	cout << "!\n";
 	concurrencyfile.close();
 
 	/*ofstream sanetravfile(args.logfilepath+"/concurrent_travelers_sanity_check.log");
