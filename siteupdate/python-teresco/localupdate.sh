@@ -60,8 +60,13 @@ else
     echo "$0: SKIPPING switch to DB copy"
 fi
 
+echo "$0: gathering repo head info"
+echo HighwayData '@' `(cd $tmbase/HighwayData; git show -s | head -n 1 | cut -f2 -d' ')` | tee $datestr/$logdir/siteupdate.log
+echo UserData '@' `(cd $tmbase/UserData; git show -s | head -n 1 | cut -f2 -d' ')` | tee -a $datestr/$logdir/siteupdate.log
+echo DataProcessing '@' `git show -s | head -n 1 | cut -f2 -d' '` | tee -a $datestr/$logdir/siteupdate.log
+
 echo "$0: launching siteupdate.py"
-PYTHONIOENCODING='utf-8' ./siteupdate.py -d TravelMapping-$datestr $graphflag -l $datestr/$logdir -c $datestr/$statdir -g $datestr/$graphdir -n $datestr/$nmpmdir | tee $datestr/$logdir/siteupdate.log 2>&1 || exit 1
+PYTHONIOENCODING='utf-8' ./siteupdate.py -d TravelMapping-$datestr $graphflag -l $datestr/$logdir -c $datestr/$statdir -g $datestr/$graphdir -n $datestr/$nmpmdir | tee -a $datestr/$logdir/siteupdate.log 2>&1 || exit 1
 date
 
 if [ -x ../../nmpfilter/nmpbyregion ]; then
