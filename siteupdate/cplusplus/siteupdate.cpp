@@ -263,7 +263,7 @@ int main(int argc, char *argv[])
 	unordered_set<Route*> con_roots;
 
 	for (HighwaySystem *h : highway_systems)
-	{	for (Route r : h->route_list)
+	{	for (Route& r : h->route_list)
 		{	if (roots.find(r.root) == roots.end()) roots.insert(r.root);
 			else el.add_error("Duplicate root in route lists: " + r.root);
 			string list_name = r.readable_name();
@@ -271,7 +271,7 @@ int main(int argc, char *argv[])
 			if (list_names.find(list_name) == list_names.end()) list_names.insert(list_name);
 			else duplicate_list_names.insert(list_name);
 		}
-		for (ConnectedRoute cr : h->con_route_list)
+		for (ConnectedRoute& cr : h->con_route_list)
 		  for (size_t r = 0; r < cr.roots.size(); r++)
 		    // FIXME branch based on result of list_names.insert
 		    if (con_roots.find(cr.roots[r]) == con_roots.end()) con_roots.insert(cr.roots[r]);
@@ -292,8 +292,8 @@ int main(int argc, char *argv[])
 		// only be a few in reasonable cases)
 		unsigned int num_found = 0;
 		for (HighwaySystem *h : highway_systems)
-		  for (Route r : h->route_list)
-		    for (string lr : roots)
+		  for (Route& r : h->route_list)
+		    for (const string& lr : roots)
 		      if (lr == r.root)
 		      {	el.add_error("route " + lr + " not matched by any connected route root.");
 			num_found++;
