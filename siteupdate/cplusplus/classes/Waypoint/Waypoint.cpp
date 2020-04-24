@@ -22,7 +22,7 @@ Waypoint::Waypoint(char *line, Route *rte, std::mutex *strtok_mtx, DatacheckEntr
 	// parse WPT line
 	strtok_mtx->lock();
 	for (char *token = strtok(line, " "); token; token = strtok(0, " "))
-		alt_labels.push_back(token);	// get all tokens & put into label deque
+		alt_labels.emplace_back(token);	// get all tokens & put into label deque
 	strtok_mtx->unlock();
 
 	// We know alt_labels will have at least one element, because if the WPT line is
