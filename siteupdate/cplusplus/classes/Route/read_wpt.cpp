@@ -39,7 +39,7 @@ void Route::read_wpt
 	{	// strip whitespace
 		while (lines[l][0] == ' ' || lines[l][0] == '\t') lines[l]++;
 		char * endchar = lines[l+1]-2; // -2 skips over the 0 inserted by strtok
-		if (*endchar == 0) endchar--;  // skip back one more for CRLF cases FIXME what about lines followed by blank lines?
+		while (*endchar == 0) endchar--;  // skip back more for CRLF cases, and lines followed by blank lines
 		while (*endchar == ' ' || *endchar == '\t')
 		{	*endchar = 0;
 			endchar--;
