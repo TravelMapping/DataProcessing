@@ -1,9 +1,9 @@
-PlaceRadius::PlaceRadius(const char *P, const char *B, const char *Y, const char *X, const char *R)
-{	place = P;
-	base = B;
-	lat = strtod(Y, 0);
-	lng = strtod(X, 0);
-	r = strtoul(R, 0, 10);
+PlaceRadius::PlaceRadius(const char *D, const char *T, double& Y, double& X, int& R)
+{	descr = D;
+	title = T;
+	lat = Y;
+	lng = X;
+	r = R;
 }
 
 bool PlaceRadius::contains_vertex(HGVertex *v) {return contains_vertex(v->lat, v->lng);}

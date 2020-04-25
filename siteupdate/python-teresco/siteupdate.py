@@ -3,7 +3,7 @@
 """Python code to read .csv and .wpt files and prepare for
 adding to the Travel Mapping Project database.
 
-(c) 2015-2018, Jim Teresco
+(c) 2015-2020, Jim Teresco, Eric Bryant, and Travel Mapping Project contributors
 
 This module defines classes to represent the contents of a
 .csv file that lists the highways within a system, and a
@@ -19,6 +19,38 @@ import sys
 import string
 import time
 import threading
+
+class DBFieldLength:
+    abbrev = 3
+    banner = 6
+    city = 100
+    color = 16
+    continentCode = 3
+    continentName = 15
+    countryCode = 3
+    countryName = 32
+    date = 10
+    dcErrCode = 22
+    graphCategory = 12
+    graphDescr = 100
+    graphFilename = 32
+    graphFormat = 10
+    label = 26
+    level = 10
+    regionCode = 8
+    regionName = 48
+    regiontype = 32
+    root = 32
+    route = 16
+    routeLongName = 80
+    statusChange = 16
+    systemFullName = 60
+    systemName = 10
+    traveler = 48
+    updateText = 1024
+
+    countryRegion = countryName + regionName + 3
+    dcErrValue = root + label + 1
 
 class ElapsedTime:
     """To get a nicely-formatted elapsed time string for printing"""
@@ -318,70 +350,28 @@ class Waypoint:
         lat_string = url_parts[1].split("&")[0] # chop off "&lon"
         lng_string = url_parts[2].split("&")[0] # chop off possible "&zoom"
         valid_coords = True
-
-        # make sure lat_string is valid
-        point_count = 0
-        for c in range(len(lat_string)):
-            # check for multiple decimal points
-            if lat_string[c] == '.':
-                point_count += 1
-                if point_count > 1:
-                    #print("\nWARNING: Malformed URL in " + route.root + ", line: " + line, end="", flush=True)
-                    datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_LAT', lat_string))
-                    self.lat = 0.0
-                    self.lng = 0.0
-                    valid_coords = False
-                    break
-            # check for minus sign not at beginning
-            if lat_string[c] == '-' and c > 0:
-                #print("\nWARNING: Malformed URL in " + route.root + ", line: " + line, end="", flush=True)
-                datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_LAT', lat_string))
-                self.lat = 0.0
-                self.lng = 0.0
-                valid_coords = False
-                break
-            # check for invalid characters
-            if lat_string[c] not in "-.0123456789":
-                #print("\nWARNING: Malformed URL in " + route.root + ", line: " + line, end="", flush=True)
-                datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_LAT', lat_string))
-                self.lat = 0.0
-                self.lng = 0.0
-                valid_coords = False
-                break
-
-        # make sure lng_string is valid
-        point_count = 0
-        for c in range(len(lng_string)):
-            # check for multiple decimal points
-            if lng_string[c] == '.':
-                point_count += 1
-                if point_count > 1:
-                    #print("\nWARNING: Malformed URL in " + route.root + ", line: " + line, end="", flush=True)
-                    datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_LON', lng_string))
-                    self.lat = 0.0
-                    self.lng = 0.0
-                    valid_coords = False
-                    break
-            # check for minus sign not at beginning
-            if lng_string[c] == '-' and c > 0:
-                #print("\nWARNING: Malformed URL in " + route.root + ", line: " + line, end="", flush=True)
-                datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_LON', lng_string))
-                self.lat = 0.0
-                self.lng = 0.0
-                valid_coords = False
-                break
-            # check for invalid characters
-            if lng_string[c] not in "-.0123456789":
-                #print("\nWARNING: Malformed URL in " + route.root + ", line: " + line, end="", flush=True)
-                datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_LON', lng_string))
-                self.lat = 0.0
-                self.lng = 0.0
-                valid_coords = False
-                break
-
+        if not valid_num_str(lat_string):
+            if len(lat_string.encode('utf-8')) > DBFieldLength.dcErrValue:
+                slicepoint = DBFieldLength.dcErrValue-3
+                while len(lat_string[:slicepoint].encode('utf-8')) > DBFieldLength.dcErrValue-3:
+                        slicepoint -= 1
+                lat_string = lat_string[:slicepoint]+"..."
+            datacheckerrors.append(DatacheckEntry(route, [self.label], "MALFORMED_LAT", lat_string))
+            valid_coords = False
+        if not valid_num_str(lng_string):
+            if len(lng_string.encode('utf-8')) > DBFieldLength.dcErrValue:
+                slicepoint = DBFieldLength.dcErrValue-3
+                while len(lng_string[:slicepoint].encode('utf-8')) > DBFieldLength.dcErrValue-3:
+                        slicepoint -= 1
+                lng_string = lng_string[:slicepoint]+"..."
+            datacheckerrors.append(DatacheckEntry(route, [self.label], "MALFORMED_LON", lng_string))
+            valid_coords = False
         if valid_coords:
             self.lat = float(lat_string)
             self.lng = float(lng_string)
+        else:
+            self.lat = 0
+            self.lng = 0
         # also keep track of a list of colocated waypoints, if any
         self.colocated = None
         # and keep a list of "near-miss points", if any
@@ -743,9 +733,6 @@ class Waypoint:
                     return True
         return False
 
-    def is_valid(self):
-        return self.lat != 0.0 or self.lng != 0.0
-
     def hashpoint(self):
         # return a canonical waypoint for graph vertex hashtable lookup
         if self.colocated is None:
@@ -776,6 +763,24 @@ class Waypoint:
             return True
         #if self.label[len(no_abbrev) + len(r.abbrev)] == '/':
             #datacheckerrors.append(route, [self.label], "UNEXPECTED_DESIGNATION", self.label[len(no_abbrev)+len(r.abbrev)+1:])
+        return False
+
+    def label_too_long(self, datacheckerrors):
+        # check whether label is longer than the DB can store
+        if len(self.label.encode('utf-8')) > DBFieldLength.label:
+            slicepoint = DBFieldLength.label-3
+            while len(self.label[:slicepoint].encode('utf-8')) > DBFieldLength.label-3:
+                slicepoint -= 1
+            excess = "..."+self.label[slicepoint:]
+            self.label = self.label[:slicepoint]
+
+            if len(excess.encode('utf-8')) > DBFieldLength.dcErrValue:
+                slicepoint = DBFieldLength.dcErrValue-3
+                while len(excess[:slicepoint].encode('utf-8')) > DBFieldLength.dcErrValue-3:
+                        slicepoint -= 1
+                excess = excess[:slicepoint]+"..."
+            datacheckerrors.append(DatacheckEntry(self.route,[self.label+'...'],"LABEL_TOO_LONG", excess))
+            return True
         return False
 
 class HighwaySegment:
@@ -892,19 +897,50 @@ class Route:
     def __init__(self,line,system,el):
         """initialize object from a .csv file line, but do not
         yet read in waypoint file"""
+        self.root = ""
         fields = line.split(";")
         if len(fields) != 8:
-            el.add_error("Could not parse csv line: [" + line +
+            el.add_error("Could not parse " + system.systemname + ".csv line: [" + line +
                          "], expected 8 fields, found " + str(len(fields)))
+            return
         self.system = system
         if system.systemname != fields[0]:
-            el.add_error("System mismatch parsing line [" + line + "], expected " + system.systemname)
+            el.add_error("System mismatch parsing " + system.systemname +
+                         ".csv line [" + line + "], expected " + system.systemname)
         self.region = fields[1]
+        region_found = False
+        for r in all_regions:
+            if r[0] == self.region:
+                region_found = True
+                break
+        if not region_found:
+            el.add_error("Unrecognized region in " + system.systemname +
+                         ".csv line: " + line)
         self.route = fields[2]
+        if len(self.route.encode('utf-8')) > DBFieldLength.route:
+            el.add_error("Route > " + str(DBFieldLength.route) +
+                         " bytes in " + system.systemname +
+                         ".csv line: " + line)
         self.banner = fields[3]
+        if len(self.banner.encode('utf-8')) > DBFieldLength.banner:
+            el.add_error("Banner > " + str(DBFieldLength.banner) +
+                         " bytes in " + system.systemname +
+                         ".csv line: " + line)
         self.abbrev = fields[4]
-        self.city = fields[5].replace("'","''")
+        if len(self.abbrev.encode('utf-8')) > DBFieldLength.abbrev:
+            el.add_error("Abbrev > " + str(DBFieldLength.abbrev) +
+                         " bytes in " + system.systemname +
+                         ".csv line: " + line)
+        self.city = fields[5]
+        if len(self.city.encode('utf-8')) > DBFieldLength.city:
+            el.add_error("City > " + str(DBFieldLength.city) +
+                         " bytes in " + system.systemname +
+                         ".csv line: " + line)
         self.root = fields[6]
+        if len(self.root.encode('utf-8')) > DBFieldLength.root:
+            el.add_error("Root > " + str(DBFieldLength.root) +
+                         " bytes in " + system.systemname +
+                         ".csv line: " + line)
         self.alt_route_names = fields[7].split(",")
         self.point_list = []
         self.labels_in_use = set()
@@ -934,7 +970,9 @@ class Route:
                 if len(line) > 0:
                     previous_point = w
                     w = Waypoint(line,self,datacheckerrors)
-                    if w.is_valid() == False:
+                    malformed_url = w.lat == 0.0 and w.lng == 0.0
+                    label_too_long = w.label_too_long(datacheckerrors)
+                    if malformed_url or label_too_long:
                         w = previous_point
                         continue
                     self.point_list.append(w)
@@ -969,6 +1007,8 @@ class Route:
                     # add HighwaySegment, if not first point
                     if previous_point is not None:
                         self.segment_list.append(HighwaySegment(previous_point, w, self))
+            if len(self.point_list) < 2:
+                el.add_error("Route contains fewer than 2 points: " + str(self))
 
     def print_route(self):
         for point in self.point_list:
@@ -984,7 +1024,8 @@ class Route:
         """return csv line to insert into a table"""
         # note: alt_route_names does not need to be in the db since
         # list preprocessing uses alt or canonical and no longer cares
-        return "'" + self.system.systemname + "','" + self.region + "','" + self.route + "','" + self.banner + "','" + self.abbrev + "','" + self.city + "','" + self.root + "','" + str(self.mileage) + "','" + str(self.rootOrder) + "'";
+        return "'" + self.system.systemname + "','" + self.region + "','" + self.route + "','" + self.banner + "','" + self.abbrev + \
+               "','" + self.city.replace("'","''") + "','" + self.root + "','" + str(self.mileage) + "','" + str(self.rootOrder) + "'";
 
     def readable_name(self):
         """return a string for a human-readable route name"""
@@ -1015,19 +1056,36 @@ class ConnectedRoute:
 
     def __init__(self,line,system,el):
         """initialize the object from the _con.csv line given"""
+        self.system = system
+        self.route = ""
+        self.banner = ""
+        self.groupname = ""
+        self.roots = []
         fields = line.split(";")
         if len(fields) != 5:
-            el.add_error("Could not parse _con.csv line: [" + line +
-                         "] expected 5 fields, found " + str(len(fields)))
-        self.system = system
+            el.add_error("Could not parse " + system.systemname + "_con.csv line: [" + line +
+                         "], expected 5 fields, found " + str(len(fields)))
+            return
         if system.systemname != fields[0]:
-            el.add_error("System mismatch parsing line [" + line + "], expected " + system.systemname)
+            el.add_error("System mismatch parsing " + system.systemname +
+                         "_con.csv line [" + line + "], expected " + system.systemname)
         self.route = fields[1]
+        if len(self.route.encode('utf-8')) > DBFieldLength.route:
+            el.add_error("route > " + str(DBFieldLength.route) +
+                         " bytes in " + system.systemname +
+                         "_con.csv line: " + line)
         self.banner = fields[2]
+        if len(self.banner.encode('utf-8')) > DBFieldLength.banner:
+            el.add_error("banner > " + str(DBFieldLength.banner) +
+                         " bytes in " + system.systemname +
+                         "_con.csv line: " + line)
         self.groupname = fields[3]
+        if len(self.groupname.encode('utf-8')) > DBFieldLength.city:
+            el.add_error("groupname > " + str(DBFieldLength.city) +
+                         " bytes in " + system.systemname +
+                         "_con.csv line: " + line)
         # fields[4] is the list of roots, which will become a python list
         # of Route objects already in the system
-        self.roots = []
         roots = fields[4].split(",")
         rootOrder = 0
         for root in roots:
@@ -1037,7 +1095,7 @@ class ConnectedRoute:
                     route = check_route
                     break
             if route is None:
-                el.add_error("Could not find Route matching root " + root +
+                el.add_error("Could not find Route matching ConnectedRoute root " + root +
                              " in system " + system.systemname + '.')
             else:
                 self.roots.append(route)
@@ -1045,7 +1103,7 @@ class ConnectedRoute:
                 route.rootOrder = rootOrder
             rootOrder += 1
         if len(self.roots) < 1:
-            el.add_error("No roots in _con.csv line [" + line + "]")
+            el.add_error("No roots in " + system.systemname + "_con.csv line: " + line)
         # will be computed for routes in active & preview systems later
         self.mileage = 0.0
 
@@ -1066,7 +1124,7 @@ class HighwaySystem:
 
     See Route for information about the fields of a .csv file
 
-    With the implementation of three tiers of systems (active,
+    With the implementation of three levels of systems (active,
     preview, devel), added parameter and field here, to be stored in
     DB
 
@@ -1088,6 +1146,8 @@ class HighwaySystem:
         self.level = level
         self.mileage_by_region = dict()
         self.vertices = set()
+
+        # read chopped routes .csv
         try:
             file = open(path+"/"+systemname+".csv","rt",encoding='utf-8')
         except OSError as e:
@@ -1098,7 +1158,16 @@ class HighwaySystem:
             # ignore the first line of field names
             lines.pop(0)
             for line in lines:
-                self.route_list.append(Route(line.rstrip('\n'),self,el))
+                line=line.strip()
+                if len(line) > 0:
+                    r = Route(line,self,el)
+                    if r.root == "":
+                        el.add_error("Unable to find root in " + systemname +
+                                     ".csv line: ["+line+"]")
+                    else:
+                        self.route_list.append(r)
+
+        # read _con.csv
         try:
             file = open(path+"/"+systemname+"_con.csv","rt",encoding='utf-8')
         except OSError as e:
@@ -1109,8 +1178,9 @@ class HighwaySystem:
             # again, ignore first line with field names
             lines.pop(0)
             for line in lines:
-                self.con_route_list.append(ConnectedRoute(line.rstrip('\n'),
-                                                          self,el))
+                line=line.strip()
+                if len(line) > 0:
+                    self.con_route_list.append(ConnectedRoute(line,self,el))
 
     """Return whether this is an active system"""
     def active(self):
@@ -1144,22 +1214,25 @@ class TravelerList:
     start_waypoint end_waypoint
     """
 
-    def __init__(self,travelername,route_hash,path="../../../UserData/list_files"):
+    def __init__(self,travelername,route_hash,el,path="../../../UserData/list_files"):
         list_entries = 0
         self.clinched_segments = set()
         self.traveler_name = travelername[:-5]
+        if len(self.traveler_name.encode('utf-8')) > DBFieldLength.traveler:
+            el.add_error("Traveler name " + self.traveler_name + " > " + str(DBFieldLength.traveler) + "bytes")
         with open(path+"/"+travelername,"rt", encoding='UTF-8') as file:
             lines = file.readlines()
         file.close()
-
+        # strip UTF-8 byte order mark if present
+        lines[0] = lines[0].encode('utf-8').decode("utf-8-sig")
         self.log_entries = []
 
         for line in lines:
-            line = line.strip().rstrip('\x00')
+            line = line.strip(" \t\r\n\x00")
             # ignore empty or "comment" lines
             if len(line) == 0 or line.startswith("#"):
                 continue
-            fields = re.split(' +',line)
+            fields = re.split('[ \t]+',line)
             if len(fields) != 4:
                 # OK if 5th field exists and starts with #
                 if len(fields) < 5 or not fields[4].startswith("#"):
@@ -1170,7 +1243,10 @@ class TravelerList:
             route_entry = fields[1].lower()
             lookup = fields[0].lower() + ' ' + route_entry
             if lookup not in route_hash:
+                (line, invchar) = no_control_chars(line)
                 self.log_entries.append("Unknown region/highway combo in line: " + line)
+                if invchar:
+                    self.log_entries[-1] += " [contains invalid character(s)]"
             else:
                 r = route_hash[lookup]
                 for a in r.alt_route_names:
@@ -1187,9 +1263,9 @@ class TravelerList:
                 point_indices = []
                 checking_index = 0;
                 for w in r.point_list:
-                    lower_label = w.label.lower().strip("+*")
-                    list_label_1 = fields[2].lower().strip("+*")
-                    list_label_2 = fields[3].lower().strip("+*")
+                    lower_label = w.label.lower().lstrip("+*")
+                    list_label_1 = fields[2].lower().lstrip("+*")
+                    list_label_2 = fields[3].lower().lstrip("+*")
                     if list_label_1 == lower_label or list_label_2 == lower_label:
                         point_indices.append(checking_index)
                         r.labels_in_use.add(lower_label.upper())
@@ -1205,7 +1281,10 @@ class TravelerList:
                                             
                     checking_index += 1
                 if len(point_indices) != 2:
+                    (line, invchar) = no_control_chars(line)
                     self.log_entries.append("Waypoint label(s) not found in line: " + line)
+                    if invchar:
+                        self.log_entries[-1] += " [contains invalid character(s)]"
                 else:
                     list_entries += 1
                     # find the segments we just matched and store this traveler with the
@@ -1265,6 +1344,7 @@ class DatacheckEntry:
     LABEL_PARENS           |
     LABEL_SELFREF          |
     LABEL_SLASHES          |
+    LABEL_TOO_LONG         |
     LABEL_UNDERSCORES      |
     LACKS_GENERIC          |
     LONG_SEGMENT           | distance in miles
@@ -1596,12 +1676,12 @@ class PlaceRadius:
     place-based graphs are restricted.
     """
 
-    def __init__(self, place, base, lat, lng, r):
-        self.place = place
-        self.base = base
-        self.lat = float(lat)
-        self.lng = float(lng)
-        self.r = int(r)
+    def __init__(self, descr, title, lat, lng, r):
+        self.descr = descr
+        self.title = title
+        self.lat = lat
+        self.lng = lng
+        self.r = r
 
     def contains_vertex(self, v):
         """return whether v's coordinates are within this area"""
@@ -1673,7 +1753,7 @@ class PlaceRadius:
 
     def v_search(self, qt, g, w_bound, e_bound):
         # recursively search quadtree for waypoints within this PlaceRadius area, and return a set
-        # of their corresponding graph vertices to return to the PlaceRadius::vertices function
+        # of their corresponding graph vertices to return to the PlaceRadius.vertices function
         vertex_set = set()
 
         # first check if this is a terminal quadrant, and if it is,
@@ -1772,7 +1852,7 @@ class HighwayGraph:
         counter = 0
         print("!\n" + et.et() + "Creating edges", end="", flush=True)
         for h in highway_systems:
-            if h.devel():
+            if h.level != "active" and h.level != "preview":
                 continue
             if counter % 6 == 0:
                 print('.', end="", flush=True)
@@ -2087,6 +2167,39 @@ def format_clinched_mi(clinched,total):
     return "{0:.2f}".format(clinched) + " of {0:.2f}".format(total) + \
         " mi " + percentage
 
+def valid_num_str(data):
+    point_count = 0
+    # check initial character
+    if data[0] == '.':
+        point_count = 1
+    elif data[0] < '0' and data[0] != '-' or data[0] > '9':
+        return False
+    # check subsequent characters
+    for c in data[1:]:
+        # check for minus sign not at beginning
+        if c == '-':
+            return False
+        # check for multiple decimal points
+        if c == '.':
+            point_count += 1
+            if point_count > 1:
+                return False
+        # check for invalid characters
+        elif c < '0' or c > '9':
+            return False
+    return True
+
+def no_control_chars(input):
+    output = ""
+    invchar = False
+    for c in input:
+        if c < ' ' or c == '\x7F':
+            output += '?'
+            invchar = True
+        else:
+            output += c
+    return (output, invchar)
+
 class GraphListEntry:
     """This class encapsulates information about generated graphs for
     inclusion in the DB table.  Field names here match column names
@@ -2155,10 +2268,21 @@ else:
     file.close()
     lines.pop(0)  # ignore header line
     for line in lines:
-        fields = line.rstrip('\n').split(";")
-        if len(fields) != 2:
-            el.add_error("Could not parse continents.csv line: " + line)
+        line=line.strip()
+        if len(line) == 0:
             continue
+        fields = line.split(";")
+        if len(fields) != 2:
+            el.add_error("Could not parse continents.csv line: [" + line +
+                         "], expected 2 fields, found " + str(len(fields)))
+            continue
+        # verify field lengths
+        if len(fields[0].encode('utf-8')) > DBFieldLength.continentCode:
+            el.add_error("Continent code > " + str(DBFieldLength.continentCode) +
+                         " bytes in continents.csv line " + line)
+        if len(fields[1].encode('utf-8')) > DBFieldLength.continentName:
+            el.add_error("Continent name > " + str(DBFieldLength.continentName) +
+                         " bytes in continents.csv line " + line)
         continents.append(fields)
 
 countries = []
@@ -2171,10 +2295,21 @@ else:
     file.close()
     lines.pop(0)  # ignore header line
     for line in lines:
-        fields = line.rstrip('\n').split(";")
-        if len(fields) != 2:
-            el.add_error("Could not parse countries.csv line: " + line)
+        line=line.strip()
+        if len(line) == 0:
             continue
+        fields = line.split(";")
+        if len(fields) != 2:
+            el.add_error("Could not parse countries.csv line: [" + line +
+                         "], expected 2 fields, found " + str(len(fields)))
+            continue
+        # verify field lengths
+        if len(fields[0].encode('utf-8')) > DBFieldLength.countryCode:
+            el.add_error("Country code > " + str(DBFieldLength.countryCode) +
+                         " bytes in countries.csv line " + line)
+        if len(fields[1].encode('utf-8')) > DBFieldLength.countryName:
+            el.add_error("Country name > " + str(DBFieldLength.countryName) +
+                         " bytes in countries.csv line " + line)
         countries.append(fields)
 
 all_regions = []
@@ -2187,28 +2322,38 @@ else:
     file.close()
     lines.pop(0)  # ignore header line
     for line in lines:
-        fields = line.rstrip('\n').split(";")
+        line=line.strip()
+        if len(line) == 0:
+            continue
+        fields = line.split(";")
         if len(fields) != 5:
-            el.add_error("Could not parse regions.csv line: " + line)
+            el.add_error("Could not parse regions.csv line: [" + line +
+                         "], expected 5 fields, found " + str(len(fields)))
             continue
-        # look up country and continent, add index into those arrays
-        # in case they're needed for lookups later (not needed for DB)
-        for i in range(len(countries)):
-            country = countries[i][0]
-            if country == fields[2]:
-                fields.append(i)
+        # verify field data
+        if len(fields[0].encode('utf-8')) > DBFieldLength.regionCode:
+            el.add_error("Region code > " + str(DBFieldLength.regionCode) +
+                         " bytes in regions.csv line " + line)
+        if len(fields[1].encode('utf-8')) > DBFieldLength.regionName:
+            el.add_error("Region name > " + str(DBFieldLength.regionName) +
+                         " bytes in regions.csv line " + line)
+        c_found = False
+        for c in countries:
+            if c[0] == fields[2]:
+                c_found = True
                 break
-        if len(fields) != 6:
+        if not c_found:
             el.add_error("Could not find country matching regions.csv line: " + line)
-            continue
-        for i in range(len(continents)):
-            continent = continents[i][0]
-            if continent == fields[3]:
-                fields.append(i)
+        c_found = False
+        for c in continents:
+            if c[0] == fields[3]:
+                c_found = True
                 break
-        if len(fields) != 7:
+        if not c_found:
             el.add_error("Could not find continent matching regions.csv line: " + line)
-            continue
+        if len(fields[4].encode('utf-8')) > DBFieldLength.regiontype:
+            el.add_error("Region type > " + str(DBFieldLength.regiontype) +
+                         " bytes in regions.csv line " + line)
         all_regions.append(fields)
 
 # Create a list of HighwaySystem objects, one per system in systems.csv file
@@ -2224,16 +2369,52 @@ else:
     lines.pop(0)  # ignore header line for now
     ignoring = []
     for line in lines:
+        line=line.strip()
+        if len(line) == 0:
+            continue
         if line.startswith('#'):
             ignoring.append("Ignored comment in " + args.systemsfile + ": " + line.rstrip('\n'))
             continue
-        fields = line.rstrip('\n').split(";")
+        fields = line.split(";")
         if len(fields) != 6:
-            el.add_error("Could not parse " + args.systemsfile + " line: " + line)
+            el.add_error("Could not parse " + args.systemsfile + " line: [" + line +
+                         "], expected 6 fields, found " + str(len(fields)))
             continue
+        # verify System
+        if len(fields[0].encode('utf-8')) > DBFieldLength.systemName:
+            el.add_error("System code > " + str(DBFieldLength.systemName) +
+                         " bytes in " + args.systemsfile + " line " + line)
+        # verify CountryCode
+        valid_country = False
+        for i in range(len(countries)):
+            country = countries[i][0]
+            if country == fields[1]:
+                valid_country = True
+                break
+        if not valid_country:
+            el.add_error("Could not find country matching " + args.systemsfile + " line: " + line)
+        # verify Name
+        if len(fields[2].encode('utf-8')) > DBFieldLength.systemFullName:
+            el.add_error("System name > " + str(DBFieldLength.systemFullName) +
+                         " bytes in " + args.systemsfile + " line " + line)
+        # verify Color
+        if len(fields[3].encode('utf-8')) > DBFieldLength.color:
+            el.add_error("Color > " + str(DBFieldLength.color) +
+                         " bytes in " + args.systemsfile + " line " + line)
+        # verify Tier
+        try:
+            fields[4] = int(fields[4])
+        except ValueError:
+            el.add_error("Invalid tier in " + args.systemsfile + " line " + line)
+        else:
+            if fields[4] < 1:
+                el.add_error("Invalid tier in " + args.systemsfile + " line " + line)
+        # verify Level
+        if fields[5] != "active" and fields[5] != "preview" and fields[5] != "devel":
+            el.add_error("Unrecognized level in " + args.systemsfile + " line: " + line)
+
         print(fields[0] + ".",end="",flush=True)
-        hs = HighwaySystem(fields[0], fields[1],
-                           fields[2].replace("'","''"),
+        hs = HighwaySystem(fields[0], fields[1], fields[2],
                            fields[3], fields[4], fields[5], el,
                            args.highwaydatapath+"/hwy_data/_systems")
         highway_systems.append(hs)
@@ -2335,8 +2516,6 @@ def read_wpts_for_highway_system(h):
             all_wpt_files.remove(wpt_path)
         r.read_wpt(all_waypoints,all_waypoints_lock,datacheckerrors,
                    el,args.highwaydatapath+"/hwy_data")
-        if len(r.point_list) < 2:
-            el.add_error("Route contains fewer than 2 points: " + str(r))
         print(".", end="",flush=True)
         #print(str(r))
         #r.print_route()
@@ -2555,7 +2734,7 @@ print(et.et() + "Processing traveler list files:",flush=True)
 for t in traveler_ids:
     if t.endswith('.list'):
         print(t + " ",end="",flush=True)
-        traveler_lists.append(TravelerList(t,route_hash,args.userlistfilepath))
+        traveler_lists.append(TravelerList(t,route_hash,el,args.userlistfilepath))
 print('\n' + et.et() + "Processed " + str(len(traveler_lists)) + " traveler list files.")
 traveler_lists.sort(key=lambda TravelerList: TravelerList.traveler_name)
 # assign traveler numbers
@@ -2574,10 +2753,30 @@ file.close()
 
 lines.pop(0)  # ignore header line
 for line in lines:
-    fields = line.rstrip('\n').split(';')
-    if len(fields) != 5:
-        print("Could not parse updates.csv line: " + line)
+    line=line.strip()
+    if len(line) == 0:
         continue
+    fields = line.split(';')
+    if len(fields) != 5:
+        el.add_error("Could not parse updates.csv line: [" + line +
+                     "], expected 5 fields, found " + str(len(fields)))
+        continue
+    # verify field lengths
+    if len(fields[0].encode('utf-8')) > DBFieldLength.date:
+        el.add_error("date > " + str(DBFieldLength.date) +
+                     " bytes in updates.csv line " + line)
+    if len(fields[1].encode('utf-8')) > DBFieldLength.countryRegion:
+        el.add_error("region > " + str(DBFieldLength.countryRegion) +
+                     " bytes in updates.csv line " + line)
+    if len(fields[2].encode('utf-8')) > DBFieldLength.routeLongName:
+        el.add_error("route > " + str(DBFieldLength.routeLongName) +
+                     " bytes in updates.csv line " + line)
+    if len(fields[3].encode('utf-8')) > DBFieldLength.root:
+        el.add_error("root > " + str(DBFieldLength.root) +
+                     " bytes in updates.csv line " + line)
+    if len(fields[4].encode('utf-8')) > DBFieldLength.updateText:
+        el.add_error("description > " + str(DBFieldLength.updateText) +
+                     " bytes in updates.csv line " + line)
     updates.append(fields)
 print("")
 
@@ -2592,10 +2791,30 @@ file.close()
 
 lines.pop(0)  # ignore header line
 for line in lines:
-    fields = line.rstrip('\n').split(';')
-    if len(fields) != 5:
-        print("Could not parse systemupdates.csv line: " + line)
+    line=line.strip()
+    if len(line) == 0:
         continue
+    fields = line.split(';')
+    if len(fields) != 5:
+        el.add_error("Could not parse systemupdates.csv line: [" + line +
+                     "], expected 5 fields, found " + str(len(fields)))
+        continue
+    # verify field lengths
+    if len(fields[0].encode('utf-8')) > DBFieldLength.date:
+        el.add_error("date > " + str(DBFieldLength.date) +
+                     " bytes in systemupdates.csv line " + line)
+    if len(fields[1].encode('utf-8')) > DBFieldLength.countryRegion:
+        el.add_error("region > " + str(DBFieldLength.countryRegion) +
+                     " bytes in systemupdates.csv line " + line)
+    if len(fields[2].encode('utf-8')) > DBFieldLength.systemName:
+        el.add_error("systemName > " + str(DBFieldLength.systemName) +
+                     " bytes in systemupdates.csv line " + line)
+    if len(fields[3].encode('utf-8')) > DBFieldLength.systemFullName:
+        el.add_error("description > " + str(DBFieldLength.systemFullName) +
+                     " bytes in systemupdates.csv line " + line)
+    if len(fields[4].encode('utf-8')) > DBFieldLength.statusChange:
+        el.add_error("statusChange > " + str(DBFieldLength.statusChange) +
+                     " bytes in systemupdates.csv line " + line)
     systemupdates.append(fields)
 print("")
 
@@ -2678,7 +2897,7 @@ for t in traveler_lists:
     for s in t.clinched_segments:
         if s.concurrent is not None:
             for hs in s.concurrent:
-                if hs.route.system.active_or_preview() and hs.add_clinched_by(t):
+                if hs != s and hs.route.system.active_or_preview() and hs.add_clinched_by(t):
                     concurrencyfile.write("Concurrency augment for traveler " + t.traveler_name + ": [" + str(hs) + "] based on [" + str(s) + "]\n")
 print("!")
 concurrencyfile.close()
@@ -3094,25 +3313,22 @@ datacheckfps = []
 datacheck_always_error = [ 'BAD_ANGLE', 'DUPLICATE_LABEL', 'HIDDEN_TERMINUS',
                            'INVALID_FINAL_CHAR', 'INVALID_FIRST_CHAR',
                            'LABEL_INVALID_CHAR', 'LABEL_PARENS', 'LABEL_SLASHES',
-                           'LABEL_UNDERSCORES', 'LONG_UNDERSCORE',
+                           'LABEL_TOO_LONG', 'LABEL_UNDERSCORES', 'LONG_UNDERSCORE',
                            'MALFORMED_LAT', 'MALFORMED_LON', 'MALFORMED_URL',
                            'NONTERMINAL_UNDERSCORE' ]
 for line in lines:
-    fields = line.rstrip('\n').split(';')
+    line=line.strip()
+    if len(line) == 0:
+        continue
+    fields = line.split(';')
     if len(fields) != 6:
-        el.add_error("Could not parse datacheckfps.csv line: " + line)
+        el.add_error("Could not parse datacheckfps.csv line: [" + line +
+                     "], expected 6 fields, found " + str(len(fields)))
         continue
     if fields[4] in datacheck_always_error:
         print("datacheckfps.csv line not allowed (always error): " + line)
         continue
     datacheckfps.append(fields)
-
-# See if we have any errors that should be fatal to the site update process
-if len(el.error_list) > 0:
-    print("ABORTING due to " + str(len(el.error_list)) + " errors:")
-    for i in range(len(el.error_list)):
-        print(str(i+1) + ": " + el.error_list[i])
-    sys.exit(1)
 
 # Build a graph structure out of all highway data in active and
 # preview systems
@@ -3140,6 +3356,8 @@ else:
     graph_types.append(['master', 'All Travel Mapping Data',
                         'These graphs contain all routes currently plotted in the Travel Mapping project.'])
 
+
+
     # graphs restricted by place/area - from areagraphs.csv file
     print(et.et() + "Creating area data graphs.", flush=True)
     with open(args.highwaydatapath+"/graphs/areagraphs.csv", "rt",encoding='utf-8') as file:
@@ -3148,21 +3366,55 @@ else:
     lines.pop(0);  # ignore header line
     area_list = []
     for line in lines:
-        fields = line.rstrip('\n').split(";")
-        if len(fields) != 5:
-            print("Could not parse areagraphs.csv line: " + line)
+        line=line.strip()
+        if len(line) == 0:
             continue
+        fields = line.split(";")
+        if len(fields) != 5:
+            el.add_error("Could not parse areagraphs.csv line: [" + line +
+                         "], expected 5 fields, found " + str(len(fields)))
+            continue
+        if len(fields[0].encode('utf-8'))+len(fields[4]) > DBFieldLength.graphDescr-13:
+            el.add_error("description + radius is too long by " +
+                         str(len(fields[0].encode('utf-8'))+len(fields[4]) - DBFieldLength.graphDescr+13) +
+                         " byte(s) in areagraphs.csv line: " + line)
+        if len(fields[1].encode('utf-8'))+len(fields[4]) > DBFieldLength.graphFilename-19:
+            el.add_error("title + radius = filename too long by " +
+                         str(len(fields[1].encode('utf-8'))+len(fields[4]) - DBFieldLength.graphFilename+19) +
+                         " byte(s) in areagraphs.csv line: " + line)
+        # convert numeric fields
+        try:
+            fields[2] = float(fields[2])
+        except ValueError:
+            el.add_error("invalid lat in areagraphs.csv line: " + line)
+            fields[2] = 0.0
+        try:
+            fields[3] = float(fields[3])
+        except ValueError:
+            el.add_error("invalid lng in areagraphs.csv line: " + line)
+            fields[3] = 0.0
+        try:
+            fields[4] = int(fields[4])
+        except ValueError:
+            el.add_error("invalid radius in areagraphs.csv line: " + line)
+            fields[4] = 1
+        else:
+            if fields[4] <= 0:
+                el.add_error("invalid radius in areagraphs.csv line: " + line)
+                fields[4] = 1
         area_list.append(PlaceRadius(*fields))
 
     for a in area_list:
-        print(a.base + '(' + str(a.r) + ') ', end="", flush=True)
-        graph_data.write_subgraphs_tmg(graph_list, args.graphfilepath + "/", a.base + str(a.r) + "-area",
-                                       a.place + " (" + str(a.r) + " mi radius)", "area",
+        print(a.title + '(' + str(a.r) + ') ', end="", flush=True)
+        graph_data.write_subgraphs_tmg(graph_list, args.graphfilepath + "/", a.title + str(a.r) + "-area",
+                                       a.descr + " (" + str(a.r) + " mi radius)", "area",
                                        None, None, a, all_waypoints)
     graph_types.append(['area', 'Routes Within a Given Radius of a Place',
                         'These graphs contain all routes currently plotted within the given distance radius of the given place.'])
     print("!")
         
+
+
     # Graphs restricted by region
     print(et.et() + "Creating regional data graphs.", flush=True)
 
@@ -3181,6 +3433,8 @@ else:
     graph_types.append(['region', 'Routes Within a Single Region',
                         'These graphs contain all routes currently plotted within the given region.'])
     print("!")
+
+
 
     # Graphs restricted by system - from systemgraphs.csv file
     print(et.et() + "Creating system data graphs.", flush=True)
@@ -3208,6 +3462,8 @@ else:
                             'These graphs contain the routes within a single highway system and are not restricted by region.'])
     print("!")
 
+
+
     # Some additional interesting graphs, the "multisystem" graphs
     print(et.et() + "Creating multisystem graphs.", flush=True)
 
@@ -3216,10 +3472,20 @@ else:
     file.close()
     lines.pop(0);  # ignore header line
     for line in lines:
-        fields = line.rstrip('\n').split(";")
-        if len(fields) != 3:
-            print("Could not parse multisystem.csv line: " + line)
+        line=line.strip()
+        if len(line) == 0:
             continue
+        fields = line.split(";")
+        if len(fields) != 3:
+            el.add_error("Could not parse multisystem.csv line: [" + line +
+                         "], expected 3 fields, found " + str(len(fields)))
+            continue
+        if len(fields[0].encode('utf-8')) > DBFieldLength.graphDescr:
+            el.add_error("description > " + str(DBFieldLength.graphDescr) +
+                         " bytes in multisystem.csv line: " + line)
+        if len(fields[1].encode('utf-8')) > DBFieldLength.graphFilename-14:
+            el.add_error("title > " + str(DBFieldLength.graphFilename-14) +
+                         " bytes in multisystem.csv line: " + line)
         print(fields[1] + ' ', end="", flush=True)
         systems = []
         selected_systems = fields[2].split(",")
@@ -3233,6 +3499,8 @@ else:
                         'These graphs contain the routes within a set of highway systems.'])
     print("!")
 
+
+
     # Some additional interesting graphs, the "multiregion" graphs
     print(et.et() + "Creating multiregion graphs.", flush=True)
 
@@ -3241,10 +3509,20 @@ else:
     file.close()
     lines.pop(0);  # ignore header line
     for line in lines:
-        fields = line.rstrip('\n').split(";")
-        if len(fields) != 3:
-            print("Could not parse multiregion.csv line: " + line)
+        line=line.strip()
+        if len(line) == 0:
             continue
+        fields = line.split(";")
+        if len(fields) != 3:
+            el.add_error("Could not parse multiregion.csv line: [" + line +
+                         "], expected 3 fields, found " + str(len(fields)))
+            continue
+        if len(fields[0].encode('utf-8')) > DBFieldLength.graphDescr:
+            el.add_error("description > " + str(DBFieldLength.graphDescr) +
+                         " bytes in multiregion.csv line: " + line)
+        if len(fields[1].encode('utf-8')) > DBFieldLength.graphFilename-14:
+            el.add_error("title > " + str(DBFieldLength.graphFilename-14) +
+                         " bytes in multiregion.csv line: " + line)
         print(fields[1] + ' ', end="", flush=True)
         region_list = []
         selected_regions = fields[2].split(",")
@@ -3257,6 +3535,8 @@ else:
     graph_types.append(['multiregion', 'Routes Within Multiple Regions',
                         'These graphs contain the routes within a set of regions.'])
     print("!")
+
+
 
     # country graphs - we find countries that have regions
     # that have routes with active or preview mileage
@@ -3277,6 +3557,8 @@ else:
     graph_types.append(['country', 'Routes Within a Single Multi-Region Country',
                         'These graphs contain the routes within a single country that is composed of multiple regions that contain plotted routes.  Countries consisting of a single region are represented by their regional graph.'])
     print("!")
+
+
 
     # continent graphs -- any continent with data will be created
     print(et.et() + "Creating continent graphs.", flush=True)
@@ -3314,10 +3596,11 @@ for h in highway_systems:
         prev_w = None
 
         # look for hidden termini
-        if r.point_list[0].is_hidden:
-            datacheckerrors.append(DatacheckEntry(r,[r.point_list[0].label],'HIDDEN_TERMINUS'))
-        if r.point_list[len(r.point_list)-1].is_hidden:
-            datacheckerrors.append(DatacheckEntry(r,[r.point_list[len(r.point_list)-1].label],'HIDDEN_TERMINUS'))
+        if len(r.point_list) > 1:
+            if r.point_list[0].is_hidden:
+                datacheckerrors.append(DatacheckEntry(r,[r.point_list[0].label],'HIDDEN_TERMINUS'))
+            if r.point_list[-1].is_hidden:
+                datacheckerrors.append(DatacheckEntry(r,[r.point_list[len(r.point_list)-1].label],'HIDDEN_TERMINUS'))
 
         for w in r.point_list:
             # duplicate labels
@@ -3544,6 +3827,13 @@ else:
     logfile.write("No datacheck errors found.")
 logfile.close()
     
+# See if we have any errors that should be fatal to the site update process
+if len(el.error_list) > 0:
+    print(et.et() + "ABORTING due to " + str(len(el.error_list)) + " errors:")
+    for i in range(len(el.error_list)):
+        print(str(i+1) + ": " + el.error_list[i])
+    sys.exit(1)
+
 if args.errorcheck:
     print(et.et() + "SKIPPING database file.", flush=True)
 else:
@@ -3576,7 +3866,9 @@ else:
     
     # first, continents, countries, and regions
     print(et.et() + "...continents, countries, regions", flush=True)
-    sqlfile.write('CREATE TABLE continents (code VARCHAR(3), name VARCHAR(15), PRIMARY KEY(code));\n')
+    sqlfile.write('CREATE TABLE continents (code VARCHAR(' + str(DBFieldLength.continentCode) +
+                  '), name VARCHAR(' + str(DBFieldLength.continentName) +
+                  '), PRIMARY KEY(code));\n')
     sqlfile.write('INSERT INTO continents VALUES\n')
     first = True
     for c in continents:
@@ -3586,7 +3878,9 @@ else:
         sqlfile.write("('" + c[0] + "','" + c[1] + "')\n")
     sqlfile.write(";\n")
 
-    sqlfile.write('CREATE TABLE countries (code VARCHAR(3), name VARCHAR(32), PRIMARY KEY(code));\n')
+    sqlfile.write('CREATE TABLE countries (code VARCHAR(' + str(DBFieldLength.countryCode) +
+                  '), name VARCHAR(' + str(DBFieldLength.countryName) +
+                  '), PRIMARY KEY(code));\n')
     sqlfile.write('INSERT INTO countries VALUES\n')
     first = True
     for c in countries:
@@ -3596,7 +3890,12 @@ else:
         sqlfile.write("('" + c[0] + "','" + c[1].replace("'","''") + "')\n")
     sqlfile.write(";\n")
 
-    sqlfile.write('CREATE TABLE regions (code VARCHAR(8), name VARCHAR(48), country VARCHAR(3), continent VARCHAR(3), regiontype VARCHAR(32), PRIMARY KEY(code), FOREIGN KEY (country) REFERENCES countries(code), FOREIGN KEY (continent) REFERENCES continents(code));\n')
+    sqlfile.write('CREATE TABLE regions (code VARCHAR(' + str(DBFieldLength.regionCode) +
+                  '), name VARCHAR(' + str(DBFieldLength.regionName) +
+                  '), country VARCHAR(' + str(DBFieldLength.countryCode) +
+                  '), continent VARCHAR(' + str(DBFieldLength.continentCode) +
+                  '), regiontype VARCHAR(' + str(DBFieldLength.regiontype) +
+                  '), PRIMARY KEY(code), FOREIGN KEY (country) REFERENCES countries(code), FOREIGN KEY (continent) REFERENCES continents(code));\n')
     sqlfile.write('INSERT INTO regions VALUES\n')
     first = True
     for r in all_regions:
@@ -3612,7 +3911,12 @@ else:
     # a boolean indicating if the system is active for mapping in the
     # project in the field 'active'
     print(et.et() + "...systems", flush=True)
-    sqlfile.write('CREATE TABLE systems (systemName VARCHAR(10), countryCode CHAR(3), fullName VARCHAR(60), color VARCHAR(16), level VARCHAR(10), tier INTEGER, csvOrder INTEGER, PRIMARY KEY(systemName));\n')
+    sqlfile.write('CREATE TABLE systems (systemName VARCHAR(' + str(DBFieldLength.systemName) +
+                  '), countryCode CHAR(' + str(DBFieldLength.countryCode) +
+                  '), fullName VARCHAR(' + str(DBFieldLength.systemFullName) +
+                  '), color VARCHAR(' + str(DBFieldLength.color) +
+                  '), level VARCHAR(' + str(DBFieldLength.level) +
+                  '), tier INTEGER, csvOrder INTEGER, PRIMARY KEY(systemName));\n')
     sqlfile.write('INSERT INTO systems VALUES\n')
     first = True
     csvOrder = 0
@@ -3621,14 +3925,21 @@ else:
             sqlfile.write(",")
         first = False
         sqlfile.write("('" + h.systemname + "','" +  h.country + "','" +
-                      h.fullname + "','" + h.color + "','" + h.level +
+                      h.fullname.replace("'","''") + "','" + h.color + "','" + h.level +
                       "','" + str(h.tier) + "','" + str(csvOrder) + "')\n")
         csvOrder += 1
     sqlfile.write(";\n")
 
     # next, a table of highways, with the same fields as in the first line
     print(et.et() + "...routes", flush=True)
-    sqlfile.write('CREATE TABLE routes (systemName VARCHAR(10), region VARCHAR(8), route VARCHAR(16), banner VARCHAR(6), abbrev VARCHAR(3), city VARCHAR(100), root VARCHAR(32), mileage FLOAT, rootOrder INTEGER, csvOrder INTEGER, PRIMARY KEY(root), FOREIGN KEY (systemName) REFERENCES systems(systemName));\n')
+    sqlfile.write('CREATE TABLE routes (systemName VARCHAR(' + str(DBFieldLength.systemName) +
+                  '), region VARCHAR(' + str(DBFieldLength.regionCode) +
+                  '), route VARCHAR(' + str(DBFieldLength.route) +
+                  '), banner VARCHAR(' + str(DBFieldLength.banner) +
+                  '), abbrev VARCHAR(' + str(DBFieldLength.abbrev) +
+                  '), city VARCHAR(' + str(DBFieldLength.city) +
+                  '), root VARCHAR(' + str(DBFieldLength.root) +
+                  '), mileage FLOAT, rootOrder INTEGER, csvOrder INTEGER, PRIMARY KEY(root), FOREIGN KEY (systemName) REFERENCES systems(systemName));\n')
     sqlfile.write('INSERT INTO routes VALUES\n')
     first = True
     csvOrder = 0
@@ -3643,7 +3954,12 @@ else:
 
     # connected routes table, but only first "root" in each in this table
     print(et.et() + "...connectedRoutes", flush=True)
-    sqlfile.write('CREATE TABLE connectedRoutes (systemName VARCHAR(10), route VARCHAR(16), banner VARCHAR(6), groupName VARCHAR(100), firstRoot VARCHAR(32), mileage FLOAT, csvOrder INTEGER, PRIMARY KEY(firstRoot), FOREIGN KEY (firstRoot) REFERENCES routes(root));\n')
+    sqlfile.write('CREATE TABLE connectedRoutes (systemName VARCHAR(' + str(DBFieldLength.systemName) +
+                  '), route VARCHAR(' + str(DBFieldLength.route) +
+                  '), banner VARCHAR(' + str(DBFieldLength.banner) +
+                  '), groupName VARCHAR(' + str(DBFieldLength.city) +
+                  '), firstRoot VARCHAR(' + str(DBFieldLength.root) +
+                  '), mileage FLOAT, csvOrder INTEGER, PRIMARY KEY(firstRoot), FOREIGN KEY (firstRoot) REFERENCES routes(root));\n')
     sqlfile.write('INSERT INTO connectedRoutes VALUES\n')
     first = True
     csvOrder = 0
@@ -3659,7 +3975,9 @@ else:
     # This table has remaining roots for any connected route
     # that connects multiple routes/roots
     print(et.et() + "...connectedRouteRoots", flush=True)
-    sqlfile.write('CREATE TABLE connectedRouteRoots (firstRoot VARCHAR(32), root VARCHAR(32), FOREIGN KEY (firstRoot) REFERENCES connectedRoutes(firstRoot));\n')
+    sqlfile.write('CREATE TABLE connectedRouteRoots (firstRoot VARCHAR(' + str(DBFieldLength.root) +
+                  '), root VARCHAR(' + str(DBFieldLength.root) +
+                  '), FOREIGN KEY (firstRoot) REFERENCES connectedRoutes(firstRoot));\n')
     first = True
     for h in highway_systems:
         for cr in h.con_route_list:
@@ -3675,7 +3993,9 @@ else:
 
     # Now, a table with raw highway route data: list of points, in order, that define the route
     print(et.et() + "...waypoints", flush=True)
-    sqlfile.write('CREATE TABLE waypoints (pointId INTEGER, pointName VARCHAR(20), latitude DOUBLE, longitude DOUBLE, root VARCHAR(32), PRIMARY KEY(pointId), FOREIGN KEY (root) REFERENCES routes(root));\n')
+    sqlfile.write('CREATE TABLE waypoints (pointId INTEGER, pointName VARCHAR(' + str(DBFieldLength.label) +
+                  '), latitude DOUBLE, longitude DOUBLE, root VARCHAR(' + str(DBFieldLength.root) +
+                  '), PRIMARY KEY(pointId), FOREIGN KEY (root) REFERENCES routes(root));\n')
     point_num = 0
     for h in highway_systems:
         for r in h.route_list:
@@ -3696,7 +4016,9 @@ else:
 
     # Table of all HighwaySegments.
     print(et.et() + "...segments", flush=True)
-    sqlfile.write('CREATE TABLE segments (segmentId INTEGER, waypoint1 INTEGER, waypoint2 INTEGER, root VARCHAR(32), PRIMARY KEY (segmentId), FOREIGN KEY (waypoint1) REFERENCES waypoints(pointId), FOREIGN KEY (waypoint2) REFERENCES waypoints(pointId), FOREIGN KEY (root) REFERENCES routes(root));\n')
+    sqlfile.write('CREATE TABLE segments (segmentId INTEGER, waypoint1 INTEGER, waypoint2 INTEGER, root VARCHAR(' + str(DBFieldLength.root) +
+                  '), PRIMARY KEY (segmentId), FOREIGN KEY (waypoint1) REFERENCES waypoints(pointId), ' +
+                  'FOREIGN KEY (waypoint2) REFERENCES waypoints(pointId), FOREIGN KEY (root) REFERENCES routes(root));\n')
     segment_num = 0
     clinched_list = []
     for h in highway_systems:
@@ -3716,7 +4038,8 @@ else:
     # maybe a separate traveler table will make sense but for now, I'll just use
     # the name from the .list name
     print(et.et() + "...clinched", flush=True)
-    sqlfile.write('CREATE TABLE clinched (segmentId INTEGER, traveler VARCHAR(48), FOREIGN KEY (segmentId) REFERENCES segments(segmentId));\n')
+    sqlfile.write('CREATE TABLE clinched (segmentId INTEGER, traveler VARCHAR(' + str(DBFieldLength.traveler) +
+                  '), FOREIGN KEY (segmentId) REFERENCES segments(segmentId));\n')
     for start in range(0, len(clinched_list), 10000):
         sqlfile.write('INSERT INTO clinched VALUES\n')
         first = True
@@ -3730,7 +4053,8 @@ else:
     # overall mileage by region data (with concurrencies accounted for,
     # active systems only then active+preview)
     print(et.et() + "...overallMileageByRegion", flush=True)
-    sqlfile.write('CREATE TABLE overallMileageByRegion (region VARCHAR(8), activeMileage FLOAT, activePreviewMileage FLOAT);\n')
+    sqlfile.write('CREATE TABLE overallMileageByRegion (region VARCHAR(' + str(DBFieldLength.regionCode) +
+                  '), activeMileage FLOAT, activePreviewMileage FLOAT);\n')
     sqlfile.write('INSERT INTO overallMileageByRegion VALUES\n')
     first = True
     for region in list(active_preview_mileage_by_region.keys()):
@@ -3751,7 +4075,9 @@ else:
     # system mileage by region data (with concurrencies accounted for,
     # active systems and preview systems only)
     print(et.et() + "...systemMileageByRegion", flush=True)
-    sqlfile.write('CREATE TABLE systemMileageByRegion (systemName VARCHAR(10), region VARCHAR(8), mileage FLOAT, FOREIGN KEY (systemName) REFERENCES systems(systemName));\n')
+    sqlfile.write('CREATE TABLE systemMileageByRegion (systemName VARCHAR(' + str(DBFieldLength.systemName) +
+                  '), region VARCHAR(' + str(DBFieldLength.regionCode) +
+                  '), mileage FLOAT, FOREIGN KEY (systemName) REFERENCES systems(systemName));\n')
     sqlfile.write('INSERT INTO systemMileageByRegion VALUES\n')
     first = True
     for h in highway_systems:
@@ -3766,7 +4092,9 @@ else:
     # clinched overall mileage by region data (with concurrencies
     # accounted for, active systems and preview systems only)
     print(et.et() + "...clinchedOverallMileageByRegion", flush=True)
-    sqlfile.write('CREATE TABLE clinchedOverallMileageByRegion (region VARCHAR(8), traveler VARCHAR(48), activeMileage FLOAT, activePreviewMileage FLOAT);\n')
+    sqlfile.write('CREATE TABLE clinchedOverallMileageByRegion (region VARCHAR(' + str(DBFieldLength.regionCode) +
+                  '), traveler VARCHAR(' + str(DBFieldLength.traveler) +
+                  '), activeMileage FLOAT, activePreviewMileage FLOAT);\n')
     sqlfile.write('INSERT INTO clinchedOverallMileageByRegion VALUES\n')
     first = True
     for t in traveler_lists:
@@ -3785,7 +4113,10 @@ else:
     # clinched system mileage by region data (with concurrencies accounted
     # for, active systems and preview systems only)
     print(et.et() + "...clinchedSystemMileageByRegion", flush=True)
-    sqlfile.write('CREATE TABLE clinchedSystemMileageByRegion (systemName VARCHAR(10), region VARCHAR(8), traveler VARCHAR(48), mileage FLOAT, FOREIGN KEY (systemName) REFERENCES systems(systemName));\n')
+    sqlfile.write('CREATE TABLE clinchedSystemMileageByRegion (systemName VARCHAR(' + str(DBFieldLength.systemName) +
+                  '), region VARCHAR(' + str(DBFieldLength.regionCode) +
+                  '), traveler VARCHAR(' + str(DBFieldLength.traveler) +
+                  '), mileage FLOAT, FOREIGN KEY (systemName) REFERENCES systems(systemName));\n')
     sqlfile.write('INSERT INTO clinchedSystemMileageByRegion VALUES\n')
     first = True
     for line in csmbr_values:
@@ -3798,7 +4129,9 @@ else:
     # clinched mileage by connected route, active systems and preview
     # systems only
     print(et.et() + "...clinchedConnectedRoutes", flush=True)
-    sqlfile.write('CREATE TABLE clinchedConnectedRoutes (route VARCHAR(32), traveler VARCHAR(48), mileage FLOAT, clinched BOOLEAN, FOREIGN KEY (route) REFERENCES connectedRoutes(firstRoot));\n')
+    sqlfile.write('CREATE TABLE clinchedConnectedRoutes (route VARCHAR(' + str(DBFieldLength.root) +
+                  '), traveler VARCHAR(' + str(DBFieldLength.traveler) +
+                  '), mileage FLOAT, clinched BOOLEAN, FOREIGN KEY (route) REFERENCES connectedRoutes(firstRoot));\n')
     for start in range(0, len(ccr_values), 10000):
         sqlfile.write('INSERT INTO clinchedConnectedRoutes VALUES\n')
         first = True
@@ -3811,7 +4144,9 @@ else:
 
     # clinched mileage by route, active systems and preview systems only
     print(et.et() + "...clinchedRoutes", flush=True)
-    sqlfile.write('CREATE TABLE clinchedRoutes (route VARCHAR(32), traveler VARCHAR(48), mileage FLOAT, clinched BOOLEAN, FOREIGN KEY (route) REFERENCES routes(root));\n')
+    sqlfile.write('CREATE TABLE clinchedRoutes (route VARCHAR(' + str(DBFieldLength.root) +
+                  '), traveler VARCHAR(' + str(DBFieldLength.traveler) +
+                  '), mileage FLOAT, clinched BOOLEAN, FOREIGN KEY (route) REFERENCES routes(root));\n')
     for start in range(0, len(cr_values), 10000):
         sqlfile.write('INSERT INTO clinchedRoutes VALUES\n')
         first = True
@@ -3824,7 +4159,12 @@ else:
 
     # updates entries
     print(et.et() + "...updates", flush=True)
-    sqlfile.write('CREATE TABLE updates (date VARCHAR(10), region VARCHAR(60), route VARCHAR(80), root VARCHAR(32), description VARCHAR(1024));\n')
+    sqlfile.write('CREATE TABLE updates (date VARCHAR(' + str(DBFieldLength.date) +
+                  '), region VARCHAR(' + str(DBFieldLength.countryRegion) +
+                  '), route VARCHAR(' + str(DBFieldLength.routeLongName) +
+                  '), root VARCHAR(' + str(DBFieldLength.root) +
+                  '), description VARCHAR(' + str(DBFieldLength.updateText) +
+                  '));\n')
     sqlfile.write('INSERT INTO updates VALUES\n')
     first = True
     for update in updates:
@@ -3836,7 +4176,12 @@ else:
 
     # systemUpdates entries
     print(et.et() + "...systemUpdates", flush=True)
-    sqlfile.write('CREATE TABLE systemUpdates (date VARCHAR(10), region VARCHAR(48), systemName VARCHAR(10), description VARCHAR(128), statusChange VARCHAR(16));\n')
+    sqlfile.write('CREATE TABLE systemUpdates (date VARCHAR(' + str(DBFieldLength.date) +
+                  '), region VARCHAR(' + str(DBFieldLength.countryRegion) +
+                  '), systemName VARCHAR(' + str(DBFieldLength.systemName) +
+                  '), description VARCHAR(' + str(DBFieldLength.systemFullName) +
+                  '), statusChange VARCHAR(' + str(DBFieldLength.statusChange) +
+                  '));\n')
     sqlfile.write('INSERT INTO systemUpdates VALUES\n')
     first = True
     for systemupdate in systemupdates:
@@ -3848,7 +4193,13 @@ else:
 
     # datacheck errors into the db
     print(et.et() + "...datacheckErrors", flush=True)
-    sqlfile.write('CREATE TABLE datacheckErrors (route VARCHAR(32), label1 VARCHAR(50), label2 VARCHAR(20), label3 VARCHAR(20), code VARCHAR(22), value VARCHAR(32), falsePositive BOOLEAN, FOREIGN KEY (route) REFERENCES routes(root));\n')
+    sqlfile.write('CREATE TABLE datacheckErrors (route VARCHAR(' + str(DBFieldLength.root) +
+                  '), label1 VARCHAR(' + str(DBFieldLength.label) +
+                  '), label2 VARCHAR(' + str(DBFieldLength.label) +
+                  '), label3 VARCHAR(' + str(DBFieldLength.label) +
+                  '), code VARCHAR(' + str(DBFieldLength.dcErrCode) +
+                  '), value VARCHAR(' + str(DBFieldLength.dcErrValue) +
+                  '), falsePositive BOOLEAN, FOREIGN KEY (route) REFERENCES routes(root));\n')
     if len(datacheckerrors) > 0:
         sqlfile.write('INSERT INTO datacheckErrors VALUES\n')
         first = True
@@ -3877,7 +4228,9 @@ else:
         print(et.et() + "...graphs", flush=True)
         sqlfile.write('DROP TABLE IF EXISTS graphs;\n')
         sqlfile.write('DROP TABLE IF EXISTS graphTypes;\n')
-        sqlfile.write('CREATE TABLE graphTypes (category VARCHAR(12), descr VARCHAR(100), longDescr TEXT, PRIMARY KEY(category));\n')
+        sqlfile.write('CREATE TABLE graphTypes (category VARCHAR(' + str(DBFieldLength.graphCategory) +
+                  '), descr VARCHAR(' + str(DBFieldLength.graphDescr) +
+                  '), longDescr TEXT, PRIMARY KEY(category));\n')
         if len(graph_types) > 0:
             sqlfile.write('INSERT INTO graphTypes VALUES\n')
             first = True
@@ -3888,7 +4241,11 @@ else:
                 sqlfile.write("('" + g[0] + "','" + g[1] + "','" + g[2] + "')\n")
             sqlfile.write(";\n")
 
-        sqlfile.write('CREATE TABLE graphs (filename VARCHAR(32), descr VARCHAR(100), vertices INTEGER, edges INTEGER, travelers INTEGER, format VARCHAR(10), category VARCHAR(12), FOREIGN KEY (category) REFERENCES graphTypes(category));\n')
+        sqlfile.write('CREATE TABLE graphs (filename VARCHAR(' + str(DBFieldLength.graphFilename) +
+                  '), descr VARCHAR(' + str(DBFieldLength.graphDescr) +
+                  '), vertices INTEGER, edges INTEGER, travelers INTEGER, format VARCHAR(' + str(DBFieldLength.graphFormat) +
+                  '), category VARCHAR(' + str(DBFieldLength.graphCategory) +
+                  '), FOREIGN KEY (category) REFERENCES graphTypes(category));\n')
         if len(graph_list) > 0:
             sqlfile.write('INSERT INTO graphs VALUES\n')
             first = True

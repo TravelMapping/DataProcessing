@@ -1,9 +1,9 @@
 void sqlfile1
     (	ElapsedTime *et,
 	Arguments *args,
-	std::list<Region> *all_regions,
-	std::list<std::pair<std::string,std::string>> *continents,
-	std::list<std::pair<std::string,std::string>> *countries,
+	std::vector<Region*> *all_regions,
+	std::vector<std::pair<std::string,std::string>> *continents,
+	std::vector<std::pair<std::string,std::string>> *countries,
 	std::list<HighwaySystem*> *highway_systems,
 	std::list<TravelerList*> *traveler_lists,
 	ClinchedDBValues *clin_db_val,
@@ -40,34 +40,45 @@ void sqlfile1
       #ifndef threading_enabled
 	std::cout << et->et() << "...continents, countries, regions" << std::endl;
       #endif
-	sqlfile << "CREATE TABLE continents (code VARCHAR(3), name VARCHAR(15), PRIMARY KEY(code));\n";
+	sqlfile << "CREATE TABLE continents (code VARCHAR(" << DBFieldLength::continentCode
+		<< "), name VARCHAR(" << DBFieldLength::continentName
+		<< "), PRIMARY KEY(code));\n";
 	sqlfile << "INSERT INTO continents VALUES\n";
 	bool first = 1;
-	for (std::pair<std::string,std::string> c : *continents)
+	for (size_t c = 0; c < continents->size()-1; c++)
 	{	if (!first) sqlfile << ',';
 		first = 0;
-		sqlfile << "('" << c.first << "','" << c.second << "')\n";
+		sqlfile << "('" << (*continents)[c].first << "','" << (*continents)[c].second << "')\n";
 	}
 	sqlfile << ";\n";
 
-	sqlfile << "CREATE TABLE countries (code VARCHAR(3), name VARCHAR(32), PRIMARY KEY(code));\n";
+	sqlfile << "CREATE TABLE countries (code VARCHAR(" << DBFieldLength::countryCode
+		<< "), name VARCHAR(" << DBFieldLength::countryName
+		<< "), PRIMARY KEY(code));\n";
 	sqlfile << "INSERT INTO countries VALUES\n";
 	first = 1;
-	for (std::pair<std::string,std::string> c : *countries)
+	for (size_t c = 0; c < countries->size()-1; c++)
 	{	if (!first) sqlfile << ',';
 		first = 0;
-		sqlfile << "('" << c.first << "','" << double_quotes(c.second) << "')\n";
+		sqlfile << "('" << (*countries)[c].first << "','" << double_quotes((*countries)[c].second) << "')\n";
 	}
 	sqlfile << ";\n";
 
-	sqlfile << "CREATE TABLE regions (code VARCHAR(8), name VARCHAR(48), country VARCHAR(3), continent VARCHAR(3), regiontype VARCHAR(32), ";
+	sqlfile << "CREATE TABLE regions (code VARCHAR(" << DBFieldLength::regionCode
+		<< "), name VARCHAR(" << DBFieldLength::regionName
+		<< "), country VARCHAR(" << DBFieldLength::countryCode
+		<< "), continent VARCHAR(" << DBFieldLength::continentCode
+		<< "), regiontype VARCHAR(" << DBFieldLength::regiontype
+		<< "), ";
 	sqlfile << "PRIMARY KEY(code), FOREIGN KEY (country) REFERENCES countries(code), FOREIGN KEY (continent) REFERENCES continents(code));\n";
 	sqlfile << "INSERT INTO regions VALUES\n";
 	first = 1;
-	for (Region &r : *all_regions)
+	for (size_t r = 0; r < all_regions->size()-1; r++)
 	{	if (!first) sqlfile << ',';
 		first = 0;
-		sqlfile << "('" << r.code << "','" + double_quotes(r.name) << "','" << r.country_code() + "','" + r.continent_code() + "','" << r.type << "')\n";
+		sqlfile << "('" << (*all_regions)[r]->code << "','" << double_quotes((*all_regions)[r]->name)
+			<< "','" << (*all_regions)[r]->country_code() << "','" << (*all_regions)[r]->continent_code()
+			<< "','" << (*all_regions)[r]->type << "')\n";
 	}
 	sqlfile << ";\n";
 
@@ -79,8 +90,12 @@ void sqlfile1
       #ifndef threading_enabled
 	std::cout << et->et() << "...systems" << std::endl;
       #endif
-	sqlfile << "CREATE TABLE systems (systemName VARCHAR(10), countryCode CHAR(3), fullName VARCHAR(60), color ";
-	sqlfile << "VARCHAR(16), level VARCHAR(10), tier INTEGER, csvOrder INTEGER, PRIMARY KEY(systemName));\n";
+	sqlfile << "CREATE TABLE systems (systemName VARCHAR(" << DBFieldLength::systemName
+		<< "), countryCode CHAR(" << DBFieldLength::countryCode
+		<< "), fullName VARCHAR(" << DBFieldLength::systemFullName
+		<< "), color VARCHAR(" << DBFieldLength::color
+		<< "), level VARCHAR(" << DBFieldLength::level
+		<< "), tier INTEGER, csvOrder INTEGER, PRIMARY KEY(systemName));\n";
 	sqlfile << "INSERT INTO systems VALUES\n";
 	first = 1;
 	unsigned int csvOrder = 0;
@@ -98,8 +113,14 @@ void sqlfile1
       #ifndef threading_enabled
 	std::cout << et->et() << "...routes" << std::endl;
       #endif
-	sqlfile << "CREATE TABLE routes (systemName VARCHAR(10), region VARCHAR(8), route VARCHAR(16), banner VARCHAR(6), abbrev VARCHAR(3), city VARCHAR(100), root ";
-	sqlfile << "VARCHAR(32), mileage FLOAT, rootOrder INTEGER, csvOrder INTEGER, PRIMARY KEY(root), FOREIGN KEY (systemName) REFERENCES systems(systemName));\n";
+	sqlfile << "CREATE TABLE routes (systemName VARCHAR(" << DBFieldLength::systemName
+		<< "), region VARCHAR(" << DBFieldLength::regionCode
+		<< "), route VARCHAR(" << DBFieldLength::route
+		<< "), banner VARCHAR(" << DBFieldLength::banner
+		<< "), abbrev VARCHAR(" << DBFieldLength::abbrev
+		<< "), city VARCHAR(" << DBFieldLength::city
+		<< "), root VARCHAR(" << DBFieldLength::root
+		<< "), mileage FLOAT, rootOrder INTEGER, csvOrder INTEGER, PRIMARY KEY(root), FOREIGN KEY (systemName) REFERENCES systems(systemName));\n";
 	sqlfile << "INSERT INTO routes VALUES\n";
 	first = 1;
 	csvOrder = 0;
@@ -116,8 +137,12 @@ void sqlfile1
       #ifndef threading_enabled
 	std::cout << et->et() << "...connectedRoutes" << std::endl;
       #endif
-	sqlfile << "CREATE TABLE connectedRoutes (systemName VARCHAR(10), route VARCHAR(16), banner VARCHAR(6), groupName VARCHAR(100), firstRoot ";
-	sqlfile << "VARCHAR(32), mileage FLOAT, csvOrder INTEGER, PRIMARY KEY(firstRoot), FOREIGN KEY (firstRoot) REFERENCES routes(root));\n";
+	sqlfile << "CREATE TABLE connectedRoutes (systemName VARCHAR(" << DBFieldLength::systemName
+		<< "), route VARCHAR(" << DBFieldLength::route
+		<< "), banner VARCHAR(" << DBFieldLength::banner
+		<< "), groupName VARCHAR(" << DBFieldLength::city
+		<< "), firstRoot VARCHAR(" << DBFieldLength::root
+		<< "), mileage FLOAT, csvOrder INTEGER, PRIMARY KEY(firstRoot), FOREIGN KEY (firstRoot) REFERENCES routes(root));\n";
 	sqlfile << "INSERT INTO connectedRoutes VALUES\n";
 	first = 1;
 	csvOrder = 0;
@@ -135,7 +160,9 @@ void sqlfile1
       #ifndef threading_enabled
 	std::cout << et->et() << "...connectedRouteRoots" << std::endl;
       #endif
-	sqlfile << "CREATE TABLE connectedRouteRoots (firstRoot VARCHAR(32), root VARCHAR(32), FOREIGN KEY (firstRoot) REFERENCES connectedRoutes(firstRoot));\n";
+	sqlfile << "CREATE TABLE connectedRouteRoots (firstRoot VARCHAR(" << DBFieldLength::root
+		<< "), root VARCHAR(" << DBFieldLength::root
+		<< "), FOREIGN KEY (firstRoot) REFERENCES connectedRoutes(firstRoot));\n";
 	first = 1;
 	for (HighwaySystem *h : *highway_systems)
 	  for (ConnectedRoute &cr : h->con_route_list)
@@ -143,7 +170,7 @@ void sqlfile1
 	    {	if (first) sqlfile << "INSERT INTO connectedRouteRoots VALUES\n";
 		else sqlfile << ',';
 		first = 0;
-		sqlfile << "('" << cr.roots[0]->root << "','" + cr.roots[i]->root + "')\n";
+		sqlfile << "('" << cr.roots[0]->root << "','" << cr.roots[i]->root << "')\n";
 	    }
 	sqlfile << ";\n";
 
@@ -151,8 +178,9 @@ void sqlfile1
       #ifndef threading_enabled
 	std::cout << et->et() << "...waypoints" << std::endl;
       #endif
-	sqlfile << "CREATE TABLE waypoints (pointId INTEGER, pointName VARCHAR(20), latitude DOUBLE, longitude DOUBLE, ";
-	sqlfile << "root VARCHAR(32), PRIMARY KEY(pointId), FOREIGN KEY (root) REFERENCES routes(root));\n";
+	sqlfile << "CREATE TABLE waypoints (pointId INTEGER, pointName VARCHAR(" << DBFieldLength::label
+		<< "), latitude DOUBLE, longitude DOUBLE, root VARCHAR(" << DBFieldLength::root
+		<< "), PRIMARY KEY(pointId), FOREIGN KEY (root) REFERENCES routes(root));\n";
 	unsigned int point_num = 0;
 	for (HighwaySystem *h : *highway_systems)
 	  for (Route &r : h->route_list)
@@ -176,8 +204,9 @@ void sqlfile1
       #ifndef threading_enabled
 	std::cout << et->et() << "...segments" << std::endl;
       #endif
-	sqlfile << "CREATE TABLE segments (segmentId INTEGER, waypoint1 INTEGER, waypoint2 INTEGER, root VARCHAR(32), PRIMARY KEY (segmentId), FOREIGN KEY (waypoint1) ";
-	sqlfile << "REFERENCES waypoints(pointId), FOREIGN KEY (waypoint2) REFERENCES waypoints(pointId), FOREIGN KEY (root) REFERENCES routes(root));\n";
+	sqlfile << "CREATE TABLE segments (segmentId INTEGER, waypoint1 INTEGER, waypoint2 INTEGER, root VARCHAR(" << DBFieldLength::root
+		<< "), PRIMARY KEY (segmentId), FOREIGN KEY (waypoint1) REFERENCES waypoints(pointId), "
+		<< "FOREIGN KEY (waypoint2) REFERENCES waypoints(pointId), FOREIGN KEY (root) REFERENCES routes(root));\n";
 	unsigned int segment_num = 0;
 	std::vector<std::string> clinched_list;
 	for (HighwaySystem *h : *highway_systems)
@@ -200,7 +229,8 @@ void sqlfile1
       #ifndef threading_enabled
 	std::cout << et->et() << "...clinched" << std::endl;
       #endif
-	sqlfile << "CREATE TABLE clinched (segmentId INTEGER, traveler VARCHAR(48), FOREIGN KEY (segmentId) REFERENCES segments(segmentId));\n";
+	sqlfile << "CREATE TABLE clinched (segmentId INTEGER, traveler VARCHAR(" << DBFieldLength::traveler
+		<< "), FOREIGN KEY (segmentId) REFERENCES segments(segmentId));\n";
 	for (size_t start = 0; start < clinched_list.size(); start += 10000)
 	{	sqlfile << "INSERT INTO clinched VALUES\n";
 		first = 1;
@@ -217,16 +247,17 @@ void sqlfile1
       #ifndef threading_enabled
 	std::cout << et->et() << "...overallMileageByRegion" << std::endl;
       #endif
-	sqlfile << "CREATE TABLE overallMileageByRegion (region VARCHAR(8), activeMileage FLOAT, activePreviewMileage FLOAT);\n";
+	sqlfile << "CREATE TABLE overallMileageByRegion (region VARCHAR(" << DBFieldLength::regionCode
+		<< "), activeMileage FLOAT, activePreviewMileage FLOAT);\n";
 	sqlfile << "INSERT INTO overallMileageByRegion VALUES\n";
 	first = 1;
-	for (Region &region : *all_regions)
-	{	if (region.active_only_mileage+region.active_preview_mileage == 0) continue;
+	for (Region* region : *all_regions)
+	{	if (region->active_only_mileage+region->active_preview_mileage == 0) continue;
 		if (!first) sqlfile << ',';
 		first = 0;
 		char fstr[65];
-		sprintf(fstr, "','%.15g','%.15g')\n", region.active_only_mileage, region.active_preview_mileage);
-		sqlfile << "('" << region.code << fstr;
+		sprintf(fstr, "','%.15g','%.15g')\n", region->active_only_mileage, region->active_preview_mileage);
+		sqlfile << "('" << region->code << fstr;
 	}
 	sqlfile << ";\n";
 
@@ -235,8 +266,9 @@ void sqlfile1
       #ifndef threading_enabled
 	std::cout << et->et() << "...systemMileageByRegion" << std::endl;
       #endif
-	sqlfile << "CREATE TABLE systemMileageByRegion (systemName VARCHAR(10), region VARCHAR(8), ";
-	sqlfile << "mileage FLOAT, FOREIGN KEY (systemName) REFERENCES systems(systemName));\n";
+	sqlfile << "CREATE TABLE systemMileageByRegion (systemName VARCHAR(" << DBFieldLength::systemName
+		<< "), region VARCHAR(" << DBFieldLength::regionCode
+		<< "), mileage FLOAT, FOREIGN KEY (systemName) REFERENCES systems(systemName));\n";
 	sqlfile << "INSERT INTO systemMileageByRegion VALUES\n";
 	first = 1;
 	for (HighwaySystem *h : *highway_systems)
@@ -255,7 +287,9 @@ void sqlfile1
       #ifndef threading_enabled
 	std::cout << et->et() << "...clinchedOverallMileageByRegion" << std::endl;
       #endif
-	sqlfile << "CREATE TABLE clinchedOverallMileageByRegion (region VARCHAR(8), traveler VARCHAR(48), activeMileage FLOAT, activePreviewMileage FLOAT);\n";
+	sqlfile << "CREATE TABLE clinchedOverallMileageByRegion (region VARCHAR(" << DBFieldLength::regionCode
+		<< "), traveler VARCHAR(" << DBFieldLength::traveler
+		<< "), activeMileage FLOAT, activePreviewMileage FLOAT);\n";
 	sqlfile << "INSERT INTO clinchedOverallMileageByRegion VALUES\n";
 	first = 1;
 	for (TravelerList *t : *traveler_lists)
@@ -276,8 +310,10 @@ void sqlfile1
       #ifndef threading_enabled
 	std::cout << et->et() << "...clinchedSystemMileageByRegion" << std::endl;
       #endif
-	sqlfile << "CREATE TABLE clinchedSystemMileageByRegion (systemName VARCHAR(10), region VARCHAR(8), traveler ";
-	sqlfile << "VARCHAR(48), mileage FLOAT, FOREIGN KEY (systemName) REFERENCES systems(systemName));\n";
+	sqlfile << "CREATE TABLE clinchedSystemMileageByRegion (systemName VARCHAR(" << DBFieldLength::systemName
+		<< "), region VARCHAR(" << DBFieldLength::regionCode
+		<< "), traveler VARCHAR(" << DBFieldLength::traveler
+		<< "), mileage FLOAT, FOREIGN KEY (systemName) REFERENCES systems(systemName));\n";
 	sqlfile << "INSERT INTO clinchedSystemMileageByRegion VALUES\n";
 	first = 1;
 	for (std::string &line : clin_db_val->csmbr_values)
@@ -292,8 +328,9 @@ void sqlfile1
       #ifndef threading_enabled
 	std::cout << et->et() << "...clinchedConnectedRoutes" << std::endl;
       #endif
-	sqlfile << "CREATE TABLE clinchedConnectedRoutes (route VARCHAR(32), traveler VARCHAR(48), mileage ";
-	sqlfile << "FLOAT, clinched BOOLEAN, FOREIGN KEY (route) REFERENCES connectedRoutes(firstRoot));\n";
+	sqlfile << "CREATE TABLE clinchedConnectedRoutes (route VARCHAR(" << DBFieldLength::root
+		<< "), traveler VARCHAR(" << DBFieldLength::traveler
+		<< "), mileage FLOAT, clinched BOOLEAN, FOREIGN KEY (route) REFERENCES connectedRoutes(firstRoot));\n";
 	for (size_t start = 0; start < clin_db_val->ccr_values.size(); start += 10000)
 	{	sqlfile << "INSERT INTO clinchedConnectedRoutes VALUES\n";
 		first = 1;
@@ -309,7 +346,9 @@ void sqlfile1
       #ifndef threading_enabled
 	std::cout << et->et() << "...clinchedRoutes" << std::endl;
       #endif
-	sqlfile << "CREATE TABLE clinchedRoutes (route VARCHAR(32), traveler VARCHAR(48), mileage FLOAT, clinched BOOLEAN, FOREIGN KEY (route) REFERENCES routes(root));\n";
+	sqlfile << "CREATE TABLE clinchedRoutes (route VARCHAR(" << DBFieldLength::root
+		<< "), traveler VARCHAR(" << DBFieldLength::traveler
+		<< "), mileage FLOAT, clinched BOOLEAN, FOREIGN KEY (route) REFERENCES routes(root));\n";
 	for (size_t start = 0; start < clin_db_val->cr_values.size(); start += 10000)
 	{	sqlfile << "INSERT INTO clinchedRoutes VALUES\n";
 		first = 1;
@@ -325,7 +364,12 @@ void sqlfile1
       #ifndef threading_enabled
 	std::cout << et->et() << "...updates" << std::endl;
       #endif
-	sqlfile << "CREATE TABLE updates (date VARCHAR(10), region VARCHAR(60), route VARCHAR(80), root VARCHAR(32), description VARCHAR(1024));\n";
+	sqlfile << "CREATE TABLE updates (date VARCHAR(" << DBFieldLength::date
+		<< "), region VARCHAR(" << DBFieldLength::countryRegion
+		<< "), route VARCHAR(" << DBFieldLength::routeLongName
+		<< "), root VARCHAR(" << DBFieldLength::root
+		<< "), description VARCHAR(" << DBFieldLength::updateText
+		<< "));\n";
 	sqlfile << "INSERT INTO updates VALUES\n";
 	first = 1;
 	for (std::array<std::string,5> &update : *updates)
@@ -340,7 +384,12 @@ void sqlfile1
       #ifndef threading_enabled
 	std::cout << et->et() << "...systemUpdates" << std::endl;
       #endif
-	sqlfile << "CREATE TABLE systemUpdates (date VARCHAR(10), region VARCHAR(48), systemName VARCHAR(10), description VARCHAR(128), statusChange VARCHAR(16));\n";
+	sqlfile << "CREATE TABLE systemUpdates (date VARCHAR(" << DBFieldLength::date
+		<< "), region VARCHAR(" << DBFieldLength::countryRegion
+		<< "), systemName VARCHAR(" << DBFieldLength::systemName
+		<< "), description VARCHAR(" << DBFieldLength::systemFullName
+		<< "), statusChange VARCHAR(" << DBFieldLength::statusChange
+		<< "));\n";
 	sqlfile << "INSERT INTO systemUpdates VALUES\n";
 	first = 1;
 	for (std::array<std::string,5> &systemupdate : *systemupdates)
@@ -369,8 +418,13 @@ void sqlfile2
       #ifndef threading_enabled
 	std::cout << et->et() << "...datacheckErrors" << std::endl;
       #endif
-	sqlfile << "CREATE TABLE datacheckErrors (route VARCHAR(32), label1 VARCHAR(50), label2 VARCHAR(20), label3 VARCHAR(20), ";
-	sqlfile << "code VARCHAR(22), value VARCHAR(32), falsePositive BOOLEAN, FOREIGN KEY (route) REFERENCES routes(root));\n";
+	sqlfile << "CREATE TABLE datacheckErrors (route VARCHAR(" << DBFieldLength::root
+		<< "), label1 VARCHAR(" << DBFieldLength::label
+		<< "), label2 VARCHAR(" << DBFieldLength::label
+		<< "), label3 VARCHAR(" << DBFieldLength::label
+		<< "), code VARCHAR(" << DBFieldLength::dcErrCode
+		<< "), value VARCHAR(" << DBFieldLength::dcErrValue
+		<< "), falsePositive BOOLEAN, FOREIGN KEY (route) REFERENCES routes(root));\n";
 	if (datacheckerrors->entries.size())
 	{	sqlfile << "INSERT INTO datacheckErrors VALUES\n";
 		bool first = 1;
@@ -392,7 +446,9 @@ void sqlfile2
 	      #endif
 		sqlfile << "DROP TABLE IF EXISTS graphs;\n";
 		sqlfile << "DROP TABLE IF EXISTS graphTypes;\n";
-		sqlfile << "CREATE TABLE graphTypes (category VARCHAR(12), descr VARCHAR(100), longDescr TEXT, PRIMARY KEY(category));\n";
+		sqlfile << "CREATE TABLE graphTypes (category VARCHAR(" << DBFieldLength::graphCategory
+			<< "), descr VARCHAR(" << DBFieldLength::graphDescr
+			<< "), longDescr TEXT, PRIMARY KEY(category));\n";
 		if (graph_types->size())
 		{	sqlfile << "INSERT INTO graphTypes VALUES\n";
 			bool first = 1;
@@ -403,8 +459,12 @@ void sqlfile2
 			}
 			sqlfile << ";\n";
 		}
-		sqlfile << "CREATE TABLE graphs (filename VARCHAR(32), descr VARCHAR(100), vertices INTEGER, edges INTEGER, travelers INTEGER, ";
-		sqlfile << "format VARCHAR(10), category VARCHAR(12), FOREIGN KEY (category) REFERENCES graphTypes(category));\n";
+		sqlfile << "CREATE TABLE graphs (filename VARCHAR(" << DBFieldLength::graphFilename
+			<< "), descr VARCHAR(" << DBFieldLength::graphDescr
+			<< "), vertices INTEGER, edges INTEGER, travelers INTEGER, "
+			<< "format VARCHAR(" << DBFieldLength::graphFormat
+			<< "), category VARCHAR(" << DBFieldLength::graphCategory
+			<< "), FOREIGN KEY (category) REFERENCES graphTypes(category));\n";
 		if (graph_vector->size())
 		{	sqlfile << "INSERT INTO graphs VALUES\n";
 			for (size_t g = 0; g < graph_vector->size(); g++)

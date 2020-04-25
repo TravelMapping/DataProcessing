@@ -22,7 +22,7 @@ Waypoint::Waypoint(char *line, Route *rte, std::mutex *strtok_mtx, DatacheckEntr
 	// parse WPT line
 	strtok_mtx->lock();
 	for (char *token = strtok(line, " "); token; token = strtok(0, " "))
-		alt_labels.push_back(token);	// get all tokens & put into label deque
+		alt_labels.emplace_back(token);	// get all tokens & put into label deque
 	strtok_mtx->unlock();
 
 	// We know alt_labels will have at least one element, because if the WPT line is
@@ -44,74 +44,35 @@ Waypoint::Waypoint(char *line, Route *rte, std::mutex *strtok_mtx, DatacheckEntr
 		lat = 0;	lng = 0;	return;
 	}
 	bool valid_coords = 1;
-
-	// make sure lat= string is valid
-	size_t point_count = 0;
-	for (const char *c = URL.data()+latBeg; *c != '&' && *c != 0; c++)
-	{	// check for multiple decimal points
-		if (*c == '.')
-		{	point_count += 1;
-			if (point_count > 1)
-			{	//std::cout << ("\nWARNING: Malformed URL in " + route->root + ", line: ") + line << std::endl;
-				size_t ampersand = URL.find('&', latBeg);
-				datacheckerrors->add(route, label, "", "", "MALFORMED_LAT",
-				  (ampersand == -1) ? URL.data()+latBeg : URL.substr(latBeg, ampersand-latBeg));
-				lat = 0;	lng = 0;	valid_coords = 0;	break;
-			}
+	if (!valid_num_str(URL.data()+latBeg, '&'))
+	{	size_t ampersand = URL.find('&', latBeg);
+		std::string lat_string = (ampersand == -1) ? URL.data()+latBeg : URL.substr(latBeg, ampersand-latBeg);
+		if (lat_string.size() > DBFieldLength::dcErrValue)
+		{	lat_string = lat_string.substr(0, DBFieldLength::dcErrValue-3);
+			while (lat_string.back() < 0)	lat_string.erase(lat_string.end()-1);
+			lat_string += "...";
 		}
-		// check for minus sign not at beginning
-		if (*c == '-' and c > URL.data()+latBeg)
-		{	//std::cout << ("\nWARNING: Malformed URL in " + route->root + ", line: ") + line << std::endl;
-			size_t ampersand = URL.find('&', latBeg);
-			datacheckerrors->add(route, label, "", "", "MALFORMED_LAT",
-			  (ampersand == -1) ? URL.data()+latBeg : URL.substr(latBeg, ampersand-latBeg));
-			lat = 0;	lng = 0;	valid_coords = 0;	break;
-		}
-		// check for invalid characters
-		if (!strchr("-.0123456789", *c))
-		{	//std::cout << ("\nWARNING: Malformed URL in " + route->root + ", line: ") + line << std::endl;
-			size_t ampersand = URL.find('&', latBeg);
-			datacheckerrors->add(route, label, "", "", "MALFORMED_LAT",
-			  (ampersand == -1) ? URL.data()+latBeg : URL.substr(latBeg, ampersand-latBeg));
-			lat = 0;	lng = 0;	valid_coords = 0;	break;
-		}
+		datacheckerrors->add(route, label, "", "", "MALFORMED_LAT", lat_string);
+		valid_coords = 0;
 	}
-	// make sure lon= string is valid
-	point_count = 0;
-	for (const char *c = URL.data()+lonBeg; *c != '&' && *c != 0; c++)
-	{	// check for multiple decimal points
-		if (*c == '.')
-		{	point_count += 1;
-			if (point_count > 1)
-			{	//std::cout << ("\nWARNING: Malformed URL in " + route->root + ", line: ") + line << std::endl;
-				size_t ampersand = URL.find('&', lonBeg);
-				datacheckerrors->add(route, label, "", "", "MALFORMED_LON",
-				  (ampersand == -1) ? URL.data()+lonBeg : URL.substr(lonBeg, ampersand-lonBeg));
-				lat = 0;	lng = 0;	valid_coords = 0;	break;
-			}
+	if (!valid_num_str(URL.data()+lonBeg, '&'))
+	{	size_t ampersand = URL.find('&', lonBeg);
+		std::string lng_string = (ampersand == -1) ? URL.data()+lonBeg : URL.substr(lonBeg, ampersand-lonBeg);
+		if (lng_string.size() > DBFieldLength::dcErrValue)
+		{	lng_string = lng_string.substr(0, DBFieldLength::dcErrValue-3);
+			while (lng_string.back() < 0)	lng_string.erase(lng_string.end()-1);
+			lng_string += "...";
 		}
-		// check for minus sign not at beginning
-		if (*c == '-' and c > URL.data()+lonBeg)
-		{	//std::cout << ("\nWARNING: Malformed URL in " + route->root + ", line: ") + line << std::endl;
-			size_t ampersand = URL.find('&', lonBeg);
-			datacheckerrors->add(route, label, "", "", "MALFORMED_LON",
-			  (ampersand == -1) ? URL.data()+lonBeg : URL.substr(lonBeg, ampersand-lonBeg));
-			lat = 0;	lng = 0;	valid_coords = 0;	break;
-		}
-		// check for invalid characters
-		if (!strchr("-.0123456789", *c))
-		{	//std::cout << ("\nWARNING: Malformed URL in " + route->root + ", line: ") + line << std::endl;
-			size_t ampersand = URL.find('&', lonBeg);
-			datacheckerrors->add(route, label, "", "", "MALFORMED_LON",
-			  (ampersand == -1) ? URL.data()+lonBeg : URL.substr(lonBeg, ampersand-lonBeg));
-			lat = 0;	lng = 0;	valid_coords = 0;	break;
-		}
+		datacheckerrors->add(route, label, "", "", "MALFORMED_LON", lng_string);
+		valid_coords = 0;
 	}
-
 	if (valid_coords)
-	{	lat = strtod(&URL[latBeg], 0);
+	     {	lat = strtod(&URL[latBeg], 0);
 		lng = strtod(&URL[lonBeg], 0);
-	}
+	     }
+	else {	lat = 0;
+		lng = 0;
+	     }
 }
 
 std::string Waypoint::str()
@@ -376,6 +337,32 @@ inline void Waypoint::duplicate_coords(DatacheckEntryList *datacheckerrors, std:
 	  }
 }
 
+inline bool Waypoint::label_too_long(DatacheckEntryList *datacheckerrors)
+{	// label longer than the DB can store
+	if (label.size() > DBFieldLength::label)
+	{	// save the excess beyond what can fit in a DB field, to put in the info/value column
+		std::string excess = label.substr(DBFieldLength::label-3);
+		// strip any partial multi-byte characters off the beginning
+		while (excess.front() < 0)	excess.erase(excess.begin());
+		// if it's too long for the info/value column,
+		if (excess.size() > DBFieldLength::dcErrValue-3)
+		{	// cut it down to what will fit,
+			excess = excess.substr(0, DBFieldLength::dcErrValue-6);
+			// strip any partial multi-byte characters off the end,
+			while (excess.back() < 0)	excess.erase(excess.end()-1);
+			// and append "..."
+			excess += "...";
+		}
+		// now truncate the label itself
+		label = label.substr(0, DBFieldLength::label-3);
+		// and strip any partial multi-byte characters off the end
+		while (label.back() < 0)	label.erase(label.end()-1);
+		datacheckerrors->add(route, label+"...", "", "", "LABEL_TOO_LONG", "..."+excess);
+		return 1;
+	}
+	return 0;
+}
+
 inline void Waypoint::out_of_bounds(DatacheckEntryList *datacheckerrors, char *fstr)
 {	// out-of-bounds coords
 	if (lat > 90 || lat < -90 || lng > 180 || lng < -180)
@@ -442,7 +429,7 @@ inline void Waypoint::label_invalid_char(DatacheckEntryList *datacheckerrors, st
 }
 
 inline void Waypoint::label_invalid_ends(DatacheckEntryList *datacheckerrors)
-{	// look for labels with invalid characters
+{	// look for labels with invalid first or final characters
 	const char *c = label.data();
 	while (*c == '*') c++;
 	if (*c == '_' || *c == '/' || *c == '(')

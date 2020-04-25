@@ -1,5 +1,3 @@
-std::mutex Route::liu_mtx;
-std::mutex Route::ual_mtx;
 std::mutex Route::awf_mtx;
 
 Route::Route(std::string &line, HighwaySystem *sys, ErrorList &el, std::unordered_map<std::string, Region*> &region_hash)
@@ -7,101 +5,59 @@ Route::Route(std::string &line, HighwaySystem *sys, ErrorList &el, std::unordere
 	but do not yet read in waypoint file */
 	con_route = 0;
 	mileage = 0;
-	rootOrder = -1;  // order within connected route
-	if (line.back() == 0x0D) line.erase(line.end()-1);	// trim DOS newlines
+	rootOrder = -1; // order within connected route
+	region = 0;	// if this stays 0, setup has failed due to bad .csv data
 
+	// parse chopped routes csv line
+	size_t NumFields = 8;
+	std::string sys_str, arn_str;
+	std::string* fields[8] = {&sys_str, &rg_str, &route, &banner, &abbrev, &city, &root, &arn_str};
+	split(line, fields, NumFields, ';');
+	if (NumFields != 8)
+	{	el.add_error("Could not parse " + sys->systemname
+			   + ".csv line: [" + line + "], expected 8 fields, found " + std::to_string(NumFields));
+		root.clear(); // in case it was filled by a line with 7 or 9+ fields
+		return;
+	}
 	// system
-	size_t left = line.find(';');
-	if (left == std::string::npos)
-	{	el.add_error("Could not parse " + system->systemname + ".csv line: [" + line + "], expected 8 fields, found 1");
-		return;
-	}
 	system = sys;
-	if (system->systemname != line.substr(0,left))
-	    {	el.add_error("System mismatch parsing " + system->systemname + ".csv line [" + line + "], expected " + system->systemname);
-		return;
-	    }
-
+	if (system->systemname != sys_str)
+		el.add_error("System mismatch parsing " + system->systemname
+			   + ".csv line [" + line + "], expected " + system->systemname);
 	// region
-	size_t right = line.find(';', left+1);
-	if (right == std::string::npos)
-	{	el.add_error("Could not parse " + system->systemname + ".csv line: [" + line + "], expected 8 fields, found 2");
-		return;
-	}
-	try { region = region_hash.at(line.substr(left+1, right-left-1));
+	try {	region = region_hash.at(rg_str);
 	    }
 	catch (const std::out_of_range& oor)
-	    {	el.add_error("Unrecognized region in " + system->systemname + ".csv line: [" + line + "], " + line.substr(left+1, right-left-1));
-		region = 0;
-		return;
+	    {	el.add_error("Unrecognized region in " + system->systemname
+			   + ".csv line: " + line);
+		region = region_hash.at("error");
 	    }
-
 	// route
-	left = right;
-	right = line.find(';', left+1);
-	if (right == std::string::npos)
-	{	el.add_error("Could not parse " + system->systemname + ".csv line: [" + line + "], expected 8 fields, found 3");
-		return;
-	}
-	route = line.substr(left+1, right-left-1);
-
+	if (route.size() > DBFieldLength::route)
+		el.add_error("Route > " + std::to_string(DBFieldLength::route)
+			   + " bytes in " + system->systemname + ".csv line: " + line);
 	// banner
-	left = right;
-	right = line.find(';', left+1);
-	if (right == std::string::npos)
-	{	el.add_error("Could not parse " + system->systemname + ".csv line: [" + line + "], expected 8 fields, found 4");
-		return;
-	}
-	banner = line.substr(left+1, right-left-1);
-	if (banner.size() > 6)
-	    {	el.add_error("Banner >6 characters in " + system->systemname + ".csv line: [" + line + "], " + banner);
-		return;
-	    }
-
+	if (banner.size() > DBFieldLength::banner)
+		el.add_error("Banner > " + std::to_string(DBFieldLength::banner)
+			   + " bytes in " + system->systemname + ".csv line: " + line);
 	// abbrev
-	left = right;
-	right = line.find(';', left+1);
-	if (right == std::string::npos)
-	{	el.add_error("Could not parse " + system->systemname + ".csv line: [" + line + "], expected 8 fields, found 5");
-		return;
-	}
-	abbrev = line.substr(left+1, right-left-1);
-	if (abbrev.size() > 3)
-	    {	el.add_error("Abbrev >3 characters in " + system->systemname + ".csv line: [" + line + "], " + abbrev);
-		return;
-	    }
-
+	if (abbrev.size() > DBFieldLength::abbrev)
+		el.add_error("Abbrev > " + std::to_string(DBFieldLength::abbrev)
+			   + " bytes in " + system->systemname + ".csv line: " + line);
 	// city
-	left = right;
-	right = line.find(';', left+1);
-	if (right == std::string::npos)
-	{	el.add_error("Could not parse " + system->systemname + ".csv line: [" + line + "], expected 8 fields, found 6");
-		return;
-	}
-	city = line.substr(left+1, right-left-1);
-
+	if (city.size() > DBFieldLength::city)
+		el.add_error("City > " + std::to_string(DBFieldLength::city)
+			   + " bytes in " + system->systemname + ".csv line: " + line);
 	// root
-	left = right;
-	right = line.find(';', left+1);
-	if (right == std::string::npos)
-	{	el.add_error("Could not parse " + system->systemname + ".csv line: [" + line + "], expected 8 fields, found 7");
-		return;
-	}
-	root = line.substr(left+1, right-left-1);
-
+	if (root.size() > DBFieldLength::root)
+		el.add_error("Root > " + std::to_string(DBFieldLength::root)
+			   + " bytes in " + system->systemname + ".csv line: " + line);
 	// alt_route_names
-	left = right;
-	right = line.find(';', left+1);
-	if (right != std::string::npos)
-	{	el.add_error("Could not parse " + system->systemname + ".csv line: [" + line + "], expected 8 fields, found more");
-		return;
+	size_t l = 0;
+	for (size_t r = 0; r != -1; l = r+1)
+	{	r = arn_str.find(',', l);
+		alt_route_names.emplace_back(arn_str, l, r-l);
 	}
-	char *arnstr = new char[line.size()-left];
-	strcpy(arnstr, line.substr(left+1).data());
-	for (char *token = strtok(arnstr, ","); token; token = strtok(0, ","))
-		alt_route_names.push_back(token);
-	delete[] arnstr;
-	//yDEBUG*/ std::cout << "returning from Route ctor" << endl;
 }
 
 std::string Route::str()
@@ -151,7 +107,7 @@ std::string Route::csv_line()
 
 std::string Route::readable_name()
 {	/* return a string for a human-readable route name */
-	return region->code + " " + route + banner + abbrev;
+	return rg_str + " " + route + banner + abbrev;
 }
 
 std::string Route::list_entry_name()
@@ -174,11 +130,6 @@ double Route::clinched_by_traveler(TravelerList *t)
 		if (t_found != s->clinched_by.end()) miles += s->length;
 	}
 	return miles;
-}
-
-bool Route::is_valid()
-{	if (!region || route.empty() || root.empty() ) return 0;
-	return 1;
 }
 
 std::string Route::list_line(int beg, int end)

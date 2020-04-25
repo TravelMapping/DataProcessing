@@ -5,7 +5,7 @@ class HighwaySystem
 
 	See Route for information about the fields of a .csv file
 
-	With the implementation of three tiers of systems (active,
+	With the implementation of three levels of systems (active,
 	preview, devel), added parameter and field here, to be stored in
 	DB
 
@@ -21,38 +21,58 @@ class HighwaySystem
 	std::pair<std::string, std::string> *country;
 	std::string fullname;
 	std::string color;
-	unsigned short tier;
+	short tier;
 	char level; // 'a' for active, 'p' for preview, 'd' for devel
 
 	std::list<Route> route_list;
 	std::list<ConnectedRoute> con_route_list;
 	std::unordered_map<Region*, double> mileage_by_region;
 	std::unordered_set<HGVertex*> vertices;
+	bool is_valid;
 
 	HighwaySystem(std::string &line, ErrorList &el, std::string path, std::string &systemsfile,
-		      std::list<std::pair<std::string,std::string>> &countries,
+		      std::vector<std::pair<std::string,std::string>> &countries,
 		      std::unordered_map<std::string, Region*> &region_hash)
-	{	char *c_country = 0;
-		std::ifstream file;
-
+	{	std::ifstream file;
 		// parse systems.csv line
-		if (line.back() == 0x0D) line.erase(line.end()-1);	// trim DOS newlines
-		char *c_line = new char[line.size()+1];
-		strcpy(c_line, line.data());
-		systemname = strtok(c_line, ";");
-		c_country = strtok(0, ";");
-		fullname = strtok(0, ";");
-		color = strtok(0, ";");
-		tier = *strtok(0, ";")-48;
-		level = *strtok(0, ";");
-		if (tier > 5 || tier < 1 || color.empty() || fullname.empty() || !c_country || systemname.empty() || invalid_level())
-		{	el.add_error("Could not parse "+systemsfile+" line: "+line);
-			delete[] c_line;
+		size_t NumFields = 6;
+		std::string country_str, tier_str, level_str;
+		std::string* fields[6] = {&systemname, &country_str, &fullname, &color, &tier_str, &level_str};
+		split(line, fields, NumFields, ';');
+		if (NumFields != 6)
+		{	el.add_error("Could not parse " + systemsfile
+				   + " line: [" + line + "], expected 6 fields, found " + std::to_string(NumFields));
+			is_valid = 0;
 			return;
 		}
-		country = country_or_continent_by_code(c_country, countries);
-		if (!country) el.add_error("Could not find country matching " + systemsfile + " line: " + line);
-		delete[] c_line;
+		is_valid = 1;
+		// System
+		if (systemname.size() > DBFieldLength::systemName)
+			el.add_error("System code > " + std::to_string(DBFieldLength::systemName)
+				   + " bytes in " + systemsfile + " line " + line);
+		// CountryCode
+		country = country_or_continent_by_code(country_str, countries);
+		if (!country)
+		{	el.add_error("Could not find country matching " + systemsfile + " line: " + line);
+			country = country_or_continent_by_code("error", countries);
+		}
+		// Name
+		if (fullname.size() > DBFieldLength::systemFullName)
+			el.add_error("System name > " + std::to_string(DBFieldLength::systemFullName)
+				   + " bytes in " + systemsfile + " line " + line);
+		// Color
+		if (color.size() > DBFieldLength::color)
+			el.add_error("Color > " + std::to_string(DBFieldLength::color)
+				   + " bytes in " + systemsfile + " line " + line);
+		// Tier
+		char *endptr;
+		tier = strtol(tier_str.data(), &endptr, 10);
+		if (*endptr || tier < 1)
+			el.add_error("Invalid tier in " + systemsfile + " line " + line);
+		// Level
+		level = level_str[0];
+		if (level_str != "active" && level_str != "preview" && level_str != "devel")
+			el.add_error("Unrecognized level in " + systemsfile + " line: " + line);
 
 		// read chopped routes CSV
 		file.open(path+"/"+systemname+".csv");
@@ -60,8 +80,12 @@ class HighwaySystem
 		else {	getline(file, line); // ignore header line
 			while(getline(file, line))
 			{	if (line.back() == 0x0D) line.erase(line.end()-1);	// trim DOS newlines
+				if (line.empty()) continue;
 				route_list.emplace_back(line, this, el, region_hash);
-				if (!route_list.back().is_valid()) route_list.pop_back();
+				if (route_list.back().root.empty())
+				{	el.add_error("Unable to find root in " + systemname +".csv line: ["+line+"]");
+					route_list.pop_back();
+				}
 			}
 		     }
 		file.close();
@@ -72,20 +96,11 @@ class HighwaySystem
 		else {	getline(file, line); // ignore header line
 			while(getline(file, line))
 			{	if (line.back() == 0x0D) line.erase(line.end()-1);	// trim DOS newlines
+				if (line.empty()) continue;
 				con_route_list.emplace_back(line, this, el, route_list);
 			}
 		     }
 		file.close();
-	}
-
-	bool is_valid()
-	{	if (invalid_level()) return 0;
-		if (tier > 5 || tier < 1 || color.empty() || fullname.empty() || !country || systemname.empty()) return 0;
-		return 1;
-	}
-
-	bool invalid_level()
-	{	return level != 'a' && level != 'p' && level != 'd';
 	}
 
 	/* Return whether this is an active system */

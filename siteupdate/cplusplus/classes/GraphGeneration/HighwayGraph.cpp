@@ -82,7 +82,7 @@ class HighwayGraph
 		counter = 0;
 		std::cout << et.et() + "Creating edges" << std::flush;
 		for (HighwaySystem *h : highway_systems)
-		{	if (h->devel()) continue;
+		{	if (!h->active_or_preview()) continue;
 			if (counter % 6 == 0) std::cout << '.' << std::flush;
 			counter++;
 			for (Route &r : h->route_list)
