@@ -1,5 +1,3 @@
-std::mutex Route::liu_mtx;
-std::mutex Route::ual_mtx;
 std::mutex Route::awf_mtx;
 
 Route::Route(std::string &line, HighwaySystem *sys, ErrorList &el, std::unordered_map<std::string, Region*> &region_hash)
