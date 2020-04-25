@@ -335,7 +335,7 @@ int main(int argc, char *argv[])
 	thread **thr = new thread*[args.numthreads];
 	for (unsigned int t = 0; t < args.numthreads; t++)
 		thr[t] = new thread(ReadWptThread, t, &highway_systems, &hs_it, &list_mtx, args.highwaydatapath+"/hwy_data",
-				    &el, &all_wpt_files, &all_waypoints, &strtok_mtx, datacheckerrors);
+				    &el, &all_wpt_files, &all_waypoints, datacheckerrors);
 	for (unsigned int t = 0; t < args.numthreads; t++)
 		thr[t]->join();
 	for (unsigned int t = 0; t < args.numthreads; t++)
@@ -344,7 +344,7 @@ int main(int argc, char *argv[])
 	for (HighwaySystem* h : highway_systems)
 	{	std::cout << h->systemname << std::flush;
 		for (std::list<Route>::iterator r = h->route_list.begin(); r != h->route_list.end(); r++)
-		{	r->read_wpt(&all_waypoints, &el, args.highwaydatapath+"/hwy_data", &strtok_mtx, datacheckerrors, &all_wpt_files);
+		{	r->read_wpt(&all_waypoints, &el, args.highwaydatapath+"/hwy_data", datacheckerrors, &all_wpt_files);
 		}
 		std::cout << "!" << std::endl;
 	}

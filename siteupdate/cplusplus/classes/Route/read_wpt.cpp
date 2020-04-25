@@ -1,5 +1,5 @@
 void Route::read_wpt
-(	WaypointQuadtree *all_waypoints, ErrorList *el, std::string path, std::mutex *strtok_mtx,
+(	WaypointQuadtree *all_waypoints, ErrorList *el, std::string path,
 	DatacheckEntryList *datacheckerrors, std::unordered_set<std::string> *all_wpt_files
 )
 {	/* read data into the Route's waypoint list from a .wpt file */
@@ -23,9 +23,18 @@ void Route::read_wpt
 	file.read(wptdata, wptdatasize);
 	wptdata[wptdatasize] = 0; // add null terminator
 	file.close();
-	strtok_mtx->lock();
-	for (char *token = strtok(wptdata, "\r\n"); token; token = strtok(0, "\r\n") ) lines.emplace_back(token);
-	strtok_mtx->unlock();
+
+	// split file into lines
+	size_t spn = 0;
+	for (char* c = wptdata; *c; c += spn)
+	{	spn = strcspn(c, "\n\r");
+		while (c[spn] == '\n' || c[spn] == '\r')
+		{	c[spn] = 0;
+			spn++;
+		}
+		lines.emplace_back(c);
+	}
+
 	lines.push_back(wptdata+wptdatasize+1); // add a dummy "past-the-end" element to make lines[l+1]-2 work
 	// set to be used per-route to find label duplicates
 	std::unordered_set<std::string> all_route_labels;
@@ -45,7 +54,7 @@ void Route::read_wpt
 			endchar--;
 		}
 		if (lines[l][0] == 0) continue;
-		Waypoint *w = new Waypoint(lines[l], this, strtok_mtx, datacheckerrors);
+		Waypoint *w = new Waypoint(lines[l], this, datacheckerrors);
 			      // deleted on termination of program, or immediately below if invalid
 		bool malformed_url = w->lat == 0 && w->lng == 0;
 		bool label_too_long = w->label_too_long(datacheckerrors);

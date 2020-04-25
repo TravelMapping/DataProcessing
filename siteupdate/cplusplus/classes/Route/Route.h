@@ -61,7 +61,7 @@ class Route
 	Route(std::string &, HighwaySystem *, ErrorList &, std::unordered_map<std::string, Region*> &);
 
 	std::string str();
-	void read_wpt(WaypointQuadtree *, ErrorList *, std::string, std::mutex *, DatacheckEntryList *, std::unordered_set<std::string> *);
+	void read_wpt(WaypointQuadtree *, ErrorList *, std::string, DatacheckEntryList *, std::unordered_set<std::string> *);
 	void print_route();
 	HighwaySegment* find_segment_by_waypoints(Waypoint*, Waypoint*);
 	std::string chopped_rtes_line();
