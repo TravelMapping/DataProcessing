@@ -3600,7 +3600,7 @@ for h in highway_systems:
             if r.point_list[0].is_hidden:
                 datacheckerrors.append(DatacheckEntry(r,[r.point_list[0].label],'HIDDEN_TERMINUS'))
             if r.point_list[-1].is_hidden:
-                datacheckerrors.append(DatacheckEntry(r,[r.point_list[len(r.point_list)-1].label],'HIDDEN_TERMINUS'))
+                datacheckerrors.append(DatacheckEntry(r,[r.point_list[-1].label],'HIDDEN_TERMINUS'))
 
         for w in r.point_list:
             # duplicate labels
