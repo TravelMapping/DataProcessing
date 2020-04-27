@@ -2493,11 +2493,11 @@ else:
 # that do not have a .csv file entry that causes them to be
 # read into the data
 print(et.et() + "Finding all .wpt files. ",end="",flush=True)
-all_wpt_files = []
+all_wpt_files = set()
 for dir, sub, files in os.walk(args.highwaydatapath+"/hwy_data"):
     for file in files:
         if file.endswith('.wpt') and '_boundaries' not in dir:
-            all_wpt_files.append(dir+"/"+file)
+            all_wpt_files.add(dir+"/"+file)
 print(str(len(all_wpt_files)) + " files found.")
 
 # For finding colocated Waypoints and concurrent segments, we have
@@ -3600,7 +3600,7 @@ for h in highway_systems:
             if r.point_list[0].is_hidden:
                 datacheckerrors.append(DatacheckEntry(r,[r.point_list[0].label],'HIDDEN_TERMINUS'))
             if r.point_list[-1].is_hidden:
-                datacheckerrors.append(DatacheckEntry(r,[r.point_list[len(r.point_list)-1].label],'HIDDEN_TERMINUS'))
+                datacheckerrors.append(DatacheckEntry(r,[r.point_list[-1].label],'HIDDEN_TERMINUS'))
 
         for w in r.point_list:
             # duplicate labels

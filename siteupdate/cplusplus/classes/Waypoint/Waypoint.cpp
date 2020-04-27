@@ -15,15 +15,20 @@ bool waypoint_simplification_sort(Waypoint *w1, Waypoint *w2)
 
 const double Waypoint::pi = 3.141592653589793238;
 
-Waypoint::Waypoint(char *line, Route *rte, std::mutex *strtok_mtx, DatacheckEntryList *datacheckerrors)
+Waypoint::Waypoint(char *line, Route *rte, DatacheckEntryList *datacheckerrors)
 {	/* initialize object from a .wpt file line */
 	route = rte;
 
 	// parse WPT line
-	strtok_mtx->lock();
-	for (char *token = strtok(line, " "); token; token = strtok(0, " "))
-		alt_labels.emplace_back(token);	// get all tokens & put into label deque
-	strtok_mtx->unlock();
+	size_t spn = 0;
+	for (char* c = line; *c; c += spn)
+	{	spn = strcspn(c, " ");
+		while (c[spn] == ' ')
+		{	c[spn] = 0;
+			spn++;
+		}
+		alt_labels.emplace_back(c);
+	}
 
 	// We know alt_labels will have at least one element, because if the WPT line is
 	// blank or contains only spaces, Route::read_wpt will not call this constructor.

@@ -22,7 +22,7 @@ class Waypoint
 	bool is_hidden;
 	static const double pi;
 
-	Waypoint(char *, Route *, std::mutex *, DatacheckEntryList *);
+	Waypoint(char *, Route *, DatacheckEntryList *);
 
 	std::string str();
 	std::string csv_line(unsigned int);
