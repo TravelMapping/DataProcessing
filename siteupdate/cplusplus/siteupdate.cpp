@@ -25,6 +25,7 @@ class DatacheckEntryList;
 class HighwayGraph;
 class HGVertex;
 class HGEdge;
+#define pi 3.141592653589793238
 #include <chrono>
 #include <cmath>
 #include <cstring>
@@ -255,65 +256,6 @@ int main(int argc, char *argv[])
 	DatacheckEntryList *datacheckerrors = new DatacheckEntryList;
 					      // deleted on termination of program
 
-	// check for duplicate .list names
-	// and duplicate root entries among Route and ConnectedRoute
-	// data in all highway systems
-    {	cout << et.et() << "Checking for duplicate list names in routes, roots in routes and connected routes." << endl;
-	unordered_set<string> roots, list_names, duplicate_list_names;
-	unordered_set<Route*> con_roots;
-
-	for (HighwaySystem *h : highway_systems)
-	{	for (Route& r : h->route_list)
-		{	if (roots.find(r.root) == roots.end()) roots.insert(r.root);
-			else el.add_error("Duplicate root in route lists: " + r.root);
-			string list_name = r.readable_name();
-			// FIXME branch based on result of list_names.insert
-			if (list_names.find(list_name) == list_names.end()) list_names.insert(list_name);
-			else duplicate_list_names.insert(list_name);
-		}
-		for (ConnectedRoute& cr : h->con_route_list)
-		  for (size_t r = 0; r < cr.roots.size(); r++)
-		    // FIXME branch based on result of list_names.insert
-		    if (con_roots.find(cr.roots[r]) == con_roots.end()) con_roots.insert(cr.roots[r]);
-		    else el.add_error("Duplicate root in con_route lists: " + cr.roots[r]->root);//*/
-	}
-
-	// Make sure every route was listed as a part of some connected route
-	if (roots.size() == con_roots.size())
-		cout << "Check passed: same number of routes as connected route roots. " << roots.size() << endl;
-	else {	el.add_error("Check FAILED: " + to_string(roots.size()) + " routes != " + to_string(con_roots.size()) + " connected route roots.");
-		// remove con_routes entries from roots
-		for (Route *cr : con_roots)
-		{	unordered_set<string>::iterator r = roots.find(cr->root);
-			if (r != roots.end()) roots.erase(r); //FIXME erase by value
-		}
-		// there will be some leftovers, let's look up their routes to make
-		// an error report entry (not worried about efficiency as there would
-		// only be a few in reasonable cases)
-		unsigned int num_found = 0;
-		for (HighwaySystem *h : highway_systems)
-		  for (Route& r : h->route_list)
-		    for (const string& lr : roots)
-		      if (lr == r.root)
-		      {	el.add_error("route " + lr + " not matched by any connected route root.");
-			num_found++;
-			break;
-		      }
-		cout << "Added " << num_found << " ROUTE_NOT_IN_CONNECTED error entries." << endl;
-	     }
-
-	// report any duplicate list names as errors
-	if (duplicate_list_names.empty()) cout << "No duplicate list names found." << endl;
-	else {	for (string d : duplicate_list_names) el.add_error("Duplicate list name: " + d);
-		cout << "Added " << duplicate_list_names.size() << " DUPLICATE_LIST_NAME error entries." << endl;
-	     }
-
-	roots.clear();
-	list_names.clear();
-	duplicate_list_names.clear();
-	con_roots.clear();
-    }
-
 	// For tracking whether any .wpt files are in the directory tree
 	// that do not have a .csv file entry that causes them to be
 	// read into the data
@@ -443,13 +385,17 @@ int main(int argc, char *argv[])
 
 	#include "functions/concurrency_detection.cpp"
 
-	// Create hash table for faster lookup of routes by list file name
-	cout << et.et() << "Creating route hash table for list processing:" << endl;
-	unordered_map<string, Route*> route_hash;
-	for (HighwaySystem *h : highway_systems)
-	  for (list<Route>::iterator r = h->route_list.begin(); r != h->route_list.end(); r++) //FIXME use more compact syntax (&)
-	  {	route_hash[lower(r->readable_name())] = &*r;
-		for (string &a : r->alt_route_names) route_hash[lower(r->rg_str + " " + a)] = &*r;
+	cout << et.et() << "Checking for unconnected chopped routes, creating canonical AltLabels & populating unused sets." << endl;
+	for (HighwaySystem* h : highway_systems)
+	  for (Route& r : h->route_list)
+	  {	if (!r.con_route)
+	  	  el.add_error(r.system->systemname + ".csv: root " + r.root + " not matched by any connected route root.");
+	  	for (Waypoint* w : r.point_list)
+	  	  for (std::string& a : w->alt_labels)
+	  	  {	while (a[0] == '+' || a[0] == '*') a = a.substr(1);
+			upper(a.data());
+			r.unused_alt_labels.insert(a);
+	  	  }
 	  }
 
 	// Create a list of TravelerList objects, one per person
@@ -460,7 +406,7 @@ int main(int argc, char *argv[])
       #ifdef threading_enabled
 	// set up for threaded .list file processing
 	for (unsigned int t = 0; t < args.numthreads; t++)
-		thr[t] = new thread(ReadListThread, t, &traveler_ids, &id_it, &traveler_lists, &list_mtx, &strtok_mtx, &args, &route_hash, &el);
+		thr[t] = new thread(ReadListThread, t, &traveler_ids, &id_it, &traveler_lists, &list_mtx, &strtok_mtx, &args, &el);
 	for (unsigned int t = 0; t < args.numthreads; t++)
 		thr[t]->join();
 	for (unsigned int t = 0; t < args.numthreads; t++)
@@ -468,7 +414,7 @@ int main(int argc, char *argv[])
       #else
 	for (string &t : traveler_ids)
 	{	cout << t << ' ' << std::flush;
-		traveler_lists.push_back(new TravelerList(t, &route_hash, &el, &args, &strtok_mtx));
+		traveler_lists.push_back(new TravelerList(t, &el, &args, &strtok_mtx));
 	}
 	traveler_ids.clear();
       #endif

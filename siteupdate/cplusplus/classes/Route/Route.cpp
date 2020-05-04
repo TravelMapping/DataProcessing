@@ -1,3 +1,4 @@
+std::unordered_map<std::string, Route*> Route::root_hash, Route::list_hash;
 std::mutex Route::awf_mtx;
 
 Route::Route(std::string &line, HighwaySystem *sys, ErrorList &el, std::unordered_map<std::string, Region*> &region_hash)
@@ -52,12 +53,28 @@ Route::Route(std::string &line, HighwaySystem *sys, ErrorList &el, std::unordere
 	if (root.size() > DBFieldLength::root)
 		el.add_error("Root > " + std::to_string(DBFieldLength::root)
 			   + " bytes in " + system->systemname + ".csv line: " + line);
+	lower(root.data());
 	// alt_route_names
-	size_t l = 0;
-	for (size_t r = 0; r != -1; l = r+1)
-	{	r = arn_str.find(',', l);
-		alt_route_names.emplace_back(arn_str, l, r-l);
+	upper(arn_str.data());
+	size_t len;
+	for (size_t pos = 0; pos < arn_str.size(); pos += len+1)
+	{	len = strcspn(arn_str.data()+pos, ",");
+		alt_route_names.emplace_back(arn_str, pos, len);
 	}
+
+	// insert into root_hash, checking for duplicate root entries
+	if (!root_hash.insert(std::pair<std::string, Route*>(root, this)).second)
+	  el.add_error("Duplicate root in " + system->systemname + ".csv: " + root +
+		       " already in " + root_hash.at(root)->system->systemname + ".csv");
+	// insert into list_hash with list name, checking for duplicate .list names
+	if (!list_hash.insert(std::pair<std::string, Route*>(upper(readable_name()), this)).second)
+	  el.add_error("Duplicate main list name in " + root + ": '" + readable_name() +
+		       "' already points to " + list_hash.at( upper(readable_name()) )->root);
+	// insert into list_hash with alt names, checking for duplicate .list names
+	for (std::string& a : alt_route_names)
+	  if (!list_hash.insert(std::pair<std::string, Route*>(upper(rg_str + " " + a), this)).second)
+	    el.add_error("Duplicate alt route name in " + root + ": '" + region->code + ' ' + a +
+			 "' already points to " + list_hash.at(upper(rg_str + " " + a))->root);
 }
 
 std::string Route::str()
@@ -178,10 +195,4 @@ void Route::write_nmp_merged(std::string filename)
 		     }
 	}
 	wptfile.close();
-}
-
-Route *route_by_root(std::string root, std::list<Route> &route_list)
-{	for (std::list<Route>::iterator r = route_list.begin(); r != route_list.end(); r++)
-		if (r->root == root) return &*r;
-	return 0;
 }

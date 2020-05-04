@@ -63,16 +63,6 @@ void Route::read_wpt
 			continue;
 		}
 		point_list.push_back(w);
-		// populate unused alt labels
-		for (size_t i = 0; i < w->alt_labels.size(); i++)
-		{	std::string al = w->alt_labels[i];
-			// strip out leading '+'
-			while (al[0] == '+') al.erase(0, 1);	//TODO would erase via iterator be any faster?
-			// convert to upper case
-			for (size_t c = 0; c < al.size(); c++)
-			  if (al[c] >= 'a' && al[c] <= 'z') al[c] -= 32;
-			unused_alt_labels.insert(al);
-		}
 		all_waypoints->insert(w, 1);
 
 		// single-point Datachecks, and HighwaySegment

@@ -29,7 +29,7 @@ class TravelerList
 	unsigned int preview_systems_clinched;
 	static std::mutex alltrav_mtx;	// for locking the traveler_lists list when reading .lists from disk
 
-	TravelerList(std::string travname, std::unordered_map<std::string, Route*> *route_hash, ErrorList *el, Arguments *args, std::mutex *strtok_mtx)
+	TravelerList(std::string travname, ErrorList *el, Arguments *args, std::mutex *strtok_mtx)
 	{	active_systems_traveled = 0;
 		active_systems_clinched = 0;
 		preview_systems_traveled = 0;
@@ -116,11 +116,11 @@ class TravelerList
 			  }
 
 			// find the root that matches in some system and when we do, match labels
-			std::string route_entry = lower(std::string(fields[1]));
-			std::string lookup = std::string(lower(fields[0])) + " " + route_entry;
-			try {	Route *r = route_hash->at(lookup);
-				for (std:: string a : r->alt_route_names)
-				  if (route_entry == lower(a))
+			std::string route_entry = upper(std::string(fields[1])); // leave fields[1] intact for potential AltRouteName note
+			std::string lookup = std::string(upper(fields[0])) + " " + route_entry;
+			try {	Route *r = Route::list_hash.at(lookup);
+				for (std::string& a : r->alt_route_names)
+				  if (route_entry == a)
 				  {	log << "Note: deprecated route name " << fields[1]
 					    << " -> canonical name " << r->list_entry_name() << " in line " << trim_line << '\n';
 					break;
@@ -135,28 +135,28 @@ class TravelerList
 				// "+" or "*" when matching
 				std::vector<unsigned int> point_indices;
 				unsigned int checking_index = 0;
+				while (*fields[2] == '*' || *fields[2] == '+') fields[2]++;
+				while (*fields[3] == '*' || *fields[3] == '+') fields[3]++;
+				upper(fields[2]);
+				upper(fields[3]);
 				for (Waypoint *w : r->point_list)
-				{	std::string lower_label = lower(w->label);
-					while (*lower(fields[2]) == '*' || *fields[2] == '+') fields[2]++;
-					while (*lower(fields[3]) == '*' || *fields[3] == '+') fields[3]++;
-					while (lower_label.front() == '+' || lower_label.front() == '*') lower_label.erase(lower_label.begin());
-					if (fields[2] == lower_label || fields[3] == lower_label)
+				{	std::string upper_label = upper(w->label);
+					while (upper_label.front() == '+' || upper_label.front() == '*') upper_label = upper_label.substr(1);
+					if (fields[2] == upper_label || fields[3] == upper_label)
 					     {	point_indices.push_back(checking_index);
 						r->liu_mtx.lock();
-						r->labels_in_use.insert(upper(lower_label));
+						r->labels_in_use.insert(upper_label);
 						r->liu_mtx.unlock();
 					     }
 					else {	for (std::string &alt : w->alt_labels)
-						{	lower_label = lower(alt);
-							while (lower_label.front() == '+') lower_label.erase(lower_label.begin());
-							if (fields[2] == lower_label || fields[3] == lower_label)
+						{	if (fields[2] == alt || fields[3] == alt)
 							{	point_indices.push_back(checking_index);
 								r->liu_mtx.lock();
-								r->labels_in_use.insert(upper(lower_label));
+								r->labels_in_use.insert(alt);
 								r->liu_mtx.unlock();
 								// if we have not yet used this alt label, remove it from the unused set
 								r->ual_mtx.lock();
-								r->unused_alt_labels.erase(upper(lower_label));
+								r->unused_alt_labels.erase(alt);
 								r->ual_mtx.unlock();
 							}
 						}

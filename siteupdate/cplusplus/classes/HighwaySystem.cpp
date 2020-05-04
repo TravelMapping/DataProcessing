@@ -79,7 +79,8 @@ class HighwaySystem
 		if (!file) el.add_error("Could not open "+path+"/"+systemname+".csv");
 		else {	getline(file, line); // ignore header line
 			while(getline(file, line))
-			{	if (line.back() == 0x0D) line.erase(line.end()-1);	// trim DOS newlines
+			{	// trim DOS newlines & trailing whitespace
+				while ( strchr("\r\t ", line.back()) ) line.pop_back();
 				if (line.empty()) continue;
 				route_list.emplace_back(line, this, el, region_hash);
 				if (route_list.back().root.empty())
@@ -95,9 +96,10 @@ class HighwaySystem
 		if (!file) el.add_error("Could not open "+path+"/"+systemname+"_con.csv");
 		else {	getline(file, line); // ignore header line
 			while(getline(file, line))
-			{	if (line.back() == 0x0D) line.erase(line.end()-1);	// trim DOS newlines
+			{	// trim DOS newlines & trailing whitespace
+				while ( strchr("\r\t ", line.back()) ) line.pop_back();
 				if (line.empty()) continue;
-				con_route_list.emplace_back(line, this, el, route_list);
+				con_route_list.emplace_back(line, this, el);
 			}
 		     }
 		file.close();

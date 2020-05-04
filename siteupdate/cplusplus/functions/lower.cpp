@@ -4,8 +4,8 @@ std::string lower(std::string str)
 	return str;
 }
 
-char *lower(char *str)
-{	for (char *c = str; *c != 0; c++)
+const char *lower(const char *str)
+{	for (char* c = (char*)str; *c != 0; c++)
 	  if (*c >= 'A' && *c <= 'Z') *c += 32;
 	return str;
 }

@@ -10,10 +10,10 @@ bool PlaceRadius::contains_vertex(HGVertex *v) {return contains_vertex(v->lat, v
 bool PlaceRadius::contains_vertex(double vlat, double vlng)
 {	/* return whether coordinates are within this area */
 	// convert to radians to compute distance
-	double rlat1 = lat * (Waypoint::pi/180);
-	double rlng1 = lng * (Waypoint::pi/180);
-	double rlat2 = vlat * (Waypoint::pi/180);
-	double rlng2 = vlng * (Waypoint::pi/180);
+	double rlat1 = lat * (pi/180);
+	double rlng1 = lng * (pi/180);
+	double rlat2 = vlat * (pi/180);
+	double rlng2 = vlng * (pi/180);
 
 	/* original formula
 	double ans = acos(cos(rlat1)*cos(rlng1)*cos(rlat2)*cos(rlng2) +\
@@ -48,10 +48,10 @@ std::unordered_set<HGVertex*> PlaceRadius::vertices(WaypointQuadtree *qt, Highwa
 
 	// N/S sanity check: If lat is <= r/2 miles to the N or S pole, lngdelta calculation will fail.
 	// In these cases, our place radius will span the entire "width" of the world, from -180 to +180 degrees.
-	if (90-fabs(lat)*(Waypoint::pi/180) <= r/7926.2) return v_search(qt, g, -180, +180);
+	if (90-fabs(lat)*(pi/180) <= r/7926.2) return v_search(qt, g, -180, +180);
 
 	// width, in degrees longitude, of our bounding box for quadtree search
-	double lngdelta = acos((cos(r/3963.1) - pow(sin(lat*(Waypoint::pi/180)),2)) / pow(cos(lat*(Waypoint::pi/180)),2)) / (Waypoint::pi/180);
+	double lngdelta = acos((cos(r/3963.1) - pow(sin(lat*(pi/180)),2)) / pow(cos(lat*(pi/180)),2)) / (pi/180);
 	double w_bound = lng-lngdelta;
 	double e_bound = lng+lngdelta;
 
@@ -92,8 +92,8 @@ std::unordered_set<HGVertex*> PlaceRadius::v_search(WaypointQuadtree *qt, Highwa
 	// if we're not a terminal quadrant, we need to determine which
 	// of our child quadrants we need to search and recurse into each
 	else {	//printf("DEBUG: recursive case, mid_lat=%.17g mid_lng=%.17g\n", qt->mid_lat, qt->mid_lng); fflush(stdout);
-		bool look_n = (lat + r/3963.1/(Waypoint::pi/180)) >= qt->mid_lat;
-		bool look_s = (lat - r/3963.1/(Waypoint::pi/180)) <= qt->mid_lat;
+		bool look_n = (lat + r/3963.1/(pi/180)) >= qt->mid_lat;
+		bool look_s = (lat - r/3963.1/(pi/180)) <= qt->mid_lat;
 		bool look_e = e_bound >= qt->mid_lng;
 		bool look_w = w_bound <= qt->mid_lng;
 		//std::cout << "DEBUG: recursive case, " << look_n << " " << look_s << " " << look_e << " " << look_w << std::endl;

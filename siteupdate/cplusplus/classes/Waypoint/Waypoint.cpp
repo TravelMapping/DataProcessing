@@ -13,8 +13,6 @@ bool waypoint_simplification_sort(Waypoint *w1, Waypoint *w2)
 	else return 0;
 }
 
-const double Waypoint::pi = 3.141592653589793238;
-
 Waypoint::Waypoint(char *line, Route *rte, DatacheckEntryList *datacheckerrors)
 {	/* initialize object from a .wpt file line */
 	route = rte;
@@ -314,17 +312,14 @@ bool Waypoint::label_references_route(Route *r, DatacheckEntryList *datacheckerr
 inline void Waypoint::duplicate_label(DatacheckEntryList *datacheckerrors, std::unordered_set<std::string> &all_route_labels)
 {	// duplicate labels
 	// first, check primary label
-	std::string lower_label = lower(label);
-	while (lower_label[0] == '+' || lower_label[0] == '*') lower_label.erase(lower_label.begin());
-	if (!all_route_labels.insert(lower_label).second)
-		datacheckerrors->add(route, lower_label, "", "", "DUPLICATE_LABEL", "");
+	std::string upper_label = upper(label);
+	while (upper_label[0] == '+' || upper_label[0] == '*') upper_label = upper_label.substr(1);
+	if (!all_route_labels.insert(upper_label).second)
+		datacheckerrors->add(route, upper_label, "", "", "DUPLICATE_LABEL", "");
 	// then check alt labels
-	for (std::string &label : alt_labels)
-	{	std::string lower_label = lower(label);
-		while (lower_label[0] == '+' || lower_label[0] == '*') lower_label.erase(lower_label.begin());
-		if (!all_route_labels.insert(lower_label).second)
-			datacheckerrors->add(route, lower_label, "", "", "DUPLICATE_LABEL", "");
-	}
+	for (std::string &a : alt_labels)
+	    if (!all_route_labels.insert(a).second)
+		datacheckerrors->add(route, a, "", "", "DUPLICATE_LABEL", "");
 }
 
 inline void Waypoint::duplicate_coords(DatacheckEntryList *datacheckerrors, std::unordered_set<Waypoint*> &coords_used, char *fstr)
