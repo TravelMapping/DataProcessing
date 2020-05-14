@@ -128,7 +128,7 @@ class HighwaySystem
 	/* Return total system mileage across all regions */
 	double total_mileage()
 	{	double mi = 0;
-		for (std::pair<Region*, double> rm : mileage_by_region) mi += rm.second;
+		for (std::pair<Region* const, double>& rm : mileage_by_region) mi += rm.second;
 		return mi;
 	}
 

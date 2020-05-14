@@ -165,9 +165,9 @@ class TravelerList
 				}
 				if (point_indices.size() != 2)
 				{	bool invalid_char = 0;
-					for (size_t c = 0; c < trim_line.size(); c++)
-					  if (iscntrl(trim_line[c]))
-					  {	trim_line[c] = '?';
+					for (char& c : trim_line)
+					  if (iscntrl(c))
+					  {	c = '?';
 						invalid_char = 1;
 					  }
 					log << "Waypoint label(s) not found in line: " << trim_line;
@@ -189,9 +189,9 @@ class TravelerList
 			    }
 			catch (const std::out_of_range& oor)
 			    {	bool invalid_char = 0;
-				for (size_t c = 0; c < trim_line.size(); c++)
-				  if (iscntrl(trim_line[c]))
-				  {	trim_line[c] = '?';
+				for (char& c : trim_line)
+				  if (iscntrl(c))
+				  {	c = '?';
 					invalid_char = 1;
 				  }
 				log << "Unknown region/highway combo in line: " << trim_line;
@@ -209,21 +209,21 @@ class TravelerList
 	/* Return active mileage across all regions */
 	double active_only_miles()
 	{	double mi = 0;
-		for (std::pair<Region*, double> rm : active_only_mileage_by_region) mi += rm.second;
+		for (std::pair<Region* const, double>& rm : active_only_mileage_by_region) mi += rm.second;
 		return mi;
 	}
 
 	/* Return active+preview mileage across all regions */
 	double active_preview_miles()
 	{	double mi = 0;
-		for (std::pair<Region*, double> rm : active_preview_mileage_by_region) mi += rm.second;
+		for (std::pair<Region* const, double>& rm : active_preview_mileage_by_region) mi += rm.second;
 		return mi;
 	}
 
 	/* Return mileage across all regions for a specified system */
 	double system_region_miles(HighwaySystem *h)
 	{	double mi = 0;
-		for (std::pair<Region*, double> rm : system_region_mileages.at(h)) mi += rm.second;
+		for (std::pair<Region* const, double>& rm : system_region_mileages.at(h)) mi += rm.second;
 		return mi;
 	}
 

@@ -96,7 +96,7 @@ class HighwayGraph
 		// compress edges adjacent to hidden vertices
 		counter = 0;
 		std::cout << et.et() + "Compressing collapsed edges" << std::flush;
-		for (std::pair<const Waypoint*, HGVertex*> wv : vertices)
+		for (std::pair<Waypoint* const, HGVertex*>& wv : vertices)
 		{	if (counter % 10000 == 0) std::cout << '.' << std::flush;
 			counter++;
 			if (!wv.second->visibility)
@@ -146,7 +146,7 @@ class HighwayGraph
 	} // end ctor
 
 	void clear()
-	{	for (std::pair<const Waypoint*, HGVertex*> wv : vertices) delete wv.second;
+	{	for (std::pair<Waypoint* const, HGVertex*>& wv : vertices) delete wv.second;
 		vertex_names.clear();
 		waypoint_naming_log.clear();
 		vertices.clear();

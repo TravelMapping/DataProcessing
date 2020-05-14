@@ -248,7 +248,7 @@ int main(int argc, char *argv[])
 		}
 		cout << endl;
 		// at the end, print the lines ignored
-		for (string l : ignoring) cout << l << endl;
+		for (string& l : ignoring) cout << l << endl;
 		ignoring.clear();
 	     }
 	file.close();
@@ -285,9 +285,8 @@ int main(int argc, char *argv[])
       #else
 	for (HighwaySystem* h : highway_systems)
 	{	std::cout << h->systemname << std::flush;
-		for (std::list<Route>::iterator r = h->route_list.begin(); r != h->route_list.end(); r++)
-		{	r->read_wpt(&all_waypoints, &el, args.highwaydatapath+"/hwy_data", datacheckerrors, &all_wpt_files);
-		}
+		for (Route& r : h->route_list)
+			r.read_wpt(&all_waypoints, &el, args.highwaydatapath+"/hwy_data", datacheckerrors, &all_wpt_files);
 		std::cout << "!" << std::endl;
 	}
       #endif
@@ -529,7 +528,7 @@ int main(int argc, char *argv[])
 	    {	inusefile << r.root << '(' << r.point_list.size() << "):";
 		list<string> liu_list(r.labels_in_use.begin(), r.labels_in_use.end());
 		liu_list.sort();
-		for (string label : liu_list) inusefile << ' ' << label;
+		for (string& label : liu_list) inusefile << ' ' << label;
 		inusefile << '\n';
 		r.labels_in_use.clear();
 	    }
@@ -546,7 +545,7 @@ int main(int argc, char *argv[])
 				string ual_entry = r.root + '(' + to_string(r.unused_alt_labels.size()) + "):";
 				list<string> ual_list(r.unused_alt_labels.begin(), r.unused_alt_labels.end());
 				ual_list.sort();
-				for (string label : ual_list) ual_entry += ' ' + label;
+				for (string& label : ual_list) ual_entry += ' ' + label;
 				r.unused_alt_labels.clear();
 				unused_alt_labels.push_back(ual_entry);
 			}
@@ -656,7 +655,7 @@ int main(int argc, char *argv[])
 		region_entries.push_back(region->code + fstr);
 	  }
 	region_entries.sort();
-	for (string e : region_entries) hdstatsfile << e;
+	for (string& e : region_entries) hdstatsfile << e;
 
 	for (HighwaySystem *h : highway_systems)
 	{	sprintf(fstr, ") total: %.2f mi\n", h->total_mileage());
@@ -664,7 +663,7 @@ int main(int argc, char *argv[])
 		if (h->mileage_by_region.size() > 1)
 		{	hdstatsfile << "System " << h->systemname << " by region:\n";
 			list<Region*> regions_in_system;
-			for (pair<Region*, double> rm : h->mileage_by_region)
+			for (pair<Region* const, double>& rm : h->mileage_by_region)
 				regions_in_system.push_back(rm.first);
 			regions_in_system.sort(sort_regions_by_code);
 			for (Region *r : regions_in_system)
@@ -673,19 +672,19 @@ int main(int argc, char *argv[])
 			}
 		}
 		hdstatsfile << "System " << h->systemname << " by route:\n";
-		for (list<ConnectedRoute>::iterator cr = h->con_route_list.begin(); cr != h->con_route_list.end(); cr++)
+		for (ConnectedRoute& cr : h->con_route_list)
 		{	double con_total_miles = 0;
 			string to_write = "";
-			for (Route *r : cr->roots)
+			for (Route *r : cr.roots)
 			{	sprintf(fstr, ": %.2f mi\n", r->mileage);
 				to_write += "  " + r->readable_name() + fstr;
 				con_total_miles += r->mileage;
 			}
-			cr->mileage = con_total_miles; //FIXME?
+			cr.mileage = con_total_miles; //FIXME?
 			sprintf(fstr, ": %.2f mi", con_total_miles);
-			hdstatsfile << cr->readable_name() << fstr;
-			if (cr->roots.size() == 1)
-				hdstatsfile << " (" << cr->roots[0]->readable_name() << " only)\n";
+			hdstatsfile << cr.readable_name() << fstr;
+			if (cr.roots.size() == 1)
+				hdstatsfile << " (" << cr.roots[0]->readable_name() << " only)\n";
 			else	hdstatsfile << '\n' << to_write;
 		}
 	}
@@ -733,7 +732,7 @@ int main(int argc, char *argv[])
 	allfile << '\n';
 	for (TravelerList *t : traveler_lists)
 	{	double t_total_mi = 0;
-		for (std::pair<Region*, double> rm : t->active_only_mileage_by_region)
+		for (std::pair<Region* const, double>& rm : t->active_only_mileage_by_region)
 			t_total_mi += rm.second;
 		sprintf(fstr, "%.2f", t_total_mi);
 		allfile << t->traveler_name << ',' << fstr;
@@ -771,7 +770,7 @@ int main(int argc, char *argv[])
 	allfile << '\n';
 	for (TravelerList *t : traveler_lists)
 	{	double t_total_mi = 0;
-		for (std::pair<Region*, double> rm : t->active_preview_mileage_by_region)
+		for (std::pair<Region* const, double>& rm : t->active_preview_mileage_by_region)
 			t_total_mi += rm.second;
 		sprintf(fstr, "%.2f", t_total_mi);
 		allfile << t->traveler_name << ',' << fstr;
@@ -799,7 +798,7 @@ int main(int argc, char *argv[])
 		sysfile << "Traveler,Total";
 		regions.clear();
 		total_mi = 0;
-		for (std::pair<Region*, double> rm : h->mileage_by_region)
+		for (std::pair<Region* const, double>& rm : h->mileage_by_region)
 		{	regions.push_back(rm.first);
 			total_mi += rm.second;		//TODO is this right?
 		}
@@ -835,7 +834,7 @@ int main(int argc, char *argv[])
 	cout << et.et() << "Reading datacheckfps.csv." << endl;
 	file.open(args.highwaydatapath+"/datacheckfps.csv");
 	getline(file, line); // ignore header line
-	list<array<string, 6>> datacheckfps; //FIXME try implementing as an unordered_multiset; see if speed increases
+	list<array<string, 6>> datacheckfps;
 	unordered_set<string> datacheck_always_error
 	({	"BAD_ANGLE", "DUPLICATE_LABEL", "HIDDEN_TERMINUS",
 		"INVALID_FINAL_CHAR", "INVALID_FIRST_CHAR",
@@ -881,22 +880,22 @@ int main(int argc, char *argv[])
 	fpfile << "Log file created at: " << ctime(&timestamp);
 	unsigned int counter = 0;
 	unsigned int fpcount = 0;
-	for (list<DatacheckEntry>::iterator d = datacheckerrors->entries.begin(); d != datacheckerrors->entries.end(); d++)
+	for (DatacheckEntry& d : datacheckerrors->entries)
 	{	//cout << "Checking: " << d->str() << endl;
 		counter++;
 		if (counter % 1000 == 0) cout << '.' << flush;
 		for (list<array<string, 6>>::iterator fp = datacheckfps.begin(); fp != datacheckfps.end(); fp++)
-		  if (d->match_except_info(*fp))
-		    if (d->info == (*fp)[5])
+		  if (d.match_except_info(*fp))
+		    if (d.info == (*fp)[5])
 		    {	//cout << "Match!" << endl;
-			d->fp = 1;
+			d.fp = 1;
 			fpcount++;
 			datacheckfps.erase(fp);
 			break;
 		    }
 		    else
 		    {	fpfile << "FP_ENTRY: " << (*fp)[0] << ';' << (*fp)[1] << ';' << (*fp)[2] << ';' << (*fp)[3] << ';' << (*fp)[4] << ';' << (*fp)[5] << '\n';
-			fpfile << "CHANGETO: " << (*fp)[0] << ';' << (*fp)[1] << ';' << (*fp)[2] << ';' << (*fp)[3] << ';' << (*fp)[4] << ';' << d->info << '\n';
+			fpfile << "CHANGETO: " << (*fp)[0] << ';' << (*fp)[1] << ';' << (*fp)[2] << ';' << (*fp)[3] << ';' << (*fp)[4] << ';' << d.info << '\n';
 		    }
 	}
 	fpfile.close();
@@ -910,8 +909,8 @@ int main(int argc, char *argv[])
 	timestamp = time(0);
 	fpfile << "Log file created at: " << ctime(&timestamp);
 	if (datacheckfps.empty()) fpfile << "No unmatched FP entries.\n";
-	else	for (array<string, 6> entry : datacheckfps)
-			fpfile << entry[0] << ';' << entry[1] << ';' << entry[2] << ';' << entry[3] << ';' << entry[4] << ';' << entry[5] << '\n';
+	else	for (array<string, 6>& entry : datacheckfps)
+		  fpfile << entry[0] << ';' << entry[1] << ';' << entry[2] << ';' << entry[3] << ';' << entry[4] << ';' << entry[5] << '\n';
 	fpfile.close();
 
 	// datacheck.log file
@@ -999,7 +998,7 @@ int main(int argc, char *argv[])
 	unsigned other_count = 0;
 	unsigned int total_rtes = 0;
 	for (HighwaySystem *h : highway_systems)
-	  for (Route r : h->route_list)
+	  for (Route& r : h->route_list)
 	  {	total_rtes++;
 		if (h->devel()) d_count++;
 		else {	if (h->active()) a_count++;

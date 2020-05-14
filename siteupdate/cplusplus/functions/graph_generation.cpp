@@ -5,7 +5,7 @@ HighwayGraph graph_data(all_waypoints, highway_systems, datacheckerrors, args.nu
 
 cout << et.et() << "Writing graph waypoint simplification log." << endl;
 ofstream wslogfile(args.logfilepath + "/waypointsimplification.log");
-for (string line : graph_data.waypoint_naming_log)
+for (string& line : graph_data.waypoint_naming_log)
 	wslogfile << line << '\n';
 wslogfile.close();
 graph_data.waypoint_naming_log.clear();
@@ -34,7 +34,8 @@ else {	list<Region*> *regions;
 	graph_vector[0].edges = 0;	graph_vector[0].vertices = graph_data.vertices.size();
 	graph_vector[1].edges = 0;	graph_vector[1].vertices = 0;
 	graph_vector[2].edges = 0;	graph_vector[2].vertices = 0;
-	for (std::pair<const Waypoint*, HGVertex*> wv : graph_data.vertices)
+	// get master graph vertex & edge counts for terminal output before writing files
+	for (std::pair<Waypoint* const, HGVertex*>& wv : graph_data.vertices)
 	{	graph_vector[0].edges += wv.second->incident_s_edges.size();
 		if (wv.second->visibility >= 1)
 		{	graph_vector[2].vertices++;
