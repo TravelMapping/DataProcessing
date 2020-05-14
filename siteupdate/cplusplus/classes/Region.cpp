@@ -1,6 +1,6 @@
 std::pair<std::string, std::string> *country_or_continent_by_code(std::string code, std::vector<std::pair<std::string, std::string>> &pair_vector)
-{	for (std::vector<std::pair<std::string, std::string>>::iterator c = pair_vector.begin(); c != pair_vector.end(); c++)
-		if (c->first == code) return &*c;
+{	for (std::pair<std::string, std::string>& c : pair_vector)
+		if (c.first == code) return &c;
 	return 0;
 }
 

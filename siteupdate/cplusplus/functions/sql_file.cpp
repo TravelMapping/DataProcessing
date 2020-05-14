@@ -273,7 +273,7 @@ void sqlfile1
 	first = 1;
 	for (HighwaySystem *h : *highway_systems)
 	  if (h->active_or_preview())
-	    for (std::pair<Region*,double> rm : h->mileage_by_region)
+	    for (std::pair<Region* const,double>& rm : h->mileage_by_region)
 	    {	if (!first) sqlfile << ',';
 		first = 0;
 		char fstr[35];
@@ -293,7 +293,7 @@ void sqlfile1
 	sqlfile << "INSERT INTO clinchedOverallMileageByRegion VALUES\n";
 	first = 1;
 	for (TravelerList *t : *traveler_lists)
-	  for (std::pair<Region*,double> rm : t->active_preview_mileage_by_region)
+	  for (std::pair<Region* const,double>& rm : t->active_preview_mileage_by_region)
 	  {	if (!first) sqlfile << ',';
 		first = 0;
 		double active_miles = 0;

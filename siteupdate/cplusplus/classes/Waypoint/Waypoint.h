@@ -20,7 +20,6 @@ class Waypoint
 	std::vector<Waypoint*> ap_coloc;
 	std::forward_list<Waypoint*> near_miss_points;
 	bool is_hidden;
-	static const double pi;
 
 	Waypoint(char *, Route *, DatacheckEntryList *);
 
