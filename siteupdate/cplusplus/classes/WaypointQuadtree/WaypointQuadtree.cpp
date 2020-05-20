@@ -1,4 +1,4 @@
-bool WaypointQuadtree::WaypointQuadtree::refined()
+inline bool WaypointQuadtree::WaypointQuadtree::refined()
 {	return nw_child;
 }
 

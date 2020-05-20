@@ -27,17 +27,11 @@ void Route::read_wpt
 	// split file into lines
 	size_t spn = 0;
 	for (char* c = wptdata; *c; c += spn)
-	{	spn = strcspn(c, "\n\r");
-		while (c[spn] == '\n' || c[spn] == '\r')
-		{	c[spn] = 0;
-			spn++;
-		}
+	{	for (spn = strcspn(c, "\n\r"); c[spn] == '\n' || c[spn] == '\r'; spn++) c[spn] = 0;
 		lines.emplace_back(c);
 	}
 
 	lines.push_back(wptdata+wptdatasize+1); // add a dummy "past-the-end" element to make lines[l+1]-2 work
-	// set to be used per-route to find label duplicates
-	std::unordered_set<std::string> all_route_labels;
 	// set to be used for finding duplicate coordinates
 	std::unordered_set<Waypoint*> coords_used;
 	double vis_dist = 0;
@@ -67,7 +61,6 @@ void Route::read_wpt
 
 		// single-point Datachecks, and HighwaySegment
 		w->out_of_bounds(datacheckerrors, fstr);
-		w->duplicate_label(datacheckerrors, all_route_labels);
 		w->duplicate_coords(datacheckerrors, coords_used, fstr);
 		if (point_list.size() > 1)
 		{	w->distance_update(datacheckerrors, fstr, vis_dist, point_list[point_list.size()-2]);

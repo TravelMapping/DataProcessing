@@ -1,4 +1,4 @@
-void userlog
+void TravelerList::userlog
 (	ClinchedDBValues *clin_db_val,
 	const double total_active_only_miles,
 	const double total_active_preview_miles,
