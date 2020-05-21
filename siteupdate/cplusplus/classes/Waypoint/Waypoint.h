@@ -39,7 +39,6 @@ class Waypoint
 	bool label_references_route(Route *, DatacheckEntryList *);
 
 	// Datacheck
-	inline void duplicate_label(DatacheckEntryList *, std::unordered_set<std::string> &);
 	inline void duplicate_coords(DatacheckEntryList *, std::unordered_set<Waypoint*> &, char *);
 	inline void out_of_bounds(DatacheckEntryList *, char *);
 	inline void distance_update(DatacheckEntryList *, char *, double &, Waypoint *);

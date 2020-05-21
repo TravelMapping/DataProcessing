@@ -2,7 +2,7 @@
 if (args->splitregion == upper(fields[0]))
 {	// first, comment out original line
 	splist << "##### " << orig_line << newline;
-	HighwaySegment *orig_hs = r->segment_list[point_indices[0]];
+	HighwaySegment *orig_hs = r->segment_list[index1];
 	HighwaySegment *new_hs = 0;
 	if (!orig_hs->concurrent)
 		std::cout << "ERROR: " << orig_hs->str() << " not concurrent" << std::endl;
@@ -17,7 +17,7 @@ if (args->splitregion == upper(fields[0]))
 		else {	if (count > 1) std::cout << "DEBUG: multiple matches found for " << orig_hs->str() << std::endl;
 			// get lines from associated connected route.
 			// assumption: each chopped route in old full region corresponds 1:1 to a connected route in new chopped regions
-			splist << new_hs->route->con_route->list_lines(point_indices[0], point_indices[1] - point_indices[0], newline, 2) << endlines[l];
+			splist << new_hs->route->con_route->list_lines(index1, index2 - index1, newline, 2) << endlines[l];
 		     }
 	     }
 }

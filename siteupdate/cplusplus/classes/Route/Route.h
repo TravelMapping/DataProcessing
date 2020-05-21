@@ -51,7 +51,9 @@ class Route
 	std::vector<Waypoint*> point_list;
 	std::unordered_set<std::string> labels_in_use;
 	std::unordered_set<std::string> unused_alt_labels;
-	static std::unordered_map<std::string, Route*> root_hash, list_hash;
+	std::unordered_set<std::string> duplicate_labels;
+	std::unordered_map<std::string, unsigned int> pri_label_hash, alt_label_hash;
+	static std::unordered_map<std::string, Route*> root_hash, pri_list_hash, alt_list_hash;
 	static std::mutex awf_mtx;	// for locking the all_wpt_files set when erasing processed WPTs
 	std::mutex liu_mtx;	// for locking the labels_in_use set when inserting labels during TravelerList processing
 	std::mutex ual_mtx;	// for locking the unused_alt_labels set when removing in-use alt_labels
@@ -73,4 +75,5 @@ class Route
 	double clinched_by_traveler(TravelerList *);
 	std::string list_line(int, int);
 	void write_nmp_merged(std::string);
+	inline void store_traveled_segments(TravelerList*, unsigned int, unsigned int);
 };

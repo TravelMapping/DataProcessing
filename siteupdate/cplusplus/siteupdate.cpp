@@ -44,11 +44,14 @@ class HGEdge;
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
+#include "classes/Arguments.cpp"
+#include "classes/ClinchedDBValues.cpp"
 #include "classes/WaypointQuadtree/WaypointQuadtree.h"
 #include "classes/Route/Route.h"
 #include "classes/ConnectedRoute/ConnectedRoute.h"
 #include "classes/Waypoint/Waypoint.h"
 #include "classes/HighwaySegment/HighwaySegment.h"
+#include "classes/TravelerList/TravelerList.h"
 #include "classes/GraphGeneration/HGEdge.h"
 #include "classes/GraphGeneration/PlaceRadius.h"
 #include "enable_threading.cpp"
@@ -62,7 +65,6 @@ class HGEdge;
 #include "functions/split.cpp"
 #include "functions/valid_num_str.cpp"
 #include "classes/DBFieldLength.cpp"
-#include "classes/Arguments.cpp"
 #include "classes/ElapsedTime.cpp"
 #include "classes/ErrorList.cpp"
 #include "classes/Region.cpp"
@@ -71,7 +73,6 @@ class HGEdge;
 #include "classes/DatacheckEntryList.cpp"
 #include "classes/Waypoint/Waypoint.cpp"
 #include "classes/WaypointQuadtree/WaypointQuadtree.cpp"
-#include "classes/ClinchedDBValues.cpp"
 #include "classes/Route/Route.cpp"
 #include "classes/ConnectedRoute/ConnectedRoute.cpp"
 #include "classes/TravelerList/TravelerList.cpp"
@@ -96,7 +97,7 @@ using namespace std;
 int main(int argc, char *argv[])
 {	ifstream file;
 	string line;
-	mutex list_mtx, log_mtx, strtok_mtx;
+	mutex list_mtx, log_mtx;
 	time_t timestamp;
 
 	// start a timer for including elapsed time reports in messages
@@ -384,17 +385,45 @@ int main(int argc, char *argv[])
 
 	#include "functions/concurrency_detection.cpp"
 
-	cout << et.et() << "Checking for unconnected chopped routes, creating canonical AltLabels & populating unused sets." << endl;
+	cout << et.et() << "Processing waypoint labels and checking for unconnected chopped routes." << endl;
 	for (HighwaySystem* h : highway_systems)
 	  for (Route& r : h->route_list)
-	  {	if (!r.con_route)
-	  	  el.add_error(r.system->systemname + ".csv: root " + r.root + " not matched by any connected route root.");
-	  	for (Waypoint* w : r.point_list)
-	  	  for (std::string& a : w->alt_labels)
-	  	  {	while (a[0] == '+' || a[0] == '*') a = a.substr(1);
-			upper(a.data());
-			r.unused_alt_labels.insert(a);
-	  	  }
+	  {	// check for unconnected chopped routes
+		if (!r.con_route)
+		  el.add_error(r.system->systemname + ".csv: root " + r.root + " not matched by any connected route root.");
+		unsigned int index = 0;
+		for (Waypoint* w : r.point_list)
+		{	// ignore case and leading '+' or '*'
+			std::string upper_label = upper(w->label);
+			while (upper_label[0] == '+' || upper_label[0] == '*')
+				upper_label = upper_label.substr(1);
+			// if primary label not duplicated, add to r.pri_label_hash
+			if (r.alt_label_hash.find(upper_label) != r.alt_label_hash.end())
+			{	datacheckerrors->add(&r, upper_label, "", "", "DUPLICATE_LABEL", "");
+				r.duplicate_labels.insert(upper_label);
+			}
+			else if (!r.pri_label_hash.insert(std::pair<std::string, unsigned int>(upper_label, index)).second)
+			{	datacheckerrors->add(&r, upper_label, "", "", "DUPLICATE_LABEL", "");
+				r.duplicate_labels.insert(upper_label);
+			}
+			for (std::string& a : w->alt_labels)
+			{	// create canonical AltLabels
+				while (a[0] == '+' || a[0] == '*') a = a.substr(1);
+				upper(a.data());
+				// populate unused set
+				r.unused_alt_labels.insert(a);
+				// create label->index hashes and check if AltLabels duplicated
+				if (r.pri_label_hash.find(a) != r.pri_label_hash.end())
+				{	datacheckerrors->add(&r, a, "", "", "DUPLICATE_LABEL", "");
+					r.duplicate_labels.insert(a);
+				}
+				else if (!r.alt_label_hash.insert(std::pair<std::string, unsigned int>(a, index)).second)
+				{	datacheckerrors->add(&r, a, "", "", "DUPLICATE_LABEL", "");
+					r.duplicate_labels.insert(a);
+				}
+			}
+			index++;
+		}
 	  }
 
 	// Create a list of TravelerList objects, one per person
@@ -405,7 +434,7 @@ int main(int argc, char *argv[])
       #ifdef threading_enabled
 	// set up for threaded .list file processing
 	for (unsigned int t = 0; t < args.numthreads; t++)
-		thr[t] = new thread(ReadListThread, t, &traveler_ids, &id_it, &traveler_lists, &list_mtx, &strtok_mtx, &args, &el);
+		thr[t] = new thread(ReadListThread, t, &traveler_ids, &id_it, &traveler_lists, &list_mtx, &args, &el);
 	for (unsigned int t = 0; t < args.numthreads; t++)
 		thr[t]->join();
 	for (unsigned int t = 0; t < args.numthreads; t++)
@@ -413,7 +442,7 @@ int main(int argc, char *argv[])
       #else
 	for (string &t : traveler_ids)
 	{	cout << t << ' ' << std::flush;
-		traveler_lists.push_back(new TravelerList(t, &el, &args, &strtok_mtx));
+		traveler_lists.push_back(new TravelerList(t, &el, &args));
 	}
 	traveler_ids.clear();
       #endif
@@ -426,8 +455,16 @@ int main(int argc, char *argv[])
 		travnum++;
 	}
 
-	//#include "debug/highway_segment_log.cpp"
-	//#include "debug/pioneers.cpp"
+	cout << et.et() << "Clearing route & label hash tables." << endl;
+	Route::root_hash.clear();
+	Route::pri_list_hash.clear();
+	Route::alt_list_hash.clear();
+	for (HighwaySystem* h : highway_systems)
+	  for (Route& r : h->route_list)
+	  {	r.pri_label_hash.clear();
+		r.alt_label_hash.clear();
+		r.duplicate_labels.clear();
+	  }
 
 	// Read updates.csv file, just keep in the fields list for now since we're
 	// just going to drop this into the DB later anyway
@@ -516,47 +553,72 @@ int main(int argc, char *argv[])
 	}
 	file.close();
 
-	// write log file for points in use -- might be more useful in the DB later,
-	// or maybe in another format
-	cout << et.et() << "Writing points in use log." << endl;
-	ofstream inusefile(args.logfilepath+"/pointsinuse.log");
-	timestamp = time(0);
-	inusefile << "Log file created at: " << ctime(&timestamp);
-	for (HighwaySystem *h : highway_systems)
-	  for (Route &r : h->route_list)
-	    if (r.labels_in_use.size())
-	    {	inusefile << r.root << '(' << r.point_list.size() << "):";
-		list<string> liu_list(r.labels_in_use.begin(), r.labels_in_use.end());
-		liu_list.sort();
-		for (string& label : liu_list) inusefile << ' ' << label;
-		inusefile << '\n';
-		r.labels_in_use.clear();
-	    }
-	inusefile.close();
-
-	// write log file for alt labels not in use
-	cout << et.et() << "Writing unused alt labels log." << endl;
+	cout << et.et() << "Writing pointsinuse.log, unusedaltlabels.log, listnamesinuse.log and unusedaltroutenames.log" << endl;
 	unsigned int total_unused_alt_labels = 0;
+	unsigned int total_unusedaltroutenames = 0;
 	list<string> unused_alt_labels;
+	ofstream piufile(args.logfilepath+"/pointsinuse.log");
+	ofstream lniufile(args.logfilepath+"/listnamesinuse.log");
+	ofstream uarnfile(args.logfilepath+"/unusedaltroutenames.log");
+	timestamp = time(0);
+	piufile << "Log file created at: " << ctime(&timestamp);
+	lniufile << "Log file created at: " << ctime(&timestamp);
+	uarnfile << "Log file created at: " << ctime(&timestamp);
 	for (HighwaySystem *h : highway_systems)
-		for (Route &r : h->route_list)
+	{	for (Route &r : h->route_list)
+		{	// labelsinuse.log line
+			if (r.labels_in_use.size())
+			{	piufile << r.root << '(' << r.point_list.size() << "):";
+				list<string> liu_list(r.labels_in_use.begin(), r.labels_in_use.end());
+				liu_list.sort();
+				for (string& label : liu_list) piufile << ' ' << label;
+				piufile << '\n';
+				r.labels_in_use.clear();
+			}
+			// unusedaltlabels.log lines, to be sorted by root later
 			if (r.unused_alt_labels.size())
 			{	total_unused_alt_labels += r.unused_alt_labels.size();
 				string ual_entry = r.root + '(' + to_string(r.unused_alt_labels.size()) + "):";
 				list<string> ual_list(r.unused_alt_labels.begin(), r.unused_alt_labels.end());
 				ual_list.sort();
 				for (string& label : ual_list) ual_entry += ' ' + label;
-				r.unused_alt_labels.clear();
 				unused_alt_labels.push_back(ual_entry);
+				r.unused_alt_labels.clear();
 			}
+		}
+		// listnamesinuse.log line
+		if (h->listnamesinuse.size())
+		{	lniufile << h->systemname << '(' << h->route_list.size() << "):";
+			list<string> lniu_list(h->listnamesinuse.begin(), h->listnamesinuse.end());
+			lniu_list.sort();
+			for (string& list_name : lniu_list) lniufile << " \"" << list_name << '"';
+			lniufile << '\n';
+			h->listnamesinuse.clear();
+		}
+		// unusedaltroutenames.log line
+		if (h->unusedaltroutenames.size())
+		{	total_unusedaltroutenames += h->unusedaltroutenames.size();
+			uarnfile << h->systemname << '(' << h->unusedaltroutenames.size() << "):";
+			list<string> uarn_list(h->unusedaltroutenames.begin(), h->unusedaltroutenames.end());
+			uarn_list.sort();
+			for (string& list_name : uarn_list) uarnfile << " \"" << list_name << '"';
+			uarnfile << '\n';
+			h->unusedaltroutenames.clear();
+		}
+	}
+	piufile.close();
+	lniufile.close();
+	uarnfile << "Total: " << total_unusedaltroutenames << '\n';
+	uarnfile.close();
+	// sort lines and write unusedaltlabels.log
 	unused_alt_labels.sort();
-	ofstream unusedfile(args.logfilepath+"/unusedaltlabels.log");
+	ofstream ualfile(args.logfilepath+"/unusedaltlabels.log");
 	timestamp = time(0);
-	unusedfile << "Log file created at: " << ctime(&timestamp);
-	for (string &ual_entry : unused_alt_labels) unusedfile << ual_entry << '\n';
+	ualfile << "Log file created at: " << ctime(&timestamp);
+	for (string &ual_entry : unused_alt_labels) ualfile << ual_entry << '\n';
 	unused_alt_labels.clear();
-	unusedfile << "Total: " << total_unused_alt_labels << '\n';
-	unusedfile.close();
+	ualfile << "Total: " << total_unused_alt_labels << '\n';
+	ualfile.close();
 
 
 	// now augment any traveler clinched segments for concurrencies

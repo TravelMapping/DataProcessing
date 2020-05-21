@@ -1,4 +1,3 @@
-//FIXME try to break strtok. That goes for all strtok project-wide.
 class HighwaySystem
 {	/* This class encapsulates the contents of one .csv file
 	that represents the collection of highways within a system.
@@ -28,6 +27,8 @@ class HighwaySystem
 	std::list<ConnectedRoute> con_route_list;
 	std::unordered_map<Region*, double> mileage_by_region;
 	std::unordered_set<HGVertex*> vertices;
+	std::unordered_set<std::string>listnamesinuse, unusedaltroutenames;
+	std::mutex lniu_mtx, uarn_mtx;
 	bool is_valid;
 
 	HighwaySystem(std::string &line, ErrorList &el, std::string path, std::string &systemsfile,

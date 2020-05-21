@@ -9,7 +9,7 @@ class WaypointQuadtree
 	unsigned int unique_locations;
 	std::recursive_mutex mtx;
 
-	bool refined();
+	inline bool refined();
 	WaypointQuadtree(double, double, double, double);
 	void refine();
 	void insert(Waypoint*, bool);

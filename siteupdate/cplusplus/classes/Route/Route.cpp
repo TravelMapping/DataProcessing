@@ -1,4 +1,4 @@
-std::unordered_map<std::string, Route*> Route::root_hash, Route::list_hash;
+std::unordered_map<std::string, Route*> Route::root_hash, Route::pri_list_hash, Route::alt_list_hash;
 std::mutex Route::awf_mtx;
 
 Route::Route(std::string &line, HighwaySystem *sys, ErrorList &el, std::unordered_map<std::string, Region*> &region_hash)
@@ -64,17 +64,28 @@ Route::Route(std::string &line, HighwaySystem *sys, ErrorList &el, std::unordere
 
 	// insert into root_hash, checking for duplicate root entries
 	if (!root_hash.insert(std::pair<std::string, Route*>(root, this)).second)
-	  el.add_error("Duplicate root in " + system->systemname + ".csv: " + root +
-		       " already in " + root_hash.at(root)->system->systemname + ".csv");
-	// insert into list_hash with list name, checking for duplicate .list names
-	if (!list_hash.insert(std::pair<std::string, Route*>(upper(readable_name()), this)).second)
-	  el.add_error("Duplicate main list name in " + root + ": '" + readable_name() +
-		       "' already points to " + list_hash.at( upper(readable_name()) )->root);
-	// insert into list_hash with alt names, checking for duplicate .list names
+		el.add_error("Duplicate root in " + system->systemname + ".csv: " + root +
+			     " already in " + root_hash.at(root)->system->systemname + ".csv");
+	// insert list name into pri_list_hash, checking for duplicate .list names
+	std::string list_name = upper(readable_name());
+	if (alt_list_hash.find(list_name) != alt_list_hash.end())
+		el.add_error("Duplicate main list name in " + root + ": '" + readable_name() +
+			     "' already points to " + alt_list_hash.at(list_name)->root);
+	else if (!pri_list_hash.insert(std::pair<std::string,Route*>(list_name, this)).second)
+		el.add_error("Duplicate main list name in " + root + ": '" + readable_name() +
+			     "' already points to " + pri_list_hash.at(list_name)->root);
+	// insert alt names into alt_list_hash, checking for duplicate .list names
 	for (std::string& a : alt_route_names)
-	  if (!list_hash.insert(std::pair<std::string, Route*>(upper(rg_str + " " + a), this)).second)
-	    el.add_error("Duplicate alt route name in " + root + ": '" + region->code + ' ' + a +
-			 "' already points to " + list_hash.at(upper(rg_str + " " + a))->root);
+	{   list_name = upper(rg_str + ' ' + a);
+	    if (pri_list_hash.find(list_name) != pri_list_hash.end())
+		el.add_error("Duplicate alt route name in " + root + ": '" + region->code + ' ' + a +
+			     "' already points to " + pri_list_hash.at(list_name)->root);
+	    else if (!alt_list_hash.insert(std::pair<std::string, Route*>(list_name, this)).second)
+		el.add_error("Duplicate alt route name in " + root + ": '" + region->code + ' ' + a +
+			     "' already points to " + alt_list_hash.at(list_name)->root);
+	    // populate unused set
+	    system->unusedaltroutenames.insert(list_name);
+	}
 }
 
 std::string Route::str()
@@ -195,4 +206,13 @@ void Route::write_nmp_merged(std::string filename)
 		     }
 	}
 	wptfile.close();
+}
+
+inline void Route::store_traveled_segments(TravelerList* t, unsigned int beg, unsigned int end)
+{	// store clinched segments with traveler and traveler with segments
+	for (unsigned int pos = beg; pos < end; pos++)
+	{	HighwaySegment *hs = segment_list[pos];
+		hs->add_clinched_by(t);
+		t->clinched_segments.insert(hs);
+	}
 }
