@@ -35,14 +35,12 @@ while (*fields[2] == '*' || *fields[2] == '+') fields[2]++;
 while (*fields[3] == '*' || *fields[3] == '+') fields[3]++;
 upper(fields[2]);
 upper(fields[3]);
-
 // look for point indices for labels, first in pri_label_hash
 std::unordered_map<std::string,unsigned int>::iterator lit1 = r->pri_label_hash.find(fields[2]);
 std::unordered_map<std::string,unsigned int>::iterator lit2 = r->pri_label_hash.find(fields[3]);
 // and then if not found, in alt_label_hash
 if (lit1 == r->pri_label_hash.end()) lit1 = r->alt_label_hash.find(fields[2]);
 if (lit2 == r->pri_label_hash.end()) lit2 = r->alt_label_hash.find(fields[3]);
-
 // if we did not find matches for both labels...
 if (lit1 == r->alt_label_hash.end() || lit2 == r->alt_label_hash.end())
 {	bool invalid_char = 0;
@@ -78,10 +76,15 @@ if (r->duplicate_labels.find(fields[3]) != r->duplicate_labels.end())
 	    << ". Unable to parse line: " << trim_line << '\n';
 	duplicate = 1;
 }
-if (duplicate) continue;
+if (duplicate)
+{	splist << orig_line << endlines[l];
+	continue;
+}
 // if both labels reference the same waypoint...
 if (lit1->second == lit2->second)
-	log << "Equivalent waypoint labels mark zero distance traveled in line: " << trim_line << '\n';
+{	log << "Equivalent waypoint labels mark zero distance traveled in line: " << trim_line << '\n';
+	splist << orig_line << endlines[l];
+}
 // otherwise both labels are valid; mark in use & proceed
 else {	r->system->lniu_mtx.lock();
 	r->system->listnamesinuse.insert(lookup);
