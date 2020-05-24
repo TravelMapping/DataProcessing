@@ -51,7 +51,10 @@ TravelerList::TravelerList(std::string travname, ErrorList *el, Arguments *args)
 	}
 	lines.push_back(listdata+listdatasize+1); // add a dummy "past-the-end" element to make lines[l+1]-2 work
 	// strip UTF-8 byte order mark if present
-	if (!strncmp(lines[0], "\xEF\xBB\xBF", 3)) lines[0] += 3;
+	if (!strncmp(lines[0], "\xEF\xBB\xBF", 3))
+	{	lines[0] += 3;
+		splist << "\xEF\xBB\xBF";
+	}
 
 	for (unsigned int l = 0; l < lines.size()-1; l++)
 	{	std::string orig_line(lines[l]);
