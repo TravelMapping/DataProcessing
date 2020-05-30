@@ -906,7 +906,12 @@ int main(int argc, char *argv[])
 		"NONTERMINAL_UNDERSCORE"
 	});
 	while (getline(file, line))
-	{	if (line.back() == 0x0D) line.erase(line.end()-1);	// trim DOS newlines
+	{	// trim DOS newlines & trailing whitespace
+		while (line.back() == 0x0D || line.back() == ' ' || line.back() == '\t')
+			line.pop_back();
+		// trim leading whitespace
+		while (line[0] == ' ' || line[0] == '\t')
+			line = line.substr(1);
 		if (line.empty()) continue;
 		// parse system updates.csv line
 		size_t NumFields = 6;
