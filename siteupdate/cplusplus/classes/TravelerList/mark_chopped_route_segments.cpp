@@ -19,7 +19,7 @@ if (rit == Route::pri_list_hash.end())
 		continue;
 	}
 	else	log << "Note: deprecated route name " << fields[1]
-		    << " -> canonical name " << rit->second->list_entry_name() << " in line " << trim_line << '\n';
+		    << " -> canonical name " << rit->second->list_entry_name() << " in line: " << trim_line << '\n';
 }
 Route* r = rit->second;
 if (r->system->devel())
@@ -102,13 +102,24 @@ else {	r->system->lniu_mtx.lock();
 	r->ual_mtx.unlock();
 
 	list_entries++;
-	if (lit1->second < lit2->second)
+	bool reverse = 0;
+	if (lit1->second <= lit2->second)
 	     {	index1 = lit1->second;
 		index2 = lit2->second;
 	     }
 	else {	index1 = lit2->second;
 		index2 = lit1->second;
+		reverse = 1;
 	     }
 	r->store_traveled_segments(this, index1, index2);
-	#include "splitregion.cpp"
+	// new .list lines for region split-ups
+	if (args->splitregion == r->region->code)
+	{
+		#define r1 r
+		#define r2 r
+		#include "splitregion.cpp"
+		#undef r1
+		#undef r2
+	}
+	else	splist << orig_line << endlines[l];
      }

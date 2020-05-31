@@ -81,7 +81,7 @@ std::string ConnectedRoute::readable_name()
 	return ans;
 }
 
-std::string ConnectedRoute::list_lines(int pos, int len, std::string newline, size_t indent)
+/*std::string ConnectedRoute::list_lines(int pos, int len, std::string newline, size_t indent)
 {	// return .list file lines marking (len) consecutive
 	// segments, starting at waypoint (pos) segments into route
 	//std::cout << "\nDEBUG: list_lines for " << readable_name() << " (" << roots.size() << " connected root(s))" << std::endl;
@@ -95,4 +95,4 @@ std::string ConnectedRoute::list_lines(int pos, int len, std::string newline, si
 	// strip final newline
 	while (lines.back() == '\n' || lines.back() == '\r') lines.pop_back();
 	return lines;
-}
+}//*/

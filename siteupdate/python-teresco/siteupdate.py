@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Travel Mapping Project, Jim Teresco, 2015-2018
+# Travel Mapping Project, Jim Teresco, 2015-2020
 """Python code to read .csv and .wpt files and prepare for
 adding to the Travel Mapping Project database.
 
@@ -1284,7 +1284,7 @@ class TravelerList:
                 continue
             fields = re.split('[ \t]+',line)
             # truncate inline comments from fields list
-            for i in range(min(len(fields), 5)):
+            for i in range(min(len(fields), 7)):
                 if fields[i][0] == '#':
                     fields = fields[:i]
                     break
@@ -1305,7 +1305,7 @@ class TravelerList:
                             self.log_entries[-1] += " [contains invalid character(s)]"
                         continue
                     else:
-                        self.log_entries.append("Note: deprecated route name " + fields[1] + " -> canonical name " + r.list_entry_name() + " in line " + line)
+                        self.log_entries.append("Note: deprecated route name " + fields[1] + " -> canonical name " + r.list_entry_name() + " in line: " + line)
                 if r.system.devel():
                     self.log_entries.append("Ignoring line matching highway in system in development: " + line)
                     continue
@@ -1378,12 +1378,139 @@ class TravelerList:
                     if index1 > index2:
                         (index1, index2) = (index2, index1)
                     r.store_traveled_segments(self, index1, index2)
+            elif len(fields) == 6:
+                lookup1 = fields[0].upper() + ' ' + fields[1].upper()
+                lookup2 = fields[3].upper() + ' ' + fields[4].upper()
+                # look for region/route combos, first in pri_list_hash
+                # and then if not found, in alt_list_hash
+                both_lookups_found = True
+                try:
+                    r1 = Route.pri_list_hash[lookup1]
+                except KeyError:
+                    try:
+                        r1 = Route.alt_list_hash[lookup1]
+                    except KeyError:
+                        r1 = None
+                    else:
+                        self.log_entries.append("Note: deprecated route name \"" + fields[0] + ' ' + fields[1] \
+                                              + "\" -> canonical name \"" + r1.readable_name() + "\" in line: " + line)
+                try:
+                    r2 = Route.pri_list_hash[lookup2]
+                except KeyError:
+                    try:
+                        r2 = Route.alt_list_hash[lookup2]
+                    except KeyError:
+                        r2 = None
+                    else:
+                        self.log_entries.append("Note: deprecated route name \"" + fields[3] + ' ' + fields[4] \
+                                              + "\" -> canonical name \"" + r2.readable_name() + "\" in line: " + line)
+                if r1 is None or r2 is None:
+                    (lookup1, invchar) = no_control_chars(lookup1)
+                    (lookup2, invchar) = no_control_chars(lookup2)
+                    (line, invchar) = no_control_chars(line)
+                    if r1 == r2:
+                        self.log_entries.append("Unknown region/highway combos " + lookup1 + " and " + lookup2 + " in line: " + line)
+                    else:
+                        log_entry = "Unknown region/highway combo "
+                        log_entry += lookup1 if r1 is None else lookup2
+                        log_entry += " in line: " + line
+                        self.log_entries.append(log_entry)
+                    if invchar:
+                        self.log_entries[-1] += " [contains invalid character(s)]"
+                    continue
+                if r1.con_route != r2.con_route:
+                    self.log_entries.append(lookup1 + " and " + lookup2 + " not in same connected route in line: " + line)
+                    continue
+                if r1.system.devel():
+                    self.log_entries.append("Ignoring line matching highway in system in development: " + line)
+                    continue
+                # r1 and r2 are route matches, and we need to find
+                # waypoint indices, ignoring case and leading
+                # '+' or '*' when matching
+                list_label_1 = fields[2].lstrip("+*").upper()
+                list_label_2 = fields[5].lstrip("+*").upper()
+                # look for point indices for labels, first in pri_label_hash
+                # and then if not found, in alt_label_hash
+                try:
+                    index1 = r1.pri_label_hash[list_label_1]
+                except KeyError:
+                    try:
+                        index1 = r1.alt_label_hash[list_label_1]
+                    except KeyError:
+                        index1 = None
+                try:
+                    index2 = r2.pri_label_hash[list_label_2]
+                except KeyError:
+                    try:
+                        index2 = r2.alt_label_hash[list_label_2]
+                    except KeyError:
+                        index2 = None
+                # if we did not find matches for both labels...
+                if index1 is None or index2 is None:
+                    (list_label_1, invchar) = no_control_chars(list_label_1)
+                    (list_label_2, invchar) = no_control_chars(list_label_2)
+                    (line, invchar) = no_control_chars(line)
+                    if index1 is None and index2 is None:
+                        self.log_entries.append("Waypoint labels " + list_label_1 + " and " + list_label_2 + " not found in line: " + line)
+                    else:
+                        log_entry = "Waypoint "
+                        if index1 is None:
+                            log_entry += lookup1 + ' ' + list_label_1
+                        else:
+                            log_entry += lookup2 + ' ' + list_label_2
+                        log_entry += " not found in line: " + line
+                        self.log_entries.append(log_entry)
+                    if invchar:
+                        self.log_entries[-1] += " [contains invalid character(s)]"
+                    continue
+                # are either of the labels used duplicates?
+                duplicate = False
+                if list_label_1 in r1.duplicate_labels:
+                    self.log_entries.append(r1.region + ": duplicate label " + list_label_1 + " in " + r1.root \
+                                          + ". Please report this error in the TravelMapping forum. Unable to parse line: " + line)
+                    duplicate = True
+                if list_label_2 in r2.duplicate_labels:
+                    self.log_entries.append(r2.region + ": duplicate label " + list_label_2 + " in " + r2.root \
+                                          + ". Please report this error in the TravelMapping forum. Unable to parse line: " + line)
+                    duplicate = True
+                if duplicate:
+                    continue
+                # if both region/route combos point to the same chopped route...
+                if r1 == r2:
+                    # if both labels reference the same waypoint...
+                    if index1 == index2:
+                        self.log_entries.append("Equivalent waypoint labels mark zero distance traveled in line: " + line)
+                        continue
+                    if index1 <= index2:
+                        r1.store_traveled_segments(self, index1, index2)
+                    else:
+                        r1.store_traveled_segments(self, index2, index1)
+                else:
+                    if r1.rootOrder > r2.rootOrder:
+                        (r1, r2) = (r2, r1)
+                        (index1, index2) = (index2, index1)
+                    # mark the beginning chopped route from index1 to its end
+                    r1.store_traveled_segments(self, index1, len(r1.segment_list))
+                    # mark the ending chopped route from its beginning to index2
+                    r2.store_traveled_segments(self, 0, index2)
+                    # mark any intermediate chopped routes in their entirety.
+                    for r in range(r1.rootOrder+1, r2.rootOrder):
+                        r1.con_route.roots[r].store_traveled_segments(self, 0, len(r1.con_route.roots[r].segment_list))
+                # both labels are valid; mark in use & proceed
+                r1.system.listnamesinuse.add(lookup1)
+                r1.system.unusedaltroutenames.discard(lookup1)
+                r1.labels_in_use.add(list_label_1)
+                r2.system.listnamesinuse.add(lookup2)
+                r2.system.unusedaltroutenames.discard(lookup2)
+                r2.labels_in_use.add(list_label_2)
+                list_entries += 1
             else:
-                self.log_entries.append("Incorrect format line: " + line)
+                self.log_entries.append("Incorrect format line (4 or 6 fields expected, found " + \
+                                        str(len(fields)) +"): " + line)
 
         self.log_entries.append("Processed " + str(list_entries) + \
-                                    " good lines marking " +str(len(self.clinched_segments)) + \
-                                    " segments traveled.")
+                                " good lines marking " +str(len(self.clinched_segments)) + \
+                                " segments traveled.")
         # additional setup for later stats processing
         # a place to track this user's total mileage per region,
         # but only active+preview and active only (since devel
