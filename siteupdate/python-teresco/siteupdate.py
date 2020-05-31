@@ -386,7 +386,7 @@ class Waypoint:
 
     def csv_line(self,id):
         """return csv line to insert into a table"""
-        return "'" + str(id) + "','" + self.label + "','" + str(self.lat) + "','" + str(self.lng) + "','" + self.route.root + "'"
+        return "'" + str(id) + "','" + self.label + "','" + str(self.lat) + "','" + str(self.lng) + "','" + self.route.root + "',ST_GEOMFROMTEXT('POINT(" + str(self.lng) + " " + str(self.lat) + ")')";
 
     def same_coords(self,other):
         """return if this waypoint is colocated with the other,
@@ -4055,7 +4055,7 @@ else:
     print(et.et() + "...waypoints", flush=True)
     sqlfile.write('CREATE TABLE waypoints (pointId INTEGER, pointName VARCHAR(' + str(DBFieldLength.label) +
                   '), latitude DOUBLE, longitude DOUBLE, root VARCHAR(' + str(DBFieldLength.root) +
-                  '), PRIMARY KEY(pointId), FOREIGN KEY (root) REFERENCES routes(root));\n')
+                  '), coordinates POINT NOT NULL, SPATIAL INDEX(coordinates), PRIMARY KEY(pointId), FOREIGN KEY (root) REFERENCES routes(root));\n')
     point_num = 0
     for h in highway_systems:
         for r in h.route_list:
