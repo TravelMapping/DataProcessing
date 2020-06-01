@@ -97,7 +97,7 @@ using namespace std;
 int main(int argc, char *argv[])
 {	ifstream file;
 	string line;
-	mutex list_mtx, log_mtx;
+	mutex list_mtx;
 	time_t timestamp;
 
 	// start a timer for including elapsed time reports in messages
@@ -630,7 +630,7 @@ int main(int argc, char *argv[])
 	list<TravelerList*>::iterator tl_it = traveler_lists.begin();
 
 	for (unsigned int t = 0; t < args.numthreads; t++)
-		thr[t] = new thread(ConcAugThread, t, &traveler_lists, &tl_it, &list_mtx, &log_mtx, augment_lists+t);
+		thr[t] = new thread(ConcAugThread, t, &traveler_lists, &tl_it, &list_mtx, augment_lists+t);
 	for (unsigned int t = 0; t < args.numthreads; t++)
 		thr[t]->join();
 	cout << "!\n" << et.et() << "Writing to concurrencies.log." << endl;

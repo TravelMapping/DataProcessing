@@ -13,7 +13,10 @@ TravelerList::TravelerList(std::string travname, ErrorList *el, Arguments *args)
 	std::ofstream splist;
 	if (args->splitregionpath != "") splist.open(args->splitregionpath+"/list_files/"+travname);
 	time_t StartTime = time(0);
-	log << "Log file created at: " << ctime(&StartTime);
+	log << "Log file created at: ";
+	alltrav_mtx.lock();
+	log << ctime(&StartTime);
+	alltrav_mtx.unlock();
 	std::vector<char*> lines;
 	std::vector<std::string> endlines;
 	std::ifstream file(args->userlistfilepath+"/"+travname);
