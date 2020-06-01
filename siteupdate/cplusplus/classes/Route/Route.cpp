@@ -160,16 +160,16 @@ double Route::clinched_by_traveler(TravelerList *t)
 	return miles;
 }
 
-std::string Route::list_line(int beg, int end)
+/*std::string Route::list_line(int beg, int end)
 {	/* Return a .list file line from (beg) to (end),
 	these being indices to the point_list vector.
 	These values can be "out-of-bounds" when getting lines
 	for connected routes. If so, truncate or return "". */
-	if (beg >= int(point_list.size()) || end <= 0) return "";
+/*	if (beg >= int(point_list.size()) || end <= 0) return "";
 	if (end >= int(point_list.size())) end = point_list.size()-1;
 	if (beg < 0) beg = 0;
 	return readable_name() + " " + point_list[beg]->label + " " + point_list[end]->label;
-}
+}//*/
 
 void Route::write_nmp_merged(std::string filename)
 {	mkdir(filename.data(), 0777);

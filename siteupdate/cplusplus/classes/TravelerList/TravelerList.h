@@ -27,7 +27,9 @@ class TravelerList
 	unsigned int active_systems_clinched;
 	unsigned int preview_systems_traveled;
 	unsigned int preview_systems_clinched;
-	static std::mutex alltrav_mtx;	// for locking the traveler_lists list when reading .lists from disk
+	// for locking the traveler_lists list when reading .lists from disk
+	// and avoiding data races when creating userlog timestamps
+	static std::mutex alltrav_mtx;
 
 	TravelerList(std::string, ErrorList *, Arguments *);
 	double active_only_miles();

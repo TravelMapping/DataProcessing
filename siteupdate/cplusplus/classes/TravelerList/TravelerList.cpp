@@ -13,7 +13,10 @@ TravelerList::TravelerList(std::string travname, ErrorList *el, Arguments *args)
 	std::ofstream splist;
 	if (args->splitregionpath != "") splist.open(args->splitregionpath+"/list_files/"+travname);
 	time_t StartTime = time(0);
-	log << "Log file created at: " << ctime(&StartTime);
+	log << "Log file created at: ";
+	alltrav_mtx.lock();
+	log << ctime(&StartTime);
+	alltrav_mtx.unlock();
 	std::vector<char*> lines;
 	std::vector<std::string> endlines;
 	std::ifstream file(args->userlistfilepath+"/"+travname);
@@ -61,7 +64,7 @@ TravelerList::TravelerList(std::string travname, ErrorList *el, Arguments *args)
 		// strip whitespace
 		while (lines[l][0] == ' ' || lines[l][0] == '\t') lines[l]++;
 		char * endchar = lines[l+1]-2; // -2 skips over the 0 inserted while separating listdata into lines
-		while (*endchar == 0) endchar--;  // skip back more for CRLF cases, and lines followed by blank lines
+		while (*endchar == 0 && endchar > lines[l]) endchar--;  // skip back more for CRLF cases, and lines followed by blank lines
 		while (*endchar == ' ' || *endchar == '\t')
 		{	*endchar = 0;
 			endchar--;
@@ -84,7 +87,12 @@ TravelerList::TravelerList(std::string travname, ErrorList *el, Arguments *args)
 		     {
 			#include "mark_chopped_route_segments.cpp"
 		     }
-		else {	log << "Incorrect format line: " << trim_line << '\n';
+		else if (fields.size() == 6)
+		     {
+			#include "mark_connected_route_segments.cpp"
+		     }
+		else {	log << "Incorrect format line (4 or 6 fields expected, found "
+			    << fields.size() << "): " << trim_line << '\n';
 			splist << orig_line << endlines[l];
 		     }
 	}
