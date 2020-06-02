@@ -46,7 +46,7 @@ class Waypoint
 	inline void visible_distance(DatacheckEntryList *, char *, double &, Waypoint *&);
 	inline void bus_with_i(DatacheckEntryList *);
 	inline void label_looks_hidden(DatacheckEntryList *);
-	inline void label_invalid_char(DatacheckEntryList *, std::string &);
+	inline void label_invalid_char(DatacheckEntryList *);
 	inline void label_invalid_ends(DatacheckEntryList *);
 	inline void label_parens(DatacheckEntryList *);
 	inline void label_slashes(DatacheckEntryList *, const char *);
