@@ -1558,6 +1558,7 @@ class DatacheckEntry:
     -----------------------+--------------------------------------------
     BAD_ANGLE              |
     BUS_WITH_I             |
+    DISCONNECTED_ROUTE     | adjacent root's expected connection point
     DUPLICATE_COORDS       | coordinate pair
     DUPLICATE_LABEL        |
     HIDDEN_JUNCTION        | number of incident edges in TM master graph
@@ -3545,8 +3546,8 @@ file.close()
 
 lines.pop(0)  # ignore header line
 datacheckfps = []
-datacheck_always_error = [ 'BAD_ANGLE', 'DUPLICATE_LABEL', 'HIDDEN_TERMINUS',
-                           'INVALID_FINAL_CHAR', 'INVALID_FIRST_CHAR',
+datacheck_always_error = [ 'BAD_ANGLE', 'DISCONNECTED_ROUTE', 'DUPLICATE_LABEL', 
+                           'HIDDEN_TERMINUS', 'INVALID_FINAL_CHAR', 'INVALID_FIRST_CHAR',
                            'LABEL_INVALID_CHAR', 'LABEL_PARENS', 'LABEL_SLASHES',
                            'LABEL_TOO_LONG', 'LABEL_UNDERSCORES', 'LONG_UNDERSCORE',
                            'MALFORMED_LAT', 'MALFORMED_LON', 'MALFORMED_URL',

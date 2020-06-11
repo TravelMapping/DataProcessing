@@ -929,8 +929,8 @@ int main(int argc, char *argv[])
 	getline(file, line); // ignore header line
 	list<array<string, 6>> datacheckfps;
 	unordered_set<string> datacheck_always_error
-	({	"BAD_ANGLE", "DUPLICATE_LABEL", "HIDDEN_TERMINUS",
-		"INVALID_FINAL_CHAR", "INVALID_FIRST_CHAR",
+	({	"BAD_ANGLE", "DISCONNECTED_ROUTE", "DUPLICATE_LABEL",
+		"HIDDEN_TERMINUS", "INVALID_FINAL_CHAR", "INVALID_FIRST_CHAR",
 		"LABEL_INVALID_CHAR", "LABEL_PARENS", "LABEL_SLASHES",
 		"LABEL_TOO_LONG", "LABEL_UNDERSCORES", "LONG_UNDERSCORE",
 		"MALFORMED_LAT", "MALFORMED_LON", "MALFORMED_URL",

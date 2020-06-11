@@ -12,6 +12,7 @@ class DatacheckEntry
     -----------------------+--------------------------------------------
     BAD_ANGLE              |
     BUS_WITH_I             |
+    DISCONNECTED_ROUTE     | adjacent root's expected connection point
     DUPLICATE_COORDS       | coordinate pair
     DUPLICATE_LABEL        |
     HIDDEN_JUNCTION        | number of incident edges in TM master graph
