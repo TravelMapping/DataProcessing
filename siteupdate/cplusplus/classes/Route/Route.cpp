@@ -8,6 +8,7 @@ Route::Route(std::string &line, HighwaySystem *sys, ErrorList &el, std::unordere
 	mileage = 0;
 	rootOrder = -1; // order within connected route
 	region = 0;	// if this stays 0, setup has failed due to bad .csv data
+	is_reversed = 0;
 
 	// parse chopped routes csv line
 	size_t NumFields = 8;
@@ -215,4 +216,12 @@ inline void Route::store_traveled_segments(TravelerList* t, unsigned int beg, un
 		hs->add_clinched_by(t);
 		t->clinched_segments.insert(hs);
 	}
+}
+
+inline Waypoint* Route::con_beg()
+{	return is_reversed ? point_list.back() : point_list.front();
+}
+
+inline Waypoint* Route::con_end()
+{	return is_reversed ? point_list.front() : point_list.back();
 }

@@ -124,9 +124,13 @@ else {	if (r1->rootOrder > r2->rootOrder)
 		reverse = 1;
 	}
 	// mark the beginning chopped route from index1 to its end
-	r1->store_traveled_segments(this, index1, r1->segment_list.size());
+	if (r1->is_reversed)
+		r1->store_traveled_segments(this, 0, index1);
+	else	r1->store_traveled_segments(this, index1, r1->segment_list.size());
 	// mark the ending chopped route from its beginning to index2
-	r2->store_traveled_segments(this, 0, index2);
+	if (r2->is_reversed)
+		r2->store_traveled_segments(this, index2, r2->segment_list.size());
+	else	r2->store_traveled_segments(this, 0, index2);
 	// mark any intermediate chopped routes in their entirety.
 	for (size_t r = r1->rootOrder+1; r < r2->rootOrder; r++)
 	  r1->con_route->roots[r]->store_traveled_segments(this, 0, r1->con_route->roots[r]->segment_list.size());
