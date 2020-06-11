@@ -391,8 +391,39 @@ int main(int argc, char *argv[])
 	  {	// check for unconnected chopped routes
 		if (!r.con_route)
 		  el.add_error(r.system->systemname + ".csv: root " + r.root + " not matched by any connected route root.");
-		unsigned int index = 0;
-		for (Waypoint* w : r.point_list)
+
+		// check for mismatched route endpoints within connected routes
+		#define q r.con_route->roots[r.rootOrder-1]
+		if ( r.rootOrder > 0 && q->point_list.size() > 1 && !r.con_beg()->same_coords(q->con_end()) )
+		{	if ( q->con_beg()->same_coords(r.con_beg()) )
+			{	//std::cout << "DEBUG: marking only " << q->str() << " reversed" << std::endl;
+				//if (q->is_reversed) std::cout << "DEBUG: " << q->str() << " already reversed!" << std::endl;
+				q->is_reversed = 1;
+			}
+			else if ( q->con_end()->same_coords(r.con_end()) )
+			{	//std::cout << "DEBUG: marking only " << r.str() << " reversed" << std::endl;
+				//if (r.is_reversed) std::cout << "DEBUG: " << r.str() << " already reversed!" << std::endl;
+				r.is_reversed = 1;
+			}
+			else if ( q->con_beg()->same_coords(r.con_end()) )
+			{	//std::cout << "DEBUG: marking both " << q->str() << " and " << r.str() << " reversed" << std::endl;
+				//if (q->is_reversed) std::cout << "DEBUG: " << q->str() << " already reversed!" << std::endl;
+				//if (r.is_reversed) std::cout << "DEBUG: " << r.str() << " already reversed!" << std::endl;
+				q->is_reversed = 1;
+				r.is_reversed = 1;
+			}
+			else if ( !q->con_end()->same_coords(r.con_beg()) )
+			{	datacheckerrors->add(&r, r.con_beg()->label, "", "",
+						     "DISCONNECTED_ROUTE", q->con_end()->root_at_label());
+				datacheckerrors->add(q, q->con_end()->label, "", "",
+						     "DISCONNECTED_ROUTE", r.con_beg()->root_at_label());
+			}
+		}
+		#undef q
+
+		// create label hashes and check for duplicates
+		#define w r.point_list[index]
+		for (unsigned int index = 0; index < r.point_list.size(); index++)
 		{	// ignore case and leading '+' or '*'
 			std::string upper_label = upper(w->label);
 			while (upper_label[0] == '+' || upper_label[0] == '*')
@@ -422,8 +453,8 @@ int main(int argc, char *argv[])
 					r.duplicate_labels.insert(a);
 				}
 			}
-			index++;
 		}
+		#undef w
 	  }
 
 	// Create a list of TravelerList objects, one per person

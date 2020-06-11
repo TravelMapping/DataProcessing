@@ -60,6 +60,7 @@ class Route
 	std::vector<HighwaySegment*> segment_list;
 	double mileage;
 	int rootOrder;
+	bool is_reversed;
 
 	Route(std::string &, HighwaySystem *, ErrorList &, std::unordered_map<std::string, Region*> &);
 
@@ -76,4 +77,6 @@ class Route
 	//std::string list_line(int, int);
 	void write_nmp_merged(std::string);
 	inline void store_traveled_segments(TravelerList*, unsigned int, unsigned int);
+	inline Waypoint* con_beg();
+	inline Waypoint* con_end();
 };

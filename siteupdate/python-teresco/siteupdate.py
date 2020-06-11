@@ -990,6 +990,7 @@ class Route:
         self.con_route = None
         self.mileage = 0.0
         self.rootOrder = -1  # order within connected route
+        self.is_reversed = False
 
     def __str__(self):
         """printable version of the object"""
@@ -1094,6 +1095,12 @@ class Route:
             hs = self.segment_list[pos]
             hs.add_clinched_by(t)
             t.clinched_segments.add(hs)
+
+    def con_beg(self):
+        return self.point_list[-1] if self.is_reversed else self.point_list[0]
+
+    def con_end(self):
+        return self.point_list[0] if self.is_reversed else self.point_list[-1]
 
 class ConnectedRoute:
     """This class encapsulates a single 'connected route' as given
@@ -1490,9 +1497,15 @@ class TravelerList:
                         (r1, r2) = (r2, r1)
                         (index1, index2) = (index2, index1)
                     # mark the beginning chopped route from index1 to its end
-                    r1.store_traveled_segments(self, index1, len(r1.segment_list))
+                    if r1.is_reversed:
+                        r1.store_traveled_segments(self, 0, index1)
+                    else:
+                        r1.store_traveled_segments(self, index1, len(r1.segment_list))
                     # mark the ending chopped route from its beginning to index2
-                    r2.store_traveled_segments(self, 0, index2)
+                    if r2.is_reversed:
+                        r2.store_traveled_segments(self, index2, len(r2.segment_list))
+                    else:
+                        r2.store_traveled_segments(self, 0, index2)
                     # mark any intermediate chopped routes in their entirety.
                     for r in range(r1.rootOrder+1, r2.rootOrder):
                         r1.con_route.roots[r].store_traveled_segments(self, 0, len(r1.con_route.roots[r].segment_list))
@@ -2873,6 +2886,24 @@ for h in highway_systems:
         # check for unconnected chopped routes
         if r.con_route is None:
             el.add_error(r.system.systemname + ".csv: root " + r.root + " not matched by any connected route root.")
+
+        # check for mismatched route endpoints within connected routes
+        q = r.con_route.roots[r.rootOrder-1]
+        if r.rootOrder > 0 and len(q.point_list) > 1 and not r.con_beg().same_coords(q.con_end()):
+            if q.con_beg().same_coords(r.con_beg()):
+                q.is_reversed = True
+            elif q.con_end().same_coords(r.con_end()):
+                r.is_reversed = True
+            elif q.con_beg().same_coords(r.con_end()):
+                q.is_reversed = True
+                r.is_reversed = True
+            elif not q.con_end().same_coords(r.con_beg()):
+                datacheckerrors.append(DatacheckEntry(r, [r.con_beg().label],
+                                       "DISCONNECTED_ROUTE", q.root + '@' + q.con_end().label))
+                datacheckerrors.append(DatacheckEntry(q, [q.con_end().label],
+                                       "DISCONNECTED_ROUTE", r.root + '@' + r.con_beg().label))
+
+        # create label hashes and check for duplicates
         index = 0
         for w in r.point_list:
             # ignore case and leading '+' or '*'
