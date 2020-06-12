@@ -3949,7 +3949,7 @@ for h in highway_systems:
                     datacheckerrors.append(DatacheckEntry(r,[w.label],'NONTERMINAL_UNDERSCORE'))
 
                 # look for I-xx with Bus instead of BL or BS
-                if re.fullmatch('I\-[0-9]+[EeWwNnSs]?[Bb][Uu][Ss].*', w.label) and all_regions[w.route.region][2] == "USA":
+                if re.fullmatch('I\-[0-9]+[EeWwCcNnSs]?[Bb][Uu][Ss].*', w.label) and all_regions[w.route.region][2] == "USA":
                     datacheckerrors.append(DatacheckEntry(r,[w.label],'BUS_WITH_I'))
 
                 # look for labels that look like hidden waypoints but

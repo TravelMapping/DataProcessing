@@ -383,8 +383,8 @@ inline void Waypoint::bus_with_i(DatacheckEntryList *datacheckerrors)
 	const char *c = label.data()+2;
 	if (*c < '0' || *c > '9') return;
 	while (*c >= '0' && *c <= '9') c++;
-	if ( *c == 'E' || *c == 'W' || *c == 'N' || *c == 'S'
-	  || *c == 'e' || *c == 'w' || *c == 'n' || *c == 's' ) c++;
+	if ( *c == 'E' || *c == 'W' || *c == 'C' || *c == 'N' || *c == 'S'
+	  || *c == 'e' || *c == 'w' || *c == 'c' || *c == 'n' || *c == 's' ) c++;
 	if ( (*c == 'B' || *c == 'b')
 	  && (*(c+1) == 'u' || *(c+1) == 'U')
 	  && (*(c+2) == 's' || *(c+2) == 'S') )
