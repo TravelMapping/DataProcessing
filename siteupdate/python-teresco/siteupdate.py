@@ -913,11 +913,7 @@ class Route:
                          ".csv line [" + line + "], expected " + system.systemname)
         self.region = fields[1]
         region_found = False
-        for r in all_regions:
-            if r[0] == self.region:
-                region_found = True
-                break
-        if not region_found:
+        if self.region not in all_regions:
             el.add_error("Unrecognized region in " + system.systemname +
                          ".csv line: " + line)
         self.route = fields[2]
@@ -2538,7 +2534,7 @@ else:
                          " bytes in countries.csv line " + line)
         countries.append(fields)
 
-all_regions = []
+all_regions = {}
 try:
     file = open(args.highwaydatapath+"/regions.csv", "rt",encoding='utf-8')
 except OSError as e:
@@ -2580,7 +2576,7 @@ else:
         if len(fields[4].encode('utf-8')) > DBFieldLength.regiontype:
             el.add_error("Region type > " + str(DBFieldLength.regiontype) +
                          " bytes in regions.csv line " + line)
-        all_regions.append(fields)
+        all_regions[fields[0]] = fields
 
 # Create a list of HighwaySystem objects, one per system in systems.csv file
 highway_systems = []
@@ -3656,7 +3652,7 @@ else:
 
     # We will create graph data and a graph file for each region that includes
     # any active or preview systems
-    for r in all_regions:
+    for r in all_regions.values():
         region_code = r[0]
         if region_code not in active_preview_mileage_by_region:
             continue
@@ -3762,9 +3758,9 @@ else:
         print(fields[1] + ' ', end="", flush=True)
         region_list = []
         selected_regions = fields[2].split(",")
-        for r in all_regions:
-            if r[0] in selected_regions and r[0] in active_preview_mileage_by_region:
-                region_list.append(r[0])
+        for r in all_regions.keys():
+            if r in selected_regions and r in active_preview_mileage_by_region:
+                region_list.append(r)
         graph_data.write_subgraphs_tmg(graph_list, args.graphfilepath + "/", fields[1],
                                        fields[0], "multiregion",
                                        region_list, None, None, all_waypoints)
@@ -3779,7 +3775,7 @@ else:
     print(et.et() + "Creating country graphs.", flush=True)
     for c in countries:
         region_list = []
-        for r in all_regions:
+        for r in all_regions.values():
             # does it match this country and have routes?
             if c[0] == r[2] and r[0] in active_preview_mileage_by_region:
                 region_list.append(r[0])
@@ -3800,7 +3796,7 @@ else:
     print(et.et() + "Creating continent graphs.", flush=True)
     for c in continents:
         region_list = []
-        for r in all_regions:
+        for r in all_regions.values():
             # does it match this continent and have routes?
             if c[0] == r[3] and r[0] in active_preview_mileage_by_region:
                 region_list.append(r[0])
@@ -3953,7 +3949,7 @@ for h in highway_systems:
                     datacheckerrors.append(DatacheckEntry(r,[w.label],'NONTERMINAL_UNDERSCORE'))
 
                 # look for I-xx with Bus instead of BL or BS
-                if re.fullmatch('I\-[0-9]*Bus', w.label):
+                if re.fullmatch('I\-[0-9]+[EeWwNnSs]?[Bb][Uu][Ss].*', w.label) and all_regions[w.route.region][2] == "USA":
                     datacheckerrors.append(DatacheckEntry(r,[w.label],'BUS_WITH_I'))
 
                 # look for labels that look like hidden waypoints but
@@ -4117,7 +4113,7 @@ else:
                   '), PRIMARY KEY(code), FOREIGN KEY (country) REFERENCES countries(code), FOREIGN KEY (continent) REFERENCES continents(code));\n')
     sqlfile.write('INSERT INTO regions VALUES\n')
     first = True
-    for r in all_regions:
+    for r in all_regions.values():
         if not first:
             sqlfile.write(",")
         first = False
