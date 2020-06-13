@@ -3936,7 +3936,7 @@ for h in highway_systems:
 
                 # look for labels with invalid first or last character
                 index = 0
-                while w.label[index] == '*':
+                while index < len(w.label) and w.label[index] == '*':
                     index += 1
                 if index < len(w.label) and w.label[index] in "_/(":
                     datacheckerrors.append(DatacheckEntry(r,[w.label],'INVALID_FIRST_CHAR', w.label[index]))

@@ -406,13 +406,17 @@ inline void Waypoint::label_looks_hidden(DatacheckEntryList *datacheckerrors)
 
 inline void Waypoint::label_invalid_char(DatacheckEntryList *datacheckerrors)
 {	// look for labels with invalid characters
-	for (const char *c = label.data(); *c; c++)
+	if (label == "*")
+		  datacheckerrors->add(route, label, "", "", "LABEL_INVALID_CHAR", "");
+	else for (const char *c = label.data(); *c; c++)
 		if ((*c == 42 || *c == 43) && c > label.data()
 		 || (*c < 40)	|| (*c == 44)	|| (*c > 57 && *c < 65)
 		 || (*c == 96)	|| (*c > 122)	|| (*c > 90 && *c < 95))
 		  datacheckerrors->add(route, label, "", "", "LABEL_INVALID_CHAR", "");
 	for (std::string& lbl : alt_labels)
-	  for (const char *c = lbl.data(); *c; c++)
+	  if (lbl == "*")
+		  datacheckerrors->add(route, lbl, "", "", "LABEL_INVALID_CHAR", "");
+	  else for (const char *c = lbl.data(); *c; c++)
 		if (*c == '+' && c > lbl.data() || *c == '*' && (c > lbl.data()+1 || lbl[0] != '+')
 		 || (*c < 40)	|| (*c == 44)	|| (*c > 57 && *c < 65)
 		 || (*c == 96)	|| (*c > 122)	|| (*c > 90 && *c < 95))
