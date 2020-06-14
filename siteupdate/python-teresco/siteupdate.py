@@ -3853,6 +3853,13 @@ for h in highway_systems:
             else:
                coords_used.add(latlng)
 
+            # look for labels with invalid characters
+            if not re.fullmatch('\+?\*?[a-zA-Z0-9()/_\-\.]+', w.label):
+                datacheckerrors.append(DatacheckEntry(r,[w.label],'LABEL_INVALID_CHAR'))
+            for a in w.alt_labels:
+                if not re.fullmatch('\+?\*?[a-zA-Z0-9()/_\-\.]+', a):
+                    datacheckerrors.append(DatacheckEntry(r,[a],'LABEL_INVALID_CHAR'))
+
             # visible distance update, and last segment length check
             if prev_w is not None:
                 last_distance = w.distance_to(prev_w)
@@ -3926,13 +3933,6 @@ for h in highway_systems:
                 or left_count > 1 \
                 or (left_count == 1 and w.label.index('(') > w.label.index(')')):
                     datacheckerrors.append(DatacheckEntry(r,[w.label],'LABEL_PARENS'))
-
-                # look for labels with invalid characters
-                if not re.fullmatch('\*?[a-zA-Z0-9()/_\-\.]+', w.label):
-                    datacheckerrors.append(DatacheckEntry(r,[w.label],'LABEL_INVALID_CHAR'))
-                for a in w.alt_labels:
-                    if not re.fullmatch('\+?\*?[a-zA-Z0-9()/_\-\.]+', a):
-                        datacheckerrors.append(DatacheckEntry(r,[a],'LABEL_INVALID_CHAR'))
 
                 # look for labels with invalid first or last character
                 index = 0
