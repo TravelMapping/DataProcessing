@@ -62,6 +62,7 @@ void Route::read_wpt
 		// single-point Datachecks, and HighwaySegment
 		w->out_of_bounds(datacheckerrors, fstr);
 		w->duplicate_coords(datacheckerrors, coords_used, fstr);
+		w->label_invalid_char(datacheckerrors);
 		if (point_list.size() > 1)
 		{	w->distance_update(datacheckerrors, fstr, vis_dist, point_list[point_list.size()-2]);
 			// add HighwaySegment, if not first point
@@ -76,7 +77,6 @@ void Route::read_wpt
 			w->label_slashes(datacheckerrors, slash);
 			w->underscore_datachecks(datacheckerrors, slash);
 			w->label_parens(datacheckerrors);
-			w->label_invalid_char(datacheckerrors);
 			w->label_invalid_ends(datacheckerrors);
 			w->bus_with_i(datacheckerrors);
 			w->label_looks_hidden(datacheckerrors);
