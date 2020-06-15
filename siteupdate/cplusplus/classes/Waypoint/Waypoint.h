@@ -52,5 +52,6 @@ class Waypoint
 	inline void label_slashes(DatacheckEntryList *, const char *);
 	inline void label_selfref(DatacheckEntryList *, const char *);
 	inline bool label_too_long(DatacheckEntryList *);
+	inline void lacks_generic(DatacheckEntryList *);
 	inline void underscore_datachecks(DatacheckEntryList *, const char *);
 };

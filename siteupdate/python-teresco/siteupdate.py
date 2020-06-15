@@ -3957,6 +3957,10 @@ for h in highway_systems:
                 if re.fullmatch('X[0-9][0-9][0-9][0-9][0-9][0-9]', w.label):
                     datacheckerrors.append(DatacheckEntry(r,[w.label],'LABEL_LOOKS_HIDDEN'))
 
+                # lacks generic highway type
+                if re.fullmatch('^\*?[Oo][lL][dD][0-9].*', w.label):
+                    datacheckerrors.append(DatacheckEntry(r,[w.label],'LACKS_GENERIC'))
+
                 # look for USxxxA but not USxxxAlt, B/Bus (others?)
                 ##if re.fullmatch('US[0-9]+A.*', w.label) and not re.fullmatch('US[0-9]+Alt.*', w.label) or \
                 ##   re.fullmatch('US[0-9]+B.*', w.label) and \
