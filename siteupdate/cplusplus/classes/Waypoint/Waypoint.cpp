@@ -389,8 +389,9 @@ inline void Waypoint::visible_distance(DatacheckEntryList *datacheckerrors, char
 
 inline void Waypoint::bus_with_i(DatacheckEntryList *datacheckerrors)
 {	// look for I-xx with Bus instead of BL or BS
-	if (label[0] != 'I' || label[1] != '-' || route->region->country->first != "USA") return;
-	const char *c = label.data()+2;
+	const char *c = label.data();
+	if (*c == '*') c++;
+	if (*c++ != 'I' || *c++ != '-' || route->region->country->first != "USA") return;
 	if (*c < '0' || *c > '9') return;
 	while (*c >= '0' && *c <= '9') c++;
 	if ( *c == 'E' || *c == 'W' || *c == 'C' || *c == 'N' || *c == 'S'
