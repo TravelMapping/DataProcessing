@@ -346,6 +346,16 @@ inline bool Waypoint::label_too_long(DatacheckEntryList *datacheckerrors)
 	return 0;
 }
 
+inline void Waypoint::lacks_generic(DatacheckEntryList *datacheckerrors)
+{	// label lacks generic highway type
+	const char* c = label[0] == '*' ? label.data()+1 : label.data();
+	if ( (*c == 'O' || *c == 'o')
+	  && (*(c+1) == 'l' || *(c+1) == 'L')
+	  && (*(c+2) == 'd' || *(c+2) == 'D')
+	  &&  *(c+3) >= '0' && *(c+3) <= '9')
+		datacheckerrors->add(route, label, "", "", "LACKS_GENERIC", "");
+}
+
 inline void Waypoint::out_of_bounds(DatacheckEntryList *datacheckerrors, char *fstr)
 {	// out-of-bounds coords
 	if (lat > 90 || lat < -90 || lng > 180 || lng < -180)
@@ -379,8 +389,9 @@ inline void Waypoint::visible_distance(DatacheckEntryList *datacheckerrors, char
 
 inline void Waypoint::bus_with_i(DatacheckEntryList *datacheckerrors)
 {	// look for I-xx with Bus instead of BL or BS
-	if (label[0] != 'I' || label[1] != '-' || route->region->country->first != "USA") return;
-	const char *c = label.data()+2;
+	const char *c = label.data();
+	if (*c == '*') c++;
+	if (*c++ != 'I' || *c++ != '-' || route->region->country->first != "USA") return;
 	if (*c < '0' || *c > '9') return;
 	while (*c >= '0' && *c <= '9') c++;
 	if ( *c == 'E' || *c == 'W' || *c == 'C' || *c == 'N' || *c == 'S'

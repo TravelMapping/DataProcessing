@@ -80,6 +80,7 @@ void Route::read_wpt
 			w->label_invalid_ends(datacheckerrors);
 			w->bus_with_i(datacheckerrors);
 			w->label_looks_hidden(datacheckerrors);
+			w->lacks_generic(datacheckerrors);
 		}
 	}
 	delete[] wptdata;

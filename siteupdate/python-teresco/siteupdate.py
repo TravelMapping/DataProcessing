@@ -2922,10 +2922,10 @@ for h in highway_systems:
                 # create label->index hashes and check if AltLabels duplicated
                 if w.alt_labels[a] in r.pri_label_hash:
                     datacheckerrors.append(DatacheckEntry(r, [w.alt_labels[a]], "DUPLICATE_LABEL"))
-                    r.duplicate_labels.add(a)
+                    r.duplicate_labels.add(w.alt_labels[a])
                 elif w.alt_labels[a] in r.alt_label_hash:
                     datacheckerrors.append(DatacheckEntry(r, [w.alt_labels[a]], "DUPLICATE_LABEL"))
-                    r.duplicate_labels.add(a)
+                    r.duplicate_labels.add(w.alt_labels[a])
                 else:
                     r.alt_label_hash[w.alt_labels[a]] = index
             index += 1
@@ -3949,13 +3949,17 @@ for h in highway_systems:
                     datacheckerrors.append(DatacheckEntry(r,[w.label],'NONTERMINAL_UNDERSCORE'))
 
                 # look for I-xx with Bus instead of BL or BS
-                if re.fullmatch('I\-[0-9]+[EeWwCcNnSs]?[Bb][Uu][Ss].*', w.label) and all_regions[w.route.region][2] == "USA":
+                if re.fullmatch('\*?I\-[0-9]+[EeWwCcNnSs]?[Bb][Uu][Ss].*', w.label) and all_regions[w.route.region][2] == "USA":
                     datacheckerrors.append(DatacheckEntry(r,[w.label],'BUS_WITH_I'))
 
                 # look for labels that look like hidden waypoints but
                 # which aren't hidden
                 if re.fullmatch('X[0-9][0-9][0-9][0-9][0-9][0-9]', w.label):
                     datacheckerrors.append(DatacheckEntry(r,[w.label],'LABEL_LOOKS_HIDDEN'))
+
+                # lacks generic highway type
+                if re.fullmatch('^\*?[Oo][lL][dD][0-9].*', w.label):
+                    datacheckerrors.append(DatacheckEntry(r,[w.label],'LACKS_GENERIC'))
 
                 # look for USxxxA but not USxxxAlt, B/Bus (others?)
                 ##if re.fullmatch('US[0-9]+A.*', w.label) and not re.fullmatch('US[0-9]+Alt.*', w.label) or \
