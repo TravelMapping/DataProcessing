@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Travel Mapping Project, Jim Teresco, 2015-2018
+# Travel Mapping Project, Jim Teresco, 2015-2020
 """Python code to read .csv and .wpt files and prepare for
 adding to the Travel Mapping Project database.
 
@@ -913,11 +913,7 @@ class Route:
                          ".csv line [" + line + "], expected " + system.systemname)
         self.region = fields[1]
         region_found = False
-        for r in all_regions:
-            if r[0] == self.region:
-                region_found = True
-                break
-        if not region_found:
+        if self.region not in all_regions:
             el.add_error("Unrecognized region in " + system.systemname +
                          ".csv line: " + line)
         self.route = fields[2]
@@ -990,6 +986,7 @@ class Route:
         self.con_route = None
         self.mileage = 0.0
         self.rootOrder = -1  # order within connected route
+        self.is_reversed = False
 
     def __str__(self):
         """printable version of the object"""
@@ -1094,6 +1091,12 @@ class Route:
             hs = self.segment_list[pos]
             hs.add_clinched_by(t)
             t.clinched_segments.add(hs)
+
+    def con_beg(self):
+        return self.point_list[-1] if self.is_reversed else self.point_list[0]
+
+    def con_end(self):
+        return self.point_list[0] if self.is_reversed else self.point_list[-1]
 
 class ConnectedRoute:
     """This class encapsulates a single 'connected route' as given
@@ -1284,7 +1287,7 @@ class TravelerList:
                 continue
             fields = re.split('[ \t]+',line)
             # truncate inline comments from fields list
-            for i in range(min(len(fields), 5)):
+            for i in range(min(len(fields), 7)):
                 if fields[i][0] == '#':
                     fields = fields[:i]
                     break
@@ -1305,7 +1308,7 @@ class TravelerList:
                             self.log_entries[-1] += " [contains invalid character(s)]"
                         continue
                     else:
-                        self.log_entries.append("Note: deprecated route name " + fields[1] + " -> canonical name " + r.list_entry_name() + " in line " + line)
+                        self.log_entries.append("Note: deprecated route name " + fields[1] + " -> canonical name " + r.list_entry_name() + " in line: " + line)
                 if r.system.devel():
                     self.log_entries.append("Ignoring line matching highway in system in development: " + line)
                     continue
@@ -1378,12 +1381,145 @@ class TravelerList:
                     if index1 > index2:
                         (index1, index2) = (index2, index1)
                     r.store_traveled_segments(self, index1, index2)
+            elif len(fields) == 6:
+                lookup1 = fields[0].upper() + ' ' + fields[1].upper()
+                lookup2 = fields[3].upper() + ' ' + fields[4].upper()
+                # look for region/route combos, first in pri_list_hash
+                # and then if not found, in alt_list_hash
+                both_lookups_found = True
+                try:
+                    r1 = Route.pri_list_hash[lookup1]
+                except KeyError:
+                    try:
+                        r1 = Route.alt_list_hash[lookup1]
+                    except KeyError:
+                        r1 = None
+                    else:
+                        self.log_entries.append("Note: deprecated route name \"" + fields[0] + ' ' + fields[1] \
+                                              + "\" -> canonical name \"" + r1.readable_name() + "\" in line: " + line)
+                try:
+                    r2 = Route.pri_list_hash[lookup2]
+                except KeyError:
+                    try:
+                        r2 = Route.alt_list_hash[lookup2]
+                    except KeyError:
+                        r2 = None
+                    else:
+                        self.log_entries.append("Note: deprecated route name \"" + fields[3] + ' ' + fields[4] \
+                                              + "\" -> canonical name \"" + r2.readable_name() + "\" in line: " + line)
+                if r1 is None or r2 is None:
+                    (lookup1, invchar) = no_control_chars(lookup1)
+                    (lookup2, invchar) = no_control_chars(lookup2)
+                    (line, invchar) = no_control_chars(line)
+                    if r1 == r2:
+                        self.log_entries.append("Unknown region/highway combos " + lookup1 + " and " + lookup2 + " in line: " + line)
+                    else:
+                        log_entry = "Unknown region/highway combo "
+                        log_entry += lookup1 if r1 is None else lookup2
+                        log_entry += " in line: " + line
+                        self.log_entries.append(log_entry)
+                    if invchar:
+                        self.log_entries[-1] += " [contains invalid character(s)]"
+                    continue
+                if r1.con_route != r2.con_route:
+                    self.log_entries.append(lookup1 + " and " + lookup2 + " not in same connected route in line: " + line)
+                    continue
+                if r1.system.devel():
+                    self.log_entries.append("Ignoring line matching highway in system in development: " + line)
+                    continue
+                # r1 and r2 are route matches, and we need to find
+                # waypoint indices, ignoring case and leading
+                # '+' or '*' when matching
+                list_label_1 = fields[2].lstrip("+*").upper()
+                list_label_2 = fields[5].lstrip("+*").upper()
+                # look for point indices for labels, first in pri_label_hash
+                # and then if not found, in alt_label_hash
+                try:
+                    index1 = r1.pri_label_hash[list_label_1]
+                except KeyError:
+                    try:
+                        index1 = r1.alt_label_hash[list_label_1]
+                    except KeyError:
+                        index1 = None
+                try:
+                    index2 = r2.pri_label_hash[list_label_2]
+                except KeyError:
+                    try:
+                        index2 = r2.alt_label_hash[list_label_2]
+                    except KeyError:
+                        index2 = None
+                # if we did not find matches for both labels...
+                if index1 is None or index2 is None:
+                    (list_label_1, invchar) = no_control_chars(list_label_1)
+                    (list_label_2, invchar) = no_control_chars(list_label_2)
+                    (line, invchar) = no_control_chars(line)
+                    if index1 is None and index2 is None:
+                        self.log_entries.append("Waypoint labels " + list_label_1 + " and " + list_label_2 + " not found in line: " + line)
+                    else:
+                        log_entry = "Waypoint "
+                        if index1 is None:
+                            log_entry += lookup1 + ' ' + list_label_1
+                        else:
+                            log_entry += lookup2 + ' ' + list_label_2
+                        log_entry += " not found in line: " + line
+                        self.log_entries.append(log_entry)
+                    if invchar:
+                        self.log_entries[-1] += " [contains invalid character(s)]"
+                    continue
+                # are either of the labels used duplicates?
+                duplicate = False
+                if list_label_1 in r1.duplicate_labels:
+                    self.log_entries.append(r1.region + ": duplicate label " + list_label_1 + " in " + r1.root \
+                                          + ". Please report this error in the TravelMapping forum. Unable to parse line: " + line)
+                    duplicate = True
+                if list_label_2 in r2.duplicate_labels:
+                    self.log_entries.append(r2.region + ": duplicate label " + list_label_2 + " in " + r2.root \
+                                          + ". Please report this error in the TravelMapping forum. Unable to parse line: " + line)
+                    duplicate = True
+                if duplicate:
+                    continue
+                # if both region/route combos point to the same chopped route...
+                if r1 == r2:
+                    # if both labels reference the same waypoint...
+                    if index1 == index2:
+                        self.log_entries.append("Equivalent waypoint labels mark zero distance traveled in line: " + line)
+                        continue
+                    if index1 <= index2:
+                        r1.store_traveled_segments(self, index1, index2)
+                    else:
+                        r1.store_traveled_segments(self, index2, index1)
+                else:
+                    if r1.rootOrder > r2.rootOrder:
+                        (r1, r2) = (r2, r1)
+                        (index1, index2) = (index2, index1)
+                    # mark the beginning chopped route from index1 to its end
+                    if r1.is_reversed:
+                        r1.store_traveled_segments(self, 0, index1)
+                    else:
+                        r1.store_traveled_segments(self, index1, len(r1.segment_list))
+                    # mark the ending chopped route from its beginning to index2
+                    if r2.is_reversed:
+                        r2.store_traveled_segments(self, index2, len(r2.segment_list))
+                    else:
+                        r2.store_traveled_segments(self, 0, index2)
+                    # mark any intermediate chopped routes in their entirety.
+                    for r in range(r1.rootOrder+1, r2.rootOrder):
+                        r1.con_route.roots[r].store_traveled_segments(self, 0, len(r1.con_route.roots[r].segment_list))
+                # both labels are valid; mark in use & proceed
+                r1.system.listnamesinuse.add(lookup1)
+                r1.system.unusedaltroutenames.discard(lookup1)
+                r1.labels_in_use.add(list_label_1)
+                r2.system.listnamesinuse.add(lookup2)
+                r2.system.unusedaltroutenames.discard(lookup2)
+                r2.labels_in_use.add(list_label_2)
+                list_entries += 1
             else:
-                self.log_entries.append("Incorrect format line: " + line)
+                self.log_entries.append("Incorrect format line (4 or 6 fields expected, found " + \
+                                        str(len(fields)) +"): " + line)
 
         self.log_entries.append("Processed " + str(list_entries) + \
-                                    " good lines marking " +str(len(self.clinched_segments)) + \
-                                    " segments traveled.")
+                                " good lines marking " +str(len(self.clinched_segments)) + \
+                                " segments traveled.")
         # additional setup for later stats processing
         # a place to track this user's total mileage per region,
         # but only active+preview and active only (since devel
@@ -1418,6 +1554,7 @@ class DatacheckEntry:
     -----------------------+--------------------------------------------
     BAD_ANGLE              |
     BUS_WITH_I             |
+    DISCONNECTED_ROUTE     | adjacent root's expected connection point
     DUPLICATE_COORDS       | coordinate pair
     DUPLICATE_LABEL        |
     HIDDEN_JUNCTION        | number of incident edges in TM master graph
@@ -2397,7 +2534,7 @@ else:
                          " bytes in countries.csv line " + line)
         countries.append(fields)
 
-all_regions = []
+all_regions = {}
 try:
     file = open(args.highwaydatapath+"/regions.csv", "rt",encoding='utf-8')
 except OSError as e:
@@ -2439,7 +2576,7 @@ else:
         if len(fields[4].encode('utf-8')) > DBFieldLength.regiontype:
             el.add_error("Region type > " + str(DBFieldLength.regiontype) +
                          " bytes in regions.csv line " + line)
-        all_regions.append(fields)
+        all_regions[fields[0]] = fields
 
 # Create a list of HighwaySystem objects, one per system in systems.csv file
 highway_systems = []
@@ -2746,6 +2883,24 @@ for h in highway_systems:
         # check for unconnected chopped routes
         if r.con_route is None:
             el.add_error(r.system.systemname + ".csv: root " + r.root + " not matched by any connected route root.")
+
+        # check for mismatched route endpoints within connected routes
+        q = r.con_route.roots[r.rootOrder-1]
+        if r.rootOrder > 0 and len(q.point_list) > 1 and not r.con_beg().same_coords(q.con_end()):
+            if q.con_beg().same_coords(r.con_beg()):
+                q.is_reversed = True
+            elif q.con_end().same_coords(r.con_end()):
+                r.is_reversed = True
+            elif q.con_beg().same_coords(r.con_end()):
+                q.is_reversed = True
+                r.is_reversed = True
+            elif not q.con_end().same_coords(r.con_beg()):
+                datacheckerrors.append(DatacheckEntry(r, [r.con_beg().label],
+                                       "DISCONNECTED_ROUTE", q.root + '@' + q.con_end().label))
+                datacheckerrors.append(DatacheckEntry(q, [q.con_end().label],
+                                       "DISCONNECTED_ROUTE", r.root + '@' + r.con_beg().label))
+
+        # create label hashes and check for duplicates
         index = 0
         for w in r.point_list:
             # ignore case and leading '+' or '*'
@@ -2767,10 +2922,10 @@ for h in highway_systems:
                 # create label->index hashes and check if AltLabels duplicated
                 if w.alt_labels[a] in r.pri_label_hash:
                     datacheckerrors.append(DatacheckEntry(r, [w.alt_labels[a]], "DUPLICATE_LABEL"))
-                    r.duplicate_labels.add(a)
+                    r.duplicate_labels.add(w.alt_labels[a])
                 elif w.alt_labels[a] in r.alt_label_hash:
                     datacheckerrors.append(DatacheckEntry(r, [w.alt_labels[a]], "DUPLICATE_LABEL"))
-                    r.duplicate_labels.add(a)
+                    r.duplicate_labels.add(w.alt_labels[a])
                 else:
                     r.alt_label_hash[w.alt_labels[a]] = index
             index += 1
@@ -3387,8 +3542,8 @@ file.close()
 
 lines.pop(0)  # ignore header line
 datacheckfps = []
-datacheck_always_error = [ 'BAD_ANGLE', 'DUPLICATE_LABEL', 'HIDDEN_TERMINUS',
-                           'INVALID_FINAL_CHAR', 'INVALID_FIRST_CHAR',
+datacheck_always_error = [ 'BAD_ANGLE', 'DISCONNECTED_ROUTE', 'DUPLICATE_LABEL', 
+                           'HIDDEN_TERMINUS', 'INVALID_FINAL_CHAR', 'INVALID_FIRST_CHAR',
                            'LABEL_INVALID_CHAR', 'LABEL_PARENS', 'LABEL_SLASHES',
                            'LABEL_TOO_LONG', 'LABEL_UNDERSCORES', 'LONG_UNDERSCORE',
                            'MALFORMED_LAT', 'MALFORMED_LON', 'MALFORMED_URL',
@@ -3497,7 +3652,7 @@ else:
 
     # We will create graph data and a graph file for each region that includes
     # any active or preview systems
-    for r in all_regions:
+    for r in all_regions.values():
         region_code = r[0]
         if region_code not in active_preview_mileage_by_region:
             continue
@@ -3603,9 +3758,9 @@ else:
         print(fields[1] + ' ', end="", flush=True)
         region_list = []
         selected_regions = fields[2].split(",")
-        for r in all_regions:
-            if r[0] in selected_regions and r[0] in active_preview_mileage_by_region:
-                region_list.append(r[0])
+        for r in all_regions.keys():
+            if r in selected_regions and r in active_preview_mileage_by_region:
+                region_list.append(r)
         graph_data.write_subgraphs_tmg(graph_list, args.graphfilepath + "/", fields[1],
                                        fields[0], "multiregion",
                                        region_list, None, None, all_waypoints)
@@ -3620,7 +3775,7 @@ else:
     print(et.et() + "Creating country graphs.", flush=True)
     for c in countries:
         region_list = []
-        for r in all_regions:
+        for r in all_regions.values():
             # does it match this country and have routes?
             if c[0] == r[2] and r[0] in active_preview_mileage_by_region:
                 region_list.append(r[0])
@@ -3641,7 +3796,7 @@ else:
     print(et.et() + "Creating continent graphs.", flush=True)
     for c in continents:
         region_list = []
-        for r in all_regions:
+        for r in all_regions.values():
             # does it match this continent and have routes?
             if c[0] == r[3] and r[0] in active_preview_mileage_by_region:
                 region_list.append(r[0])
@@ -3697,6 +3852,13 @@ for h in highway_systems:
                                                               "("+str(latlng[0])+","+str(latlng[1])+")"))
             else:
                coords_used.add(latlng)
+
+            # look for labels with invalid characters
+            if not re.fullmatch('\+?\*?[a-zA-Z0-9()/_\-\.]+', w.label):
+                datacheckerrors.append(DatacheckEntry(r,[w.label],'LABEL_INVALID_CHAR'))
+            for a in w.alt_labels:
+                if not re.fullmatch('\+?\*?[a-zA-Z0-9()/_\-\.]+', a):
+                    datacheckerrors.append(DatacheckEntry(r,[a],'LABEL_INVALID_CHAR'))
 
             # visible distance update, and last segment length check
             if prev_w is not None:
@@ -3772,16 +3934,9 @@ for h in highway_systems:
                 or (left_count == 1 and w.label.index('(') > w.label.index(')')):
                     datacheckerrors.append(DatacheckEntry(r,[w.label],'LABEL_PARENS'))
 
-                # look for labels with invalid characters
-                if not re.fullmatch('\*?[a-zA-Z0-9()/_\-\.]+', w.label):
-                    datacheckerrors.append(DatacheckEntry(r,[w.label],'LABEL_INVALID_CHAR'))
-                for a in w.alt_labels:
-                    if not re.fullmatch('\+?\*?[a-zA-Z0-9()/_\-\.]+', a):
-                        datacheckerrors.append(DatacheckEntry(r,[a],'LABEL_INVALID_CHAR'))
-
                 # look for labels with invalid first or last character
                 index = 0
-                while w.label[index] == '*':
+                while index < len(w.label) and w.label[index] == '*':
                     index += 1
                 if index < len(w.label) and w.label[index] in "_/(":
                     datacheckerrors.append(DatacheckEntry(r,[w.label],'INVALID_FIRST_CHAR', w.label[index]))
@@ -3794,13 +3949,17 @@ for h in highway_systems:
                     datacheckerrors.append(DatacheckEntry(r,[w.label],'NONTERMINAL_UNDERSCORE'))
 
                 # look for I-xx with Bus instead of BL or BS
-                if re.fullmatch('I\-[0-9]*Bus', w.label):
+                if re.fullmatch('\*?I\-[0-9]+[EeWwCcNnSs]?[Bb][Uu][Ss].*', w.label) and all_regions[w.route.region][2] == "USA":
                     datacheckerrors.append(DatacheckEntry(r,[w.label],'BUS_WITH_I'))
 
                 # look for labels that look like hidden waypoints but
                 # which aren't hidden
                 if re.fullmatch('X[0-9][0-9][0-9][0-9][0-9][0-9]', w.label):
                     datacheckerrors.append(DatacheckEntry(r,[w.label],'LABEL_LOOKS_HIDDEN'))
+
+                # lacks generic highway type
+                if re.fullmatch('^\*?[Oo][lL][dD][0-9].*', w.label):
+                    datacheckerrors.append(DatacheckEntry(r,[w.label],'LACKS_GENERIC'))
 
                 # look for USxxxA but not USxxxAlt, B/Bus (others?)
                 ##if re.fullmatch('US[0-9]+A.*', w.label) and not re.fullmatch('US[0-9]+Alt.*', w.label) or \
@@ -3958,7 +4117,7 @@ else:
                   '), PRIMARY KEY(code), FOREIGN KEY (country) REFERENCES countries(code), FOREIGN KEY (continent) REFERENCES continents(code));\n')
     sqlfile.write('INSERT INTO regions VALUES\n')
     first = True
-    for r in all_regions:
+    for r in all_regions.values():
         if not first:
             sqlfile.write(",")
         first = False

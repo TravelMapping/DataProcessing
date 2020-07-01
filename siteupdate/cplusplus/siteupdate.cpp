@@ -97,7 +97,7 @@ using namespace std;
 int main(int argc, char *argv[])
 {	ifstream file;
 	string line;
-	mutex list_mtx, log_mtx;
+	mutex list_mtx;
 	time_t timestamp;
 
 	// start a timer for including elapsed time reports in messages
@@ -391,8 +391,39 @@ int main(int argc, char *argv[])
 	  {	// check for unconnected chopped routes
 		if (!r.con_route)
 		  el.add_error(r.system->systemname + ".csv: root " + r.root + " not matched by any connected route root.");
-		unsigned int index = 0;
-		for (Waypoint* w : r.point_list)
+
+		// check for mismatched route endpoints within connected routes
+		#define q r.con_route->roots[r.rootOrder-1]
+		if ( r.rootOrder > 0 && q->point_list.size() > 1 && !r.con_beg()->same_coords(q->con_end()) )
+		{	if ( q->con_beg()->same_coords(r.con_beg()) )
+			{	//std::cout << "DEBUG: marking only " << q->str() << " reversed" << std::endl;
+				//if (q->is_reversed) std::cout << "DEBUG: " << q->str() << " already reversed!" << std::endl;
+				q->is_reversed = 1;
+			}
+			else if ( q->con_end()->same_coords(r.con_end()) )
+			{	//std::cout << "DEBUG: marking only " << r.str() << " reversed" << std::endl;
+				//if (r.is_reversed) std::cout << "DEBUG: " << r.str() << " already reversed!" << std::endl;
+				r.is_reversed = 1;
+			}
+			else if ( q->con_beg()->same_coords(r.con_end()) )
+			{	//std::cout << "DEBUG: marking both " << q->str() << " and " << r.str() << " reversed" << std::endl;
+				//if (q->is_reversed) std::cout << "DEBUG: " << q->str() << " already reversed!" << std::endl;
+				//if (r.is_reversed) std::cout << "DEBUG: " << r.str() << " already reversed!" << std::endl;
+				q->is_reversed = 1;
+				r.is_reversed = 1;
+			}
+			else if ( !q->con_end()->same_coords(r.con_beg()) )
+			{	datacheckerrors->add(&r, r.con_beg()->label, "", "",
+						     "DISCONNECTED_ROUTE", q->con_end()->root_at_label());
+				datacheckerrors->add(q, q->con_end()->label, "", "",
+						     "DISCONNECTED_ROUTE", r.con_beg()->root_at_label());
+			}
+		}
+		#undef q
+
+		// create label hashes and check for duplicates
+		#define w r.point_list[index]
+		for (unsigned int index = 0; index < r.point_list.size(); index++)
 		{	// ignore case and leading '+' or '*'
 			std::string upper_label = upper(w->label);
 			while (upper_label[0] == '+' || upper_label[0] == '*')
@@ -422,8 +453,8 @@ int main(int argc, char *argv[])
 					r.duplicate_labels.insert(a);
 				}
 			}
-			index++;
 		}
+		#undef w
 	  }
 
 	// Create a list of TravelerList objects, one per person
@@ -630,7 +661,7 @@ int main(int argc, char *argv[])
 	list<TravelerList*>::iterator tl_it = traveler_lists.begin();
 
 	for (unsigned int t = 0; t < args.numthreads; t++)
-		thr[t] = new thread(ConcAugThread, t, &traveler_lists, &tl_it, &list_mtx, &log_mtx, augment_lists+t);
+		thr[t] = new thread(ConcAugThread, t, &traveler_lists, &tl_it, &list_mtx, augment_lists+t);
 	for (unsigned int t = 0; t < args.numthreads; t++)
 		thr[t]->join();
 	cout << "!\n" << et.et() << "Writing to concurrencies.log." << endl;
@@ -898,8 +929,8 @@ int main(int argc, char *argv[])
 	getline(file, line); // ignore header line
 	list<array<string, 6>> datacheckfps;
 	unordered_set<string> datacheck_always_error
-	({	"BAD_ANGLE", "DUPLICATE_LABEL", "HIDDEN_TERMINUS",
-		"INVALID_FINAL_CHAR", "INVALID_FIRST_CHAR",
+	({	"BAD_ANGLE", "DISCONNECTED_ROUTE", "DUPLICATE_LABEL",
+		"HIDDEN_TERMINUS", "INVALID_FINAL_CHAR", "INVALID_FIRST_CHAR",
 		"LABEL_INVALID_CHAR", "LABEL_PARENS", "LABEL_SLASHES",
 		"LABEL_TOO_LONG", "LABEL_UNDERSCORES", "LONG_UNDERSCORE",
 		"MALFORMED_LAT", "MALFORMED_LON", "MALFORMED_URL",

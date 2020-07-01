@@ -8,6 +8,7 @@ Route::Route(std::string &line, HighwaySystem *sys, ErrorList &el, std::unordere
 	mileage = 0;
 	rootOrder = -1; // order within connected route
 	region = 0;	// if this stays 0, setup has failed due to bad .csv data
+	is_reversed = 0;
 
 	// parse chopped routes csv line
 	size_t NumFields = 8;
@@ -160,16 +161,16 @@ double Route::clinched_by_traveler(TravelerList *t)
 	return miles;
 }
 
-std::string Route::list_line(int beg, int end)
+/*std::string Route::list_line(int beg, int end)
 {	/* Return a .list file line from (beg) to (end),
 	these being indices to the point_list vector.
 	These values can be "out-of-bounds" when getting lines
 	for connected routes. If so, truncate or return "". */
-	if (beg >= int(point_list.size()) || end <= 0) return "";
+/*	if (beg >= int(point_list.size()) || end <= 0) return "";
 	if (end >= int(point_list.size())) end = point_list.size()-1;
 	if (beg < 0) beg = 0;
 	return readable_name() + " " + point_list[beg]->label + " " + point_list[end]->label;
-}
+}//*/
 
 void Route::write_nmp_merged(std::string filename)
 {	mkdir(filename.data(), 0777);
@@ -215,4 +216,12 @@ inline void Route::store_traveled_segments(TravelerList* t, unsigned int beg, un
 		hs->add_clinched_by(t);
 		t->clinched_segments.insert(hs);
 	}
+}
+
+inline Waypoint* Route::con_beg()
+{	return is_reversed ? point_list.back() : point_list.front();
+}
+
+inline Waypoint* Route::con_end()
+{	return is_reversed ? point_list.front() : point_list.back();
 }
