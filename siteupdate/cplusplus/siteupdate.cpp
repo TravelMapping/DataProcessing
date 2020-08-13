@@ -412,7 +412,7 @@ int main(int argc, char *argv[])
 				q->is_reversed = 1;
 				r.is_reversed = 1;
 			}
-			else if ( !q->con_end()->same_coords(r.con_beg()) )
+			else
 			{	datacheckerrors->add(&r, r.con_beg()->label, "", "",
 						     "DISCONNECTED_ROUTE", q->con_end()->root_at_label());
 				datacheckerrors->add(q, q->con_end()->label, "", "",

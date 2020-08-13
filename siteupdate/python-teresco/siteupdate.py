@@ -2894,7 +2894,7 @@ for h in highway_systems:
             elif q.con_beg().same_coords(r.con_end()):
                 q.is_reversed = True
                 r.is_reversed = True
-            elif not q.con_end().same_coords(r.con_beg()):
+            else:
                 datacheckerrors.append(DatacheckEntry(r, [r.con_beg().label],
                                        "DISCONNECTED_ROUTE", q.root + '@' + q.con_end().label))
                 datacheckerrors.append(DatacheckEntry(q, [q.con_end().label],
