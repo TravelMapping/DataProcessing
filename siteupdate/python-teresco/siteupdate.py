@@ -1559,6 +1559,7 @@ class DatacheckEntry:
     DUPLICATE_LABEL        |
     HIDDEN_JUNCTION        | number of incident edges in TM master graph
     HIDDEN_TERMINUS        |
+    INTERSTATE_NO_HYPHEN   |
     INVALID_FINAL_CHAR     | final character in label
     INVALID_FIRST_CHAR     | first character in label other than *
     LABEL_INVALID_CHAR     |
@@ -3543,7 +3544,8 @@ file.close()
 lines.pop(0)  # ignore header line
 datacheckfps = []
 datacheck_always_error = [ 'BAD_ANGLE', 'DISCONNECTED_ROUTE', 'DUPLICATE_LABEL', 
-                           'HIDDEN_TERMINUS', 'INVALID_FINAL_CHAR', 'INVALID_FIRST_CHAR',
+                           'HIDDEN_TERMINUS', 'INTERSTATE_NO_HYPHEN',
+                           'INVALID_FINAL_CHAR', 'INVALID_FIRST_CHAR',
                            'LABEL_INVALID_CHAR', 'LABEL_PARENS', 'LABEL_SLASHES',
                            'LABEL_TOO_LONG', 'LABEL_UNDERSCORES', 'LONG_UNDERSCORE',
                            'MALFORMED_LAT', 'MALFORMED_LON', 'MALFORMED_URL',
@@ -3948,10 +3950,6 @@ for h in highway_systems:
                         w.label.index('/') > w.label.index('_'):
                     datacheckerrors.append(DatacheckEntry(r,[w.label],'NONTERMINAL_UNDERSCORE'))
 
-                # look for I-xx with Bus instead of BL or BS
-                if re.fullmatch('\*?I\-[0-9]+[EeWwCcNnSs]?[Bb][Uu][Ss].*', w.label) and all_regions[w.route.region][2] == "USA":
-                    datacheckerrors.append(DatacheckEntry(r,[w.label],'BUS_WITH_I'))
-
                 # look for labels that look like hidden waypoints but
                 # which aren't hidden
                 if re.fullmatch('X[0-9][0-9][0-9][0-9][0-9][0-9]', w.label):
@@ -3960,6 +3958,16 @@ for h in highway_systems:
                 # lacks generic highway type
                 if re.fullmatch('^\*?[Oo][lL][dD][0-9].*', w.label):
                     datacheckerrors.append(DatacheckEntry(r,[w.label],'LACKS_GENERIC'))
+
+                # USA-only datachecks
+                if w.route.system.country == "USA" and len(w.label) >= 2:
+                    # look for I-xx with Bus instead of BL or BS
+                    if re.fullmatch('\*?I\-[0-9]+[EeWwCcNnSs]?[Bb][Uu][Ss].*', w.label):
+                        datacheckerrors.append(DatacheckEntry(r,[w.label],'BUS_WITH_I'))
+                    # look for Ixx without hyphen
+                    c = 2 if (w.label.startswith("To") and len(w.label) > 2) else 0
+                    if w.label[c] == 'I' and w.label[c+1].isdigit():
+                        datacheckerrors.append(DatacheckEntry(r,[w.label],'INTERSTATE_NO_HYPHEN'))
 
                 # look for USxxxA but not USxxxAlt, B/Bus (others?)
                 ##if re.fullmatch('US[0-9]+A.*', w.label) and not re.fullmatch('US[0-9]+Alt.*', w.label) or \

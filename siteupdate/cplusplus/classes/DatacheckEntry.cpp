@@ -17,6 +17,7 @@ class DatacheckEntry
     DUPLICATE_LABEL        |
     HIDDEN_JUNCTION        | number of incident edges in TM master graph
     HIDDEN_TERMINUS        |
+    INTERSTATE_NO_HYPHEN   |
     INVALID_FINAL_CHAR     | final character in label
     INVALID_FIRST_CHAR     | first character in label other than *
     LABEL_INVALID_CHAR     |
