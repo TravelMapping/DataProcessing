@@ -71,16 +71,17 @@ void Route::read_wpt
 		}
 		// checks for visible points
 		if (!w->is_hidden)
-		{	w->visible_distance(datacheckerrors, fstr, vis_dist, last_visible);
-			const char *slash = strchr(w->label.data(), '/');
+		{	const char *slash = strchr(w->label.data(), '/');
+			w->bus_with_i(datacheckerrors);
+			w->interstate_no_hyphen(datacheckerrors);
+			w->label_invalid_ends(datacheckerrors);
+			w->label_looks_hidden(datacheckerrors);
+			w->label_parens(datacheckerrors);
 			w->label_selfref(datacheckerrors, slash);
 			w->label_slashes(datacheckerrors, slash);
-			w->underscore_datachecks(datacheckerrors, slash);
-			w->label_parens(datacheckerrors);
-			w->label_invalid_ends(datacheckerrors);
-			w->bus_with_i(datacheckerrors);
-			w->label_looks_hidden(datacheckerrors);
 			w->lacks_generic(datacheckerrors);
+			w->underscore_datachecks(datacheckerrors, slash);
+			w->visible_distance(datacheckerrors, fstr, vis_dist, last_visible);
 		}
 	}
 	delete[] wptdata;
