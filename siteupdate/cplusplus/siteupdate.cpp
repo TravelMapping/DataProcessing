@@ -394,7 +394,7 @@ int main(int argc, char *argv[])
 
 		// check for mismatched route endpoints within connected routes
 		#define q r.con_route->roots[r.rootOrder-1]
-		if ( r.rootOrder > 0 && q->point_list.size() > 1 && !r.con_beg()->same_coords(q->con_end()) )
+		if ( r.rootOrder > 0 && q->point_list.size() > 1 && r.point_list.size() > 1 && !r.con_beg()->same_coords(q->con_end()) )
 		{	if ( q->con_beg()->same_coords(r.con_beg()) )
 			{	//std::cout << "DEBUG: marking only " << q->str() << " reversed" << std::endl;
 				//if (q->is_reversed) std::cout << "DEBUG: " << q->str() << " already reversed!" << std::endl;

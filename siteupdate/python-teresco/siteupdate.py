@@ -2887,7 +2887,7 @@ for h in highway_systems:
 
         # check for mismatched route endpoints within connected routes
         q = r.con_route.roots[r.rootOrder-1]
-        if r.rootOrder > 0 and len(q.point_list) > 1 and not r.con_beg().same_coords(q.con_end()):
+        if r.rootOrder > 0 and len(q.point_list) > 1 and len(r.point_list) > 1 and not r.con_beg().same_coords(q.con_end()):
             if q.con_beg().same_coords(r.con_beg()):
                 q.is_reversed = True
             elif q.con_end().same_coords(r.con_end()):
