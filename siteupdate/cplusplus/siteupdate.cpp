@@ -244,7 +244,6 @@ int main(int argc, char *argv[])
 					    // deleted on termination of program
 			if (!hs->is_valid) delete hs;
 			else {	highway_systems.push_back(hs);
-				cout << hs->systemname << '.' << std::flush;
 			     }
 		}
 		cout << endl;
@@ -999,8 +998,7 @@ int main(int argc, char *argv[])
 	}
 	fpfile.close();
 	cout << '!' << endl;
-	cout << et.et() << "Found " << datacheckerrors->entries.size() << " datacheck errors." << endl;
-	cout << et.et() << "Matched " << fpcount << " FP entries." << endl;
+	cout << et.et() << "Found " << datacheckerrors->entries.size() << " datacheck errors and matched " << fpcount << " FP entries." << endl;
 
 	// write log of unmatched false positives from the datacheckfps.csv
 	cout << et.et() << "Writing log of unmatched datacheck FP entries." << endl;

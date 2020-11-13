@@ -1045,6 +1045,7 @@ class Route:
                         self.segment_list.append(HighwaySegment(previous_point, w, self))
             if len(self.point_list) < 2:
                 el.add_error("Route contains fewer than 2 points: " + str(self))
+            print(".", end="",flush=True)
 
     def print_route(self):
         for point in self.point_list:
@@ -2581,7 +2582,7 @@ else:
 
 # Create a list of HighwaySystem objects, one per system in systems.csv file
 highway_systems = []
-print(et.et() + "Reading systems list in " + args.highwaydatapath+"/"+args.systemsfile + ".  ",flush=True)
+print(et.et() + "Reading systems list in " + args.highwaydatapath+"/"+args.systemsfile + ".",flush=True)
 try:
     file = open(args.highwaydatapath+"/"+args.systemsfile, "rt",encoding='utf-8')
 except OSError as e:
@@ -2676,7 +2677,6 @@ def read_wpts_for_highway_system(h):
             all_wpt_files.remove(wpt_path)
         r.read_wpt(all_waypoints,all_waypoints_lock,datacheckerrors,
                    el,args.highwaydatapath+"/hwy_data")
-        print(".", end="",flush=True)
         #print(str(r))
         #r.print_route()
     print("!", flush=True)
@@ -2960,7 +2960,7 @@ for h in highway_systems:
 # Read updates.csv file, just keep in the fields array for now since we're
 # just going to drop this into the DB later anyway
 updates = []
-print(et.et() + "Reading updates file.  ",end="",flush=True)
+print(et.et() + "Reading updates file.",end="",flush=True)
 with open(args.highwaydatapath+"/updates.csv", "rt", encoding='UTF-8') as file:
     lines = file.readlines()
 file.close()
@@ -2998,7 +2998,7 @@ print("")
 # array for now since we're just going to drop this into the DB later
 # anyway
 systemupdates = []
-print(et.et() + "Reading systemupdates file.  ",end="",flush=True)
+print(et.et() + "Reading systemupdates file.",end="",flush=True)
 with open(args.highwaydatapath+"/systemupdates.csv", "rt", encoding='UTF-8') as file:
     lines = file.readlines()
 file.close()
@@ -3997,7 +3997,6 @@ for h in highway_systems:
                     datacheckerrors.append(DatacheckEntry(r,labels,'SHARP_ANGLE',
                                                           "{0:.2f}".format(angle)))
 print("!", flush=True)
-print(et.et() + "Found " + str(len(datacheckerrors)) + " datacheck errors.")
 
 datacheckerrors.sort(key=lambda DatacheckEntry: str(DatacheckEntry))
 
@@ -4005,7 +4004,6 @@ datacheckerrors.sort(key=lambda DatacheckEntry: str(DatacheckEntry))
 print(et.et() + "Marking datacheck false positives.",end="",flush=True)
 fpfile = open(args.logfilepath+'/nearmatchfps.log','w',encoding='utf-8')
 fpfile.write("Log file created at: " + str(datetime.datetime.now()) + "\n")
-toremove = []
 counter = 0
 fpcount = 0
 for d in datacheckerrors:
@@ -4026,7 +4024,7 @@ for d in datacheckerrors:
             fpfile.write("CHANGETO: " + fp[0] + ';' + fp[1] + ';' + fp[2] + ';' + fp[3] + ';' + fp[4] + ';' + d.info + '\n')
 fpfile.close()
 print("!", flush=True)
-print(et.et() + "Matched " + str(fpcount) + " FP entries.", flush=True)
+print(et.et() + "Found " + str(len(datacheckerrors)) + " datacheck errors and matched " + str(fpcount) + " FP entries.", flush=True)
 
 # write log of unmatched false positives from the datacheckfps.csv
 print(et.et() + "Writing log of unmatched datacheck FP entries.", flush=True)
