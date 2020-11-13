@@ -75,6 +75,8 @@ class HighwaySystem
 		if (level_str != "active" && level_str != "preview" && level_str != "devel")
 			el.add_error("Unrecognized level in " + systemsfile + " line: " + line);
 
+		std::cout << systemname << '.' << std::flush;
+
 		// read chopped routes CSV
 		file.open(path+"/"+systemname+".csv");
 		if (!file) el.add_error("Could not open "+path+"/"+systemname+".csv");

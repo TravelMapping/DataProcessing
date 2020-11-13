@@ -12,7 +12,7 @@ void Route::read_wpt
 	std::vector<char*> lines;
 	std::ifstream file(filename);
 	if (!file)
-	{	el->add_error("Could not open " + filename);
+	{	el->add_error("[Errno 2] No such file or directory: '" + filename + '\'');
 		file.close();
 		return;
 	}

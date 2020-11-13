@@ -244,7 +244,6 @@ int main(int argc, char *argv[])
 					    // deleted on termination of program
 			if (!hs->is_valid) delete hs;
 			else {	highway_systems.push_back(hs);
-				cout << hs->systemname << '.' << std::flush;
 			     }
 		}
 		cout << endl;
@@ -394,7 +393,7 @@ int main(int argc, char *argv[])
 
 		// check for mismatched route endpoints within connected routes
 		#define q r.con_route->roots[r.rootOrder-1]
-		if ( r.rootOrder > 0 && q->point_list.size() > 1 && !r.con_beg()->same_coords(q->con_end()) )
+		if ( r.rootOrder > 0 && q->point_list.size() > 1 && r.point_list.size() > 1 && !r.con_beg()->same_coords(q->con_end()) )
 		{	if ( q->con_beg()->same_coords(r.con_beg()) )
 			{	//std::cout << "DEBUG: marking only " << q->str() << " reversed" << std::endl;
 				//if (q->is_reversed) std::cout << "DEBUG: " << q->str() << " already reversed!" << std::endl;
@@ -999,8 +998,7 @@ int main(int argc, char *argv[])
 	}
 	fpfile.close();
 	cout << '!' << endl;
-	cout << et.et() << "Found " << datacheckerrors->entries.size() << " datacheck errors." << endl;
-	cout << et.et() << "Matched " << fpcount << " FP entries." << endl;
+	cout << et.et() << "Found " << datacheckerrors->entries.size() << " datacheck errors and matched " << fpcount << " FP entries." << endl;
 
 	// write log of unmatched false positives from the datacheckfps.csv
 	cout << et.et() << "Writing log of unmatched datacheck FP entries." << endl;
