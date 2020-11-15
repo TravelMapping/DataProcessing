@@ -3294,13 +3294,11 @@ for h in highway_systems:
             hdstatsfile.write(region + ": " + "{0:.2f}".format(h.mileage_by_region[region]) + " mi\n")
     hdstatsfile.write("System " + h.systemname + " by route:\n")
     for cr in h.con_route_list:
-        con_total_miles = 0.0
         to_write = ""
         for r in cr.roots:
             to_write += "  " + r.readable_name() + ": " + "{0:.2f}".format(r.mileage) + " mi\n"
-            con_total_miles += r.mileage
-        cr.mileage = con_total_miles
-        hdstatsfile.write(cr.readable_name() + ": " + "{0:.2f}".format(con_total_miles) + " mi")
+            cr.mileage += r.mileage
+        hdstatsfile.write(cr.readable_name() + ": " + "{0:.2f}".format(cr.mileage) + " mi")
         if len(cr.roots) == 1:
             hdstatsfile.write(" (" + cr.roots[0].readable_name() + " only)\n")
         else:
@@ -3403,7 +3401,6 @@ for t in traveler_lists:
                 con_routes_clinched = 0
                 t.log_entries.append("System " + h.systemname + " by route (traveled routes only):")
                 for cr in h.con_route_list:
-                    con_total_miles = 0.0
                     con_clinched_miles = 0.0
                     to_write = ""
                     for r in cr.roots:
@@ -3420,18 +3417,17 @@ for t in traveler_lists:
                             con_clinched_miles += miles
                             to_write += "  " + r.readable_name() + ": " + \
                                 format_clinched_mi(miles,r.mileage) + "\n"
-                        con_total_miles += r.mileage
                     if con_clinched_miles > 0:
                         system_con_dict[cr] = con_clinched_miles
                         clinched = '0'
-                        if con_clinched_miles == con_total_miles:
+                        if con_clinched_miles == cr.mileage:
                             con_routes_clinched += 1
                             clinched = '1'
                         ccr_values.append("('" + cr.roots[0].root + "','" + t.traveler_name
                                           + "','" + str(con_clinched_miles) + "','"
                                           + clinched + "')")
                         t.log_entries.append(cr.readable_name() + ": " + \
-                                             format_clinched_mi(con_clinched_miles,con_total_miles))
+                                             format_clinched_mi(con_clinched_miles,cr.mileage))
                         if len(cr.roots) == 1:
                             t.log_entries.append(" (" + cr.roots[0].readable_name() + " only)")
                         else:

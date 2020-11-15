@@ -765,15 +765,13 @@ int main(int argc, char *argv[])
 		}
 		hdstatsfile << "System " << h->systemname << " by route:\n";
 		for (ConnectedRoute& cr : h->con_route_list)
-		{	double con_total_miles = 0;
-			string to_write = "";
+		{	string to_write = "";
 			for (Route *r : cr.roots)
 			{	sprintf(fstr, ": %.2f mi\n", r->mileage);
 				to_write += "  " + r->readable_name() + fstr;
-				con_total_miles += r->mileage;
+				cr.mileage += r->mileage;
 			}
-			cr.mileage = con_total_miles; //FIXME?
-			sprintf(fstr, ": %.2f mi", con_total_miles);
+			sprintf(fstr, ": %.2f mi", cr.mileage);
 			hdstatsfile << cr.readable_name() << fstr;
 			if (cr.roots.size() == 1)
 				hdstatsfile << " (" << cr.roots[0]->readable_name() << " only)\n";
