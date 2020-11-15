@@ -3966,8 +3966,10 @@ for h in highway_systems:
                     if re.fullmatch('\*?I\-[0-9]+[EeWwCcNnSs]?[Bb][Uu][Ss].*', w.label):
                         datacheckerrors.append(DatacheckEntry(r,[w.label],'BUS_WITH_I'))
                     # look for Ixx without hyphen
-                    c = 2 if (w.label.startswith("To") and len(w.label) > 2) else 0
-                    if w.label[c] == 'I' and w.label[c+1].isdigit():
+                    c = 1 if w.label[0] == '*' else 0
+                    if w.label[c:c+2] == "To":
+                        c += 2;
+                    if len(w.label) >= c+2 and w.label[c] == 'I' and w.label[c+1].isdigit():
                         datacheckerrors.append(DatacheckEntry(r,[w.label],'INTERSTATE_NO_HYPHEN'))
                     # look for USxxxA but not USxxxAlt, B/Bus/Byp
                     # Eric's paraphrase of Jim's original criteria

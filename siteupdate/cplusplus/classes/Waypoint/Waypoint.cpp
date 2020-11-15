@@ -401,7 +401,7 @@ inline void Waypoint::bus_with_i(DatacheckEntryList *datacheckerrors)
 }
 
 inline void Waypoint::interstate_no_hyphen(DatacheckEntryList *datacheckerrors)
-{	const char *c = label.data();
+{	const char *c = label[0] == '*' ? label.data()+1 : label.data();
 	if (c[0] == 'T' && c[1] == 'o') c += 2;
 	if (c[0] == 'I' && isdigit(c[1]))
 	  datacheckerrors->add(route, label, "", "", "INTERSTATE_NO_HYPHEN", "");
