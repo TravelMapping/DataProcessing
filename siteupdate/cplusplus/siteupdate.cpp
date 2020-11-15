@@ -285,8 +285,9 @@ int main(int argc, char *argv[])
       #else
 	for (HighwaySystem* h : highway_systems)
 	{	std::cout << h->systemname << std::flush;
+		bool usa_flag = h->country->first == "USA";
 		for (Route& r : h->route_list)
-			r.read_wpt(&all_waypoints, &el, args.highwaydatapath+"/hwy_data", datacheckerrors, &all_wpt_files);
+			r.read_wpt(&all_waypoints, &el, args.highwaydatapath+"/hwy_data", usa_flag, datacheckerrors, &all_wpt_files);
 		std::cout << "!" << std::endl;
 	}
       #endif

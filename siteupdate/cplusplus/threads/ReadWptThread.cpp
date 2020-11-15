@@ -16,8 +16,9 @@ void ReadWptThread
 		//printf("ReadWptThread %02i (*it)++\n", id); fflush(stdout);
 		hs_mtx->unlock();
 		std::cout << h->systemname << std::flush;
+		bool usa_flag = h->country->first == "USA";
 		for (Route &r : h->route_list)
-			r.read_wpt(all_waypoints, el, path, datacheckerrors, all_wpt_files);
+			r.read_wpt(all_waypoints, el, path, usa_flag, datacheckerrors, all_wpt_files);
 		std::cout << "!" << std::endl;
 	}
 }

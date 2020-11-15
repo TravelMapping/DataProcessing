@@ -389,7 +389,7 @@ inline void Waypoint::bus_with_i(DatacheckEntryList *datacheckerrors)
 {	// look for I-xx with Bus instead of BL or BS
 	const char *c = label.data();
 	if (*c == '*') c++;
-	if (*c++ != 'I' || *c++ != '-' || route->system->country->first != "USA") return;
+	if (*c++ != 'I' || *c++ != '-') return;
 	if (*c < '0' || *c > '9') return;
 	while (*c >= '0' && *c <= '9') c++;
 	if ( *c == 'E' || *c == 'W' || *c == 'C' || *c == 'N' || *c == 'S'
@@ -401,12 +401,10 @@ inline void Waypoint::bus_with_i(DatacheckEntryList *datacheckerrors)
 }
 
 inline void Waypoint::interstate_no_hyphen(DatacheckEntryList *datacheckerrors)
-{	if (route->system->country->first == "USA" && label.size() >= 2)
-	{	const char *c = label.data();
-		if (c[0] == 'T' && c[1] == 'o') c += 2;
-		if (c[0] == 'I' && isdigit(c[1]))
-		  datacheckerrors->add(route, label, "", "", "INTERSTATE_NO_HYPHEN", "");
-	}
+{	const char *c = label.data();
+	if (c[0] == 'T' && c[1] == 'o') c += 2;
+	if (c[0] == 'I' && isdigit(c[1]))
+	  datacheckerrors->add(route, label, "", "", "INTERSTATE_NO_HYPHEN", "");
 }
 
 inline void Waypoint::label_invalid_ends(DatacheckEntryList *datacheckerrors)

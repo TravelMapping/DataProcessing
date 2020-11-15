@@ -3817,6 +3817,7 @@ print(et.et() + "Performing data checks.",end="",flush=True)
 # perform most datachecks here (list initialized above)
 for h in highway_systems:
     print(".",end="",flush=True)
+    usa_flag = h.country == "USA"
     for r in h.route_list:
         # set of tuples to be used for finding duplicate coordinates
         coords_used = set()
@@ -3960,7 +3961,7 @@ for h in highway_systems:
                     datacheckerrors.append(DatacheckEntry(r,[w.label],'LACKS_GENERIC'))
 
                 # USA-only datachecks
-                if w.route.system.country == "USA" and len(w.label) >= 2:
+                if usa_flag and len(w.label) >= 2:
                     # look for I-xx with Bus instead of BL or BS
                     if re.fullmatch('\*?I\-[0-9]+[EeWwCcNnSs]?[Bb][Uu][Ss].*', w.label):
                         datacheckerrors.append(DatacheckEntry(r,[w.label],'BUS_WITH_I'))
