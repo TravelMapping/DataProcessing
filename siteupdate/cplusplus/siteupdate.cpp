@@ -365,7 +365,7 @@ int main(int argc, char *argv[])
 
 	// if requested, rewrite data with near-miss points merged in
 	if (args.nmpmergepath != "" && !args.errorcheck)
-	{	cout << et.et() << "Writing near-miss point merged wpt files." << endl; //FIXME output dots to indicate progress
+	{	cout << et.et() << "Writing near-miss point merged wpt files." << endl;
 	      #ifdef threading_enabled
 		// set up for threaded nmp_merged file writes
 		hs_it = highway_systems.begin();
@@ -377,9 +377,13 @@ int main(int argc, char *argv[])
 			delete thr[t];//*/
 	      #else
 		for (HighwaySystem *h : highway_systems)
-		  for (Route &r : h->route_list)
-		    r.write_nmp_merged(args.nmpmergepath + "/" + r.rg_str);
+		{	std::cout << h->systemname << std::flush;
+			for (Route &r : h->route_list)
+			  r.write_nmp_merged(args.nmpmergepath + "/" + r.rg_str);
+			std::cout << '.' << std::flush;
+		}
 	      #endif
+		cout << endl;
 	}
 
 	#include "functions/concurrency_detection.cpp"
