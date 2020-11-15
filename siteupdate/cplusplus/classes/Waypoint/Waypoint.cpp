@@ -528,11 +528,16 @@ inline void Waypoint::underscore_datachecks(DatacheckEntryList *datacheckerrors,
 	}
 }
 
-// look for USxxxA but not USxxxAlt, B/Bus (others?)
-//if re.fullmatch('US[0-9]+A.*', w.label) and not re.fullmatch('US[0-9]+Alt.*', w.label) or \
-//   re.fullmatch('US[0-9]+B.*', w.label) and \
-//   not (re.fullmatch('US[0-9]+Bus.*', w.label) or re.fullmatch('US[0-9]+Byp.*', w.label)):
-//    datacheckerrors.append(DatacheckEntry(r,[w.label],'US_BANNER'))
+inline void Waypoint::us_letter(DatacheckEntryList *datacheckerrors)
+{	// look for USxxxA but not USxxxAlt, B/Bus/Byp
+	const char* c = label[0] == '*' ? label.data()+1 : label.data();
+	if (*c++ != 'U' || *c++ != 'S')	return;
+	if (*c    < '0' || *c++  > '9')	return;
+	while (*c >= '0' && *c <= '9')	c++;
+	if (*c    < 'A' || *c++  > 'B')	return;
+	if (*c == 0 || *c == '/' || *c == '_' || *c == '(')
+		datacheckerrors->add(route, label, "", "", "US_LETTER", "");
+}
 
 inline void Waypoint::visible_distance(DatacheckEntryList *datacheckerrors, char *fstr, double &vis_dist, Waypoint *&last_visible)
 {	// complete visible distance check, omit report for active

@@ -935,7 +935,7 @@ int main(int argc, char *argv[])
 		"LABEL_INVALID_CHAR", "LABEL_PARENS", "LABEL_SLASHES",
 		"LABEL_TOO_LONG", "LABEL_UNDERSCORES", "LONG_UNDERSCORE",
 		"MALFORMED_LAT", "MALFORMED_LON", "MALFORMED_URL",
-		"NONTERMINAL_UNDERSCORE"
+		"NONTERMINAL_UNDERSCORE", "US_LETTER"
 	});
 	while (getline(file, line))
 	{	// trim DOS newlines & trailing whitespace

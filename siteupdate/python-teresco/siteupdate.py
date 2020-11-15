@@ -1579,7 +1579,7 @@ class DatacheckEntry:
     NONTERMINAL_UNDERSCORE |
     OUT_OF_BOUNDS          | coordinate pair
     SHARP_ANGLE            | angle in degrees
-    US_BANNER              |
+    US_LETTER              |
     VISIBLE_DISTANCE       | distance in miles
     VISIBLE_HIDDEN_COLOC   | hidden point at same coordinates
 
@@ -3549,7 +3549,7 @@ datacheck_always_error = [ 'BAD_ANGLE', 'DISCONNECTED_ROUTE', 'DUPLICATE_LABEL',
                            'LABEL_INVALID_CHAR', 'LABEL_PARENS', 'LABEL_SLASHES',
                            'LABEL_TOO_LONG', 'LABEL_UNDERSCORES', 'LONG_UNDERSCORE',
                            'MALFORMED_LAT', 'MALFORMED_LON', 'MALFORMED_URL',
-                           'NONTERMINAL_UNDERSCORE' ]
+                           'NONTERMINAL_UNDERSCORE', 'US_LETTER' ]
 for line in lines:
     line=line.strip()
     if len(line) == 0:
@@ -3969,12 +3969,12 @@ for h in highway_systems:
                     c = 2 if (w.label.startswith("To") and len(w.label) > 2) else 0
                     if w.label[c] == 'I' and w.label[c+1].isdigit():
                         datacheckerrors.append(DatacheckEntry(r,[w.label],'INTERSTATE_NO_HYPHEN'))
-
-                # look for USxxxA but not USxxxAlt, B/Bus (others?)
-                ##if re.fullmatch('US[0-9]+A.*', w.label) and not re.fullmatch('US[0-9]+Alt.*', w.label) or \
-                ##   re.fullmatch('US[0-9]+B.*', w.label) and \
-                ##   not (re.fullmatch('US[0-9]+Bus.*', w.label) or re.fullmatch('US[0-9]+Byp.*', w.label)):
-                ##    datacheckerrors.append(DatacheckEntry(r,[w.label],'US_BANNER'))
+                    # look for USxxxA but not USxxxAlt, B/Bus/Byp
+                    # Eric's paraphrase of Jim's original criteria
+                    # if re.fullmatch('\*?US[0-9]+[AB].*', w.label) and not re.fullmatch('\*?US[0-9]+Alt.*|\*?US[0-9]+Bus.*|\*?US[0-9]+Byp.*', w.label):
+                    # Instead, let's cast a narrower net
+                    if re.fullmatch('\*?US[0-9]+[AB]|\*?US[0-9]+[AB][/_(].*', w.label):
+                        datacheckerrors.append(DatacheckEntry(r,[w.label],'US_LETTER'))
 
             prev_w = w
 

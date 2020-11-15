@@ -75,6 +75,7 @@ void Route::read_wpt
 			if (usa_flag && w->label.size() >= 2)
 			{	w->bus_with_i(datacheckerrors);
 				w->interstate_no_hyphen(datacheckerrors);
+				w->us_letter(datacheckerrors);
 			}
 			w->label_invalid_ends(datacheckerrors);
 			w->label_looks_hidden(datacheckerrors);
