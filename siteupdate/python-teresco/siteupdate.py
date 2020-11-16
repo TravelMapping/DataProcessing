@@ -3887,15 +3887,7 @@ for h in highway_systems:
                 visible_distance = 0.0
 
                 # looking for the route within the label
-                #match_start = w.label.find(r.route)
-                #if match_start >= 0:
-                    # we have a potential match, just need to make sure if the route
-                    # name ends with a number that the matched substring isn't followed
-                    # by more numbers (e.g., NY50 is an OK label in NY5)
-                #    if len(r.route) + match_start == len(w.label) or \
-                #            not w.label[len(r.route) + match_start].isdigit():
                 # partially complete "references own route" -- too many FP
-                #or re.fullmatch('.*/'+r.route+'.*',w.label[w.label) :
                 # first check for number match after a slash, if there is one
                 selfref_found = False
                 if '/' in w.label and r.route[-1].isdigit():
@@ -3910,7 +3902,6 @@ for h in highway_systems:
                         selfref_found = True
                     if '_' in w.label[w.label.index('/')+1:] and w.label[w.label.index('/')+1:w.label.rindex('_')] == r.route:
                         selfref_found = True
-
                 # now the remaining checks
                 if selfref_found or r.route+r.banner == w.label or re.fullmatch(r.route+r.banner+'[_/].*',w.label):
                     datacheckerrors.append(DatacheckEntry(r,[w.label],'LABEL_SELFREF'))

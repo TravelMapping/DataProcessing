@@ -455,15 +455,7 @@ inline void Waypoint::label_parens(DatacheckEntryList *datacheckerrors)
 
 inline void Waypoint::label_selfref(DatacheckEntryList *datacheckerrors, const char *slash)
 {	// looking for the route within the label
-	//match_start = w.label.find(r.route)
-	//if match_start >= 0:
-	    // we have a potential match, just need to make sure if the route
-	    // name ends with a number that the matched substring isn't followed
-	    // by more numbers (e.g., NY50 is an OK label in NY5)
-	//    if len(r.route) + match_start == len(w.label) or \
-	//            not w.label[len(r.route) + match_start].isdigit():
 	// partially complete "references own route" -- too many FP
-	//or re.fullmatch('.*/'+r.route+'.*',w.label[w.label) :
 	// first check for number match after a slash, if there is one
 	if (slash && route->route.back() >= '0' && route->route.back() <= '9')
 	{	int digit_starts = route->route.size()-1;
