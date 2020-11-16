@@ -389,7 +389,7 @@ inline void Waypoint::bus_with_i(DatacheckEntryList *datacheckerrors)
 {	// look for I-xx with Bus instead of BL or BS
 	const char *c = label.data();
 	if (*c == '*') c++;
-	if (*c++ != 'I' || *c++ != '-' || route->system->country->first != "USA") return;
+	if (*c++ != 'I' || *c++ != '-') return;
 	if (*c < '0' || *c > '9') return;
 	while (*c >= '0' && *c <= '9') c++;
 	if ( *c == 'E' || *c == 'W' || *c == 'C' || *c == 'N' || *c == 'S'
@@ -401,12 +401,10 @@ inline void Waypoint::bus_with_i(DatacheckEntryList *datacheckerrors)
 }
 
 inline void Waypoint::interstate_no_hyphen(DatacheckEntryList *datacheckerrors)
-{	if (route->system->country->first == "USA" && label.size() >= 2)
-	{	const char *c = label.data();
-		if (c[0] == 'T' && c[1] == 'o') c += 2;
-		if (c[0] == 'I' && isdigit(c[1]))
-		  datacheckerrors->add(route, label, "", "", "INTERSTATE_NO_HYPHEN", "");
-	}
+{	const char *c = label[0] == '*' ? label.data()+1 : label.data();
+	if (c[0] == 'T' && c[1] == 'o') c += 2;
+	if (c[0] == 'I' && isdigit(c[1]))
+	  datacheckerrors->add(route, label, "", "", "INTERSTATE_NO_HYPHEN", "");
 }
 
 inline void Waypoint::label_invalid_ends(DatacheckEntryList *datacheckerrors)
@@ -457,15 +455,7 @@ inline void Waypoint::label_parens(DatacheckEntryList *datacheckerrors)
 
 inline void Waypoint::label_selfref(DatacheckEntryList *datacheckerrors, const char *slash)
 {	// looking for the route within the label
-	//match_start = w.label.find(r.route)
-	//if match_start >= 0:
-	    // we have a potential match, just need to make sure if the route
-	    // name ends with a number that the matched substring isn't followed
-	    // by more numbers (e.g., NY50 is an OK label in NY5)
-	//    if len(r.route) + match_start == len(w.label) or \
-	//            not w.label[len(r.route) + match_start].isdigit():
 	// partially complete "references own route" -- too many FP
-	//or re.fullmatch('.*/'+r.route+'.*',w.label[w.label) :
 	// first check for number match after a slash, if there is one
 	if (slash && route->route.back() >= '0' && route->route.back() <= '9')
 	{	int digit_starts = route->route.size()-1;
@@ -530,11 +520,16 @@ inline void Waypoint::underscore_datachecks(DatacheckEntryList *datacheckerrors,
 	}
 }
 
-// look for USxxxA but not USxxxAlt, B/Bus (others?)
-//if re.fullmatch('US[0-9]+A.*', w.label) and not re.fullmatch('US[0-9]+Alt.*', w.label) or \
-//   re.fullmatch('US[0-9]+B.*', w.label) and \
-//   not (re.fullmatch('US[0-9]+Bus.*', w.label) or re.fullmatch('US[0-9]+Byp.*', w.label)):
-//    datacheckerrors.append(DatacheckEntry(r,[w.label],'US_BANNER'))
+inline void Waypoint::us_letter(DatacheckEntryList *datacheckerrors)
+{	// look for USxxxA but not USxxxAlt, B/Bus/Byp
+	const char* c = label[0] == '*' ? label.data()+1 : label.data();
+	if (*c++ != 'U' || *c++ != 'S')	return;
+	if (*c    < '0' || *c++  > '9')	return;
+	while (*c >= '0' && *c <= '9')	c++;
+	if (*c    < 'A' || *c++  > 'B')	return;
+	if (*c == 0 || *c == '/' || *c == '_' || *c == '(')
+		datacheckerrors->add(route, label, "", "", "US_LETTER", "");
+}
 
 inline void Waypoint::visible_distance(DatacheckEntryList *datacheckerrors, char *fstr, double &vis_dist, Waypoint *&last_visible)
 {	// complete visible distance check, omit report for active

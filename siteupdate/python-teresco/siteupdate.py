@@ -1579,7 +1579,7 @@ class DatacheckEntry:
     NONTERMINAL_UNDERSCORE |
     OUT_OF_BOUNDS          | coordinate pair
     SHARP_ANGLE            | angle in degrees
-    US_BANNER              |
+    US_LETTER              |
     VISIBLE_DISTANCE       | distance in miles
     VISIBLE_HIDDEN_COLOC   | hidden point at same coordinates
 
@@ -3549,7 +3549,7 @@ datacheck_always_error = [ 'BAD_ANGLE', 'DISCONNECTED_ROUTE', 'DUPLICATE_LABEL',
                            'LABEL_INVALID_CHAR', 'LABEL_PARENS', 'LABEL_SLASHES',
                            'LABEL_TOO_LONG', 'LABEL_UNDERSCORES', 'LONG_UNDERSCORE',
                            'MALFORMED_LAT', 'MALFORMED_LON', 'MALFORMED_URL',
-                           'NONTERMINAL_UNDERSCORE' ]
+                           'NONTERMINAL_UNDERSCORE', 'US_LETTER' ]
 for line in lines:
     line=line.strip()
     if len(line) == 0:
@@ -3817,6 +3817,7 @@ print(et.et() + "Performing data checks.",end="",flush=True)
 # perform most datachecks here (list initialized above)
 for h in highway_systems:
     print(".",end="",flush=True)
+    usa_flag = h.country == "USA"
     for r in h.route_list:
         # set of tuples to be used for finding duplicate coordinates
         coords_used = set()
@@ -3886,15 +3887,7 @@ for h in highway_systems:
                 visible_distance = 0.0
 
                 # looking for the route within the label
-                #match_start = w.label.find(r.route)
-                #if match_start >= 0:
-                    # we have a potential match, just need to make sure if the route
-                    # name ends with a number that the matched substring isn't followed
-                    # by more numbers (e.g., NY50 is an OK label in NY5)
-                #    if len(r.route) + match_start == len(w.label) or \
-                #            not w.label[len(r.route) + match_start].isdigit():
                 # partially complete "references own route" -- too many FP
-                #or re.fullmatch('.*/'+r.route+'.*',w.label[w.label) :
                 # first check for number match after a slash, if there is one
                 selfref_found = False
                 if '/' in w.label and r.route[-1].isdigit():
@@ -3909,7 +3902,6 @@ for h in highway_systems:
                         selfref_found = True
                     if '_' in w.label[w.label.index('/')+1:] and w.label[w.label.index('/')+1:w.label.rindex('_')] == r.route:
                         selfref_found = True
-
                 # now the remaining checks
                 if selfref_found or r.route+r.banner == w.label or re.fullmatch(r.route+r.banner+'[_/].*',w.label):
                     datacheckerrors.append(DatacheckEntry(r,[w.label],'LABEL_SELFREF'))
@@ -3960,20 +3952,22 @@ for h in highway_systems:
                     datacheckerrors.append(DatacheckEntry(r,[w.label],'LACKS_GENERIC'))
 
                 # USA-only datachecks
-                if w.route.system.country == "USA" and len(w.label) >= 2:
+                if usa_flag and len(w.label) >= 2:
                     # look for I-xx with Bus instead of BL or BS
                     if re.fullmatch('\*?I\-[0-9]+[EeWwCcNnSs]?[Bb][Uu][Ss].*', w.label):
                         datacheckerrors.append(DatacheckEntry(r,[w.label],'BUS_WITH_I'))
                     # look for Ixx without hyphen
-                    c = 2 if (w.label.startswith("To") and len(w.label) > 2) else 0
-                    if w.label[c] == 'I' and w.label[c+1].isdigit():
+                    c = 1 if w.label[0] == '*' else 0
+                    if w.label[c:c+2] == "To":
+                        c += 2;
+                    if len(w.label) >= c+2 and w.label[c] == 'I' and w.label[c+1].isdigit():
                         datacheckerrors.append(DatacheckEntry(r,[w.label],'INTERSTATE_NO_HYPHEN'))
-
-                # look for USxxxA but not USxxxAlt, B/Bus (others?)
-                ##if re.fullmatch('US[0-9]+A.*', w.label) and not re.fullmatch('US[0-9]+Alt.*', w.label) or \
-                ##   re.fullmatch('US[0-9]+B.*', w.label) and \
-                ##   not (re.fullmatch('US[0-9]+Bus.*', w.label) or re.fullmatch('US[0-9]+Byp.*', w.label)):
-                ##    datacheckerrors.append(DatacheckEntry(r,[w.label],'US_BANNER'))
+                    # look for USxxxA but not USxxxAlt, B/Bus/Byp
+                    # Eric's paraphrase of Jim's original criteria
+                    # if re.fullmatch('\*?US[0-9]+[AB].*', w.label) and not re.fullmatch('\*?US[0-9]+Alt.*|\*?US[0-9]+Bus.*|\*?US[0-9]+Byp.*', w.label):
+                    # Instead, let's cast a narrower net
+                    if re.fullmatch('\*?US[0-9]+[AB]|\*?US[0-9]+[AB][/_(].*', w.label):
+                        datacheckerrors.append(DatacheckEntry(r,[w.label],'US_LETTER'))
 
             prev_w = w
 

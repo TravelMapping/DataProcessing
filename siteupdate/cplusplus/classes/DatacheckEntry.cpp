@@ -3,9 +3,9 @@ class DatacheckEntry
 
     route is a pointer to the route with a datacheck error
 
-    labels is a list of labels that are related to the error (such
-    as the endpoints of a too-long segment or the three points that
-    form a sharp angle)
+    label1, label2 & label3 are labels that are related to the error
+    (such as the endpoints of a too-long segment or the three points
+    that form a sharp angle)
 
     code is the error code | info is additional
     string, one of:        | information, if used:
@@ -36,7 +36,7 @@ class DatacheckEntry
     NONTERMINAL_UNDERSCORE |
     OUT_OF_BOUNDS          | coordinate pair
     SHARP_ANGLE            | angle in degrees
-    US_BANNER              |
+    US_LETTER              |
     VISIBLE_DISTANCE       | distance in miles
     VISIBLE_HIDDEN_COLOC   | hidden point at same coordinates
 

@@ -285,8 +285,9 @@ int main(int argc, char *argv[])
       #else
 	for (HighwaySystem* h : highway_systems)
 	{	std::cout << h->systemname << std::flush;
+		bool usa_flag = h->country->first == "USA";
 		for (Route& r : h->route_list)
-			r.read_wpt(&all_waypoints, &el, args.highwaydatapath+"/hwy_data", datacheckerrors, &all_wpt_files);
+			r.read_wpt(&all_waypoints, &el, args.highwaydatapath+"/hwy_data", usa_flag, datacheckerrors, &all_wpt_files);
 		std::cout << "!" << std::endl;
 	}
       #endif
@@ -934,7 +935,7 @@ int main(int argc, char *argv[])
 		"LABEL_INVALID_CHAR", "LABEL_PARENS", "LABEL_SLASHES",
 		"LABEL_TOO_LONG", "LABEL_UNDERSCORES", "LONG_UNDERSCORE",
 		"MALFORMED_LAT", "MALFORMED_LON", "MALFORMED_URL",
-		"NONTERMINAL_UNDERSCORE"
+		"NONTERMINAL_UNDERSCORE", "US_LETTER"
 	});
 	while (getline(file, line))
 	{	// trim DOS newlines & trailing whitespace

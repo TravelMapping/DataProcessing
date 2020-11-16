@@ -54,5 +54,6 @@ class Waypoint
 	inline void label_slashes(DatacheckEntryList *, const char *);
 	inline void lacks_generic(DatacheckEntryList *);
 	inline void underscore_datachecks(DatacheckEntryList *, const char *);
+	inline void us_letter(DatacheckEntryList *);
 	inline void visible_distance(DatacheckEntryList *, char *, double &, Waypoint *&);
 };
