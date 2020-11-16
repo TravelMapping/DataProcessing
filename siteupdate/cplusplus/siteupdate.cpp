@@ -366,7 +366,7 @@ int main(int argc, char *argv[])
 
 	// if requested, rewrite data with near-miss points merged in
 	if (args.nmpmergepath != "" && !args.errorcheck)
-	{	cout << et.et() << "Writing near-miss point merged wpt files." << endl; //FIXME output dots to indicate progress
+	{	cout << et.et() << "Writing near-miss point merged wpt files." << endl;
 	      #ifdef threading_enabled
 		// set up for threaded nmp_merged file writes
 		hs_it = highway_systems.begin();
@@ -378,9 +378,13 @@ int main(int argc, char *argv[])
 			delete thr[t];//*/
 	      #else
 		for (HighwaySystem *h : highway_systems)
-		  for (Route &r : h->route_list)
-		    r.write_nmp_merged(args.nmpmergepath + "/" + r.rg_str);
+		{	std::cout << h->systemname << std::flush;
+			for (Route &r : h->route_list)
+			  r.write_nmp_merged(args.nmpmergepath + "/" + r.rg_str);
+			std::cout << '.' << std::flush;
+		}
 	      #endif
+		cout << endl;
 	}
 
 	#include "functions/concurrency_detection.cpp"
@@ -766,15 +770,13 @@ int main(int argc, char *argv[])
 		}
 		hdstatsfile << "System " << h->systemname << " by route:\n";
 		for (ConnectedRoute& cr : h->con_route_list)
-		{	double con_total_miles = 0;
-			string to_write = "";
+		{	string to_write = "";
 			for (Route *r : cr.roots)
 			{	sprintf(fstr, ": %.2f mi\n", r->mileage);
 				to_write += "  " + r->readable_name() + fstr;
-				con_total_miles += r->mileage;
+				cr.mileage += r->mileage;
 			}
-			cr.mileage = con_total_miles; //FIXME?
-			sprintf(fstr, ": %.2f mi", con_total_miles);
+			sprintf(fstr, ": %.2f mi", cr.mileage);
 			hdstatsfile << cr.readable_name() << fstr;
 			if (cr.roots.size() == 1)
 				hdstatsfile << " (" << cr.roots[0]->readable_name() << " only)\n";

@@ -83,8 +83,7 @@ void TravelerList::userlog
 			unsigned int num_con_rtes_clinched = 0;
 			log << "System " << h->systemname << " by route (traveled routes only):\n";
 			for (ConnectedRoute &cr : h->con_route_list)
-			{	double con_total_miles = 0;
-				double con_clinched_miles = 0;
+			{	double con_clinched_miles = 0;
 				std::string to_write = "";
 				for (Route *r : cr.roots)
 				{	// find traveled mileage on this by this user
@@ -99,16 +98,11 @@ void TravelerList::userlog
 						con_clinched_miles += miles;
 						to_write += "  " + r->readable_name() + ": " + format_clinched_mi(miles,r->mileage) + "\n";
 					}
-					con_total_miles += r->mileage;
 				}
 				if (con_clinched_miles)
 				{	system_con_umap[&cr] = con_clinched_miles;
 					char clinched = '0';
-					/*yDEBUG
-					if (traveler_name == "oscar" && cr.system->systemname == "usaus" && cr.route == "US85")
-						printf("\nOscar on US85:\ncon_clinched_miles = %.17f\n   con_total_miles = %.17f\n",
-							con_clinched_miles, con_total_miles);//*/
-					if (con_clinched_miles == con_total_miles)
+					if (con_clinched_miles == cr.mileage)
 					{	num_con_rtes_clinched++;
 						clinched = '1';
 					}
@@ -116,7 +110,7 @@ void TravelerList::userlog
 					if (!strchr(fstr, '.')) strcat(fstr, ".0");
 					clin_db_val->add_ccr("('" + cr.roots[0]->root + "','" + traveler_name +
 							     "','" + std::string(fstr) + "','" + clinched + "')");
-					log << cr.readable_name() << ": " << format_clinched_mi(con_clinched_miles, con_total_miles) << '\n';
+					log << cr.readable_name() << ": " << format_clinched_mi(con_clinched_miles, cr.mileage) << '\n';
 					if (cr.roots.size() == 1)
 						log << " (" << cr.roots[0]->readable_name() << " only)\n";
 					else	log << to_write << '\n';
@@ -128,7 +122,6 @@ void TravelerList::userlog
 				num_con_rtes_clinched,    (int)h->con_route_list.size(),    100*(double)num_con_rtes_clinched/h->con_route_list.size());
 			log << "System " << h->systemname << fstr << '\n';
 			con_routes_traveled[h] = system_con_umap;
-			//#include "debug/oscars_usaus_ConRtes.cpp"
 		}
 	  }
 
