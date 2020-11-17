@@ -529,6 +529,12 @@ inline void Waypoint::us_letter(DatacheckEntryList *datacheckerrors)
 	if (*c    < 'A' || *c++  > 'B')	return;
 	if (*c == 0 || *c == '/' || *c == '_' || *c == '(')
 		datacheckerrors->add(route, label, "", "", "US_LETTER", "");
+	// is it followed by a city abbrev?
+	else if (*c >= 'A' && *c++ <= 'Z'
+	      && *c >= 'a' && *c++ <= 'z'
+	      && *c >= 'a' && *c++ <= 'z'
+	      && *c == 0 || *c == '/' || *c == '_' || *c == '(')
+		datacheckerrors->add(route, label, "", "", "US_LETTER", "");
 }
 
 inline void Waypoint::visible_distance(DatacheckEntryList *datacheckerrors, char *fstr, double &vis_dist, Waypoint *&last_visible)
