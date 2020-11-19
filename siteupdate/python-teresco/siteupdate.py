@@ -3949,22 +3949,37 @@ for h in highway_systems:
 
                 # USA-only datachecks
                 if usa_flag and len(w.label) >= 2:
+
                     # look for I-xx with Bus instead of BL or BS
                     if re.fullmatch('\*?I\-[0-9]+[EeWwCcNnSs]?[Bb][Uu][Ss].*', w.label):
                         datacheckerrors.append(DatacheckEntry(r,[w.label],'BUS_WITH_I'))
+
                     # look for Ixx without hyphen
                     c = 1 if w.label[0] == '*' else 0
                     if w.label[c:c+2] == "To":
                         c += 2;
                     if len(w.label) >= c+2 and w.label[c] == 'I' and w.label[c+1].isdigit():
                         datacheckerrors.append(DatacheckEntry(r,[w.label],'INTERSTATE_NO_HYPHEN'))
+
                     # look for USxxxA but not USxxxAlt, B/Bus/Byp
                     # Eric's paraphrase of Jim's original criteria
                     # if re.fullmatch('\*?US[0-9]+[AB].*', w.label) and not re.fullmatch('\*?US[0-9]+Alt.*|\*?US[0-9]+Bus.*|\*?US[0-9]+Byp.*', w.label):
-                    # Instead, let's cast a narrower net
-                    if re.fullmatch('\*?US[0-9]+[AB]|\*?US[0-9]+[AB][/_(].*', w.label):
-                        datacheckerrors.append(DatacheckEntry(r,[w.label],'US_LETTER'))
-
+                    # Instead, let's cast a narrower net (optimized for speed, just because):
+                    try:
+                        c = 3 if w.label[0] == '*' else 2
+                        if w.label[c-2] == 'U' and w.label[c-1] == 'S' and w.label[c].isdigit():
+                            while w.label[c].isdigit():
+                                c += 1
+                            if w.label[c] in 'AB':
+                                c += 1
+                                if c == len(w.label) or w.label[c] in '/_(':
+                                    datacheckerrors.append(DatacheckEntry(r,[w.label],'US_LETTER'))
+                                # is it followed by a city abbrev?
+                                elif w.label[c].isupper() and w.label[c+1].islower() and w.label[c+2].islower() \
+                                and (c+3 == len(w.label) or w.label[c+3] in '/_('):
+                                    datacheckerrors.append(DatacheckEntry(r,[w.label],'US_LETTER'))
+                    except IndexError:
+                        pass
             prev_w = w
 
         # angle check is easier with a traditional for loop and array indices
