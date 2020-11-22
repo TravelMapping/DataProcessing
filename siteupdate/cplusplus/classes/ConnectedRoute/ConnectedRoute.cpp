@@ -1,4 +1,4 @@
-ConnectedRoute::ConnectedRoute(std::string &line, HighwaySystem *sys, ErrorList &el, std::list<Route> &route_list)
+ConnectedRoute::ConnectedRoute(std::string &line, HighwaySystem *sys, ErrorList &el)
 {	mileage = 0;
 
 	// parse chopped routes csv line
@@ -29,19 +29,28 @@ ConnectedRoute::ConnectedRoute(std::string &line, HighwaySystem *sys, ErrorList 
 		el.add_error("groupname > " + std::to_string(DBFieldLength::city)
 			   + " bytes in " + system->systemname + "_con.csv line: " + line);
 	// roots
+	lower(roots_str.data());
 	int rootOrder = 0;
 	size_t l = 0;
 	for (size_t r = 0; r != -1; l = r+1)
 	{	r = roots_str.find(',', l);
-		Route *root = route_by_root(roots_str.substr(l, r-l), route_list);
-		if (!root) el.add_error("Could not find Route matching ConnectedRoute root " + roots_str.substr(l, r-l) +
-					" in system " + system->systemname + '.');
-		else {	roots.push_back(root);
+		try {	Route *root = Route::root_hash.at(roots_str.substr(l, r-l));
+			roots.push_back(root);
+			if (root->con_route)
+			  el.add_error("Duplicate root in " + sys->systemname + "_con.csv: " + root->root +
+				       " already in " + root->con_route->system->systemname + "_con.csv");
+			if (system != root->system)
+			  el.add_error("System mismatch: chopped route " + root->root + " from " + root->system->systemname +
+				       ".csv in connected route in " + system->systemname + "_con.csv");
 			root->con_route = this;
 			// save order of route in connected route
 			root->rootOrder = rootOrder;
-		     }
-		rootOrder++;
+			rootOrder++;
+		    }
+		catch (std::out_of_range& oor)
+		    {	el.add_error("Could not find Route matching ConnectedRoute root " + roots_str.substr(l, r-l) +
+					" in system " + system->systemname + '.');
+		    }
 	}
 	if (roots.size() < 1) el.add_error("No roots in " + system->systemname + "_con.csv line: " + line);
 }
@@ -72,7 +81,7 @@ std::string ConnectedRoute::readable_name()
 	return ans;
 }
 
-std::string ConnectedRoute::list_lines(int pos, int len, std::string newline, size_t indent)
+/*std::string ConnectedRoute::list_lines(int pos, int len, std::string newline, size_t indent)
 {	// return .list file lines marking (len) consecutive
 	// segments, starting at waypoint (pos) segments into route
 	//std::cout << "\nDEBUG: list_lines for " << readable_name() << " (" << roots.size() << " connected root(s))" << std::endl;
@@ -86,4 +95,4 @@ std::string ConnectedRoute::list_lines(int pos, int len, std::string newline, si
 	// strip final newline
 	while (lines.back() == '\n' || lines.back() == '\r') lines.pop_back();
 	return lines;
-}
+}//*/

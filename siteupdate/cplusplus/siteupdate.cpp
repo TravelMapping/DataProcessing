@@ -25,6 +25,7 @@ class DatacheckEntryList;
 class HighwayGraph;
 class HGVertex;
 class HGEdge;
+#define pi 3.141592653589793238
 #include <chrono>
 #include <cmath>
 #include <cstring>
@@ -43,11 +44,14 @@ class HGEdge;
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
+#include "classes/Arguments.cpp"
+#include "classes/ClinchedDBValues.cpp"
 #include "classes/WaypointQuadtree/WaypointQuadtree.h"
 #include "classes/Route/Route.h"
 #include "classes/ConnectedRoute/ConnectedRoute.h"
 #include "classes/Waypoint/Waypoint.h"
 #include "classes/HighwaySegment/HighwaySegment.h"
+#include "classes/TravelerList/TravelerList.h"
 #include "classes/GraphGeneration/HGEdge.h"
 #include "classes/GraphGeneration/PlaceRadius.h"
 #include "enable_threading.cpp"
@@ -61,7 +65,6 @@ class HGEdge;
 #include "functions/split.cpp"
 #include "functions/valid_num_str.cpp"
 #include "classes/DBFieldLength.cpp"
-#include "classes/Arguments.cpp"
 #include "classes/ElapsedTime.cpp"
 #include "classes/ErrorList.cpp"
 #include "classes/Region.cpp"
@@ -70,7 +73,6 @@ class HGEdge;
 #include "classes/DatacheckEntryList.cpp"
 #include "classes/Waypoint/Waypoint.cpp"
 #include "classes/WaypointQuadtree/WaypointQuadtree.cpp"
-#include "classes/ClinchedDBValues.cpp"
 #include "classes/Route/Route.cpp"
 #include "classes/ConnectedRoute/ConnectedRoute.cpp"
 #include "classes/TravelerList/TravelerList.cpp"
@@ -95,7 +97,7 @@ using namespace std;
 int main(int argc, char *argv[])
 {	ifstream file;
 	string line;
-	mutex list_mtx, log_mtx, strtok_mtx;
+	mutex list_mtx;
 	time_t timestamp;
 
 	// start a timer for including elapsed time reports in messages
@@ -242,77 +244,17 @@ int main(int argc, char *argv[])
 					    // deleted on termination of program
 			if (!hs->is_valid) delete hs;
 			else {	highway_systems.push_back(hs);
-				cout << hs->systemname << '.' << std::flush;
 			     }
 		}
 		cout << endl;
 		// at the end, print the lines ignored
-		for (string l : ignoring) cout << l << endl;
+		for (string& l : ignoring) cout << l << endl;
 		ignoring.clear();
 	     }
 	file.close();
 
 	DatacheckEntryList *datacheckerrors = new DatacheckEntryList;
 					      // deleted on termination of program
-
-	// check for duplicate .list names
-	// and duplicate root entries among Route and ConnectedRoute
-	// data in all highway systems
-    {	cout << et.et() << "Checking for duplicate list names in routes, roots in routes and connected routes." << endl;
-	unordered_set<string> roots, list_names, duplicate_list_names;
-	unordered_set<Route*> con_roots;
-
-	for (HighwaySystem *h : highway_systems)
-	{	for (Route& r : h->route_list)
-		{	if (roots.find(r.root) == roots.end()) roots.insert(r.root);
-			else el.add_error("Duplicate root in route lists: " + r.root);
-			string list_name = r.readable_name();
-			// FIXME branch based on result of list_names.insert
-			if (list_names.find(list_name) == list_names.end()) list_names.insert(list_name);
-			else duplicate_list_names.insert(list_name);
-		}
-		for (ConnectedRoute& cr : h->con_route_list)
-		  for (size_t r = 0; r < cr.roots.size(); r++)
-		    // FIXME branch based on result of list_names.insert
-		    if (con_roots.find(cr.roots[r]) == con_roots.end()) con_roots.insert(cr.roots[r]);
-		    else el.add_error("Duplicate root in con_route lists: " + cr.roots[r]->root);//*/
-	}
-
-	// Make sure every route was listed as a part of some connected route
-	if (roots.size() == con_roots.size())
-		cout << "Check passed: same number of routes as connected route roots. " << roots.size() << endl;
-	else {	el.add_error("Check FAILED: " + to_string(roots.size()) + " routes != " + to_string(con_roots.size()) + " connected route roots.");
-		// remove con_routes entries from roots
-		for (Route *cr : con_roots)
-		{	unordered_set<string>::iterator r = roots.find(cr->root);
-			if (r != roots.end()) roots.erase(r); //FIXME erase by value
-		}
-		// there will be some leftovers, let's look up their routes to make
-		// an error report entry (not worried about efficiency as there would
-		// only be a few in reasonable cases)
-		unsigned int num_found = 0;
-		for (HighwaySystem *h : highway_systems)
-		  for (Route& r : h->route_list)
-		    for (const string& lr : roots)
-		      if (lr == r.root)
-		      {	el.add_error("route " + lr + " not matched by any connected route root.");
-			num_found++;
-			break;
-		      }
-		cout << "Added " << num_found << " ROUTE_NOT_IN_CONNECTED error entries." << endl;
-	     }
-
-	// report any duplicate list names as errors
-	if (duplicate_list_names.empty()) cout << "No duplicate list names found." << endl;
-	else {	for (string d : duplicate_list_names) el.add_error("Duplicate list name: " + d);
-		cout << "Added " << duplicate_list_names.size() << " DUPLICATE_LIST_NAME error entries." << endl;
-	     }
-
-	roots.clear();
-	list_names.clear();
-	duplicate_list_names.clear();
-	con_roots.clear();
-    }
 
 	// For tracking whether any .wpt files are in the directory tree
 	// that do not have a .csv file entry that causes them to be
@@ -335,7 +277,7 @@ int main(int argc, char *argv[])
 	thread **thr = new thread*[args.numthreads];
 	for (unsigned int t = 0; t < args.numthreads; t++)
 		thr[t] = new thread(ReadWptThread, t, &highway_systems, &hs_it, &list_mtx, args.highwaydatapath+"/hwy_data",
-				    &el, &all_wpt_files, &all_waypoints, &strtok_mtx, datacheckerrors);
+				    &el, &all_wpt_files, &all_waypoints, datacheckerrors);
 	for (unsigned int t = 0; t < args.numthreads; t++)
 		thr[t]->join();
 	for (unsigned int t = 0; t < args.numthreads; t++)
@@ -343,9 +285,9 @@ int main(int argc, char *argv[])
       #else
 	for (HighwaySystem* h : highway_systems)
 	{	std::cout << h->systemname << std::flush;
-		for (std::list<Route>::iterator r = h->route_list.begin(); r != h->route_list.end(); r++)
-		{	r->read_wpt(&all_waypoints, &el, args.highwaydatapath+"/hwy_data", &strtok_mtx, datacheckerrors, &all_wpt_files);
-		}
+		bool usa_flag = h->country->first == "USA";
+		for (Route& r : h->route_list)
+			r.read_wpt(&all_waypoints, &el, args.highwaydatapath+"/hwy_data", usa_flag, datacheckerrors, &all_wpt_files);
 		std::cout << "!" << std::endl;
 	}
       #endif
@@ -424,7 +366,7 @@ int main(int argc, char *argv[])
 
 	// if requested, rewrite data with near-miss points merged in
 	if (args.nmpmergepath != "" && !args.errorcheck)
-	{	cout << et.et() << "Writing near-miss point merged wpt files." << endl; //FIXME output dots to indicate progress
+	{	cout << et.et() << "Writing near-miss point merged wpt files." << endl;
 	      #ifdef threading_enabled
 		// set up for threaded nmp_merged file writes
 		hs_it = highway_systems.begin();
@@ -436,20 +378,87 @@ int main(int argc, char *argv[])
 			delete thr[t];//*/
 	      #else
 		for (HighwaySystem *h : highway_systems)
-		  for (Route &r : h->route_list)
-		    r.write_nmp_merged(args.nmpmergepath + "/" + r.rg_str);
+		{	std::cout << h->systemname << std::flush;
+			for (Route &r : h->route_list)
+			  r.write_nmp_merged(args.nmpmergepath + "/" + r.rg_str);
+			std::cout << '.' << std::flush;
+		}
 	      #endif
+		cout << endl;
 	}
 
 	#include "functions/concurrency_detection.cpp"
 
-	// Create hash table for faster lookup of routes by list file name
-	cout << et.et() << "Creating route hash table for list processing:" << endl;
-	unordered_map<string, Route*> route_hash;
-	for (HighwaySystem *h : highway_systems)
-	  for (list<Route>::iterator r = h->route_list.begin(); r != h->route_list.end(); r++) //FIXME use more compact syntax (&)
-	  {	route_hash[lower(r->readable_name())] = &*r;
-		for (string &a : r->alt_route_names) route_hash[lower(r->rg_str + " " + a)] = &*r;
+	cout << et.et() << "Processing waypoint labels and checking for unconnected chopped routes." << endl;
+	for (HighwaySystem* h : highway_systems)
+	  for (Route& r : h->route_list)
+	  {	// check for unconnected chopped routes
+		if (!r.con_route)
+		  el.add_error(r.system->systemname + ".csv: root " + r.root + " not matched by any connected route root.");
+
+		// check for mismatched route endpoints within connected routes
+		#define q r.con_route->roots[r.rootOrder-1]
+		if ( r.rootOrder > 0 && q->point_list.size() > 1 && r.point_list.size() > 1 && !r.con_beg()->same_coords(q->con_end()) )
+		{	if ( q->con_beg()->same_coords(r.con_beg()) )
+			{	//std::cout << "DEBUG: marking only " << q->str() << " reversed" << std::endl;
+				//if (q->is_reversed) std::cout << "DEBUG: " << q->str() << " already reversed!" << std::endl;
+				q->is_reversed = 1;
+			}
+			else if ( q->con_end()->same_coords(r.con_end()) )
+			{	//std::cout << "DEBUG: marking only " << r.str() << " reversed" << std::endl;
+				//if (r.is_reversed) std::cout << "DEBUG: " << r.str() << " already reversed!" << std::endl;
+				r.is_reversed = 1;
+			}
+			else if ( q->con_beg()->same_coords(r.con_end()) )
+			{	//std::cout << "DEBUG: marking both " << q->str() << " and " << r.str() << " reversed" << std::endl;
+				//if (q->is_reversed) std::cout << "DEBUG: " << q->str() << " already reversed!" << std::endl;
+				//if (r.is_reversed) std::cout << "DEBUG: " << r.str() << " already reversed!" << std::endl;
+				q->is_reversed = 1;
+				r.is_reversed = 1;
+			}
+			else
+			{	datacheckerrors->add(&r, r.con_beg()->label, "", "",
+						     "DISCONNECTED_ROUTE", q->con_end()->root_at_label());
+				datacheckerrors->add(q, q->con_end()->label, "", "",
+						     "DISCONNECTED_ROUTE", r.con_beg()->root_at_label());
+			}
+		}
+		#undef q
+
+		// create label hashes and check for duplicates
+		#define w r.point_list[index]
+		for (unsigned int index = 0; index < r.point_list.size(); index++)
+		{	// ignore case and leading '+' or '*'
+			std::string upper_label = upper(w->label);
+			while (upper_label[0] == '+' || upper_label[0] == '*')
+				upper_label = upper_label.substr(1);
+			// if primary label not duplicated, add to r.pri_label_hash
+			if (r.alt_label_hash.find(upper_label) != r.alt_label_hash.end())
+			{	datacheckerrors->add(&r, upper_label, "", "", "DUPLICATE_LABEL", "");
+				r.duplicate_labels.insert(upper_label);
+			}
+			else if (!r.pri_label_hash.insert(std::pair<std::string, unsigned int>(upper_label, index)).second)
+			{	datacheckerrors->add(&r, upper_label, "", "", "DUPLICATE_LABEL", "");
+				r.duplicate_labels.insert(upper_label);
+			}
+			for (std::string& a : w->alt_labels)
+			{	// create canonical AltLabels
+				while (a[0] == '+' || a[0] == '*') a = a.substr(1);
+				upper(a.data());
+				// populate unused set
+				r.unused_alt_labels.insert(a);
+				// create label->index hashes and check if AltLabels duplicated
+				if (r.pri_label_hash.find(a) != r.pri_label_hash.end())
+				{	datacheckerrors->add(&r, a, "", "", "DUPLICATE_LABEL", "");
+					r.duplicate_labels.insert(a);
+				}
+				else if (!r.alt_label_hash.insert(std::pair<std::string, unsigned int>(a, index)).second)
+				{	datacheckerrors->add(&r, a, "", "", "DUPLICATE_LABEL", "");
+					r.duplicate_labels.insert(a);
+				}
+			}
+		}
+		#undef w
 	  }
 
 	// Create a list of TravelerList objects, one per person
@@ -460,7 +469,7 @@ int main(int argc, char *argv[])
       #ifdef threading_enabled
 	// set up for threaded .list file processing
 	for (unsigned int t = 0; t < args.numthreads; t++)
-		thr[t] = new thread(ReadListThread, t, &traveler_ids, &id_it, &traveler_lists, &list_mtx, &strtok_mtx, &args, &route_hash, &el);
+		thr[t] = new thread(ReadListThread, t, &traveler_ids, &id_it, &traveler_lists, &list_mtx, &args, &el);
 	for (unsigned int t = 0; t < args.numthreads; t++)
 		thr[t]->join();
 	for (unsigned int t = 0; t < args.numthreads; t++)
@@ -468,7 +477,7 @@ int main(int argc, char *argv[])
       #else
 	for (string &t : traveler_ids)
 	{	cout << t << ' ' << std::flush;
-		traveler_lists.push_back(new TravelerList(t, &route_hash, &el, &args, &strtok_mtx));
+		traveler_lists.push_back(new TravelerList(t, &el, &args));
 	}
 	traveler_ids.clear();
       #endif
@@ -481,8 +490,16 @@ int main(int argc, char *argv[])
 		travnum++;
 	}
 
-	//#include "debug/highway_segment_log.cpp"
-	//#include "debug/pioneers.cpp"
+	cout << et.et() << "Clearing route & label hash tables." << endl;
+	Route::root_hash.clear();
+	Route::pri_list_hash.clear();
+	Route::alt_list_hash.clear();
+	for (HighwaySystem* h : highway_systems)
+	  for (Route& r : h->route_list)
+	  {	r.pri_label_hash.clear();
+		r.alt_label_hash.clear();
+		r.duplicate_labels.clear();
+	  }
 
 	// Read updates.csv file, just keep in the fields list for now since we're
 	// just going to drop this into the DB later anyway
@@ -571,47 +588,72 @@ int main(int argc, char *argv[])
 	}
 	file.close();
 
-	// write log file for points in use -- might be more useful in the DB later,
-	// or maybe in another format
-	cout << et.et() << "Writing points in use log." << endl;
-	ofstream inusefile(args.logfilepath+"/pointsinuse.log");
-	timestamp = time(0);
-	inusefile << "Log file created at: " << ctime(&timestamp);
-	for (HighwaySystem *h : highway_systems)
-	  for (Route &r : h->route_list)
-	    if (r.labels_in_use.size())
-	    {	inusefile << r.root << '(' << r.point_list.size() << "):";
-		list<string> liu_list(r.labels_in_use.begin(), r.labels_in_use.end());
-		liu_list.sort();
-		for (string label : liu_list) inusefile << ' ' << label;
-		inusefile << '\n';
-		r.labels_in_use.clear();
-	    }
-	inusefile.close();
-
-	// write log file for alt labels not in use
-	cout << et.et() << "Writing unused alt labels log." << endl;
+	cout << et.et() << "Writing pointsinuse.log, unusedaltlabels.log, listnamesinuse.log and unusedaltroutenames.log" << endl;
 	unsigned int total_unused_alt_labels = 0;
+	unsigned int total_unusedaltroutenames = 0;
 	list<string> unused_alt_labels;
+	ofstream piufile(args.logfilepath+"/pointsinuse.log");
+	ofstream lniufile(args.logfilepath+"/listnamesinuse.log");
+	ofstream uarnfile(args.logfilepath+"/unusedaltroutenames.log");
+	timestamp = time(0);
+	piufile << "Log file created at: " << ctime(&timestamp);
+	lniufile << "Log file created at: " << ctime(&timestamp);
+	uarnfile << "Log file created at: " << ctime(&timestamp);
 	for (HighwaySystem *h : highway_systems)
-		for (Route &r : h->route_list)
+	{	for (Route &r : h->route_list)
+		{	// labelsinuse.log line
+			if (r.labels_in_use.size())
+			{	piufile << r.root << '(' << r.point_list.size() << "):";
+				list<string> liu_list(r.labels_in_use.begin(), r.labels_in_use.end());
+				liu_list.sort();
+				for (string& label : liu_list) piufile << ' ' << label;
+				piufile << '\n';
+				r.labels_in_use.clear();
+			}
+			// unusedaltlabels.log lines, to be sorted by root later
 			if (r.unused_alt_labels.size())
 			{	total_unused_alt_labels += r.unused_alt_labels.size();
 				string ual_entry = r.root + '(' + to_string(r.unused_alt_labels.size()) + "):";
 				list<string> ual_list(r.unused_alt_labels.begin(), r.unused_alt_labels.end());
 				ual_list.sort();
-				for (string label : ual_list) ual_entry += ' ' + label;
-				r.unused_alt_labels.clear();
+				for (string& label : ual_list) ual_entry += ' ' + label;
 				unused_alt_labels.push_back(ual_entry);
+				r.unused_alt_labels.clear();
 			}
+		}
+		// listnamesinuse.log line
+		if (h->listnamesinuse.size())
+		{	lniufile << h->systemname << '(' << h->route_list.size() << "):";
+			list<string> lniu_list(h->listnamesinuse.begin(), h->listnamesinuse.end());
+			lniu_list.sort();
+			for (string& list_name : lniu_list) lniufile << " \"" << list_name << '"';
+			lniufile << '\n';
+			h->listnamesinuse.clear();
+		}
+		// unusedaltroutenames.log line
+		if (h->unusedaltroutenames.size())
+		{	total_unusedaltroutenames += h->unusedaltroutenames.size();
+			uarnfile << h->systemname << '(' << h->unusedaltroutenames.size() << "):";
+			list<string> uarn_list(h->unusedaltroutenames.begin(), h->unusedaltroutenames.end());
+			uarn_list.sort();
+			for (string& list_name : uarn_list) uarnfile << " \"" << list_name << '"';
+			uarnfile << '\n';
+			h->unusedaltroutenames.clear();
+		}
+	}
+	piufile.close();
+	lniufile.close();
+	uarnfile << "Total: " << total_unusedaltroutenames << '\n';
+	uarnfile.close();
+	// sort lines and write unusedaltlabels.log
 	unused_alt_labels.sort();
-	ofstream unusedfile(args.logfilepath+"/unusedaltlabels.log");
+	ofstream ualfile(args.logfilepath+"/unusedaltlabels.log");
 	timestamp = time(0);
-	unusedfile << "Log file created at: " << ctime(&timestamp);
-	for (string &ual_entry : unused_alt_labels) unusedfile << ual_entry << '\n';
+	ualfile << "Log file created at: " << ctime(&timestamp);
+	for (string &ual_entry : unused_alt_labels) ualfile << ual_entry << '\n';
 	unused_alt_labels.clear();
-	unusedfile << "Total: " << total_unused_alt_labels << '\n';
-	unusedfile.close();
+	ualfile << "Total: " << total_unused_alt_labels << '\n';
+	ualfile.close();
 
 
 	// now augment any traveler clinched segments for concurrencies
@@ -623,7 +665,7 @@ int main(int argc, char *argv[])
 	list<TravelerList*>::iterator tl_it = traveler_lists.begin();
 
 	for (unsigned int t = 0; t < args.numthreads; t++)
-		thr[t] = new thread(ConcAugThread, t, &traveler_lists, &tl_it, &list_mtx, &log_mtx, augment_lists+t);
+		thr[t] = new thread(ConcAugThread, t, &traveler_lists, &tl_it, &list_mtx, augment_lists+t);
 	for (unsigned int t = 0; t < args.numthreads; t++)
 		thr[t]->join();
 	cout << "!\n" << et.et() << "Writing to concurrencies.log." << endl;
@@ -710,7 +752,7 @@ int main(int argc, char *argv[])
 		region_entries.push_back(region->code + fstr);
 	  }
 	region_entries.sort();
-	for (string e : region_entries) hdstatsfile << e;
+	for (string& e : region_entries) hdstatsfile << e;
 
 	for (HighwaySystem *h : highway_systems)
 	{	sprintf(fstr, ") total: %.2f mi\n", h->total_mileage());
@@ -718,7 +760,7 @@ int main(int argc, char *argv[])
 		if (h->mileage_by_region.size() > 1)
 		{	hdstatsfile << "System " << h->systemname << " by region:\n";
 			list<Region*> regions_in_system;
-			for (pair<Region*, double> rm : h->mileage_by_region)
+			for (pair<Region* const, double>& rm : h->mileage_by_region)
 				regions_in_system.push_back(rm.first);
 			regions_in_system.sort(sort_regions_by_code);
 			for (Region *r : regions_in_system)
@@ -727,19 +769,17 @@ int main(int argc, char *argv[])
 			}
 		}
 		hdstatsfile << "System " << h->systemname << " by route:\n";
-		for (list<ConnectedRoute>::iterator cr = h->con_route_list.begin(); cr != h->con_route_list.end(); cr++)
-		{	double con_total_miles = 0;
-			string to_write = "";
-			for (Route *r : cr->roots)
+		for (ConnectedRoute& cr : h->con_route_list)
+		{	string to_write = "";
+			for (Route *r : cr.roots)
 			{	sprintf(fstr, ": %.2f mi\n", r->mileage);
 				to_write += "  " + r->readable_name() + fstr;
-				con_total_miles += r->mileage;
+				cr.mileage += r->mileage;
 			}
-			cr->mileage = con_total_miles; //FIXME?
-			sprintf(fstr, ": %.2f mi", con_total_miles);
-			hdstatsfile << cr->readable_name() << fstr;
-			if (cr->roots.size() == 1)
-				hdstatsfile << " (" << cr->roots[0]->readable_name() << " only)\n";
+			sprintf(fstr, ": %.2f mi", cr.mileage);
+			hdstatsfile << cr.readable_name() << fstr;
+			if (cr.roots.size() == 1)
+				hdstatsfile << " (" << cr.roots[0]->readable_name() << " only)\n";
 			else	hdstatsfile << '\n' << to_write;
 		}
 	}
@@ -787,7 +827,7 @@ int main(int argc, char *argv[])
 	allfile << '\n';
 	for (TravelerList *t : traveler_lists)
 	{	double t_total_mi = 0;
-		for (std::pair<Region*, double> rm : t->active_only_mileage_by_region)
+		for (std::pair<Region* const, double>& rm : t->active_only_mileage_by_region)
 			t_total_mi += rm.second;
 		sprintf(fstr, "%.2f", t_total_mi);
 		allfile << t->traveler_name << ',' << fstr;
@@ -825,7 +865,7 @@ int main(int argc, char *argv[])
 	allfile << '\n';
 	for (TravelerList *t : traveler_lists)
 	{	double t_total_mi = 0;
-		for (std::pair<Region*, double> rm : t->active_preview_mileage_by_region)
+		for (std::pair<Region* const, double>& rm : t->active_preview_mileage_by_region)
 			t_total_mi += rm.second;
 		sprintf(fstr, "%.2f", t_total_mi);
 		allfile << t->traveler_name << ',' << fstr;
@@ -853,7 +893,7 @@ int main(int argc, char *argv[])
 		sysfile << "Traveler,Total";
 		regions.clear();
 		total_mi = 0;
-		for (std::pair<Region*, double> rm : h->mileage_by_region)
+		for (std::pair<Region* const, double>& rm : h->mileage_by_region)
 		{	regions.push_back(rm.first);
 			total_mi += rm.second;		//TODO is this right?
 		}
@@ -889,17 +929,23 @@ int main(int argc, char *argv[])
 	cout << et.et() << "Reading datacheckfps.csv." << endl;
 	file.open(args.highwaydatapath+"/datacheckfps.csv");
 	getline(file, line); // ignore header line
-	list<array<string, 6>> datacheckfps; //FIXME try implementing as an unordered_multiset; see if speed increases
+	list<array<string, 6>> datacheckfps;
 	unordered_set<string> datacheck_always_error
-	({	"BAD_ANGLE", "DUPLICATE_LABEL", "HIDDEN_TERMINUS",
+	({	"BAD_ANGLE", "DISCONNECTED_ROUTE", "DUPLICATE_LABEL",
+		"HIDDEN_TERMINUS", "INTERSTATE_NO_HYPHEN",
 		"INVALID_FINAL_CHAR", "INVALID_FIRST_CHAR",
 		"LABEL_INVALID_CHAR", "LABEL_PARENS", "LABEL_SLASHES",
 		"LABEL_TOO_LONG", "LABEL_UNDERSCORES", "LONG_UNDERSCORE",
 		"MALFORMED_LAT", "MALFORMED_LON", "MALFORMED_URL",
-		"NONTERMINAL_UNDERSCORE"
+		"NONTERMINAL_UNDERSCORE", "US_LETTER"
 	});
 	while (getline(file, line))
-	{	if (line.back() == 0x0D) line.erase(line.end()-1);	// trim DOS newlines
+	{	// trim DOS newlines & trailing whitespace
+		while (line.back() == 0x0D || line.back() == ' ' || line.back() == '\t')
+			line.pop_back();
+		// trim leading whitespace
+		while (line[0] == ' ' || line[0] == '\t')
+			line = line.substr(1);
 		if (line.empty()) continue;
 		// parse system updates.csv line
 		size_t NumFields = 6;
@@ -935,28 +981,27 @@ int main(int argc, char *argv[])
 	fpfile << "Log file created at: " << ctime(&timestamp);
 	unsigned int counter = 0;
 	unsigned int fpcount = 0;
-	for (list<DatacheckEntry>::iterator d = datacheckerrors->entries.begin(); d != datacheckerrors->entries.end(); d++)
+	for (DatacheckEntry& d : datacheckerrors->entries)
 	{	//cout << "Checking: " << d->str() << endl;
 		counter++;
 		if (counter % 1000 == 0) cout << '.' << flush;
 		for (list<array<string, 6>>::iterator fp = datacheckfps.begin(); fp != datacheckfps.end(); fp++)
-		  if (d->match_except_info(*fp))
-		    if (d->info == (*fp)[5])
+		  if (d.match_except_info(*fp))
+		    if (d.info == (*fp)[5])
 		    {	//cout << "Match!" << endl;
-			d->fp = 1;
+			d.fp = 1;
 			fpcount++;
 			datacheckfps.erase(fp);
 			break;
 		    }
 		    else
 		    {	fpfile << "FP_ENTRY: " << (*fp)[0] << ';' << (*fp)[1] << ';' << (*fp)[2] << ';' << (*fp)[3] << ';' << (*fp)[4] << ';' << (*fp)[5] << '\n';
-			fpfile << "CHANGETO: " << (*fp)[0] << ';' << (*fp)[1] << ';' << (*fp)[2] << ';' << (*fp)[3] << ';' << (*fp)[4] << ';' << d->info << '\n';
+			fpfile << "CHANGETO: " << (*fp)[0] << ';' << (*fp)[1] << ';' << (*fp)[2] << ';' << (*fp)[3] << ';' << (*fp)[4] << ';' << d.info << '\n';
 		    }
 	}
 	fpfile.close();
 	cout << '!' << endl;
-	cout << et.et() << "Found " << datacheckerrors->entries.size() << " datacheck errors." << endl;
-	cout << et.et() << "Matched " << fpcount << " FP entries." << endl;
+	cout << et.et() << "Found " << datacheckerrors->entries.size() << " datacheck errors and matched " << fpcount << " FP entries." << endl;
 
 	// write log of unmatched false positives from the datacheckfps.csv
 	cout << et.et() << "Writing log of unmatched datacheck FP entries." << endl;
@@ -964,8 +1009,8 @@ int main(int argc, char *argv[])
 	timestamp = time(0);
 	fpfile << "Log file created at: " << ctime(&timestamp);
 	if (datacheckfps.empty()) fpfile << "No unmatched FP entries.\n";
-	else	for (array<string, 6> entry : datacheckfps)
-			fpfile << entry[0] << ';' << entry[1] << ';' << entry[2] << ';' << entry[3] << ';' << entry[4] << ';' << entry[5] << '\n';
+	else	for (array<string, 6>& entry : datacheckfps)
+		  fpfile << entry[0] << ';' << entry[1] << ';' << entry[2] << ';' << entry[3] << ';' << entry[4] << ';' << entry[5] << '\n';
 	fpfile.close();
 
 	// datacheck.log file
@@ -1053,7 +1098,7 @@ int main(int argc, char *argv[])
 	unsigned other_count = 0;
 	unsigned int total_rtes = 0;
 	for (HighwaySystem *h : highway_systems)
-	  for (Route r : h->route_list)
+	  for (Route& r : h->route_list)
 	  {	total_rtes++;
 		if (h->devel()) d_count++;
 		else {	if (h->active()) a_count++;

@@ -1,3 +1,4 @@
+std::unordered_map<std::string, Route*> Route::root_hash, Route::pri_list_hash, Route::alt_list_hash;
 std::mutex Route::awf_mtx;
 
 Route::Route(std::string &line, HighwaySystem *sys, ErrorList &el, std::unordered_map<std::string, Region*> &region_hash)
@@ -7,6 +8,7 @@ Route::Route(std::string &line, HighwaySystem *sys, ErrorList &el, std::unordere
 	mileage = 0;
 	rootOrder = -1; // order within connected route
 	region = 0;	// if this stays 0, setup has failed due to bad .csv data
+	is_reversed = 0;
 
 	// parse chopped routes csv line
 	size_t NumFields = 8;
@@ -52,11 +54,38 @@ Route::Route(std::string &line, HighwaySystem *sys, ErrorList &el, std::unordere
 	if (root.size() > DBFieldLength::root)
 		el.add_error("Root > " + std::to_string(DBFieldLength::root)
 			   + " bytes in " + system->systemname + ".csv line: " + line);
+	lower(root.data());
 	// alt_route_names
-	size_t l = 0;
-	for (size_t r = 0; r != -1; l = r+1)
-	{	r = arn_str.find(',', l);
-		alt_route_names.emplace_back(arn_str, l, r-l);
+	upper(arn_str.data());
+	size_t len;
+	for (size_t pos = 0; pos < arn_str.size(); pos += len+1)
+	{	len = strcspn(arn_str.data()+pos, ",");
+		alt_route_names.emplace_back(arn_str, pos, len);
+	}
+
+	// insert into root_hash, checking for duplicate root entries
+	if (!root_hash.insert(std::pair<std::string, Route*>(root, this)).second)
+		el.add_error("Duplicate root in " + system->systemname + ".csv: " + root +
+			     " already in " + root_hash.at(root)->system->systemname + ".csv");
+	// insert list name into pri_list_hash, checking for duplicate .list names
+	std::string list_name = upper(readable_name());
+	if (alt_list_hash.find(list_name) != alt_list_hash.end())
+		el.add_error("Duplicate main list name in " + root + ": '" + readable_name() +
+			     "' already points to " + alt_list_hash.at(list_name)->root);
+	else if (!pri_list_hash.insert(std::pair<std::string,Route*>(list_name, this)).second)
+		el.add_error("Duplicate main list name in " + root + ": '" + readable_name() +
+			     "' already points to " + pri_list_hash.at(list_name)->root);
+	// insert alt names into alt_list_hash, checking for duplicate .list names
+	for (std::string& a : alt_route_names)
+	{   list_name = upper(rg_str + ' ' + a);
+	    if (pri_list_hash.find(list_name) != pri_list_hash.end())
+		el.add_error("Duplicate alt route name in " + root + ": '" + region->code + ' ' + a +
+			     "' already points to " + pri_list_hash.at(list_name)->root);
+	    else if (!alt_list_hash.insert(std::pair<std::string, Route*>(list_name, this)).second)
+		el.add_error("Duplicate alt route name in " + root + ": '" + region->code + ' ' + a +
+			     "' already points to " + alt_list_hash.at(list_name)->root);
+	    // populate unused set
+	    system->unusedaltroutenames.insert(list_name);
 	}
 }
 
@@ -132,16 +161,16 @@ double Route::clinched_by_traveler(TravelerList *t)
 	return miles;
 }
 
-std::string Route::list_line(int beg, int end)
+/*std::string Route::list_line(int beg, int end)
 {	/* Return a .list file line from (beg) to (end),
 	these being indices to the point_list vector.
 	These values can be "out-of-bounds" when getting lines
 	for connected routes. If so, truncate or return "". */
-	if (beg >= int(point_list.size()) || end <= 0) return "";
+/*	if (beg >= int(point_list.size()) || end <= 0) return "";
 	if (end >= int(point_list.size())) end = point_list.size()-1;
 	if (beg < 0) beg = 0;
 	return readable_name() + " " + point_list[beg]->label + " " + point_list[end]->label;
-}
+}//*/
 
 void Route::write_nmp_merged(std::string filename)
 {	mkdir(filename.data(), 0777);
@@ -180,8 +209,19 @@ void Route::write_nmp_merged(std::string filename)
 	wptfile.close();
 }
 
-Route *route_by_root(std::string root, std::list<Route> &route_list)
-{	for (std::list<Route>::iterator r = route_list.begin(); r != route_list.end(); r++)
-		if (r->root == root) return &*r;
-	return 0;
+inline void Route::store_traveled_segments(TravelerList* t, unsigned int beg, unsigned int end)
+{	// store clinched segments with traveler and traveler with segments
+	for (unsigned int pos = beg; pos < end; pos++)
+	{	HighwaySegment *hs = segment_list[pos];
+		hs->add_clinched_by(t);
+		t->clinched_segments.insert(hs);
+	}
+}
+
+inline Waypoint* Route::con_beg()
+{	return is_reversed ? point_list.back() : point_list.front();
+}
+
+inline Waypoint* Route::con_end()
+{	return is_reversed ? point_list.front() : point_list.back();
 }

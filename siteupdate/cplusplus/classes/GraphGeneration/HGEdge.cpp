@@ -1,8 +1,3 @@
-// constants for more human-readable format masks
-const unsigned char HGEdge::simple = 1;
-const unsigned char HGEdge::collapsed = 2;
-const unsigned char HGEdge::traveled = 4;
-
 HGEdge::HGEdge(HighwaySegment *s, HighwayGraph *graph)
 {	// initial construction is based on a HighwaySegment
 	s_written = 0; // simple

@@ -1,4 +1,4 @@
-bool WaypointQuadtree::WaypointQuadtree::refined()
+inline bool WaypointQuadtree::WaypointQuadtree::refined()
 {	return nw_child;
 }
 
@@ -259,7 +259,7 @@ void WaypointQuadtree::write_qt_tmg(std::string filename)
 	std::ofstream tmgfile(filename);
 	tmgfile << "TMG 1.0 simple\n";
 	tmgfile << vertices.size() << ' ' << edges.size() << '\n';
-	for (std::string v : vertices)	tmgfile << v << '\n';
-	for (std::string e : edges)	tmgfile << e << '\n';
+	for (std::string& v : vertices)	tmgfile << v << '\n';
+	for (std::string& e : edges)	tmgfile << e << '\n';
 	tmgfile.close();
 }

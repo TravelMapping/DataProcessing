@@ -1,5 +1,5 @@
 void Route::read_wpt
-(	WaypointQuadtree *all_waypoints, ErrorList *el, std::string path, std::mutex *strtok_mtx,
+(	WaypointQuadtree *all_waypoints, ErrorList *el, std::string path, bool usa_flag,
 	DatacheckEntryList *datacheckerrors, std::unordered_set<std::string> *all_wpt_files
 )
 {	/* read data into the Route's waypoint list from a .wpt file */
@@ -12,7 +12,7 @@ void Route::read_wpt
 	std::vector<char*> lines;
 	std::ifstream file(filename);
 	if (!file)
-	{	el->add_error("Could not open " + filename);
+	{	el->add_error("[Errno 2] No such file or directory: '" + filename + '\'');
 		file.close();
 		return;
 	}
@@ -23,12 +23,15 @@ void Route::read_wpt
 	file.read(wptdata, wptdatasize);
 	wptdata[wptdatasize] = 0; // add null terminator
 	file.close();
-	strtok_mtx->lock();
-	for (char *token = strtok(wptdata, "\r\n"); token; token = strtok(0, "\r\n") ) lines.emplace_back(token);
-	strtok_mtx->unlock();
+
+	// split file into lines
+	size_t spn = 0;
+	for (char* c = wptdata; *c; c += spn)
+	{	for (spn = strcspn(c, "\n\r"); c[spn] == '\n' || c[spn] == '\r'; spn++) c[spn] = 0;
+		lines.emplace_back(c);
+	}
+
 	lines.push_back(wptdata+wptdatasize+1); // add a dummy "past-the-end" element to make lines[l+1]-2 work
-	// set to be used per-route to find label duplicates
-	std::unordered_set<std::string> all_route_labels;
 	// set to be used for finding duplicate coordinates
 	std::unordered_set<Waypoint*> coords_used;
 	double vis_dist = 0;
@@ -38,14 +41,14 @@ void Route::read_wpt
 	for (unsigned int l = 0; l < lines.size()-1; l++)
 	{	// strip whitespace
 		while (lines[l][0] == ' ' || lines[l][0] == '\t') lines[l]++;
-		char * endchar = lines[l+1]-2; // -2 skips over the 0 inserted by strtok
-		if (*endchar == 0) endchar--;  // skip back one more for CRLF cases FIXME what about lines followed by blank lines?
+		char * endchar = lines[l+1]-2; // -2 skips over the 0 inserted while splitting wptdata into lines
+		while (*endchar == 0) endchar--;  // skip back more for CRLF cases, and lines followed by blank lines
 		while (*endchar == ' ' || *endchar == '\t')
 		{	*endchar = 0;
 			endchar--;
 		}
 		if (lines[l][0] == 0) continue;
-		Waypoint *w = new Waypoint(lines[l], this, strtok_mtx, datacheckerrors);
+		Waypoint *w = new Waypoint(lines[l], this, datacheckerrors);
 			      // deleted on termination of program, or immediately below if invalid
 		bool malformed_url = w->lat == 0 && w->lng == 0;
 		bool label_too_long = w->label_too_long(datacheckerrors);
@@ -54,22 +57,12 @@ void Route::read_wpt
 			continue;
 		}
 		point_list.push_back(w);
-		// populate unused alt labels
-		for (size_t i = 0; i < w->alt_labels.size(); i++)
-		{	std::string al = w->alt_labels[i];
-			// strip out leading '+'
-			while (al[0] == '+') al.erase(0, 1);	//TODO would erase via iterator be any faster?
-			// convert to upper case
-			for (size_t c = 0; c < al.size(); c++)
-			  if (al[c] >= 'a' && al[c] <= 'z') al[c] -= 32;
-			unused_alt_labels.insert(al);
-		}
 		all_waypoints->insert(w, 1);
 
 		// single-point Datachecks, and HighwaySegment
 		w->out_of_bounds(datacheckerrors, fstr);
-		w->duplicate_label(datacheckerrors, all_route_labels);
 		w->duplicate_coords(datacheckerrors, coords_used, fstr);
+		w->label_invalid_char(datacheckerrors);
 		if (point_list.size() > 1)
 		{	w->distance_update(datacheckerrors, fstr, vis_dist, point_list[point_list.size()-2]);
 			// add HighwaySegment, if not first point
@@ -78,17 +71,20 @@ void Route::read_wpt
 		}
 		// checks for visible points
 		if (!w->is_hidden)
-		{	w->visible_distance(datacheckerrors, fstr, vis_dist, last_visible);
-			const char *slash = strchr(w->label.data(), '/');
+		{	const char *slash = strchr(w->label.data(), '/');
+			if (usa_flag && w->label.size() >= 2)
+			{	w->bus_with_i(datacheckerrors);
+				w->interstate_no_hyphen(datacheckerrors);
+				w->us_letter(datacheckerrors);
+			}
+			w->label_invalid_ends(datacheckerrors);
+			w->label_looks_hidden(datacheckerrors);
+			w->label_parens(datacheckerrors);
 			w->label_selfref(datacheckerrors, slash);
 			w->label_slashes(datacheckerrors, slash);
+			w->lacks_generic(datacheckerrors);
 			w->underscore_datachecks(datacheckerrors, slash);
-			w->label_parens(datacheckerrors);
-			w->label_invalid_char(datacheckerrors, w->label);
-			  for (std::string &a : w->alt_labels) w->label_invalid_char(datacheckerrors, a);
-			w->label_invalid_ends(datacheckerrors);
-			w->bus_with_i(datacheckerrors);
-			w->label_looks_hidden(datacheckerrors);
+			w->visible_distance(datacheckerrors, fstr, vis_dist, last_visible);
 		}
 	}
 	delete[] wptdata;

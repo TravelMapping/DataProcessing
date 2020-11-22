@@ -12,10 +12,10 @@ class ConnectedRoute
 
 	double mileage; // will be computed for routes in active & preview systems
 
-	ConnectedRoute(std::string &, HighwaySystem *, ErrorList &, std::list<Route> &);
+	ConnectedRoute(std::string &, HighwaySystem *, ErrorList &);
 
 	std::string connected_rtes_line();
 	std::string csv_line();
 	std::string readable_name();
-	std::string list_lines(int, int, std::string, size_t);
+	//std::string list_lines(int, int, std::string, size_t);
 };

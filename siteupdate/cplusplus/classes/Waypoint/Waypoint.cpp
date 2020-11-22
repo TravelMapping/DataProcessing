@@ -13,17 +13,16 @@ bool waypoint_simplification_sort(Waypoint *w1, Waypoint *w2)
 	else return 0;
 }
 
-const double Waypoint::pi = 3.141592653589793238;
-
-Waypoint::Waypoint(char *line, Route *rte, std::mutex *strtok_mtx, DatacheckEntryList *datacheckerrors)
+Waypoint::Waypoint(char *line, Route *rte, DatacheckEntryList *datacheckerrors)
 {	/* initialize object from a .wpt file line */
 	route = rte;
 
 	// parse WPT line
-	strtok_mtx->lock();
-	for (char *token = strtok(line, " "); token; token = strtok(0, " "))
-		alt_labels.emplace_back(token);	// get all tokens & put into label deque
-	strtok_mtx->unlock();
+	size_t spn = 0;
+	for (char* c = line; *c; c += spn)
+	{	for (spn = strcspn(c, " "); c[spn] == ' '; spn++) c[spn] = 0;
+		alt_labels.emplace_back(c);
+	}
 
 	// We know alt_labels will have at least one element, because if the WPT line is
 	// blank or contains only spaces, Route::read_wpt will not call this constructor.
@@ -306,19 +305,13 @@ bool Waypoint::label_references_route(Route *r, DatacheckEntryList *datacheckerr
 
 /* Datacheck */
 
-inline void Waypoint::duplicate_label(DatacheckEntryList *datacheckerrors, std::unordered_set<std::string> &all_route_labels)
-{	// duplicate labels
-	// first, check primary label
-	std::string lower_label = lower(label);
-	while (lower_label[0] == '+' || lower_label[0] == '*') lower_label.erase(lower_label.begin());
-	if (!all_route_labels.insert(lower_label).second)
-		datacheckerrors->add(route, lower_label, "", "", "DUPLICATE_LABEL", "");
-	// then check alt labels
-	for (std::string &label : alt_labels)
-	{	std::string lower_label = lower(label);
-		while (lower_label[0] == '+' || lower_label[0] == '*') lower_label.erase(lower_label.begin());
-		if (!all_route_labels.insert(lower_label).second)
-			datacheckerrors->add(route, lower_label, "", "", "DUPLICATE_LABEL", "");
+inline void Waypoint::distance_update(DatacheckEntryList *datacheckerrors, char *fstr, double &vis_dist, Waypoint *prev_w)
+{	// visible distance update, and last segment length check
+	double last_distance = distance_to(prev_w);
+	vis_dist += last_distance;
+	if (last_distance > 20)
+	{	sprintf(fstr, "%.2f", last_distance);
+		datacheckerrors->add(route, prev_w->label, label, "", "LONG_SEGMENT", fstr);
 	}
 }
 
@@ -335,6 +328,25 @@ inline void Waypoint::duplicate_coords(DatacheckEntryList *datacheckerrors, std:
 			datacheckerrors->add(route, other_w->label, label, "", "DUPLICATE_COORDS", fstr);
 		}
 	  }
+}
+
+inline void Waypoint::label_invalid_char(DatacheckEntryList *datacheckerrors)
+{	// look for labels with invalid characters
+	if (label == "*")
+		  datacheckerrors->add(route, label, "", "", "LABEL_INVALID_CHAR", "");
+	else for (const char *c = label.data(); *c; c++)
+		if ((*c == 42 || *c == 43) && c > label.data()
+		 || (*c < 40)	|| (*c == 44)	|| (*c > 57 && *c < 65)
+		 || (*c == 96)	|| (*c > 122)	|| (*c > 90 && *c < 95))
+		  datacheckerrors->add(route, label, "", "", "LABEL_INVALID_CHAR", "");
+	for (std::string& lbl : alt_labels)
+	  if (lbl == "*")
+		  datacheckerrors->add(route, lbl, "", "", "LABEL_INVALID_CHAR", "");
+	  else for (const char *c = lbl.data(); *c; c++)
+		if (*c == '+' && c > lbl.data() || *c == '*' && (c > lbl.data()+1 || lbl[0] != '+')
+		 || (*c < 40)	|| (*c == 44)	|| (*c > 57 && *c < 65)
+		 || (*c == 96)	|| (*c > 122)	|| (*c > 90 && *c < 95))
+		  datacheckerrors->add(route, lbl, "", "", "LABEL_INVALID_CHAR", "");
 }
 
 inline bool Waypoint::label_too_long(DatacheckEntryList *datacheckerrors)
@@ -371,35 +383,38 @@ inline void Waypoint::out_of_bounds(DatacheckEntryList *datacheckerrors, char *f
 	}
 }
 
-inline void Waypoint::distance_update(DatacheckEntryList *datacheckerrors, char *fstr, double &vis_dist, Waypoint *prev_w)
-{	// visible distance update, and last segment length check
-	double last_distance = distance_to(prev_w);
-	vis_dist += last_distance;
-	if (last_distance > 20)
-	{	sprintf(fstr, "%.2f", last_distance);
-		datacheckerrors->add(route, prev_w->label, label, "", "LONG_SEGMENT", fstr);
-	}
-}
-
 /* checks for visible points */
-
-inline void Waypoint::visible_distance(DatacheckEntryList *datacheckerrors, char *fstr, double &vis_dist, Waypoint *&last_visible)
-{	// complete visible distance check, omit report for active
-	// systems to reduce clutter
-	if (vis_dist > 10 && !route->system->active())
-	{	sprintf(fstr, "%.2f", vis_dist);
-		datacheckerrors->add(route, last_visible->label, label, "", "VISIBLE_DISTANCE", fstr);
-	}
-	last_visible = this;
-	vis_dist = 0;
-}
 
 inline void Waypoint::bus_with_i(DatacheckEntryList *datacheckerrors)
 {	// look for I-xx with Bus instead of BL or BS
-	if (label[0] != 'I' || label[1] != '-') return;
-	const char *c = label.data()+2;
+	const char *c = label.data();
+	if (*c == '*') c++;
+	if (*c++ != 'I' || *c++ != '-') return;
+	if (*c < '0' || *c > '9') return;
 	while (*c >= '0' && *c <= '9') c++;
-	if (!strncmp(c, "Bus", 3)) datacheckerrors->add(route, label, "", "", "BUS_WITH_I", "");
+	if ( *c == 'E' || *c == 'W' || *c == 'C' || *c == 'N' || *c == 'S'
+	  || *c == 'e' || *c == 'w' || *c == 'c' || *c == 'n' || *c == 's' ) c++;
+	if ( (*c == 'B' || *c == 'b')
+	  && (*(c+1) == 'u' || *(c+1) == 'U')
+	  && (*(c+2) == 's' || *(c+2) == 'S') )
+		datacheckerrors->add(route, label, "", "", "BUS_WITH_I", "");
+}
+
+inline void Waypoint::interstate_no_hyphen(DatacheckEntryList *datacheckerrors)
+{	const char *c = label[0] == '*' ? label.data()+1 : label.data();
+	if (c[0] == 'T' && c[1] == 'o') c += 2;
+	if (c[0] == 'I' && isdigit(c[1]))
+	  datacheckerrors->add(route, label, "", "", "INTERSTATE_NO_HYPHEN", "");
+}
+
+inline void Waypoint::label_invalid_ends(DatacheckEntryList *datacheckerrors)
+{	// look for labels with invalid first or final characters
+	const char *c = label.data();
+	while (*c == '*') c++;
+	if (*c == '_' || *c == '/' || *c == '(')
+		datacheckerrors->add(route, label, "", "", "INVALID_FIRST_CHAR", std::string(1, *c));
+	if (label.back() == '_' || label.back() == '/')
+		datacheckerrors->add(route, label, "", "", "INVALID_FINAL_CHAR", std::string(1, label.back()));
 }
 
 inline void Waypoint::label_looks_hidden(DatacheckEntryList *datacheckerrors)
@@ -413,29 +428,6 @@ inline void Waypoint::label_looks_hidden(DatacheckEntryList *datacheckerrors)
 	if (label[5] < '0' || label[5] > '9')	return;
 	if (label[6] < '0' || label[6] > '9')	return;
 	datacheckerrors->add(route, label, "", "", "LABEL_LOOKS_HIDDEN", "");
-}
-
-inline void Waypoint::label_invalid_char(DatacheckEntryList *datacheckerrors, std::string &lbl)
-{	// look for labels with invalid characters
-	for (const char *c = lbl.data(); *c; c++)
-	{	if (*c < 40)		{ datacheckerrors->add(route, lbl, "", "", "LABEL_INVALID_CHAR", ""); return; }
-		if (*c == 44)		{ datacheckerrors->add(route, lbl, "", "", "LABEL_INVALID_CHAR", ""); return; }
-		if (*c > 57 && *c < 65)	{ datacheckerrors->add(route, lbl, "", "", "LABEL_INVALID_CHAR", ""); return; }
-		if (*c > 90 && *c < 95)	{ datacheckerrors->add(route, lbl, "", "", "LABEL_INVALID_CHAR", ""); return; }
-		if (*c == 96)		{ datacheckerrors->add(route, lbl, "", "", "LABEL_INVALID_CHAR", ""); return; }
-		if (*c > 122)		{ datacheckerrors->add(route, lbl, "", "", "LABEL_INVALID_CHAR", ""); return; }
-	}
-	if (strpbrk(lbl.data()+1, "+*"))  datacheckerrors->add(route, lbl, "", "", "LABEL_INVALID_CHAR", "");
-}
-
-inline void Waypoint::label_invalid_ends(DatacheckEntryList *datacheckerrors)
-{	// look for labels with invalid first or final characters
-	const char *c = label.data();
-	while (*c == '*') c++;
-	if (*c == '_' || *c == '/' || *c == '(')
-		datacheckerrors->add(route, label, "", "", "INVALID_FIRST_CHAR", std::string(1, *c));
-	if (label.back() == '_' || label.back() == '/')
-		datacheckerrors->add(route, label, "", "", "INVALID_FINAL_CHAR", std::string(1, label.back()));
 }
 
 inline void Waypoint::label_parens(DatacheckEntryList *datacheckerrors)
@@ -461,39 +453,9 @@ inline void Waypoint::label_parens(DatacheckEntryList *datacheckerrors)
 		datacheckerrors->add(route, label, "", "", "LABEL_PARENS", "");
 }
 
-inline void Waypoint::underscore_datachecks(DatacheckEntryList *datacheckerrors, const char *slash)
-{	const char *underscore = strchr(label.data(), '_');
-	if (underscore)
-	{	// look for too many underscores in label
-		if (strchr(underscore+1, '_'))
-			datacheckerrors->add(route, label, "", "", "LABEL_UNDERSCORES", "");
-		// look for too many characters after underscore in label
-		if (label.data()+label.size() > underscore+4)
-		    if (label.back() > 'Z' || label.back() < 'A' || label.data()+label.size() > underscore+5)
-			datacheckerrors->add(route, label, "", "", "LONG_UNDERSCORE", "");
-		// look for labels with a slash after an underscore
-		if (slash > underscore)
-			datacheckerrors->add(route, label, "", "", "NONTERMINAL_UNDERSCORE", "");
-	}
-}
-
-inline void Waypoint::label_slashes(DatacheckEntryList *datacheckerrors, const char *slash)
-{	// look for too many slashes in label
-	if (slash && strchr(slash+1, '/'))
-		datacheckerrors->add(route, label, "", "", "LABEL_SLASHES", "");
-}
-
 inline void Waypoint::label_selfref(DatacheckEntryList *datacheckerrors, const char *slash)
 {	// looking for the route within the label
-	//match_start = w.label.find(r.route)
-	//if match_start >= 0:
-	    // we have a potential match, just need to make sure if the route
-	    // name ends with a number that the matched substring isn't followed
-	    // by more numbers (e.g., NY50 is an OK label in NY5)
-	//    if len(r.route) + match_start == len(w.label) or \
-	//            not w.label[len(r.route) + match_start].isdigit():
 	// partially complete "references own route" -- too many FP
-	//or re.fullmatch('.*/'+r.route+'.*',w.label[w.label) :
 	// first check for number match after a slash, if there is one
 	if (slash && route->route.back() >= '0' && route->route.back() <= '9')
 	{	int digit_starts = route->route.size()-1;
@@ -526,8 +488,62 @@ inline void Waypoint::label_selfref(DatacheckEntryList *datacheckerrors, const c
 		datacheckerrors->add(route, label, "", "", "LABEL_SELFREF", "");
 }
 
-// look for USxxxA but not USxxxAlt, B/Bus (others?)
-//if re.fullmatch('US[0-9]+A.*', w.label) and not re.fullmatch('US[0-9]+Alt.*', w.label) or \
-//   re.fullmatch('US[0-9]+B.*', w.label) and \
-//   not (re.fullmatch('US[0-9]+Bus.*', w.label) or re.fullmatch('US[0-9]+Byp.*', w.label)):
-//    datacheckerrors.append(DatacheckEntry(r,[w.label],'US_BANNER'))
+inline void Waypoint::label_slashes(DatacheckEntryList *datacheckerrors, const char *slash)
+{	// look for too many slashes in label
+	if (slash && strchr(slash+1, '/'))
+		datacheckerrors->add(route, label, "", "", "LABEL_SLASHES", "");
+}
+
+inline void Waypoint::lacks_generic(DatacheckEntryList *datacheckerrors)
+{	// label lacks generic highway type
+	const char* c = label[0] == '*' ? label.data()+1 : label.data();
+	if ( (*c == 'O' || *c == 'o')
+	  && (*(c+1) == 'l' || *(c+1) == 'L')
+	  && (*(c+2) == 'd' || *(c+2) == 'D')
+	  &&  *(c+3) >= '0' && *(c+3) <= '9')
+		datacheckerrors->add(route, label, "", "", "LACKS_GENERIC", "");
+}
+
+inline void Waypoint::underscore_datachecks(DatacheckEntryList *datacheckerrors, const char *slash)
+{	const char *underscore = strchr(label.data(), '_');
+	if (underscore)
+	{	// look for too many underscores in label
+		if (strchr(underscore+1, '_'))
+			datacheckerrors->add(route, label, "", "", "LABEL_UNDERSCORES", "");
+		// look for too many characters after underscore in label
+		if (label.data()+label.size() > underscore+4)
+		    if (label.back() > 'Z' || label.back() < 'A' || label.data()+label.size() > underscore+5)
+			datacheckerrors->add(route, label, "", "", "LONG_UNDERSCORE", "");
+		// look for labels with a slash after an underscore
+		if (slash > underscore)
+			datacheckerrors->add(route, label, "", "", "NONTERMINAL_UNDERSCORE", "");
+	}
+}
+
+inline void Waypoint::us_letter(DatacheckEntryList *datacheckerrors)
+{	// look for USxxxA but not USxxxAlt, B/Bus/Byp
+	const char* c = label[0] == '*' ? label.data()+1 : label.data();
+	if (*c++ != 'U' || *c++ != 'S')	return;
+	if (*c    < '0' || *c++  > '9')	return;
+	while (*c >= '0' && *c <= '9')	c++;
+	if (*c    < 'A' || *c++  > 'B')	return;
+	if (*c == 0 || *c == '/' || *c == '_' || *c == '(')
+		datacheckerrors->add(route, label, "", "", "US_LETTER", "");
+	// is it followed by a city abbrev?
+	else if (*c >= 'A' && *c++ <= 'Z'
+	      && *c >= 'a' && *c++ <= 'z'
+	      && *c >= 'a' && *c++ <= 'z'
+	      && *c == 0 || *c == '/' || *c == '_' || *c == '(')
+		datacheckerrors->add(route, label, "", "", "US_LETTER", "");
+}
+
+inline void Waypoint::visible_distance(DatacheckEntryList *datacheckerrors, char *fstr, double &vis_dist, Waypoint *&last_visible)
+{	// complete visible distance check, omit report for active
+	// systems to reduce clutter
+	if (vis_dist > 10 && !route->system->active())
+	{	sprintf(fstr, "%.2f", vis_dist);
+		datacheckerrors->add(route, last_visible->label, label, "", "VISIBLE_DISTANCE", fstr);
+	}
+	last_visible = this;
+	vis_dist = 0;
+}

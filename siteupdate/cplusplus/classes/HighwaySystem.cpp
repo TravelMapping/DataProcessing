@@ -1,4 +1,3 @@
-//FIXME try to break strtok. That goes for all strtok project-wide.
 class HighwaySystem
 {	/* This class encapsulates the contents of one .csv file
 	that represents the collection of highways within a system.
@@ -28,6 +27,8 @@ class HighwaySystem
 	std::list<ConnectedRoute> con_route_list;
 	std::unordered_map<Region*, double> mileage_by_region;
 	std::unordered_set<HGVertex*> vertices;
+	std::unordered_set<std::string>listnamesinuse, unusedaltroutenames;
+	std::mutex lniu_mtx, uarn_mtx;
 	bool is_valid;
 
 	HighwaySystem(std::string &line, ErrorList &el, std::string path, std::string &systemsfile,
@@ -74,12 +75,15 @@ class HighwaySystem
 		if (level_str != "active" && level_str != "preview" && level_str != "devel")
 			el.add_error("Unrecognized level in " + systemsfile + " line: " + line);
 
+		std::cout << systemname << '.' << std::flush;
+
 		// read chopped routes CSV
 		file.open(path+"/"+systemname+".csv");
 		if (!file) el.add_error("Could not open "+path+"/"+systemname+".csv");
 		else {	getline(file, line); // ignore header line
 			while(getline(file, line))
-			{	if (line.back() == 0x0D) line.erase(line.end()-1);	// trim DOS newlines
+			{	// trim DOS newlines & trailing whitespace
+				while ( strchr("\r\t ", line.back()) ) line.pop_back();
 				if (line.empty()) continue;
 				route_list.emplace_back(line, this, el, region_hash);
 				if (route_list.back().root.empty())
@@ -95,9 +99,10 @@ class HighwaySystem
 		if (!file) el.add_error("Could not open "+path+"/"+systemname+"_con.csv");
 		else {	getline(file, line); // ignore header line
 			while(getline(file, line))
-			{	if (line.back() == 0x0D) line.erase(line.end()-1);	// trim DOS newlines
+			{	// trim DOS newlines & trailing whitespace
+				while ( strchr("\r\t ", line.back()) ) line.pop_back();
 				if (line.empty()) continue;
-				con_route_list.emplace_back(line, this, el, route_list);
+				con_route_list.emplace_back(line, this, el);
 			}
 		     }
 		file.close();
@@ -126,7 +131,7 @@ class HighwaySystem
 	/* Return total system mileage across all regions */
 	double total_mileage()
 	{	double mi = 0;
-		for (std::pair<Region*, double> rm : mileage_by_region) mi += rm.second;
+		for (std::pair<Region* const, double>& rm : mileage_by_region) mi += rm.second;
 		return mi;
 	}
 

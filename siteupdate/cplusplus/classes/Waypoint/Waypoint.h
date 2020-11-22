@@ -20,9 +20,8 @@ class Waypoint
 	std::vector<Waypoint*> ap_coloc;
 	std::forward_list<Waypoint*> near_miss_points;
 	bool is_hidden;
-	static const double pi;
 
-	Waypoint(char *, Route *, std::mutex *, DatacheckEntryList *);
+	Waypoint(char *, Route *, DatacheckEntryList *);
 
 	std::string str();
 	std::string csv_line(unsigned int);
@@ -40,19 +39,21 @@ class Waypoint
 	bool label_references_route(Route *, DatacheckEntryList *);
 
 	// Datacheck
-	inline void duplicate_label(DatacheckEntryList *, std::unordered_set<std::string> &);
-	inline void duplicate_coords(DatacheckEntryList *, std::unordered_set<Waypoint*> &, char *);
-	inline void out_of_bounds(DatacheckEntryList *, char *);
 	inline void distance_update(DatacheckEntryList *, char *, double &, Waypoint *);
-	// checks for visible points
-	inline void visible_distance(DatacheckEntryList *, char *, double &, Waypoint *&);
-	inline void bus_with_i(DatacheckEntryList *);
-	inline void label_looks_hidden(DatacheckEntryList *);
-	inline void label_invalid_char(DatacheckEntryList *, std::string &);
-	inline void label_invalid_ends(DatacheckEntryList *);
-	inline void label_parens(DatacheckEntryList *);
-	inline void label_slashes(DatacheckEntryList *, const char *);
-	inline void label_selfref(DatacheckEntryList *, const char *);
+	inline void duplicate_coords(DatacheckEntryList *, std::unordered_set<Waypoint*> &, char *);
+	inline void label_invalid_char(DatacheckEntryList *);
 	inline bool label_too_long(DatacheckEntryList *);
+	inline void out_of_bounds(DatacheckEntryList *, char *);
+	// checks for visible points
+	inline void bus_with_i(DatacheckEntryList *);
+	inline void interstate_no_hyphen(DatacheckEntryList *);
+	inline void label_invalid_ends(DatacheckEntryList *);
+	inline void label_looks_hidden(DatacheckEntryList *);
+	inline void label_parens(DatacheckEntryList *);
+	inline void label_selfref(DatacheckEntryList *, const char *);
+	inline void label_slashes(DatacheckEntryList *, const char *);
+	inline void lacks_generic(DatacheckEntryList *);
 	inline void underscore_datachecks(DatacheckEntryList *, const char *);
+	inline void us_letter(DatacheckEntryList *);
+	inline void visible_distance(DatacheckEntryList *, char *, double &, Waypoint *&);
 };

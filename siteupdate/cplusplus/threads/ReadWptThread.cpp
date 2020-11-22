@@ -1,7 +1,7 @@
 void ReadWptThread
 (	unsigned int id, std::list<HighwaySystem*> *hs_list, std::list<HighwaySystem*>::iterator *it,
 	std::mutex *hs_mtx, std::string path, ErrorList *el, std::unordered_set<std::string> *all_wpt_files,
-	WaypointQuadtree *all_waypoints, std::mutex *strtok_mtx, DatacheckEntryList *datacheckerrors
+	WaypointQuadtree *all_waypoints, DatacheckEntryList *datacheckerrors
 )
 {	//printf("Starting ReadWptThread %02i\n", id); fflush(stdout);
 	while (*it != hs_list->end())
@@ -16,8 +16,9 @@ void ReadWptThread
 		//printf("ReadWptThread %02i (*it)++\n", id); fflush(stdout);
 		hs_mtx->unlock();
 		std::cout << h->systemname << std::flush;
+		bool usa_flag = h->country->first == "USA";
 		for (Route &r : h->route_list)
-			r.read_wpt(all_waypoints, el, path, strtok_mtx, datacheckerrors, all_wpt_files);
+			r.read_wpt(all_waypoints, el, path, usa_flag, datacheckerrors, all_wpt_files);
 		std::cout << "!" << std::endl;
 	}
 }

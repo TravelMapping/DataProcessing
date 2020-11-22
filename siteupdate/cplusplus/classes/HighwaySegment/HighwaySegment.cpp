@@ -49,19 +49,15 @@ unsigned int HighwaySegment::index()
 /*std::string HighwaySegment::concurrent_travelers_sanity_check()
 {	if (route->system->devel()) return "";
 	if (concurrent)
-	  for (HighwaySegment *conc : *concurrent)
-	  {	if (clinched_by.size() != conc->clinched_by.size())
-		{	if (conc->route->system->devel()) continue;
+	  for (HighwaySegment *other : *concurrent)
+	  {	if (clinched_by.size() != other->clinched_by.size())
+		{	if (other->route->system->devel()) continue;
 			return "[" + str() + "] clinched by " + std::to_string(clinched_by.size()) + " travelers; [" \
-			     + conc->str() + "] clinched by " + std::to_string(conc->clinched_by.size()) + '\n';
+			     + other->str() + "] clinched by " + std::to_string(other->clinched_by.size()) + '\n';
 		}
 		else	for (TravelerList *t : clinched_by)
-			{	std::list<TravelerList*>::iterator ct;
-				for (ct = conc->clinched_by.begin(); ct != conc->clinched_by.end(); ct++)
-				  if (*ct == t) break;
-				if (ct == conc->clinched_by.end())
-				  return t->traveler_name + " has clinched [" + str() + "], but not [" + conc->str() + "]\n";
-			}
+			  if (other->clinched_by.find(t) == other->clinched_by.end())
+			    return t->traveler_name + " has clinched [" + str() + "], but not [" + other->str() + "]\n";
 	  }
 	return "";
 }//*/
