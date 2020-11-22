@@ -41,21 +41,21 @@ void TravelerList::userlog
 		double t_system_overall = 0;
 		if (system_region_mileages.find(h) != system_region_mileages.end())
 			t_system_overall = system_region_miles(h);
-		log << "System " << h->systemname << " (" << h->level_name() << ") overall: " << format_clinched_mi(t_system_overall, h->total_mileage()) << '\n';
 		if (t_system_overall)
-		  if (h->active())
-			active_systems_traveled++;
-		  else	preview_systems_traveled++;
-		if (t_system_overall == h->total_mileage())
-		  if (h->active())
-			active_systems_clinched++;
-		  else	preview_systems_clinched++;
+		{	if (h->active())
+				active_systems_traveled++;
+			else	preview_systems_traveled++;
+			if (t_system_overall == h->total_mileage())
+			  if (h->active())
+				active_systems_clinched++;
+			  else	preview_systems_clinched++;
 
-		// stats by region covered by system, always in csmbr for
-		// the DB, but add to logs only if it's been traveled at
-		// all and it covers multiple regions
-		if (t_system_overall)
-		{	if (h->mileage_by_region.size() > 1)
+			// stats by region covered by system, always in csmbr for
+			// the DB, but add to logs only if it's been traveled at
+			// all and it covers multiple regions
+			log << "System " << h->systemname << " (" << h->level_name() << ") overall: "
+			    << format_clinched_mi(t_system_overall, h->total_mileage()) << '\n';
+			if (h->mileage_by_region.size() > 1)
 				log << "System " << h->systemname << " by region:\n";
 			std::list<Region*> sysregions;
 			for (std::pair<Region* const, double> &rm : h->mileage_by_region)
@@ -74,12 +74,10 @@ void TravelerList::userlog
 				if (h->mileage_by_region.size() > 1)
 					log << "  " << region->code << ": " << format_clinched_mi(system_region_mileage, h->mileage_by_region.at(region)) << '\n';
 			}
-		}
 
-		// stats by highway for the system, by connected route and
-		// by each segment crossing region boundaries if applicable
-		if (t_system_overall)
-		{	std::unordered_map<ConnectedRoute*, double> system_con_umap;
+			// stats by highway for the system, by connected route and
+			// by each segment crossing region boundaries if applicable
+			std::unordered_map<ConnectedRoute*, double> system_con_umap;
 			unsigned int num_con_rtes_clinched = 0;
 			log << "System " << h->systemname << " by route (traveled routes only):\n";
 			for (ConnectedRoute &cr : h->con_route_list)

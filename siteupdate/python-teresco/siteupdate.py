@@ -3362,24 +3362,22 @@ for t in traveler_lists:
             t_system_overall = 0.0
             if h.systemname in t.system_region_mileages:
                 t_system_overall = math.fsum(list(t.system_region_mileages[h.systemname].values()))
-            t.log_entries.append("System " + h.systemname + " (" + h.level +
-                                 ") overall: " +
-                                 format_clinched_mi(t_system_overall, math.fsum(list(h.mileage_by_region.values()))))
             if t_system_overall > 0.0:
                 if h.active():
                     t.active_systems_traveled += 1
                 else:
                     t.preview_systems_traveled += 1
-            if t_system_overall == math.fsum(list(h.mileage_by_region.values())):
-                if h.active():
-                    t.active_systems_clinched += 1
-                else:
-                    t.preview_systems_clinched += 1
+                if t_system_overall == math.fsum(list(h.mileage_by_region.values())):
+                    if h.active():
+                        t.active_systems_clinched += 1
+                    else:
+                        t.preview_systems_clinched += 1
 
-            # stats by region covered by system, always in csmbr for
-            # the DB, but add to logs only if it's been traveled at
-            # all and it covers multiple regions
-            if t_system_overall > 0.0:
+                # stats by region covered by system, always in csmbr for
+                # the DB, but add to logs only if it's been traveled at
+                # all and it covers multiple regions
+                t.log_entries.append("System " + h.systemname + " (" + h.level + ") overall: " +
+                                     format_clinched_mi(t_system_overall, math.fsum(list(h.mileage_by_region.values()))))
                 if len(h.mileage_by_region) > 1:
                     t.log_entries.append("System " + h.systemname + " by region:")
                 for region in sorted(h.mileage_by_region.keys()):
@@ -3393,9 +3391,8 @@ for t in traveler_lists:
                         t.log_entries.append("  " + region + ": " + \
                                                  format_clinched_mi(system_region_mileage, h.mileage_by_region[region]))
 
-            # stats by highway for the system, by connected route and
-            # by each segment crossing region boundaries if applicable
-            if t_system_overall > 0.0:
+                # stats by highway for the system, by connected route and
+                # by each segment crossing region boundaries if applicable
                 system_con_dict = dict()
                 t.con_routes_traveled[h.systemname] = system_con_dict
                 con_routes_clinched = 0
