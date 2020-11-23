@@ -3342,13 +3342,6 @@ for t in traveler_lists:
     t.preview_systems_clinched = 0
     active_systems = 0
     preview_systems = 0
-    # "traveled" dictionaries indexed by system name, then conn or regular
-    # route in another dictionary with keys route, values mileage
-    # "clinched" dictionaries indexed by system name, values clinch count
-    t.con_routes_traveled = dict()
-    t.con_routes_clinched = dict()
-    t.routes_traveled = dict()
-    #t.routes_clinched = dict()
 
     # present stats by system here, also generate entries for
     # DB table clinchedSystemMileageByRegion as we compute and
@@ -3393,8 +3386,7 @@ for t in traveler_lists:
 
                 # stats by highway for the system, by connected route and
                 # by each segment crossing region boundaries if applicable
-                system_con_dict = dict()
-                t.con_routes_traveled[h.systemname] = system_con_dict
+                con_routes_traveled = 0
                 con_routes_clinched = 0
                 t.log_entries.append("System " + h.systemname + " by route (traveled routes only):")
                 for cr in h.con_route_list:
@@ -3410,12 +3402,11 @@ for t in traveler_lists:
                                 clinched = '0'
                             cr_values.append("('" + r.root + "','" + t.traveler_name + "','" +
                                              str(miles) + "','" + clinched + "')")
-                            t.routes_traveled[r] = miles
                             con_clinched_miles += miles
                             to_write += "  " + r.readable_name() + ": " + \
                                 format_clinched_mi(miles,r.mileage) + "\n"
                     if con_clinched_miles > 0:
-                        system_con_dict[cr] = con_clinched_miles
+                        con_routes_traveled += 1
                         clinched = '0'
                         if con_clinched_miles == cr.mileage:
                             con_routes_clinched += 1
@@ -3429,11 +3420,10 @@ for t in traveler_lists:
                             t.log_entries.append(" (" + cr.roots[0].readable_name() + " only)")
                         else:
                             t.log_entries.append(to_write)
-                t.con_routes_clinched[h.systemname] = con_routes_clinched
                 t.log_entries.append("System " + h.systemname + " connected routes traveled: " + \
-                                         str(len(system_con_dict)) + " of " + \
+                                         str(con_routes_traveled) + " of " + \
                                          str(len(h.con_route_list)) + \
-                                         " ({0:.1f}%)".format(100*len(system_con_dict)/len(h.con_route_list)) + \
+                                         " ({0:.1f}%)".format(100*con_routes_traveled/len(h.con_route_list)) + \
                                          ", clinched: " + str(con_routes_clinched) + " of " + \
                                          str(len(h.con_route_list)) + \
                                          " ({0:.1f}%)".format(100*con_routes_clinched/len(h.con_route_list)) + \

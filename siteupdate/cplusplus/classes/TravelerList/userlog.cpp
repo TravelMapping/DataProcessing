@@ -77,7 +77,7 @@ void TravelerList::userlog
 
 			// stats by highway for the system, by connected route and
 			// by each segment crossing region boundaries if applicable
-			std::unordered_map<ConnectedRoute*, double> system_con_umap;
+			unsigned int num_con_rtes_traveled = 0;
 			unsigned int num_con_rtes_clinched = 0;
 			log << "System " << h->systemname << " by route (traveled routes only):\n";
 			for (ConnectedRoute &cr : h->con_route_list)
@@ -92,13 +92,12 @@ void TravelerList::userlog
 						sprintf(fstr, "%.15g", miles);
 						if (!strchr(fstr, '.')) strcat(fstr, ".0");
 						clin_db_val->add_cr("('" + r->root + "','" + traveler_name + "','" + std::string(fstr) + "','" + clinched + "')");
-						routes_traveled[r] = miles;
 						con_clinched_miles += miles;
 						to_write += "  " + r->readable_name() + ": " + format_clinched_mi(miles,r->mileage) + "\n";
 					}
 				}
 				if (con_clinched_miles)
-				{	system_con_umap[&cr] = con_clinched_miles;
+				{	num_con_rtes_traveled += 1;
 					char clinched = '0';
 					if (con_clinched_miles == cr.mileage)
 					{	num_con_rtes_clinched++;
@@ -114,12 +113,10 @@ void TravelerList::userlog
 					else	log << to_write << '\n';
 				}
 			}
-			con_routes_clinched[h] = num_con_rtes_clinched;
 			sprintf(fstr, " connected routes traveled: %i of %i (%.1f%%), clinched: %i of %i (%.1f%%).",
-				(int)system_con_umap.size(), (int)h->con_route_list.size(), 100*(double)system_con_umap.size()/h->con_route_list.size(),
-				num_con_rtes_clinched,    (int)h->con_route_list.size(),    100*(double)num_con_rtes_clinched/h->con_route_list.size());
+				num_con_rtes_traveled, (int)h->con_route_list.size(), 100*(double)num_con_rtes_traveled/h->con_route_list.size(),
+				num_con_rtes_clinched, (int)h->con_route_list.size(), 100*(double)num_con_rtes_clinched/h->con_route_list.size());
 			log << "System " << h->systemname << fstr << '\n';
-			con_routes_traveled[h] = system_con_umap;
 		}
 	  }
 
