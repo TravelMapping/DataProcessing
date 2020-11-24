@@ -461,6 +461,8 @@ int main(int argc, char *argv[])
 		#undef w
 	  }
 
+	#include "functions/read_updates.cpp"
+
 	// Create a list of TravelerList objects, one per person
 	list<TravelerList*> traveler_lists;
 	list<string>::iterator id_it = traveler_ids.begin();
@@ -500,93 +502,6 @@ int main(int argc, char *argv[])
 		r.alt_label_hash.clear();
 		r.duplicate_labels.clear();
 	  }
-
-	// Read updates.csv file, just keep in the fields list for now since we're
-	// just going to drop this into the DB later anyway
-	list<array<string, 5>> updates;
-	cout << et.et() << "Reading updates file." << endl;
-	file.open(args.highwaydatapath+"/updates.csv");
-	getline(file, line); // ignore header line
-	while (getline(file, line))
-	{	if (line.back() == 0x0D) line.erase(line.end()-1);	// trim DOS newlines
-		if (line.empty()) continue;
-		// parse updates.csv line
-		size_t NumFields = 5;
-		array<string, 5> fields;
-		string* ptr_array[5] = {&fields[0], &fields[1], &fields[2], &fields[3], &fields[4]};
-		split(line, ptr_array, NumFields, ';');
-		if (NumFields != 5)
-		{	el.add_error("Could not parse updates.csv line: [" + line
-				   + "], expected 5 fields, found " + std::to_string(NumFields));
-			continue;
-		}
-		// date
-		if (fields[0].size() > DBFieldLength::date)
-			el.add_error("date > " + std::to_string(DBFieldLength::date)
-				   + " bytes in updates.csv line " + line);
-		// region
-		if (fields[1].size() > DBFieldLength::countryRegion)
-			el.add_error("region > " + std::to_string(DBFieldLength::countryRegion)
-				   + " bytes in updates.csv line " + line);
-		// route
-		if (fields[2].size() > DBFieldLength::routeLongName)
-			el.add_error("route > " + std::to_string(DBFieldLength::routeLongName)
-				   + " bytes in updates.csv line " + line);
-		// root
-		if (fields[3].size() > DBFieldLength::root)
-			el.add_error("root > " + std::to_string(DBFieldLength::root)
-				   + " bytes in updates.csv line " + line);
-		// description
-		if (fields[4].size() > DBFieldLength::updateText)
-			el.add_error("description > " + std::to_string(DBFieldLength::updateText)
-				   + " bytes in updates.csv line " + line);
-		updates.push_back(fields);
-	}
-	file.close();
-
-	// Same plan for systemupdates.csv file, again just keep in the fields
-	// list for now since we're just going to drop this into the DB later
-	// anyway
-	list<array<string, 5>> systemupdates;
-	cout << et.et() << "Reading systemupdates file." << endl;
-	file.open(args.highwaydatapath+"/systemupdates.csv");
-	getline(file, line);  // ignore header line
-	while (getline(file, line))
-	{	if (line.back() == 0x0D) line.erase(line.end()-1);	// trim DOS newlines
-		if (line.empty()) continue;
-		// parse systemupdates.csv line
-		size_t NumFields = 5;
-		array<string, 5> fields;
-		string* ptr_array[5] = {&fields[0], &fields[1], &fields[2], &fields[3], &fields[4]};
-		split(line, ptr_array, NumFields, ';');
-		if (NumFields != 5)
-		{	el.add_error("Could not parse systemupdates.csv line: [" + line
-				   + "], expected 5 fields, found " + std::to_string(NumFields));
-			continue;
-		}
-		// date
-		if (fields[0].size() > DBFieldLength::date)
-			el.add_error("date > " + std::to_string(DBFieldLength::date)
-				   + " bytes in systemupdates.csv line " + line);
-		// region
-		if (fields[1].size() > DBFieldLength::countryRegion)
-			el.add_error("region > " + std::to_string(DBFieldLength::countryRegion)
-				   + " bytes in systemupdates.csv line " + line);
-		// systemName
-		if (fields[2].size() > DBFieldLength::systemName)
-			el.add_error("systemName > " + std::to_string(DBFieldLength::systemName)
-				   + " bytes in systemupdates.csv line " + line);
-		// description
-		if (fields[3].size() > DBFieldLength::systemFullName)
-			el.add_error("description > " + std::to_string(DBFieldLength::systemFullName)
-				   + " bytes in systemupdates.csv line " + line);
-		// statusChange
-		if (fields[4].size() > DBFieldLength::statusChange)
-			el.add_error("statusChange > " + std::to_string(DBFieldLength::statusChange)
-				   + " bytes in systemupdates.csv line " + line);
-		systemupdates.push_back(fields);
-	}
-	file.close();
 
 	cout << et.et() << "Writing pointsinuse.log, unusedaltlabels.log, listnamesinuse.log and unusedaltroutenames.log" << endl;
 	unsigned int total_unused_alt_labels = 0;

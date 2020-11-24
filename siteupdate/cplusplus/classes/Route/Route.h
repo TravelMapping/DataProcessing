@@ -58,6 +58,7 @@ class Route
 	std::mutex liu_mtx;	// for locking the labels_in_use set when inserting labels during TravelerList processing
 	std::mutex ual_mtx;	// for locking the unused_alt_labels set when removing in-use alt_labels
 	std::vector<HighwaySegment*> segment_list;
+	std::array<std::string, 5> *last_update;
 	double mileage;
 	int rootOrder;
 	bool is_reversed;
@@ -76,7 +77,7 @@ class Route
 	double clinched_by_traveler(TravelerList *);
 	//std::string list_line(int, int);
 	void write_nmp_merged(std::string);
-	inline void store_traveled_segments(TravelerList*, unsigned int, unsigned int);
+	inline void store_traveled_segments(TravelerList*, std::ofstream &, unsigned int, unsigned int);
 	inline Waypoint* con_beg();
 	inline Waypoint* con_end();
 };

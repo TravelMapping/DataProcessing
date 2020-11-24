@@ -16,6 +16,7 @@ class TravelerList
 	std::unordered_map<Region*, double> active_preview_mileage_by_region;				// total mileage per region, active+preview only
 	std::unordered_map<Region*, double> active_only_mileage_by_region;				// total mileage per region, active only
 	std::unordered_map<HighwaySystem*, std::unordered_map<Region*, double>> system_region_mileages;	// mileage per region per system
+	std::unordered_set<Route*> routes;
 	unsigned int *traveler_num;
 	unsigned int active_systems_traveled;
 	unsigned int active_systems_clinched;
