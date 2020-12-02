@@ -1095,7 +1095,7 @@ class Route:
             t.clinched_segments.add(hs)
         if self not in t.routes:
             t.routes.add(self)
-            if self.last_update:
+            if self.last_update and t.update and self.last_update[0] >= t.update:
                 t.log_entries.append("Route updated " + self.last_update[0] + ": " + self.readable_name())
 
     def con_beg(self):
@@ -1273,7 +1273,7 @@ class TravelerList:
     start_waypoint end_waypoint
     """
 
-    def __init__(self,travelername,el,path="../../../UserData/list_files"):
+    def __init__(self,travelername,update,el,path="../../../UserData/list_files"):
         list_entries = 0
         self.clinched_segments = set()
         self.traveler_name = travelername[:-5]
@@ -1284,7 +1284,12 @@ class TravelerList:
         file.close()
         # strip UTF-8 byte order mark if present
         lines[0] = lines[0].encode('utf-8').decode("utf-8-sig")
-        self.log_entries = []
+        try:
+            self.log_entries = [travelername+" last updated: "+update[0]+' '+update[1]+' '+update[2]]
+            self.update = update[0]
+        except TypeError:
+            self.log_entries = []
+            self.update = None
         self.routes = set()
 
         for line in lines:
@@ -2940,7 +2945,7 @@ for h in highway_systems:
 # Read updates.csv file, just keep in the fields array for now since we're
 # just going to drop this into the DB later anyway
 updates = []
-print(et.et() + "Reading updates file.",end="",flush=True)
+print(et.et() + "Reading updates file.",flush=True)
 with open(args.highwaydatapath+"/updates.csv", "rt", encoding='UTF-8') as file:
     lines = file.readlines()
 file.close()
@@ -2978,13 +2983,12 @@ for line in lines:
             r.last_update = fields;
     except KeyError:
         pass
-print("")
 
 # Same plan for systemupdates.csv file, again just keep in the fields
 # array for now since we're just going to drop this into the DB later
 # anyway
 systemupdates = []
-print(et.et() + "Reading systemupdates file.",end="",flush=True)
+print(et.et() + "Reading systemupdates file.",flush=True)
 with open(args.highwaydatapath+"/systemupdates.csv", "rt", encoding='UTF-8') as file:
     lines = file.readlines()
 file.close()
@@ -3016,7 +3020,26 @@ for line in lines:
         el.add_error("statusChange > " + str(DBFieldLength.statusChange) +
                      " bytes in systemupdates.csv line " + line)
     systemupdates.append(fields)
-print("")
+
+# Read most recent update dates/times for .list files
+# one line for each traveler, containing 4 space-separated fields:
+# 0: username with .list extension
+# 1-3: date, time, and time zone as written by "git log -n 1 --pretty=%ci"
+listupdates = {}
+try:
+    file = open("listupdates.txt", "rt", encoding='UTF-8')
+    print(et.et() + "Reading .list updates file.",flush=True)
+    for line in file.readlines():
+        line = line.strip()
+        fields = line.split(' ')
+        if len(fields) != 4:
+            print("WARNING: Could not parse listupdates.txt line: [" +
+                  line + "], expected 4 fields, found " + str(len(fields)))
+            continue
+        listupdates[fields[0]] = fields[1:]
+    file.close()
+except FileNotFoundError:
+    pass
 
 # Create a list of TravelerList objects, one per person
 traveler_lists = []
@@ -3024,8 +3047,14 @@ traveler_lists = []
 print(et.et() + "Processing traveler list files:",flush=True)
 for t in traveler_ids:
     if t.endswith('.list'):
+        try:
+            update = listupdates[t]
+        except KeyError:
+            update = None
         print(t + " ",end="",flush=True)
-        traveler_lists.append(TravelerList(t,el,args.userlistfilepath))
+        traveler_lists.append(TravelerList(t,update,el,args.userlistfilepath))
+del traveler_ids
+del listupdates
 print('\n' + et.et() + "Processed " + str(len(traveler_lists)) + " traveler list files.")
 traveler_lists.sort(key=lambda TravelerList: TravelerList.traveler_name)
 # assign traveler numbers

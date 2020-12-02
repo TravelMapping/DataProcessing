@@ -217,7 +217,7 @@ inline void Route::store_traveled_segments(TravelerList* t, std::ofstream& log, 
 		hs->add_clinched_by(t);
 		t->clinched_segments.insert(hs);
 	}
-	if (t->routes.insert(this).second && last_update)
+	if (t->routes.insert(this).second && last_update && t->update && (*last_update)[0] >= *t->update)
 		log << "Route updated " << (*last_update)[0] << ": " << readable_name() << '\n';
 }
 

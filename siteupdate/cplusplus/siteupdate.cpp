@@ -387,7 +387,7 @@ int main(int argc, char *argv[])
 		cout << endl;
 	}
 
-	#include "functions/concurrency_detection.cpp"
+	#include "tasks/concurrency_detection.cpp"
 
 	cout << et.et() << "Processing waypoint labels and checking for unconnected chopped routes." << endl;
 	for (HighwaySystem* h : highway_systems)
@@ -461,7 +461,37 @@ int main(int argc, char *argv[])
 		#undef w
 	  }
 
-	#include "functions/read_updates.cpp"
+	#include "tasks/read_updates.cpp"
+
+	// Read most recent update dates/times for .list files
+	// one line for each traveler, containing 4 space-separated fields:
+	// 0: username with .list extension
+	// 1-3: date, time, and time zone as written by "git log -n 1 --pretty=%ci"
+	unordered_map<string, string**> listupdates;
+	file.open("listupdates.txt");
+	if (file.is_open()) cout << et.et() << "Reading .list updates file." << endl;
+	while(getline(file, line))
+	{	size_t NumFields = 4;
+		string** fields = new string*[4];
+		fields[0] = new string;	// deleted upon construction of unordered_map element
+		fields[1] = new string;	// stays in TravelerList object
+		fields[2] = new string;	// deleted once written to user log
+		fields[3] = new string;	// deleted once written to user log
+		split(line, fields, NumFields, ' ');
+		if (NumFields != 4)
+		{	cout << "WARNING: Could not parse listupdates.txt line: [" << line
+			     << "], expected 4 fields, found " << std::to_string(NumFields) << endl;
+			delete fields[0];
+			delete fields[1];
+			delete fields[2];
+			delete fields[3];
+			delete[] fields;
+			continue;
+		}
+		listupdates[*fields[0]] = fields;
+		delete fields[0];
+	}
+	file.close();
 
 	// Create a list of TravelerList objects, one per person
 	list<TravelerList*> traveler_lists;
@@ -471,7 +501,7 @@ int main(int argc, char *argv[])
       #ifdef threading_enabled
 	// set up for threaded .list file processing
 	for (unsigned int t = 0; t < args.numthreads; t++)
-		thr[t] = new thread(ReadListThread, t, &traveler_ids, &id_it, &traveler_lists, &list_mtx, &args, &el);
+		thr[t] = new thread(ReadListThread, t, &traveler_ids, &listupdates, &id_it, &traveler_lists, &list_mtx, &args, &el);
 	for (unsigned int t = 0; t < args.numthreads; t++)
 		thr[t]->join();
 	for (unsigned int t = 0; t < args.numthreads; t++)
@@ -479,10 +509,17 @@ int main(int argc, char *argv[])
       #else
 	for (string &t : traveler_ids)
 	{	cout << t << ' ' << std::flush;
-		traveler_lists.push_back(new TravelerList(t, &el, &args));
+		std::string** update;
+		try {	update = listupdates.at(t);
+		    }
+		catch (const std::out_of_range& oor)
+		    {	update = 0;
+		    }
+		traveler_lists.push_back(new TravelerList(t, update, &el, &args));
 	}
-	traveler_ids.clear();
       #endif
+	traveler_ids.clear();
+	listupdates.clear();
 	cout << endl << et.et() << "Processed " << traveler_lists.size() << " traveler list files." << endl;
 	traveler_lists.sort(sort_travelers_by_name);
 	// assign traveler numbers for master traveled graph
@@ -886,7 +923,7 @@ int main(int argc, char *argv[])
 	}
       #endif
 
-	#include "functions/graph_generation.cpp"
+	#include "tasks/graph_generation.cpp"
 
 	// now mark false positives
 	datacheckerrors->entries.sort();
