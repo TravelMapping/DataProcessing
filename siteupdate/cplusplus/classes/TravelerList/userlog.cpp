@@ -121,7 +121,7 @@ void TravelerList::userlog
 	  }
 
 	// grand summary, active only
-	sprintf(fstr,"Traveled %i of %i (%.1f%%), Clinched %i of %i (%.1f%%) active systems",
+	sprintf(fstr,"\nTraveled %i of %i (%.1f%%), Clinched %i of %i (%.1f%%) active systems",
 			active_systems_traveled, active_systems, 100*(double)active_systems_traveled/active_systems,
 			active_systems_clinched, active_systems, 100*(double)active_systems_clinched/active_systems);
 	log << fstr << '\n';
@@ -130,6 +130,15 @@ void TravelerList::userlog
 			preview_systems_traveled, preview_systems, 100*(double)preview_systems_traveled/preview_systems,
 			preview_systems_clinched, preview_systems, 100*(double)preview_systems_clinched/preview_systems);
 	log << fstr << '\n';
+
+	// updated routes, sorted by date
+	log << "\nMost recent updates for listed routes:\n";
+	std::list<Route*> route_list;
+	for (Route* r : routes) if (r->last_update) route_list.push_back(r);
+	routes.clear();
+	route_list.sort(sort_route_updates_oldest);
+	for (Route* r : route_list)
+	  log << (*r->last_update)[0] << " | " << r->root << " | " << r->readable_name() << " | " << (*r->last_update)[4] << '\n';
 
 	log.close();
 }

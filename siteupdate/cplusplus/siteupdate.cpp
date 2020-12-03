@@ -387,7 +387,7 @@ int main(int argc, char *argv[])
 		cout << endl;
 	}
 
-	#include "functions/concurrency_detection.cpp"
+	#include "tasks/concurrency_detection.cpp"
 
 	cout << et.et() << "Processing waypoint labels and checking for unconnected chopped routes." << endl;
 	for (HighwaySystem* h : highway_systems)
@@ -461,6 +461,38 @@ int main(int argc, char *argv[])
 		#undef w
 	  }
 
+	#include "tasks/read_updates.cpp"
+
+	// Read most recent update dates/times for .list files
+	// one line for each traveler, containing 4 space-separated fields:
+	// 0: username with .list extension
+	// 1-3: date, time, and time zone as written by "git log -n 1 --pretty=%ci"
+	unordered_map<string, string**> listupdates;
+	file.open("listupdates.txt");
+	if (file.is_open()) cout << et.et() << "Reading .list updates file." << endl;
+	while(getline(file, line))
+	{	size_t NumFields = 4;
+		string** fields = new string*[4];
+		fields[0] = new string;	// deleted upon construction of unordered_map element
+		fields[1] = new string;	// stays in TravelerList object
+		fields[2] = new string;	// deleted once written to user log
+		fields[3] = new string;	// deleted once written to user log
+		split(line, fields, NumFields, ' ');
+		if (NumFields != 4)
+		{	cout << "WARNING: Could not parse listupdates.txt line: [" << line
+			     << "], expected 4 fields, found " << std::to_string(NumFields) << endl;
+			delete fields[0];
+			delete fields[1];
+			delete fields[2];
+			delete fields[3];
+			delete[] fields;
+			continue;
+		}
+		listupdates[*fields[0]] = fields;
+		delete fields[0];
+	}
+	file.close();
+
 	// Create a list of TravelerList objects, one per person
 	list<TravelerList*> traveler_lists;
 	list<string>::iterator id_it = traveler_ids.begin();
@@ -469,7 +501,7 @@ int main(int argc, char *argv[])
       #ifdef threading_enabled
 	// set up for threaded .list file processing
 	for (unsigned int t = 0; t < args.numthreads; t++)
-		thr[t] = new thread(ReadListThread, t, &traveler_ids, &id_it, &traveler_lists, &list_mtx, &args, &el);
+		thr[t] = new thread(ReadListThread, t, &traveler_ids, &listupdates, &id_it, &traveler_lists, &list_mtx, &args, &el);
 	for (unsigned int t = 0; t < args.numthreads; t++)
 		thr[t]->join();
 	for (unsigned int t = 0; t < args.numthreads; t++)
@@ -477,10 +509,17 @@ int main(int argc, char *argv[])
       #else
 	for (string &t : traveler_ids)
 	{	cout << t << ' ' << std::flush;
-		traveler_lists.push_back(new TravelerList(t, &el, &args));
+		std::string** update;
+		try {	update = listupdates.at(t);
+		    }
+		catch (const std::out_of_range& oor)
+		    {	update = 0;
+		    }
+		traveler_lists.push_back(new TravelerList(t, update, &el, &args));
 	}
-	traveler_ids.clear();
       #endif
+	traveler_ids.clear();
+	listupdates.clear();
 	cout << endl << et.et() << "Processed " << traveler_lists.size() << " traveler list files." << endl;
 	traveler_lists.sort(sort_travelers_by_name);
 	// assign traveler numbers for master traveled graph
@@ -500,93 +539,6 @@ int main(int argc, char *argv[])
 		r.alt_label_hash.clear();
 		r.duplicate_labels.clear();
 	  }
-
-	// Read updates.csv file, just keep in the fields list for now since we're
-	// just going to drop this into the DB later anyway
-	list<array<string, 5>> updates;
-	cout << et.et() << "Reading updates file." << endl;
-	file.open(args.highwaydatapath+"/updates.csv");
-	getline(file, line); // ignore header line
-	while (getline(file, line))
-	{	if (line.back() == 0x0D) line.erase(line.end()-1);	// trim DOS newlines
-		if (line.empty()) continue;
-		// parse updates.csv line
-		size_t NumFields = 5;
-		array<string, 5> fields;
-		string* ptr_array[5] = {&fields[0], &fields[1], &fields[2], &fields[3], &fields[4]};
-		split(line, ptr_array, NumFields, ';');
-		if (NumFields != 5)
-		{	el.add_error("Could not parse updates.csv line: [" + line
-				   + "], expected 5 fields, found " + std::to_string(NumFields));
-			continue;
-		}
-		// date
-		if (fields[0].size() > DBFieldLength::date)
-			el.add_error("date > " + std::to_string(DBFieldLength::date)
-				   + " bytes in updates.csv line " + line);
-		// region
-		if (fields[1].size() > DBFieldLength::countryRegion)
-			el.add_error("region > " + std::to_string(DBFieldLength::countryRegion)
-				   + " bytes in updates.csv line " + line);
-		// route
-		if (fields[2].size() > DBFieldLength::routeLongName)
-			el.add_error("route > " + std::to_string(DBFieldLength::routeLongName)
-				   + " bytes in updates.csv line " + line);
-		// root
-		if (fields[3].size() > DBFieldLength::root)
-			el.add_error("root > " + std::to_string(DBFieldLength::root)
-				   + " bytes in updates.csv line " + line);
-		// description
-		if (fields[4].size() > DBFieldLength::updateText)
-			el.add_error("description > " + std::to_string(DBFieldLength::updateText)
-				   + " bytes in updates.csv line " + line);
-		updates.push_back(fields);
-	}
-	file.close();
-
-	// Same plan for systemupdates.csv file, again just keep in the fields
-	// list for now since we're just going to drop this into the DB later
-	// anyway
-	list<array<string, 5>> systemupdates;
-	cout << et.et() << "Reading systemupdates file." << endl;
-	file.open(args.highwaydatapath+"/systemupdates.csv");
-	getline(file, line);  // ignore header line
-	while (getline(file, line))
-	{	if (line.back() == 0x0D) line.erase(line.end()-1);	// trim DOS newlines
-		if (line.empty()) continue;
-		// parse systemupdates.csv line
-		size_t NumFields = 5;
-		array<string, 5> fields;
-		string* ptr_array[5] = {&fields[0], &fields[1], &fields[2], &fields[3], &fields[4]};
-		split(line, ptr_array, NumFields, ';');
-		if (NumFields != 5)
-		{	el.add_error("Could not parse systemupdates.csv line: [" + line
-				   + "], expected 5 fields, found " + std::to_string(NumFields));
-			continue;
-		}
-		// date
-		if (fields[0].size() > DBFieldLength::date)
-			el.add_error("date > " + std::to_string(DBFieldLength::date)
-				   + " bytes in systemupdates.csv line " + line);
-		// region
-		if (fields[1].size() > DBFieldLength::countryRegion)
-			el.add_error("region > " + std::to_string(DBFieldLength::countryRegion)
-				   + " bytes in systemupdates.csv line " + line);
-		// systemName
-		if (fields[2].size() > DBFieldLength::systemName)
-			el.add_error("systemName > " + std::to_string(DBFieldLength::systemName)
-				   + " bytes in systemupdates.csv line " + line);
-		// description
-		if (fields[3].size() > DBFieldLength::systemFullName)
-			el.add_error("description > " + std::to_string(DBFieldLength::systemFullName)
-				   + " bytes in systemupdates.csv line " + line);
-		// statusChange
-		if (fields[4].size() > DBFieldLength::statusChange)
-			el.add_error("statusChange > " + std::to_string(DBFieldLength::statusChange)
-				   + " bytes in systemupdates.csv line " + line);
-		systemupdates.push_back(fields);
-	}
-	file.close();
 
 	cout << et.et() << "Writing pointsinuse.log, unusedaltlabels.log, listnamesinuse.log and unusedaltroutenames.log" << endl;
 	unsigned int total_unused_alt_labels = 0;
@@ -971,7 +923,7 @@ int main(int argc, char *argv[])
 	}
       #endif
 
-	#include "functions/graph_generation.cpp"
+	#include "tasks/graph_generation.cpp"
 
 	// now mark false positives
 	datacheckerrors->entries.sort();

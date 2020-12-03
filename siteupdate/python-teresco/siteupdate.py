@@ -984,6 +984,7 @@ class Route:
         self.alt_label_hash = dict()
         self.segment_list = []
         self.con_route = None
+        self.last_update = None
         self.mileage = 0.0
         self.rootOrder = -1  # order within connected route
         self.is_reversed = False
@@ -1092,6 +1093,10 @@ class Route:
             hs = self.segment_list[pos]
             hs.add_clinched_by(t)
             t.clinched_segments.add(hs)
+        if self not in t.routes:
+            t.routes.add(self)
+            if self.last_update and t.update and self.last_update[0] >= t.update:
+                t.log_entries.append("Route updated " + self.last_update[0] + ": " + self.readable_name())
 
     def con_beg(self):
         return self.point_list[-1] if self.is_reversed else self.point_list[0]
@@ -1268,7 +1273,7 @@ class TravelerList:
     start_waypoint end_waypoint
     """
 
-    def __init__(self,travelername,el,path="../../../UserData/list_files"):
+    def __init__(self,travelername,update,el,path="../../../UserData/list_files"):
         list_entries = 0
         self.clinched_segments = set()
         self.traveler_name = travelername[:-5]
@@ -1279,7 +1284,13 @@ class TravelerList:
         file.close()
         # strip UTF-8 byte order mark if present
         lines[0] = lines[0].encode('utf-8').decode("utf-8-sig")
-        self.log_entries = []
+        try:
+            self.log_entries = [travelername+" last updated: "+update[0]+' '+update[1]+' '+update[2]]
+            self.update = update[0]
+        except TypeError:
+            self.log_entries = []
+            self.update = None
+        self.routes = set()
 
         for line in lines:
             line = line.strip(" \t\r\n\x00")
@@ -2931,36 +2942,10 @@ for h in highway_systems:
                     r.alt_label_hash[w.alt_labels[a]] = index
             index += 1
 
-# Create a list of TravelerList objects, one per person
-traveler_lists = []
-
-print(et.et() + "Processing traveler list files:",flush=True)
-for t in traveler_ids:
-    if t.endswith('.list'):
-        print(t + " ",end="",flush=True)
-        traveler_lists.append(TravelerList(t,el,args.userlistfilepath))
-print('\n' + et.et() + "Processed " + str(len(traveler_lists)) + " traveler list files.")
-traveler_lists.sort(key=lambda TravelerList: TravelerList.traveler_name)
-# assign traveler numbers
-travnum = 0
-for t in traveler_lists:
-    t.traveler_num = travnum
-    travnum += 1
-
-print(et.et() + "Clearing route & label hash tables.",flush=True)
-del Route.root_hash
-del Route.pri_list_hash
-del Route.alt_list_hash
-for h in highway_systems:
-    for r in h.route_list:
-        del r.pri_label_hash
-        del r.alt_label_hash
-        del r.duplicate_labels
-
 # Read updates.csv file, just keep in the fields array for now since we're
 # just going to drop this into the DB later anyway
 updates = []
-print(et.et() + "Reading updates file.",end="",flush=True)
+print(et.et() + "Reading updates file.",flush=True)
 with open(args.highwaydatapath+"/updates.csv", "rt", encoding='UTF-8') as file:
     lines = file.readlines()
 file.close()
@@ -2992,13 +2977,18 @@ for line in lines:
         el.add_error("description > " + str(DBFieldLength.updateText) +
                      " bytes in updates.csv line " + line)
     updates.append(fields)
-print("")
+    try:
+        r = Route.root_hash[fields[3]]
+        if r.last_update is None or r.last_update[0] < fields[0]:
+            r.last_update = fields;
+    except KeyError:
+        pass
 
 # Same plan for systemupdates.csv file, again just keep in the fields
 # array for now since we're just going to drop this into the DB later
 # anyway
 systemupdates = []
-print(et.et() + "Reading systemupdates file.",end="",flush=True)
+print(et.et() + "Reading systemupdates file.",flush=True)
 with open(args.highwaydatapath+"/systemupdates.csv", "rt", encoding='UTF-8') as file:
     lines = file.readlines()
 file.close()
@@ -3030,7 +3020,58 @@ for line in lines:
         el.add_error("statusChange > " + str(DBFieldLength.statusChange) +
                      " bytes in systemupdates.csv line " + line)
     systemupdates.append(fields)
-print("")
+
+# Read most recent update dates/times for .list files
+# one line for each traveler, containing 4 space-separated fields:
+# 0: username with .list extension
+# 1-3: date, time, and time zone as written by "git log -n 1 --pretty=%ci"
+listupdates = {}
+try:
+    file = open("listupdates.txt", "rt", encoding='UTF-8')
+    print(et.et() + "Reading .list updates file.",flush=True)
+    for line in file.readlines():
+        line = line.strip()
+        fields = line.split(' ')
+        if len(fields) != 4:
+            print("WARNING: Could not parse listupdates.txt line: [" +
+                  line + "], expected 4 fields, found " + str(len(fields)))
+            continue
+        listupdates[fields[0]] = fields[1:]
+    file.close()
+except FileNotFoundError:
+    pass
+
+# Create a list of TravelerList objects, one per person
+traveler_lists = []
+
+print(et.et() + "Processing traveler list files:",flush=True)
+for t in traveler_ids:
+    if t.endswith('.list'):
+        try:
+            update = listupdates[t]
+        except KeyError:
+            update = None
+        print(t + " ",end="",flush=True)
+        traveler_lists.append(TravelerList(t,update,el,args.userlistfilepath))
+del traveler_ids
+del listupdates
+print('\n' + et.et() + "Processed " + str(len(traveler_lists)) + " traveler list files.")
+traveler_lists.sort(key=lambda TravelerList: TravelerList.traveler_name)
+# assign traveler numbers
+travnum = 0
+for t in traveler_lists:
+    t.traveler_num = travnum
+    travnum += 1
+
+print(et.et() + "Clearing route & label hash tables.",flush=True)
+del Route.root_hash
+del Route.pri_list_hash
+del Route.alt_list_hash
+for h in highway_systems:
+    for r in h.route_list:
+        del r.pri_label_hash
+        del r.alt_label_hash
+        del r.duplicate_labels
 
 print(et.et() + "Writing pointsinuse.log, unusedaltlabels.log, listnamesinuse.log and unusedaltroutenames.log",flush=True)
 total_unused_alt_labels = 0
@@ -3431,7 +3472,7 @@ for t in traveler_lists:
 
 
     # grand summary, active only
-    t.log_entries.append("Traveled " + str(t.active_systems_traveled) + " of " + str(active_systems) +
+    t.log_entries.append("\nTraveled " + str(t.active_systems_traveled) + " of " + str(active_systems) +
                          " ({0:.1f}%)".format(100*t.active_systems_traveled/active_systems) +
                          ", Clinched " + str(t.active_systems_clinched) + " of " + str(active_systems) +
                          " ({0:.1f}%)".format(100*t.active_systems_clinched/active_systems) +
@@ -3442,6 +3483,17 @@ for t in traveler_lists:
                          ", Clinched " + str(t.preview_systems_clinched) + " of " + str(preview_systems) +
                          " ({0:.1f}%)".format(100*t.preview_systems_clinched/preview_systems) +
                          " preview systems")
+    # updated routes, sorted by date
+    t.log_entries.append("\nMost recent updates for listed routes:")
+    route_list = []
+    for r in t.routes:
+        if r.last_update:
+            route_list.append(r)
+    del t.routes
+    route_list.sort(key=lambda r: r.last_update[0]+r.last_update[3])
+    for r in route_list:
+        t.log_entries.append(r.last_update[0] + " | " + r.root + " | " + r.readable_name() + " | " + r.last_update[4])
+
 print("!", flush=True)
 
 # write log files for traveler lists
