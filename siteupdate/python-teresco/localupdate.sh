@@ -68,7 +68,7 @@ echo DataProcessing '@' `git show -s | head -n 1 | cut -f2 -d' '` | tee -a $date
 
 echo "$0: creating listupdates.txt"
 cd $tmbase/UserData/list_files
-for u in *; do echo $u `git log -n 1 --pretty=%ci`; done > $execdir/listupdates.txt
+for u in *; do echo $u `git log -n 1 --pretty=%ci $u`; done > $execdir/listupdates.txt
 cd -
 
 echo "$0: launching siteupdate.py"

@@ -138,7 +138,8 @@ void TravelerList::userlog
 	routes.clear();
 	route_list.sort(sort_route_updates_oldest);
 	for (Route* r : route_list)
-	  log << (*r->last_update)[0] << " | " << r->root << " | " << r->readable_name() << " | " << (*r->last_update)[4] << '\n';
+	    log	<< (*r->last_update)[0] << " | " << (*r->last_update)[1] << " | " << (*r->last_update)[2] << " | "
+		<< (*r->last_update)[3] << " | " << (*r->last_update)[4] << '\n';
 
 	log.close();
 }
