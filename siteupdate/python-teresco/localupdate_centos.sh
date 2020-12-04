@@ -21,7 +21,7 @@ date
 # process command line args
 for arg in "$@"; do
     if [ "$arg" == "--nographs" ]; then
-	# -k to siteupdate supresses graph generation
+	# -k to siteupdate.py supresses graph generation
 	graphflag="-k"
     fi
     if [ "$arg" == "--noinstall" ]; then
@@ -71,8 +71,8 @@ cd $tmbase/UserData/list_files
 for u in *; do echo $u `git log -n 1 --pretty=%ci $u`; done > $execdir/listupdates.txt
 cd -
 
-echo "$0: launching siteupdate"
-./siteupdate -t 16 -d TravelMapping-$datestr $graphflag -l $datestr/$logdir -c $datestr/$statdir -g $datestr/$graphdir -n $datestr/$nmpmdir -u $tmbase/UserData/list_files -w $tmbase/HighwayData | tee -a $datestr/$logdir/siteupdate.log 2>&1 || exit 1
+echo "$0: launching siteupdate.py"
+python3.7 ./siteupdate.py -d TravelMapping-$datestr $graphflag -l $datestr/$logdir -c $datestr/$statdir -g $datestr/$graphdir -n $datestr/$nmpmdir -u $tmbase/UserData/list_files -w $tmbase/HighwayData | tee -a $datestr/$logdir/siteupdate.log 2>&1 || exit 1
 date
 
 echo "$0: deleting listupdates.txt"

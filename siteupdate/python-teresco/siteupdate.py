@@ -3492,7 +3492,8 @@ for t in traveler_lists:
     del t.routes
     route_list.sort(key=lambda r: r.last_update[0]+r.last_update[3])
     for r in route_list:
-        t.log_entries.append(r.last_update[0] + " | " + r.root + " | " + r.readable_name() + " | " + r.last_update[4])
+        t.log_entries.append(r.last_update[0] + " | " + r.last_update[1] + " | " + \
+                             r.last_update[2] + " | " + r.last_update[3] + " | " + r.last_update[4])
 
 print("!", flush=True)
 
