@@ -8,9 +8,9 @@ set -e
 install=1
 pull=1
 execdir=`pwd`
-tmbase=$HOME/travelmapping
-tmwebbase=/home/www/tm
-tmpdir=/home/tmp/tm
+tmbase=$HOME/tm
+tmwebbase=/var/www/html
+tmpdir=$HOME/tmp/tm
 datestr=`date '+%Y-%m-%d@%H:%M:%S'`
 logdir=logs
 statdir=stats
@@ -21,7 +21,7 @@ date
 # process command line args
 for arg in "$@"; do
     if [ "$arg" == "--nographs" ]; then
-	# -k to siteupdate.py supresses graph generation
+	# -k to siteupdate supresses graph generation
 	graphflag="-k"
     fi
     if [ "$arg" == "--noinstall" ]; then
@@ -71,8 +71,8 @@ cd $tmbase/UserData/list_files
 for u in *; do echo $u `git log -n 1 --pretty=%ci`; done > $execdir/listupdates.txt
 cd -
 
-echo "$0: launching siteupdate.py"
-PYTHONIOENCODING='utf-8' ./siteupdate.py -d TravelMapping-$datestr $graphflag -l $datestr/$logdir -c $datestr/$statdir -g $datestr/$graphdir -n $datestr/$nmpmdir | tee -a $datestr/$logdir/siteupdate.log 2>&1 || exit 1
+echo "$0: launching siteupdate"
+./siteupdate -t 16 -d TravelMapping-$datestr $graphflag -l $datestr/$logdir -c $datestr/$statdir -g $datestr/$graphdir -n $datestr/$nmpmdir -u $tmbase/UserData/list_files -w $tmbase/HighwayData | tee -a $datestr/$logdir/siteupdate.log 2>&1 || exit 1
 date
 
 echo "$0: deleting listupdates.txt"
@@ -103,7 +103,7 @@ fi
 
 echo "$0: loading primary DB"
 date
-mysql --defaults-group-suffix=tmapadmin -u travmapadmin TravelMapping < TravelMapping-$datestr.sql
+mysql --defaults-group-suffix=travmapadmin -u travmapadmin TravelMapping < TravelMapping-$datestr.sql
 /bin/rm $tmwebbase/dbupdating
 echo "$0: switching to primary DB"
 date
@@ -113,25 +113,23 @@ echo "$0: installing logs, stats, nmp_merged, graphs, archiving old contents in 
 mkdir -p $tmpdir/$datestr
 mv $tmwebbase/$logdir $tmpdir/$datestr
 mv $datestr/$logdir $tmwebbase
+sudo chcon -R --type=httpd_sys_content_t $tmwebbase/$logdir
 mv $tmwebbase/$statdir $tmpdir/$datestr
 mv $datestr/$statdir $tmwebbase
+sudo chcon -R --type=httpd_sys_content_t $tmwebbase/$statdir
 mv $tmwebbase/$nmpmdir $tmpdir/$datestr
 mv $datestr/$nmpmdir $tmwebbase
+sudo chcon -R --type=httpd_sys_content_t $tmwebbase/$nmpmdir
 if [ "$graphflag" != "-k" ]; then
     mv $tmwebbase/$graphdir $tmpdir/$datestr
     mv $datestr/$graphdir $tmwebbase
+    sudo chcon -R --type=httpd_sys_content_t $tmwebbase/$graphdir
 fi
 rmdir $datestr
 
 echo "$0: loading DB copy"
-mysql --defaults-group-suffix=tmapadmin -u travmapadmin TravelMappingCopy < TravelMapping-$datestr.sql
+mysql --defaults-group-suffix=travmapadmin -u travmapadmin TravelMappingCopy < TravelMapping-$datestr.sql
 echo "$0: moving sql file to archive"
 mv TravelMapping-$datestr.sql $tmpdir
-echo "$0: sending email notification"
-mailx -s "Travel Mapping Site Update Complete" travelmapping-siteupdates@teresco.org <<EOF
-A Travel Mapping site update has just successfully completed.
-The complete log is available at https://travelmapping.net/logs/siteupdate.log .
-Please report any problems to travmap@teresco.org .
-EOF
 echo "$0: complete"
 date

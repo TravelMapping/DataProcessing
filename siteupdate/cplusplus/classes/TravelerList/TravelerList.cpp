@@ -1,4 +1,4 @@
-TravelerList::TravelerList(std::string travname, ErrorList *el, Arguments *args)
+TravelerList::TravelerList(std::string travname, std::string* updarr[], ErrorList *el, Arguments *args)
 {	active_systems_traveled = 0;
 	active_systems_clinched = 0;
 	preview_systems_traveled = 0;
@@ -58,6 +58,14 @@ TravelerList::TravelerList(std::string travname, ErrorList *el, Arguments *args)
 	{	lines[0] += 3;
 		splist << "\xEF\xBB\xBF";
 	}
+	// write last update date & time to log if known
+	if (updarr)
+	{	log << travname << " last updated: " << *updarr[1] << ' ' << *updarr[2] << ' ' << *updarr[3] << '\n';
+		update = updarr[1];
+		delete updarr[2];
+		delete updarr[3];
+		delete[] updarr;
+	} else	update = 0;
 
 	for (unsigned int l = 0; l < lines.size()-1; l++)
 	{	std::string orig_line(lines[l]);

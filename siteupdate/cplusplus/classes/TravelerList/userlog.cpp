@@ -41,21 +41,21 @@ void TravelerList::userlog
 		double t_system_overall = 0;
 		if (system_region_mileages.find(h) != system_region_mileages.end())
 			t_system_overall = system_region_miles(h);
-		log << "System " << h->systemname << " (" << h->level_name() << ") overall: " << format_clinched_mi(t_system_overall, h->total_mileage()) << '\n';
 		if (t_system_overall)
-		  if (h->active())
-			active_systems_traveled++;
-		  else	preview_systems_traveled++;
-		if (t_system_overall == h->total_mileage())
-		  if (h->active())
-			active_systems_clinched++;
-		  else	preview_systems_clinched++;
+		{	if (h->active())
+				active_systems_traveled++;
+			else	preview_systems_traveled++;
+			if (t_system_overall == h->total_mileage())
+			  if (h->active())
+				active_systems_clinched++;
+			  else	preview_systems_clinched++;
 
-		// stats by region covered by system, always in csmbr for
-		// the DB, but add to logs only if it's been traveled at
-		// all and it covers multiple regions
-		if (t_system_overall)
-		{	if (h->mileage_by_region.size() > 1)
+			// stats by region covered by system, always in csmbr for
+			// the DB, but add to logs only if it's been traveled at
+			// all and it covers multiple regions
+			log << "System " << h->systemname << " (" << h->level_name() << ") overall: "
+			    << format_clinched_mi(t_system_overall, h->total_mileage()) << '\n';
+			if (h->mileage_by_region.size() > 1)
 				log << "System " << h->systemname << " by region:\n";
 			std::list<Region*> sysregions;
 			for (std::pair<Region* const, double> &rm : h->mileage_by_region)
@@ -74,12 +74,10 @@ void TravelerList::userlog
 				if (h->mileage_by_region.size() > 1)
 					log << "  " << region->code << ": " << format_clinched_mi(system_region_mileage, h->mileage_by_region.at(region)) << '\n';
 			}
-		}
 
-		// stats by highway for the system, by connected route and
-		// by each segment crossing region boundaries if applicable
-		if (t_system_overall)
-		{	std::unordered_map<ConnectedRoute*, double> system_con_umap;
+			// stats by highway for the system, by connected route and
+			// by each segment crossing region boundaries if applicable
+			unsigned int num_con_rtes_traveled = 0;
 			unsigned int num_con_rtes_clinched = 0;
 			log << "System " << h->systemname << " by route (traveled routes only):\n";
 			for (ConnectedRoute &cr : h->con_route_list)
@@ -94,13 +92,12 @@ void TravelerList::userlog
 						sprintf(fstr, "%.15g", miles);
 						if (!strchr(fstr, '.')) strcat(fstr, ".0");
 						clin_db_val->add_cr("('" + r->root + "','" + traveler_name + "','" + std::string(fstr) + "','" + clinched + "')");
-						routes_traveled[r] = miles;
 						con_clinched_miles += miles;
 						to_write += "  " + r->readable_name() + ": " + format_clinched_mi(miles,r->mileage) + "\n";
 					}
 				}
 				if (con_clinched_miles)
-				{	system_con_umap[&cr] = con_clinched_miles;
+				{	num_con_rtes_traveled += 1;
 					char clinched = '0';
 					if (con_clinched_miles == cr.mileage)
 					{	num_con_rtes_clinched++;
@@ -116,17 +113,15 @@ void TravelerList::userlog
 					else	log << to_write << '\n';
 				}
 			}
-			con_routes_clinched[h] = num_con_rtes_clinched;
 			sprintf(fstr, " connected routes traveled: %i of %i (%.1f%%), clinched: %i of %i (%.1f%%).",
-				(int)system_con_umap.size(), (int)h->con_route_list.size(), 100*(double)system_con_umap.size()/h->con_route_list.size(),
-				num_con_rtes_clinched,    (int)h->con_route_list.size(),    100*(double)num_con_rtes_clinched/h->con_route_list.size());
+				num_con_rtes_traveled, (int)h->con_route_list.size(), 100*(double)num_con_rtes_traveled/h->con_route_list.size(),
+				num_con_rtes_clinched, (int)h->con_route_list.size(), 100*(double)num_con_rtes_clinched/h->con_route_list.size());
 			log << "System " << h->systemname << fstr << '\n';
-			con_routes_traveled[h] = system_con_umap;
 		}
 	  }
 
 	// grand summary, active only
-	sprintf(fstr,"Traveled %i of %i (%.1f%%), Clinched %i of %i (%.1f%%) active systems",
+	sprintf(fstr,"\nTraveled %i of %i (%.1f%%), Clinched %i of %i (%.1f%%) active systems",
 			active_systems_traveled, active_systems, 100*(double)active_systems_traveled/active_systems,
 			active_systems_clinched, active_systems, 100*(double)active_systems_clinched/active_systems);
 	log << fstr << '\n';
@@ -135,6 +130,15 @@ void TravelerList::userlog
 			preview_systems_traveled, preview_systems, 100*(double)preview_systems_traveled/preview_systems,
 			preview_systems_clinched, preview_systems, 100*(double)preview_systems_clinched/preview_systems);
 	log << fstr << '\n';
+
+	// updated routes, sorted by date
+	log << "\nMost recent updates for listed routes:\n";
+	std::list<Route*> route_list;
+	for (Route* r : routes) if (r->last_update) route_list.push_back(r);
+	routes.clear();
+	route_list.sort(sort_route_updates_oldest);
+	for (Route* r : route_list)
+	  log << (*r->last_update)[0] << " | " << r->root << " | " << r->readable_name() << " | " << (*r->last_update)[4] << '\n';
 
 	log.close();
 }

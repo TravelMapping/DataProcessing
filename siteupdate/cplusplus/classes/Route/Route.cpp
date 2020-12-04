@@ -9,6 +9,7 @@ Route::Route(std::string &line, HighwaySystem *sys, ErrorList &el, std::unordere
 	rootOrder = -1; // order within connected route
 	region = 0;	// if this stays 0, setup has failed due to bad .csv data
 	is_reversed = 0;
+	last_update = 0;
 
 	// parse chopped routes csv line
 	size_t NumFields = 8;
@@ -209,13 +210,15 @@ void Route::write_nmp_merged(std::string filename)
 	wptfile.close();
 }
 
-inline void Route::store_traveled_segments(TravelerList* t, unsigned int beg, unsigned int end)
+inline void Route::store_traveled_segments(TravelerList* t, std::ofstream& log, unsigned int beg, unsigned int end)
 {	// store clinched segments with traveler and traveler with segments
 	for (unsigned int pos = beg; pos < end; pos++)
 	{	HighwaySegment *hs = segment_list[pos];
 		hs->add_clinched_by(t);
 		t->clinched_segments.insert(hs);
 	}
+	if (t->routes.insert(this).second && last_update && t->update && (*last_update)[0] >= *t->update)
+		log << "Route updated " << (*last_update)[0] << ": " << readable_name() << '\n';
 }
 
 inline Waypoint* Route::con_beg()
@@ -224,4 +227,12 @@ inline Waypoint* Route::con_beg()
 
 inline Waypoint* Route::con_end()
 {	return is_reversed ? point_list.front() : point_list.back();
+}
+
+// sort routes by most recent update for use at end of user logs
+// all should have a valid updates entry pointer before being passed here
+bool sort_route_updates_oldest(const Route *r1, const Route *r2)
+{	int p = strcmp((*r1->last_update)[0].data(), (*r2->last_update)[0].data());
+	if (!p) return (*r1->last_update)[3] < (*r2->last_update)[3];
+		return p < 0;
 }

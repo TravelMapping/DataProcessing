@@ -111,7 +111,7 @@ else {	r->system->lniu_mtx.lock();
 		index2 = lit1->second;
 		reverse = 1;
 	     }
-	r->store_traveled_segments(this, index1, index2);
+	r->store_traveled_segments(this, log, index1, index2);
 	// new .list lines for region split-ups
 	if (args->splitregion == r->region->code)
 	{
