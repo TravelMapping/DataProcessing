@@ -1507,6 +1507,10 @@ class TravelerList:
                     # if both labels reference the same waypoint...
                     if index1 == index2:
                         self.log_entries.append("Equivalent waypoint labels mark zero distance traveled in line: " + line)
+                        if r1 not in self.routes:
+                            self.routes.add(r1)
+                            if r1.last_update and self.update and r1.last_update[0] >= self.update:
+                                self.log_entries.append("Route updated " + r1.last_update[0] + ": " + r1.readable_name())
                         continue
                     if index1 <= index2:
                         r1.store_traveled_segments(self, index1, index2)

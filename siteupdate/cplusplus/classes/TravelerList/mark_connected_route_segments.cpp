@@ -111,6 +111,8 @@ if (r1 == r2)
 	if (index1 == index2)
 	{	log << "Equivalent waypoint labels mark zero distance traveled in line: " << trim_line << '\n';
 		splist << orig_line << endlines[l];
+		if (routes.insert(r1).second && r1->last_update && update && (*r1->last_update)[0] >= *update)
+			log << "Route updated " << (*r1->last_update)[0] << ": " << r1->readable_name() << '\n';
 		continue;
 	}
 	if (index1 <= index2)
