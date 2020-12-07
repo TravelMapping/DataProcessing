@@ -1361,6 +1361,10 @@ class TravelerList:
                         self.log_entries.append(log_entry)
                     if invchar:
                         self.log_entries[-1] += " [contains invalid character(s)]"
+                    if r not in self.routes:
+                        self.routes.add(r)
+                        if r.last_update and self.update and r.last_update[0] >= self.update:
+                            self.log_entries.append("Route updated " + r.last_update[0] + ": " + r.readable_name())
                     continue
                 # are either of the labels used duplicates?
                 duplicate = False
@@ -1377,10 +1381,18 @@ class TravelerList:
                     self.log_entries.append(log_entry)
                     duplicate = True
                 if duplicate:
+                    if r not in self.routes:
+                        self.routes.add(r)
+                        if r.last_update and self.update and r.last_update[0] >= self.update:
+                            self.log_entries.append("Route updated " + r.last_update[0] + ": " + r.readable_name())
                     continue
                 # if both labels reference the same waypoint...
                 if index1 == index2:
                     self.log_entries.append("Equivalent waypoint labels mark zero distance traveled in line: " + line)
+                    if r not in self.routes:
+                        self.routes.add(r)
+                        if r.last_update and self.update and r.last_update[0] >= self.update:
+                            self.log_entries.append("Route updated " + r.last_update[0] + ": " + r.readable_name())
                 # otherwise both labels are valid; mark in use & proceed
                 else:
                     r.system.listnamesinuse.add(lookup)
