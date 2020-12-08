@@ -147,6 +147,9 @@ r1->system->uarn_mtx.unlock();
 r1->liu_mtx.lock();
 r1->labels_in_use.insert(fields[2]);
 r1->liu_mtx.unlock();
+r1->ual_mtx.lock();
+r1->unused_alt_labels.erase(fields[2]);
+r1->ual_mtx.unlock();
 r2->system->lniu_mtx.lock();
 r2->system->listnamesinuse.insert(lookup2);
 r2->system->lniu_mtx.unlock();
@@ -156,6 +159,9 @@ r2->system->uarn_mtx.unlock();
 r2->liu_mtx.lock();
 r2->labels_in_use.insert(fields[5]);
 r2->liu_mtx.unlock();
+r2->ual_mtx.lock();
+r2->unused_alt_labels.erase(fields[5]);
+r2->ual_mtx.unlock();
 list_entries++;
 // new .list lines for region split-ups
 if (args->splitregion == r1->region->code || args->splitregion == r2->region->code)

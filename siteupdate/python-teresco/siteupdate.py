@@ -1537,9 +1537,11 @@ class TravelerList:
                 r1.system.listnamesinuse.add(lookup1)
                 r1.system.unusedaltroutenames.discard(lookup1)
                 r1.labels_in_use.add(list_label_1)
+                r1.unused_alt_labels.discard(list_label_1)
                 r2.system.listnamesinuse.add(lookup2)
                 r2.system.unusedaltroutenames.discard(lookup2)
                 r2.labels_in_use.add(list_label_2)
+                r2.unused_alt_labels.discard(list_label_2)
                 list_entries += 1
             else:
                 self.log_entries.append("Incorrect format line (4 or 6 fields expected, found " + \
