@@ -49,10 +49,10 @@ inline void Route::compute_stats_r()
 	region->overall_mileage += overall_mileage;
 	region->active_preview_mileage += active_preview_mileage;
 	region->active_only_mileage += active_only_mileage;
+	region->mileage_mtx->unlock();
 	try {	system->mileage_by_region.at(region) += system_mileage;
 	    }
 	catch (const std::out_of_range& oor)
 	    {	system->mileage_by_region[region] = system_mileage;
 	    }
-	region->mileage_mtx->unlock();
 }
