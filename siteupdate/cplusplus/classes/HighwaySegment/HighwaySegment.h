@@ -10,6 +10,9 @@ class HighwaySegment
 	std::list<HighwaySegment*> *concurrent;
 	std::unordered_set<TravelerList*> clinched_by;
 	std::mutex clin_mtx;
+	unsigned char system_concurrency_count;
+	unsigned char active_only_concurrency_count;
+	unsigned char active_preview_concurrency_count;
 
 	HighwaySegment(Waypoint *, Waypoint *, Route *);
 
@@ -20,5 +23,6 @@ class HighwaySegment
 	unsigned int index();
 	//std::string concurrent_travelers_sanity_check();
 	std::string clinchedby_code(std::list<TravelerList*> *, unsigned int);
-	void compute_stats();
+	inline void compute_stats_r();
+	inline void compute_stats_t(TravelerList* t);
 };

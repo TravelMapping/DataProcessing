@@ -45,7 +45,7 @@ void TravelerList::userlog
 		{	if (h->active())
 				active_systems_traveled++;
 			else	preview_systems_traveled++;
-			if (t_system_overall == h->total_mileage())
+			if (float(t_system_overall) == float(h->total_mileage()))
 			  if (h->active())
 				active_systems_clinched++;
 			  else	preview_systems_clinched++;

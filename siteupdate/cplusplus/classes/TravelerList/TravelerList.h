@@ -10,7 +10,6 @@ class TravelerList
     start_waypoint end_waypoint
     */
 	public:
-	std::mutex ap_mi_mtx, ao_mi_mtx, sr_mi_mtx;
 	std::unordered_set<HighwaySegment*> clinched_segments;
 	std::string traveler_name;
 	std::unordered_map<Region*, double> active_preview_mileage_by_region;				// total mileage per region, active+preview only

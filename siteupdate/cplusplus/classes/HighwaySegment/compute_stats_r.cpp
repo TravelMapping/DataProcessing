@@ -1,12 +1,9 @@
-void HighwaySegment::compute_stats()
+inline void HighwaySegment::compute_stats_r()
 {	// always add the segment mileage to the route
 	route->mileage += length;
 	//#include "../debug/RtMiSegLen.cpp"
 
 	// but we do need to check for concurrencies for others
-	unsigned int system_concurrency_count = 1;
-	unsigned int active_only_concurrency_count = 1;
-	unsigned int active_preview_concurrency_count = 1;
 	unsigned int overall_concurrency_count = 1;
 	if (concurrent)
 	  for (HighwaySegment *other : *concurrent)
@@ -53,45 +50,4 @@ void HighwaySegment::compute_stats()
 	catch (const std::out_of_range& oor)
 	    {	route->system->mileage_by_region[route->region] = length/system_concurrency_count;
 	    }
-
-	// that's it for overall stats, now credit all travelers
-	// who have clinched this segment in their stats
-	for (TravelerList *t : clinched_by)
-	{	// credit active+preview for this region, which it must be
-		// if this segment is clinched by anyone but still check
-		// in case a concurrency detection might otherwise credit
-		// a traveler with miles in a devel system
-		if (route->system->active_or_preview())
-		{	t->ap_mi_mtx.lock();
-			try {	t->active_preview_mileage_by_region.at(route->region) += length/active_preview_concurrency_count;
-			    }
-			catch (const std::out_of_range& oor)
-			    {	t->active_preview_mileage_by_region[route->region] = length/active_preview_concurrency_count;
-			    }
-			t->ap_mi_mtx.unlock();
-		}
-
-		// credit active only for this region
-		if (route->system->active())
-		{	t->ao_mi_mtx.lock();
-			try {	t->active_only_mileage_by_region.at(route->region) += length/active_only_concurrency_count;
-			    }
-			catch (const std::out_of_range& oor)
-			    {	t->active_only_mileage_by_region[route->region] = length/active_only_concurrency_count;
-			    }
-			t->ao_mi_mtx.unlock();
-		}
-
-		// credit this system in this region in the messy unordered_map
-		// of unordered_maps, but skip devel system entries
-		if (route->system->active_or_preview())
-		{	t->sr_mi_mtx.lock();
-			try {	t->system_region_mileages[route->system].at(route->region) += length/system_concurrency_count;
-			    }
-			catch (const std::out_of_range& oor)
-			    {	t->system_region_mileages[route->system][route->region] = length/system_concurrency_count;
-			    }
-			t->sr_mi_mtx.unlock();
-		}
-	}
 }
