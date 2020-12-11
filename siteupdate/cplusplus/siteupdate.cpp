@@ -723,11 +723,11 @@ int main(int argc, char *argv[])
 	for (HighwaySystem *h : highway_systems)
 	{	cout << "." << flush;
 		for (Route &r : h->route_list)
-		  for (HighwaySegment *s : r.segment_list)
-		  {	s->compute_stats_r();
-			for (TravelerList *t : s->clinched_by)
-			  s->compute_stats_t(t);
-		  }
+		{ 	r.compute_stats_r();
+		  	for (HighwaySegment *s : r.segment_list)
+			  for (TravelerList *t : s->clinched_by)
+			    s->compute_stats_t(t);
+		}
 	}
 	cout << '!' << endl;
       #endif

@@ -91,5 +91,4 @@ std::string HighwaySegment::clinchedby_code(std::list<TravelerList*> *traveler_l
 	return code;
 }
 
-#include "compute_stats_r.cpp"
 #include "compute_stats_t.cpp"

@@ -77,6 +77,7 @@ class Route
 	//std::string list_line(int, int);
 	void write_nmp_merged(std::string);
 	inline void store_traveled_segments(TravelerList*, unsigned int, unsigned int);
+	inline void compute_stats_r();
 	inline Waypoint* con_beg();
 	inline Waypoint* con_end();
 };

@@ -225,3 +225,5 @@ inline Waypoint* Route::con_beg()
 inline Waypoint* Route::con_end()
 {	return is_reversed ? point_list.front() : point_list.back();
 }
+
+#include "compute_stats_r.cpp"

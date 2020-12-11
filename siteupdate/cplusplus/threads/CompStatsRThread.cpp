@@ -13,7 +13,6 @@ void CompStatsRThread(unsigned int id, std::list<HighwaySystem*> *hs_list, std::
 		mtx->unlock();
 		std::cout << '.' << std::flush;
 		for (Route &r : h->route_list)
-		  for (HighwaySegment *s : r.segment_list)
-		    s->compute_stats_r();
+		  r.compute_stats_r();
 	}
 }

@@ -23,6 +23,5 @@ class HighwaySegment
 	unsigned int index();
 	//std::string concurrent_travelers_sanity_check();
 	std::string clinchedby_code(std::list<TravelerList*> *, unsigned int);
-	inline void compute_stats_r();
 	inline void compute_stats_t(TravelerList* t);
 };
