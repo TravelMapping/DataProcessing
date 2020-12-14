@@ -5,6 +5,7 @@ siteupdate : \
   */*/*.h */*/*.cpp */*/*/*.cpp \
   classes/Arguments/Arguments.o \
   classes/ClinchedDBValues/ClinchedDBValues.o \
+  classes/DBFieldLength/DBFieldLength.o \
   classes/ElapsedTime/ElapsedTime.o \
   classes/ErrorList/ErrorList.o \
   functions/crawl_hwy_data.o \
@@ -17,6 +18,7 @@ siteupdate : \
 	g++ -std=c++11 -pthread -D threading_enabled -o siteupdate siteupdate.cpp \
 	  classes/Arguments/Arguments.o \
 	  classes/ClinchedDBValues/ClinchedDBValues.o \
+	  classes/DBFieldLength/DBFieldLength.o \
 	  classes/ElapsedTime/ElapsedTime.o \
 	  classes/ErrorList/ErrorList.o \
 	  functions/crawl_hwy_data.o \
@@ -33,6 +35,7 @@ siteupdateST : \
   classes/*.cpp \
   classes/Arguments/Arguments.o \
   classes/ClinchedDBValues/ClinchedDBValues.o \
+  classes/DBFieldLength/DBFieldLength.o \
   classes/ElapsedTime/ElapsedTime.o \
   classes/ErrorList/ErrorList.o \
   functions/*.cpp \
@@ -47,6 +50,7 @@ siteupdateST : \
 	g++ -std=c++11 -o siteupdateST siteupdate.cpp \
 	  classes/Arguments/Arguments.o \
 	  classes/ClinchedDBValues/ClinchedDBValues.o \
+	  classes/DBFieldLength/DBFieldLength.o \
 	  classes/ElapsedTime/ElapsedTime.o \
 	  classes/ErrorList/ErrorList.o \
 	  functions/crawl_hwy_data.o \
@@ -62,6 +66,9 @@ classes/Arguments/Arguments.o : classes/Arguments/Arguments.h classes/Arguments/
 
 classes/ClinchedDBValues/ClinchedDBValues.o : classes/ClinchedDBValues/ClinchedDBValues.h classes/ClinchedDBValues/ClinchedDBValues.cpp
 	g++ -std=c++11 -o classes/ClinchedDBValues/ClinchedDBValues.o -c classes/ClinchedDBValues/ClinchedDBValues.cpp
+
+classes/DBFieldLength/DBFieldLength.o : classes/DBFieldLength/DBFieldLength.h classes/DBFieldLength/DBFieldLength.cpp
+	g++ -std=c++11 -o classes/DBFieldLength/DBFieldLength.o -c classes/DBFieldLength/DBFieldLength.cpp
 
 classes/ElapsedTime/ElapsedTime.o : classes/ElapsedTime/ElapsedTime.h classes/ElapsedTime/ElapsedTime.cpp
 	g++ -std=c++11 -o classes/ElapsedTime/ElapsedTime.o -c classes/ElapsedTime/ElapsedTime.cpp

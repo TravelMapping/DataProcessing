@@ -1,3 +1,4 @@
+#include "../classes/DBFieldLength/DBFieldLength.h"
 #include "../functions/split.h"
 
 std::pair<std::string, std::string> *country_or_continent_by_code(std::string code, std::vector<std::pair<std::string, std::string>> &pair_vector)

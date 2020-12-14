@@ -57,7 +57,6 @@ class HGEdge;
 #include "functions/crawl_hwy_data.h"
 #include "functions/operators.cpp"
 #include "functions/list_contains.cpp"
-#include "classes/DBFieldLength.cpp"
 #include "classes/Region.cpp"
 #include "classes/HighwaySystem/HighwaySystem.cpp"
 #include "classes/DatacheckEntry.cpp"
