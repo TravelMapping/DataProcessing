@@ -16,7 +16,6 @@ This module defines classes to represent the contents of a
 class ErrorList;
 class Waypoint;
 class HighwaySegment;
-class Route;
 class ConnectedRoute;
 class HighwaySystem;
 class TravelerList;
@@ -24,23 +23,16 @@ class Region;
 class DatacheckEntryList;
 class HighwayGraph;
 class HGVertex;
-class HGEdge;
 #define pi 3.141592653589793238
 #include <cmath>
 #include <cstring>
-#include <ctime>
 #include <deque>
 #include <dirent.h>
 #include <forward_list>
 #include <fstream>
-#include <iostream>
-#include <list>
-#include <mutex>
-#include <string>
 #include <thread>
 #include <unordered_map>
 #include <unordered_set>
-#include <vector>
 #include "classes/Arguments/Arguments.h"
 #include "classes/ClinchedDBValues/ClinchedDBValues.h"
 #include "classes/WaypointQuadtree/WaypointQuadtree.h"
