@@ -3,10 +3,12 @@ all : siteupdate siteupdateST
 siteupdate : \
   siteupdate.cpp */*.cpp \
   */*/*.h */*/*.cpp */*/*/*.cpp \
+  classes/Arguments/Arguments.o \
   classes/ClinchedDBValues/ClinchedDBValues.o \
   classes/ElapsedTime/ElapsedTime.o \
   classes/ErrorList/ErrorList.o
 	g++ -std=c++11 -pthread -D threading_enabled -o siteupdate siteupdate.cpp \
+	  classes/Arguments/Arguments.o \
 	  classes/ClinchedDBValues/ClinchedDBValues.o \
 	  classes/ElapsedTime/ElapsedTime.o \
 	  classes/ErrorList/ErrorList.o
@@ -14,6 +16,7 @@ siteupdate : \
 siteupdateST : \
   siteupdate.cpp \
   */*/*.h */*/*.cpp */*/*/*.cpp \
+  classes/Arguments/Arguments.o \
   classes/ClinchedDBValues/ClinchedDBValues.o \
   classes/ElapsedTime/ElapsedTime.o \
   classes/ErrorList/ErrorList.o \
@@ -21,9 +24,13 @@ siteupdateST : \
   functions/*.cpp \
   tasks/*.cpp
 	g++ -std=c++11 -o siteupdateST siteupdate.cpp \
+	  classes/Arguments/Arguments.o \
 	  classes/ClinchedDBValues/ClinchedDBValues.o \
 	  classes/ElapsedTime/ElapsedTime.o \
 	  classes/ErrorList/ErrorList.o
+
+classes/Arguments/Arguments.o : classes/Arguments/Arguments.h classes/Arguments/Arguments.cpp
+	g++ -std=c++11 -o classes/Arguments/Arguments.o -c classes/Arguments/Arguments.cpp
 
 classes/ClinchedDBValues/ClinchedDBValues.o : classes/ClinchedDBValues/ClinchedDBValues.h classes/ClinchedDBValues/ClinchedDBValues.cpp
 	g++ -std=c++11 -o classes/ClinchedDBValues/ClinchedDBValues.o -c classes/ClinchedDBValues/ClinchedDBValues.cpp

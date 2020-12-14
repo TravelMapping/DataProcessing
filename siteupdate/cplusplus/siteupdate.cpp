@@ -43,7 +43,7 @@ class HGEdge;
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
-#include "classes/Arguments.cpp"
+#include "classes/Arguments/Arguments.h"
 #include "classes/ClinchedDBValues/ClinchedDBValues.h"
 #include "classes/WaypointQuadtree/WaypointQuadtree.h"
 #include "classes/Route/Route.h"
