@@ -1,3 +1,8 @@
+#include <list>
+#include <mutex>
+#include <string>
+#include <vector>
+
 class ClinchedDBValues
 {	public:
 	// this will be used to store DB entry lines...
@@ -7,21 +12,7 @@ class ClinchedDBValues
 	// ...to be added into the DB later in the program
 	std::mutex csmbr_mtx, ccr_mtx, cr_mtx;
 
-	void add_csmbr(std::string str)
-	{	csmbr_mtx.lock();
-		csmbr_values.push_back(str);
-		csmbr_mtx.unlock();
-	}
-
-	void add_ccr(std::string str)
-	{	ccr_mtx.lock();
-		ccr_values.push_back(str);
-		ccr_mtx.unlock();
-	}
-
-	void add_cr(std::string str)
-	{	cr_mtx.lock();
-		cr_values.push_back(str);
-		cr_mtx.unlock();
-	}
+	void add_csmbr(std::string);
+	void add_ccr(std::string);
+	void add_cr(std::string);
 };
