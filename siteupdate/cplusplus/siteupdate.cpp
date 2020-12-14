@@ -26,7 +26,6 @@ class HighwayGraph;
 class HGVertex;
 class HGEdge;
 #define pi 3.141592653589793238
-#include <chrono>
 #include <cmath>
 #include <cstring>
 #include <ctime>
@@ -49,6 +48,7 @@ class HGEdge;
 #include "classes/WaypointQuadtree/WaypointQuadtree.h"
 #include "classes/Route/Route.h"
 #include "classes/ConnectedRoute/ConnectedRoute.h"
+#include "classes/ElapsedTime/ElapsedTime.h"
 #include "classes/ErrorList/ErrorList.h"
 #include "classes/Waypoint/Waypoint.h"
 #include "classes/HighwaySegment/HighwaySegment.h"
@@ -66,7 +66,6 @@ class HGEdge;
 #include "functions/split.cpp"
 #include "functions/valid_num_str.cpp"
 #include "classes/DBFieldLength.cpp"
-#include "classes/ElapsedTime.cpp"
 #include "classes/Region.cpp"
 #include "classes/HighwaySystem/HighwaySystem.cpp"
 #include "classes/DatacheckEntry.cpp"
