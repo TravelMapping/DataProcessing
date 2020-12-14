@@ -56,7 +56,6 @@ class HGEdge;
 #include "classes/TravelerList/TravelerList.h"
 #include "classes/GraphGeneration/HGEdge.h"
 #include "classes/GraphGeneration/PlaceRadius.h"
-#include "enable_threading.cpp"
 #include "functions/lower.cpp"
 #include "functions/upper.cpp"
 #include "functions/format_clinched_mi.cpp"
