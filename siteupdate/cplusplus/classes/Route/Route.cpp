@@ -1,3 +1,8 @@
+#include <sys/stat.h>
+#include "../../functions/double_quotes.h"
+#include "../../functions/lower.h"
+#include "../../functions/upper.h"
+
 std::unordered_map<std::string, Route*> Route::root_hash, Route::pri_list_hash, Route::alt_list_hash;
 std::mutex Route::awf_mtx;
 

@@ -1,3 +1,5 @@
+#include "lower.h"
+
 std::string lower(std::string str)
 {	for (unsigned int c = 0; c < str.size(); c++)
 	  if (str[c] >= 'A' && str[c] <= 'Z') str[c] += 32;

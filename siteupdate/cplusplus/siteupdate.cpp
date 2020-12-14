@@ -36,8 +36,6 @@ class HGEdge;
 #include <iostream>
 #include <list>
 #include <mutex>
-//#include <regex>	// Unbearably slow. Equivalent functions will be hand-coded instead.
-#include <sys/stat.h>
 #include <string>
 #include <thread>
 #include <unordered_map>
@@ -56,15 +54,9 @@ class HGEdge;
 #include "classes/TravelerList/TravelerList.h"
 #include "classes/GraphGeneration/HGEdge.h"
 #include "classes/GraphGeneration/PlaceRadius.h"
-#include "functions/lower.cpp"
-#include "functions/upper.cpp"
-#include "functions/format_clinched_mi.cpp"
-#include "functions/double_quotes.cpp"
-#include "functions/crawl_hwy_data.cpp"
+#include "functions/crawl_hwy_data.h"
 #include "functions/operators.cpp"
 #include "functions/list_contains.cpp"
-#include "functions/split.cpp"
-#include "functions/valid_num_str.cpp"
 #include "classes/DBFieldLength.cpp"
 #include "classes/Region.cpp"
 #include "classes/HighwaySystem/HighwaySystem.cpp"

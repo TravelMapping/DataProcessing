@@ -1,3 +1,5 @@
+#include "../../functions/valid_num_str.h"
+
 bool sort_root_at_label(Waypoint *w1, Waypoint *w2)
 {	return w1->root_at_label() < w2->root_at_label();
 }

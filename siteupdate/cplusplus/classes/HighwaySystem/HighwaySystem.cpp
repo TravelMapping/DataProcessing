@@ -1,3 +1,5 @@
+#include "../../functions/split.h"
+
 HighwaySystem::HighwaySystem(
 	std::string &line, ErrorList &el, std::string path, std::string &systemsfile,
 	std::vector<std::pair<std::string,std::string>> &countries,

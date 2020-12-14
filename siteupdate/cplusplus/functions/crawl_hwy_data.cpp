@@ -1,3 +1,8 @@
+#include "crawl_hwy_data.h"
+#include <cstring>
+#include <dirent.h>
+#include <sys/stat.h>
+
 void crawl_hwy_data(std::string path, std::unordered_set<std::string> &all_wpt_files, std::unordered_set<std::string> &splitsystems, std::string &splitregion, bool get_ss)
 {	DIR *dir;
 	dirent *ent;

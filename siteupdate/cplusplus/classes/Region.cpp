@@ -1,3 +1,5 @@
+#include "../functions/split.h"
+
 std::pair<std::string, std::string> *country_or_continent_by_code(std::string code, std::vector<std::pair<std::string, std::string>> &pair_vector)
 {	for (std::pair<std::string, std::string>& c : pair_vector)
 		if (c.first == code) return &c;

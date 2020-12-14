@@ -1,4 +1,6 @@
-inline bool valid_num_str(const char* c, const char delim)
+#include <cstddef>
+
+bool valid_num_str(const char* c, const char delim)
 {	size_t point_count = 0;
 	// check initial character
 	if (*c == '.') point_count = 1;

@@ -1,3 +1,5 @@
+#include "../../functions/format_clinched_mi.h"
+
 void TravelerList::userlog
 (	ClinchedDBValues *clin_db_val,
 	const double total_active_only_miles,
