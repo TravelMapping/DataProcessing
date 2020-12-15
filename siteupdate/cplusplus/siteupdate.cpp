@@ -86,7 +86,8 @@ class HGEdge;
 #include "threads/NmpMergedThread.cpp"
 #include "threads/ReadListThread.cpp"
 #include "threads/ConcAugThread.cpp"
-#include "threads/ComputeStatsThread.cpp"
+#include "threads/CompStatsRThread.cpp"
+#include "threads/CompStatsTThread.cpp"
 #include "threads/UserLogThread.cpp"
 #include "threads/SubgraphThread.cpp"
 #include "threads/MasterTmgThread.cpp"
@@ -632,7 +633,7 @@ int main(int argc, char *argv[])
 		  if (s->concurrent)
 		    for (HighwaySegment *hs : *(s->concurrent))
 		      if (hs != s && hs->route->system->active_or_preview() && hs->add_clinched_by(t))
-			concurrencyfile << "Concurrency augment for traveler " << t->traveler_name << ": [" << hs->str() << "] based on [" << s->str() << "]\n";
+		       	concurrencyfile << "Concurrency augment for traveler " << t->traveler_name << ": [" << hs->str() << "] based on [" << s->str() << "]\n";
 	}
 	cout << '!' << endl;
       #endif
@@ -645,31 +646,42 @@ int main(int argc, char *argv[])
 		    sanetravfile << s->concurrent_travelers_sanity_check();
 	sanetravfile.close(); //*/
 
-	// compute lots of stats, first total mileage by route, system, overall, where
-	// system and overall are stored in unordered_maps by region
-	cout << et.et() << "Computing stats." << flush;
-	// now also keeping separate totals for active only, active+preview,
-	// and all for overall (not needed for system, as a system falls into just
-	// one of these categories)
-
+	// compute lots of regional stats:
+	// overall, active+preview, active only,
+	// and per-system which falls into just one of these categories
       #ifdef threading_enabled
 	// set up for threaded stats computation
+	cout << et.et() << "Computing stats per route." << flush;
 	hs_it = highway_systems.begin();
 	for (unsigned int t = 0; t < args.numthreads; t++)
-		thr[t] = new thread(ComputeStatsThread, t, &highway_systems, &hs_it, &list_mtx);
+		thr[t] = new thread(CompStatsRThread, t, &highway_systems, &hs_it, &list_mtx);
 	for (unsigned int t = 0; t < args.numthreads; t++)
 		thr[t]->join();
 	for (unsigned int t = 0; t < args.numthreads; t++)
 		delete thr[t];//*/
+	cout << '!' << endl;
+	cout << et.et() << "Computing stats per traveler." << flush;
+	tl_it = traveler_lists.begin();
+	for (unsigned int t = 0; t < args.numthreads; t++)
+		thr[t] = new thread(CompStatsTThread, t, &traveler_lists, &tl_it, &list_mtx);
+	for (unsigned int t = 0; t < args.numthreads; t++)
+		thr[t]->join();
+	for (unsigned int t = 0; t < args.numthreads; t++)
+		delete thr[t];
+	cout << '!' << endl;
       #else
+	cout << et.et() << "Computing stats." << flush;
 	for (HighwaySystem *h : highway_systems)
 	{	cout << "." << flush;
 		for (Route &r : h->route_list)
-		  for (HighwaySegment *s : r.segment_list)
-		    s->compute_stats();
+		{ 	r.compute_stats_r();
+		  	for (HighwaySegment *s : r.segment_list)
+			  for (TravelerList *t : s->clinched_by)
+			    s->compute_stats_t(t);
+		}
 	}
-      #endif
 	cout << '!' << endl;
+      #endif
 
 	cout << et.et() << "Writing highway data stats log file (highwaydatastats.log)." << endl;
 	char fstr[112];
