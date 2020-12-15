@@ -41,6 +41,24 @@ Route* r2 = rit2->second;
 if (r1->con_route != r2->con_route)
 {	log << lookup1 << " and " << lookup2 << " not in same connected route in line: " << trim_line << '\n';
 	splist << orig_line << endlines[l];
+	// log updates for routes beginning/ending r1's ConnectedRoute
+	Route* cr = r1->con_route->roots.front();
+	if (routes.insert(cr).second && cr->last_update && update && (*cr->last_update)[0] >= *update)
+		  log << "Route updated " << (*cr->last_update)[0] << ": " << cr->readable_name() << '\n';
+	if (r1->con_route->roots.size() > 1)
+	{	Route* cr = r1->con_route->roots.back();
+		if (routes.insert(cr).second && cr->last_update && update && (*cr->last_update)[0] >= *update)
+		  log << "Route updated " << (*cr->last_update)[0] << ": " << cr->readable_name() << '\n';
+	}
+	// log updates for routes beginning/ending r2's ConnectedRoute
+	cr = r2->con_route->roots.front();
+	if (routes.insert(cr).second && cr->last_update && update && (*cr->last_update)[0] >= *update)
+		  log << "Route updated " << (*cr->last_update)[0] << ": " << cr->readable_name() << '\n';
+	if (r2->con_route->roots.size() > 1)
+	{	Route* cr = r2->con_route->roots.back();
+		if (routes.insert(cr).second && cr->last_update && update && (*cr->last_update)[0] >= *update)
+		  log << "Route updated " << (*cr->last_update)[0] << ": " << cr->readable_name() << '\n';
+	}
 	continue;
 }
 if (r1->system->devel())

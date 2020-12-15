@@ -1447,6 +1447,30 @@ class TravelerList:
                     continue
                 if r1.con_route != r2.con_route:
                     self.log_entries.append(lookup1 + " and " + lookup2 + " not in same connected route in line: " + line)
+                    # log updates for routes beginning/ending r1's ConnectedRoute
+                    cr = r1.con_route.roots[0]
+                    if cr not in self.routes:
+                        self.routes.add(cr)
+                        if cr.last_update and self.update and cr.last_update[0] >= self.update:
+                            self.log_entries.append("Route updated " + cr.last_update[0] + ": " + cr.readable_name())
+                        if len(r1.con_route.roots) > 1:
+                            cr = r1.con_route.roots[-1]
+                            if cr not in self.routes:
+                                self.routes.add(cr)
+                                if cr.last_update and self.update and cr.last_update[0] >= self.update:
+                                    self.log_entries.append("Route updated " + cr.last_update[0] + ": " + cr.readable_name())
+                    # log updates for routes beginning/ending r2's ConnectedRoute
+                    cr = r2.con_route.roots[0]
+                    if cr not in self.routes:
+                        self.routes.add(cr)
+                        if cr.last_update and self.update and cr.last_update[0] >= self.update:
+                            self.log_entries.append("Route updated " + cr.last_update[0] + ": " + cr.readable_name())
+                        if len(r2.con_route.roots) > 1:
+                            cr = r2.con_route.roots[-1]
+                            if cr not in self.routes:
+                                self.routes.add(cr)
+                                if cr.last_update and self.update and cr.last_update[0] >= self.update:
+                                    self.log_entries.append("Route updated " + cr.last_update[0] + ": " + cr.readable_name())
                     continue
                 if r1.system.devel():
                     self.log_entries.append("Ignoring line matching highway in system in development: " + line)
