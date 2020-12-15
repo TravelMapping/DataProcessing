@@ -3,6 +3,7 @@
 # script to run check-only site update on local data
 #
 # Jim Teresco, Sun May 20 16:27:18 EDT 2018
+# Eric Bryant, Tue Dec 15 03:30:28 EST 2020
 #
 set -e
 install=1
@@ -38,7 +39,10 @@ fi
 echo "$0: creating directories"
 mkdir -p $logdir/users $statdir
 
-echo "$0: launching siteupdate.py"
-PYTHONIOENCODING='utf-8' ./siteupdate.py -e -l $logdir -c $statdir | tee $logdir/siteupdate.log 2>&1 || exit 1
+echo "$0: Building latest site update program..."
+make siteupdateST
+
+echo "$0: launching siteupdateST"
+./siteupdateST -e -l $logdir -c $statdir | tee $logdir/siteupdate.log 2>&1 || exit 1
 date
 echo "$0: complete"
