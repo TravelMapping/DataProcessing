@@ -1,3 +1,4 @@
+#include "../DBFieldLength/DBFieldLength.h"
 #include "../../functions/split.h"
 
 HighwaySystem::HighwaySystem(

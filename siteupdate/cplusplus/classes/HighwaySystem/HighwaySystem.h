@@ -1,3 +1,10 @@
+class ConnectedRoute;
+class ErrorList;
+class Route;
+#include <mutex>
+#include <unordered_map>
+#include <vector>
+
 class HighwaySystem
 {	/* This class encapsulates the contents of one .csv file
 	that represents the collection of highways within a system.

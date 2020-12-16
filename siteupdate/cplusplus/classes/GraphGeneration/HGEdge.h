@@ -1,3 +1,7 @@
+class HighwayGraph;
+class HighwaySegment;
+class TravelerList;
+
 class HGEdge
 {   /* This class encapsulates information needed for a highway graph
     edge that can incorporate intermediate points.

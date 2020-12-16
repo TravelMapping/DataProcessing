@@ -1,3 +1,8 @@
+class Route;
+#include <deque>
+#include <forward_list>
+#include <vector>
+
 class Waypoint
 {   /* This class encapsulates the information about a single waypoint
     from a .wpt file.

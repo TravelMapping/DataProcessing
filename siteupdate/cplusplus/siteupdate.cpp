@@ -16,7 +16,6 @@ This module defines classes to represent the contents of a
 class ErrorList;
 class Waypoint;
 class HighwayGraph;
-class HGVertex;
 #define pi 3.141592653589793238
 #include <cmath>
 #include <cstring>
@@ -35,6 +34,8 @@ class HGVertex;
 #include "classes/DatacheckEntry/DatacheckEntry.h"
 #include "classes/ElapsedTime/ElapsedTime.h"
 #include "classes/ErrorList/ErrorList.h"
+#include "classes/GraphGeneration/HGVertex.h"
+#include "classes/Region/Region.h"
 #include "classes/Waypoint/Waypoint.h"
 #include "classes/HighwaySegment/HighwaySegment.h"
 #include "classes/HighwaySystem/HighwaySystem.h"
@@ -44,7 +45,6 @@ class HGVertex;
 #include "functions/crawl_hwy_data.h"
 #include "functions/operators.cpp"
 #include "functions/list_contains.cpp"
-#include "classes/Region.cpp"
 #include "classes/HighwaySystem/HighwaySystem.cpp"
 #include "classes/Waypoint/Waypoint.cpp"
 #include "classes/WaypointQuadtree/WaypointQuadtree.cpp"
@@ -52,7 +52,6 @@ class HGVertex;
 #include "classes/ConnectedRoute/ConnectedRoute.cpp"
 #include "classes/TravelerList/TravelerList.cpp"
 #include "classes/HighwaySegment/HighwaySegment.cpp"
-#include "classes/GraphGeneration/HGVertex.cpp"
 #include "classes/GraphGeneration/GraphListEntry.cpp"
 #include "classes/GraphGeneration/HighwayGraph.cpp"
 #include "classes/GraphGeneration/HGEdge.cpp"

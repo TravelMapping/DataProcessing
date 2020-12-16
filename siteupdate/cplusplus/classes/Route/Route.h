@@ -7,6 +7,7 @@ class TravelerList;
 class Waypoint;
 class WaypointQuadtree;
 #include <deque>
+#include <mutex>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>

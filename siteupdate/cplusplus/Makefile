@@ -9,6 +9,8 @@ siteupdate : \
   classes/DBFieldLength/DBFieldLength.o \
   classes/ElapsedTime/ElapsedTime.o \
   classes/ErrorList/ErrorList.o \
+  classes/GraphGeneration/HGVertex.o \
+  classes/Region/Region.o \
   functions/crawl_hwy_data.o \
   functions/double_quotes.o \
   functions/format_clinched_mi.o \
@@ -23,6 +25,8 @@ siteupdate : \
 	  classes/DBFieldLength/DBFieldLength.o \
 	  classes/ElapsedTime/ElapsedTime.o \
 	  classes/ErrorList/ErrorList.o \
+	  classes/GraphGeneration/HGVertex.o \
+	  classes/Region/Region.o \
 	  functions/crawl_hwy_data.o \
 	  functions/double_quotes.o \
 	  functions/format_clinched_mi.o \
@@ -34,13 +38,14 @@ siteupdate : \
 siteupdateST : \
   siteupdate.cpp \
   */*/*.h */*/*.cpp */*/*/*.cpp \
-  classes/*.cpp \
   classes/Arguments/Arguments.o \
   classes/ClinchedDBValues/ClinchedDBValues.o \
   classes/DatacheckEntry/DatacheckEntry.o \
   classes/DBFieldLength/DBFieldLength.o \
   classes/ElapsedTime/ElapsedTime.o \
   classes/ErrorList/ErrorList.o \
+  classes/GraphGeneration/HGVertex.o \
+  classes/Region/Region.o \
   functions/*.cpp \
   functions/crawl_hwy_data.o \
   functions/double_quotes.o \
@@ -57,6 +62,8 @@ siteupdateST : \
 	  classes/DBFieldLength/DBFieldLength.o \
 	  classes/ElapsedTime/ElapsedTime.o \
 	  classes/ErrorList/ErrorList.o \
+	  classes/GraphGeneration/HGVertex.o \
+	  classes/Region/Region.o \
 	  functions/crawl_hwy_data.o \
 	  functions/double_quotes.o \
 	  functions/format_clinched_mi.o \
@@ -82,6 +89,12 @@ classes/ElapsedTime/ElapsedTime.o : classes/ElapsedTime/ElapsedTime.h classes/El
 
 classes/ErrorList/ErrorList.o : classes/ErrorList/ErrorList.h classes/ErrorList/ErrorList.cpp
 	g++ -std=c++11 -o classes/ErrorList/ErrorList.o -c classes/ErrorList/ErrorList.cpp
+
+classes/GraphGeneration/HGVertex.o : classes/GraphGeneration/HGVertex.h classes/GraphGeneration/HGVertex.cpp
+	g++ -std=c++11 -o classes/GraphGeneration/HGVertex.o -c classes/GraphGeneration/HGVertex.cpp
+
+classes/Region/Region.o : classes/Region/Region.h classes/Region/Region.cpp
+	g++ -std=c++11 -o classes/Region/Region.o -c classes/Region/Region.cpp
 
 functions/crawl_hwy_data.o : functions/crawl_hwy_data.h functions/crawl_hwy_data.cpp
 	g++ -std=c++11 -o functions/crawl_hwy_data.o -c functions/crawl_hwy_data.cpp
