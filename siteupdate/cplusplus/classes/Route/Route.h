@@ -91,8 +91,9 @@ class Route
 	double clinched_by_traveler(TravelerList *);
 	//std::string list_line(int, int);
 	void write_nmp_merged(std::string);
-	inline void store_traveled_segments(TravelerList*, std::ofstream &, unsigned int, unsigned int);
-	inline void compute_stats_r();
-	inline Waypoint* con_beg();
-	inline Waypoint* con_end();
+	void store_traveled_segments(TravelerList*, std::ofstream &, unsigned int, unsigned int);
+	void compute_stats_r();
+	Waypoint* con_beg();
+	Waypoint* con_end();
 };
+bool sort_route_updates_oldest(const Route*, const Route*);

@@ -1,3 +1,17 @@
+#include "TravelerList.h"
+#include "../Arguments/Arguments.h"
+#include "../ConnectedRoute/ConnectedRoute.h"
+#include "../DBFieldLength/DBFieldLength.h"
+#include "../ErrorList/ErrorList.h"
+#include "../HighwaySegment/HighwaySegment.h"
+#include "../HighwaySystem/HighwaySystem.h"
+#include "../Region/Region.h"
+#include "../Route/Route.h"
+#include "../Waypoint/Waypoint.h"
+#include "../../functions/upper.h"
+#include <cstring>
+#include <fstream>
+
 TravelerList::TravelerList(std::string travname, std::string* updarr[], ErrorList *el, Arguments *args)
 {	active_systems_traveled = 0;
 	active_systems_clinched = 0;

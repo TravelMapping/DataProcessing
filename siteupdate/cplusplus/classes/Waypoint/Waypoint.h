@@ -44,21 +44,21 @@ class Waypoint
 	bool label_references_route(Route *);
 
 	// Datacheck
-	inline void distance_update(char *, double &, Waypoint *);
-	inline void duplicate_coords(std::unordered_set<Waypoint*> &, char *);
-	inline void label_invalid_char();
-	inline bool label_too_long();
-	inline void out_of_bounds(char *);
+	void distance_update(char *, double &, Waypoint *);
+	void duplicate_coords(std::unordered_set<Waypoint*> &, char *);
+	void label_invalid_char();
+	bool label_too_long();
+	void out_of_bounds(char *);
 	// checks for visible points
-	inline void bus_with_i();
-	inline void interstate_no_hyphen();
-	inline void label_invalid_ends();
-	inline void label_looks_hidden();
-	inline void label_parens();
-	inline void label_selfref(const char *);
-	inline void label_slashes(const char *);
-	inline void lacks_generic();
-	inline void underscore_datachecks(const char *);
-	inline void us_letter();
-	inline void visible_distance(char *, double &, Waypoint *&);
+	void bus_with_i();
+	void interstate_no_hyphen();
+	void label_invalid_ends();
+	void label_looks_hidden();
+	void label_parens();
+	void label_selfref(const char *);
+	void label_slashes(const char *);
+	void lacks_generic();
+	void underscore_datachecks(const char *);
+	void us_letter();
+	void visible_distance(char *, double &, Waypoint *&);
 };

@@ -1,3 +1,7 @@
+#include "../DatacheckEntry/DatacheckEntry.h"
+#include "../WaypointQuadtree/WaypointQuadtree.h"
+#include <fstream>
+
 void Route::read_wpt
 (	WaypointQuadtree *all_waypoints, ErrorList *el, std::string path,
 	bool usa_flag, std::unordered_set<std::string> *all_wpt_files

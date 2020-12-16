@@ -1,8 +1,12 @@
 class ConnectedRoute;
 class ErrorList;
+class HGVertex;
+class Region;
 class Route;
+#include <list>
 #include <mutex>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 class HighwaySystem
@@ -42,10 +46,10 @@ class HighwaySystem
 		      std::vector<std::pair<std::string,std::string>> &,
 		      std::unordered_map<std::string, Region*> &);
 
-	inline bool active();			// Return whether this is an active system
-	inline bool preview();			// Return whether this is a preview system
-	inline bool active_or_preview();	// Return whether this is an active or preview system
-	inline bool devel();			// Return whether this is a development system
-	inline double total_mileage();		// Return total system mileage across all regions
-	inline std::string level_name();	// return full "active" / "preview" / "devel" string"
+	bool active();			// Return whether this is an active system
+	bool preview();			// Return whether this is a preview system
+	bool active_or_preview();	// Return whether this is an active or preview system
+	bool devel();			// Return whether this is a development system
+	double total_mileage();		// Return total system mileage across all regions
+	std::string level_name();	// return full "active" / "preview" / "devel" string"
 };

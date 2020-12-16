@@ -1,3 +1,4 @@
+#include "../ClinchedDBValues/ClinchedDBValues.h"
 #include "../../functions/format_clinched_mi.h"
 
 void TravelerList::userlog

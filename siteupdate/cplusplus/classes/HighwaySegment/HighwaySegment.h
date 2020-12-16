@@ -1,3 +1,6 @@
+class Waypoint;
+#include <list>
+
 class HighwaySegment
 {   /* This class represents one highway segment: the connection between two
     Waypoints connected by one or more routes */

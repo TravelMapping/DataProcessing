@@ -1,3 +1,16 @@
+class Arguments;
+class ClinchedDBValues;
+class ErrorList;
+class HighwaySegment;
+class HighwaySystem;
+class Region;
+class Route;
+#include <iostream>
+#include <list>
+#include <mutex>
+#include <unordered_map>
+#include <unordered_set>
+
 class TravelerList
 {   /* This class encapsulates the contents of one .list file
     that represents the travels of one individual user.
@@ -32,3 +45,5 @@ class TravelerList
 	double system_region_miles(HighwaySystem *);
 	void userlog(ClinchedDBValues *, const double, const double, std::list<HighwaySystem*>*, std::string path);
 };
+
+bool sort_travelers_by_name(const TravelerList*, const TravelerList*);

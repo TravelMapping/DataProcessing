@@ -15,17 +15,13 @@ This module defines classes to represent the contents of a
 
 class ErrorList;
 class Waypoint;
-class HighwayGraph;
 #define pi 3.141592653589793238
 #include <cmath>
 #include <cstring>
-#include <deque>
 #include <dirent.h>
 #include <forward_list>
 #include <fstream>
 #include <thread>
-#include <unordered_map>
-#include <unordered_set>
 #include "classes/Arguments/Arguments.h"
 #include "classes/ClinchedDBValues/ClinchedDBValues.h"
 #include "classes/WaypointQuadtree/WaypointQuadtree.h"
@@ -45,12 +41,10 @@ class HighwayGraph;
 #include "functions/crawl_hwy_data.h"
 #include "functions/operators.cpp"
 #include "functions/list_contains.cpp"
+#include "functions/upper.h"
 #include "classes/HighwaySystem/HighwaySystem.cpp"
 #include "classes/Waypoint/Waypoint.cpp"
 #include "classes/WaypointQuadtree/WaypointQuadtree.cpp"
-#include "classes/Route/Route.cpp"
-#include "classes/ConnectedRoute/ConnectedRoute.cpp"
-#include "classes/TravelerList/TravelerList.cpp"
 #include "classes/HighwaySegment/HighwaySegment.cpp"
 #include "classes/GraphGeneration/GraphListEntry.cpp"
 #include "classes/GraphGeneration/HighwayGraph.cpp"

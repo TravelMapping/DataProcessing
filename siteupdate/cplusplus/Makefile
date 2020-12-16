@@ -5,12 +5,15 @@ siteupdate : \
   */*/*.h */*/*.cpp */*/*/*.cpp \
   classes/Arguments/Arguments.o \
   classes/ClinchedDBValues/ClinchedDBValues.o \
+  classes/ConnectedRoute/ConnectedRoute.o \
   classes/DatacheckEntry/DatacheckEntry.o \
   classes/DBFieldLength/DBFieldLength.o \
   classes/ElapsedTime/ElapsedTime.o \
   classes/ErrorList/ErrorList.o \
   classes/GraphGeneration/HGVertex.o \
   classes/Region/Region.o \
+  classes/Route/Route.o \
+  classes/TravelerList/TravelerList.o \
   functions/crawl_hwy_data.o \
   functions/double_quotes.o \
   functions/format_clinched_mi.o \
@@ -21,12 +24,15 @@ siteupdate : \
 	g++ -std=c++11 -pthread -D threading_enabled -o siteupdate siteupdate.cpp \
 	  classes/Arguments/Arguments.o \
 	  classes/ClinchedDBValues/ClinchedDBValues.o \
+	  classes/ConnectedRoute/ConnectedRoute.o \
 	  classes/DatacheckEntry/DatacheckEntry.o \
 	  classes/DBFieldLength/DBFieldLength.o \
 	  classes/ElapsedTime/ElapsedTime.o \
 	  classes/ErrorList/ErrorList.o \
 	  classes/GraphGeneration/HGVertex.o \
 	  classes/Region/Region.o \
+	  classes/Route/Route.o \
+	  classes/TravelerList/TravelerList.o \
 	  functions/crawl_hwy_data.o \
 	  functions/double_quotes.o \
 	  functions/format_clinched_mi.o \
@@ -40,12 +46,15 @@ siteupdateST : \
   */*/*.h */*/*.cpp */*/*/*.cpp \
   classes/Arguments/Arguments.o \
   classes/ClinchedDBValues/ClinchedDBValues.o \
+  classes/ConnectedRoute/ConnectedRoute.o \
   classes/DatacheckEntry/DatacheckEntry.o \
   classes/DBFieldLength/DBFieldLength.o \
   classes/ElapsedTime/ElapsedTime.o \
   classes/ErrorList/ErrorList.o \
   classes/GraphGeneration/HGVertex.o \
   classes/Region/Region.o \
+  classes/Route/Route.o \
+  classes/TravelerList/TravelerList.o \
   functions/*.cpp \
   functions/crawl_hwy_data.o \
   functions/double_quotes.o \
@@ -58,12 +67,15 @@ siteupdateST : \
 	g++ -std=c++11 -o siteupdateST siteupdate.cpp \
 	  classes/Arguments/Arguments.o \
 	  classes/ClinchedDBValues/ClinchedDBValues.o \
+	  classes/ConnectedRoute/ConnectedRoute.o \
 	  classes/DatacheckEntry/DatacheckEntry.o \
 	  classes/DBFieldLength/DBFieldLength.o \
 	  classes/ElapsedTime/ElapsedTime.o \
 	  classes/ErrorList/ErrorList.o \
 	  classes/GraphGeneration/HGVertex.o \
 	  classes/Region/Region.o \
+	  classes/Route/Route.o \
+	  classes/TravelerList/TravelerList.o \
 	  functions/crawl_hwy_data.o \
 	  functions/double_quotes.o \
 	  functions/format_clinched_mi.o \
@@ -77,6 +89,9 @@ classes/Arguments/Arguments.o : classes/Arguments/Arguments.h classes/Arguments/
 
 classes/ClinchedDBValues/ClinchedDBValues.o : classes/ClinchedDBValues/ClinchedDBValues.h classes/ClinchedDBValues/ClinchedDBValues.cpp
 	g++ -std=c++11 -o classes/ClinchedDBValues/ClinchedDBValues.o -c classes/ClinchedDBValues/ClinchedDBValues.cpp
+
+classes/ConnectedRoute/ConnectedRoute.o : classes/ConnectedRoute/ConnectedRoute.h classes/ConnectedRoute/ConnectedRoute.cpp
+	g++ -std=c++11 -o classes/ConnectedRoute/ConnectedRoute.o -c classes/ConnectedRoute/ConnectedRoute.cpp
 
 classes/DatacheckEntry/DatacheckEntry.o : classes/DatacheckEntry/DatacheckEntry.h classes/DatacheckEntry/DatacheckEntry.cpp
 	g++ -std=c++11 -o classes/DatacheckEntry/DatacheckEntry.o -c classes/DatacheckEntry/DatacheckEntry.cpp
@@ -95,6 +110,14 @@ classes/GraphGeneration/HGVertex.o : classes/GraphGeneration/HGVertex.h classes/
 
 classes/Region/Region.o : classes/Region/Region.h classes/Region/Region.cpp
 	g++ -std=c++11 -o classes/Region/Region.o -c classes/Region/Region.cpp
+
+classes/Route/Route.o : classes/Route/Route.h classes/Route/Route.cpp classes/Route/compute_stats_r.cpp classes/Route/read_wpt.cpp
+	g++ -std=c++11 -o classes/Route/Route.o -c classes/Route/Route.cpp
+
+classes/TravelerList/TravelerList.o : classes/TravelerList/TravelerList.h classes/TravelerList/TravelerList.cpp \
+  classes/TravelerList/mark_chopped_route_segments.cpp classes/TravelerList/mark_connected_route_segments.cpp \
+  classes/TravelerList/splitregion.cpp classes/TravelerList/userlog.cpp
+	g++ -std=c++11 -o classes/TravelerList/TravelerList.o -c classes/TravelerList/TravelerList.cpp
 
 functions/crawl_hwy_data.o : functions/crawl_hwy_data.h functions/crawl_hwy_data.cpp
 	g++ -std=c++11 -o functions/crawl_hwy_data.o -c functions/crawl_hwy_data.cpp

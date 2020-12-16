@@ -1,3 +1,5 @@
+#include "double_quotes.h"
+
 void sqlfile1
     (	ElapsedTime *et,
 	Arguments *args,
