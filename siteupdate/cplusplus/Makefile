@@ -5,6 +5,7 @@ siteupdate : \
   */*/*.h */*/*.cpp */*/*/*.cpp \
   classes/Arguments/Arguments.o \
   classes/ClinchedDBValues/ClinchedDBValues.o \
+  classes/DatacheckEntry/DatacheckEntry.o \
   classes/DBFieldLength/DBFieldLength.o \
   classes/ElapsedTime/ElapsedTime.o \
   classes/ErrorList/ErrorList.o \
@@ -18,6 +19,7 @@ siteupdate : \
 	g++ -std=c++11 -pthread -D threading_enabled -o siteupdate siteupdate.cpp \
 	  classes/Arguments/Arguments.o \
 	  classes/ClinchedDBValues/ClinchedDBValues.o \
+	  classes/DatacheckEntry/DatacheckEntry.o \
 	  classes/DBFieldLength/DBFieldLength.o \
 	  classes/ElapsedTime/ElapsedTime.o \
 	  classes/ErrorList/ErrorList.o \
@@ -35,6 +37,7 @@ siteupdateST : \
   classes/*.cpp \
   classes/Arguments/Arguments.o \
   classes/ClinchedDBValues/ClinchedDBValues.o \
+  classes/DatacheckEntry/DatacheckEntry.o \
   classes/DBFieldLength/DBFieldLength.o \
   classes/ElapsedTime/ElapsedTime.o \
   classes/ErrorList/ErrorList.o \
@@ -50,6 +53,7 @@ siteupdateST : \
 	g++ -std=c++11 -o siteupdateST siteupdate.cpp \
 	  classes/Arguments/Arguments.o \
 	  classes/ClinchedDBValues/ClinchedDBValues.o \
+	  classes/DatacheckEntry/DatacheckEntry.o \
 	  classes/DBFieldLength/DBFieldLength.o \
 	  classes/ElapsedTime/ElapsedTime.o \
 	  classes/ErrorList/ErrorList.o \
@@ -66,6 +70,9 @@ classes/Arguments/Arguments.o : classes/Arguments/Arguments.h classes/Arguments/
 
 classes/ClinchedDBValues/ClinchedDBValues.o : classes/ClinchedDBValues/ClinchedDBValues.h classes/ClinchedDBValues/ClinchedDBValues.cpp
 	g++ -std=c++11 -o classes/ClinchedDBValues/ClinchedDBValues.o -c classes/ClinchedDBValues/ClinchedDBValues.cpp
+
+classes/DatacheckEntry/DatacheckEntry.o : classes/DatacheckEntry/DatacheckEntry.h classes/DatacheckEntry/DatacheckEntry.cpp
+	g++ -std=c++11 -o classes/DatacheckEntry/DatacheckEntry.o -c classes/DatacheckEntry/DatacheckEntry.cpp
 
 classes/DBFieldLength/DBFieldLength.o : classes/DBFieldLength/DBFieldLength.h classes/DBFieldLength/DBFieldLength.cpp
 	g++ -std=c++11 -o classes/DBFieldLength/DBFieldLength.o -c classes/DBFieldLength/DBFieldLength.cpp

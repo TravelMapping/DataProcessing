@@ -1,3 +1,16 @@
+class ConnectedRoute;
+class ErrorList;
+class HighwaySegment;
+class HighwaySystem;
+class Region;
+class TravelerList;
+class Waypoint;
+class WaypointQuadtree;
+#include <deque>
+#include <unordered_map>
+#include <unordered_set>
+#include <vector>
+
 class Route
 {   /* This class encapsulates the contents of one .csv file line
     that represents a highway within a system and the corresponding

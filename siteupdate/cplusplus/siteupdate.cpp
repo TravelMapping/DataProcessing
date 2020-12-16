@@ -15,11 +15,6 @@ This module defines classes to represent the contents of a
 
 class ErrorList;
 class Waypoint;
-class HighwaySegment;
-class ConnectedRoute;
-class HighwaySystem;
-class TravelerList;
-class Region;
 class HighwayGraph;
 class HGVertex;
 #define pi 3.141592653589793238
@@ -37,6 +32,7 @@ class HGVertex;
 #include "classes/WaypointQuadtree/WaypointQuadtree.h"
 #include "classes/Route/Route.h"
 #include "classes/ConnectedRoute/ConnectedRoute.h"
+#include "classes/DatacheckEntry/DatacheckEntry.h"
 #include "classes/ElapsedTime/ElapsedTime.h"
 #include "classes/ErrorList/ErrorList.h"
 #include "classes/Waypoint/Waypoint.h"
@@ -50,7 +46,6 @@ class HGVertex;
 #include "functions/list_contains.cpp"
 #include "classes/Region.cpp"
 #include "classes/HighwaySystem/HighwaySystem.cpp"
-#include "classes/DatacheckEntry.cpp"
 #include "classes/Waypoint/Waypoint.cpp"
 #include "classes/WaypointQuadtree/WaypointQuadtree.cpp"
 #include "classes/Route/Route.cpp"
