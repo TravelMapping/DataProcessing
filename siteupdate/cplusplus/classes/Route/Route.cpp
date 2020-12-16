@@ -241,3 +241,5 @@ bool sort_route_updates_oldest(const Route *r1, const Route *r2)
 	if (!p) return (*r1->last_update)[3] < (*r2->last_update)[3];
 		return p < 0;
 }
+
+#include "compute_stats_r.cpp"

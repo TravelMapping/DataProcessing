@@ -43,7 +43,7 @@ class Region
 	double active_only_mileage;
 	double active_preview_mileage;
 	double overall_mileage;
-	std::mutex *ao_mi_mtx, *ap_mi_mtx, *ov_mi_mtx;
+	std::mutex *mileage_mtx;
 	std::unordered_set<HGVertex*> vertices;
 	bool is_valid;
 
