@@ -40,7 +40,7 @@ echo "$0: creating directories"
 mkdir -p $logdir/users $statdir
 
 echo "$0: Building latest site update program..."
-make siteupdateST
+gmake siteupdateST
 
 echo "$0: launching siteupdateST"
 ./siteupdateST -e -l $logdir -c $statdir | tee $logdir/siteupdate.log 2>&1 || exit 1
