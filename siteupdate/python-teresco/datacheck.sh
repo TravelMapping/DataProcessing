@@ -12,9 +12,9 @@ if [ -d "$HOME/HighwayData" ]; then
 elif [ -d "$HOME/travelmapping/HighwayData" ]; then
     tmbase=$HOME/travelmapping
 elif [ -d "$HOME/TravelMapping/HighwayData" ]; then
-    tmbase=$HOME/travelmapping
+    tmbase=$HOME/TravelMapping
 elif [ -d "$HOME/tm/HighwayData" ]; then
-    tmbase=$HOME/travelmapping
+    tmbase=$HOME/tm
 else
     echo "$0: could not find HighwayData repository"
     exit 1
