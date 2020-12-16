@@ -409,8 +409,7 @@ void sqlfile2
     (	ElapsedTime *et,
 	Arguments *args,
 	std::list<std::array<std::string,3>> *graph_types,
-	std::vector<GraphListEntry> *graph_vector,
-	DatacheckEntryList *datacheckerrors
+	std::vector<GraphListEntry> *graph_vector
     )
      {	std::ofstream sqlfile(args->databasename+".sql", std::ios::app);
 
@@ -425,10 +424,10 @@ void sqlfile2
 		<< "), code VARCHAR(" << DBFieldLength::dcErrCode
 		<< "), value VARCHAR(" << DBFieldLength::dcErrValue
 		<< "), falsePositive BOOLEAN, FOREIGN KEY (route) REFERENCES routes(root));\n";
-	if (datacheckerrors->entries.size())
+	if (DatacheckEntry::errors.size())
 	{	sqlfile << "INSERT INTO datacheckErrors VALUES\n";
 		bool first = 1;
-		for (DatacheckEntry &d : datacheckerrors->entries)
+		for (DatacheckEntry &d : DatacheckEntry::errors)
 		{	if (!first) sqlfile << ',';
 			first = 0;
 			sqlfile << "('" << d.route->root << "',";

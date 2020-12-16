@@ -20,7 +20,6 @@ class ConnectedRoute;
 class HighwaySystem;
 class TravelerList;
 class Region;
-class DatacheckEntryList;
 class HighwayGraph;
 class HGVertex;
 #define pi 3.141592653589793238
@@ -52,7 +51,6 @@ class HGVertex;
 #include "classes/Region.cpp"
 #include "classes/HighwaySystem/HighwaySystem.cpp"
 #include "classes/DatacheckEntry.cpp"
-#include "classes/DatacheckEntryList.cpp"
 #include "classes/Waypoint/Waypoint.cpp"
 #include "classes/WaypointQuadtree/WaypointQuadtree.cpp"
 #include "classes/Route/Route.cpp"
@@ -235,9 +233,6 @@ int main(int argc, char *argv[])
 	     }
 	file.close();
 
-	DatacheckEntryList *datacheckerrors = new DatacheckEntryList;
-					      // deleted on termination of program
-
 	// For tracking whether any .wpt files are in the directory tree
 	// that do not have a .csv file entry that causes them to be
 	// read into the data
@@ -259,7 +254,7 @@ int main(int argc, char *argv[])
 	thread **thr = new thread*[args.numthreads];
 	for (unsigned int t = 0; t < args.numthreads; t++)
 		thr[t] = new thread(ReadWptThread, t, &highway_systems, &hs_it, &list_mtx, args.highwaydatapath+"/hwy_data",
-				    &el, &all_wpt_files, &all_waypoints, datacheckerrors);
+				    &el, &all_wpt_files, &all_waypoints);
 	for (unsigned int t = 0; t < args.numthreads; t++)
 		thr[t]->join();
 	for (unsigned int t = 0; t < args.numthreads; t++)
@@ -269,7 +264,7 @@ int main(int argc, char *argv[])
 	{	std::cout << h->systemname << std::flush;
 		bool usa_flag = h->country->first == "USA";
 		for (Route& r : h->route_list)
-			r.read_wpt(&all_waypoints, &el, args.highwaydatapath+"/hwy_data", usa_flag, datacheckerrors, &all_wpt_files);
+			r.read_wpt(&all_waypoints, &el, args.highwaydatapath+"/hwy_data", usa_flag, &all_wpt_files);
 		std::cout << "!" << std::endl;
 	}
       #endif
@@ -399,9 +394,9 @@ int main(int argc, char *argv[])
 				r.is_reversed = 1;
 			}
 			else
-			{	datacheckerrors->add(&r, r.con_beg()->label, "", "",
+			{	DatacheckEntry::add(&r, r.con_beg()->label, "", "",
 						     "DISCONNECTED_ROUTE", q->con_end()->root_at_label());
-				datacheckerrors->add(q, q->con_end()->label, "", "",
+				DatacheckEntry::add(q, q->con_end()->label, "", "",
 						     "DISCONNECTED_ROUTE", r.con_beg()->root_at_label());
 			}
 		}
@@ -416,11 +411,11 @@ int main(int argc, char *argv[])
 				upper_label = upper_label.substr(1);
 			// if primary label not duplicated, add to r.pri_label_hash
 			if (r.alt_label_hash.find(upper_label) != r.alt_label_hash.end())
-			{	datacheckerrors->add(&r, upper_label, "", "", "DUPLICATE_LABEL", "");
+			{	DatacheckEntry::add(&r, upper_label, "", "", "DUPLICATE_LABEL", "");
 				r.duplicate_labels.insert(upper_label);
 			}
 			else if (!r.pri_label_hash.insert(std::pair<std::string, unsigned int>(upper_label, index)).second)
-			{	datacheckerrors->add(&r, upper_label, "", "", "DUPLICATE_LABEL", "");
+			{	DatacheckEntry::add(&r, upper_label, "", "", "DUPLICATE_LABEL", "");
 				r.duplicate_labels.insert(upper_label);
 			}
 			for (std::string& a : w->alt_labels)
@@ -431,11 +426,11 @@ int main(int argc, char *argv[])
 				r.unused_alt_labels.insert(a);
 				// create label->index hashes and check if AltLabels duplicated
 				if (r.pri_label_hash.find(a) != r.pri_label_hash.end())
-				{	datacheckerrors->add(&r, a, "", "", "DUPLICATE_LABEL", "");
+				{	DatacheckEntry::add(&r, a, "", "", "DUPLICATE_LABEL", "");
 					r.duplicate_labels.insert(a);
 				}
 				else if (!r.alt_label_hash.insert(std::pair<std::string, unsigned int>(a, index)).second)
-				{	datacheckerrors->add(&r, a, "", "", "DUPLICATE_LABEL", "");
+				{	DatacheckEntry::add(&r, a, "", "", "DUPLICATE_LABEL", "");
 					r.duplicate_labels.insert(a);
 				}
 			}
@@ -908,14 +903,14 @@ int main(int argc, char *argv[])
 	#include "tasks/graph_generation.cpp"
 
 	// now mark false positives
-	datacheckerrors->entries.sort();
+	DatacheckEntry::errors.sort();
 	cout << et.et() << "Marking datacheck false positives." << flush;
 	ofstream fpfile(args.logfilepath+"/nearmatchfps.log");
 	timestamp = time(0);
 	fpfile << "Log file created at: " << ctime(&timestamp);
 	unsigned int counter = 0;
 	unsigned int fpcount = 0;
-	for (DatacheckEntry& d : datacheckerrors->entries)
+	for (DatacheckEntry& d : DatacheckEntry::errors)
 	{	//cout << "Checking: " << d->str() << endl;
 		counter++;
 		if (counter % 1000 == 0) cout << '.' << flush;
@@ -935,7 +930,7 @@ int main(int argc, char *argv[])
 	}
 	fpfile.close();
 	cout << '!' << endl;
-	cout << et.et() << "Found " << datacheckerrors->entries.size() << " datacheck errors and matched " << fpcount << " FP entries." << endl;
+	cout << et.et() << "Found " << DatacheckEntry::errors.size() << " datacheck errors and matched " << fpcount << " FP entries." << endl;
 
 	// write log of unmatched false positives from the datacheckfps.csv
 	cout << et.et() << "Writing log of unmatched datacheck FP entries." << endl;
@@ -955,8 +950,8 @@ int main(int argc, char *argv[])
 	logfile << "Datacheck errors that have been flagged as false positives are not included.\n";
 	logfile << "These entries should be in a format ready to paste into datacheckfps.csv.\n";
 	logfile << "Root;Waypoint1;Waypoint2;Waypoint3;Error;Info\n";
-	if (datacheckerrors->entries.empty()) logfile << "No datacheck errors found.\n";
-	else	for (DatacheckEntry &d : datacheckerrors->entries)
+	if (DatacheckEntry::errors.empty()) logfile << "No datacheck errors found.\n";
+	else	for (DatacheckEntry &d : DatacheckEntry::errors)
 		  if (!d.fp) logfile << d.str() << '\n';
 	logfile.close();
 
@@ -970,7 +965,7 @@ int main(int argc, char *argv[])
 		std::cout << et.et() << "Writing database file " << args.databasename << ".sql.\n" << std::flush;
 		sqlfile1(&et, &args, &all_regions, &continents, &countries, &highway_systems, &traveler_lists, &clin_db_val, &updates, &systemupdates);
 	      #endif
-		sqlfile2(&et, &args, &graph_types, &graph_vector, datacheckerrors);
+		sqlfile2(&et, &args, &graph_types, &graph_vector);
 	     }
 
 	// See if we have any errors that should be fatal to the site update process
