@@ -10,7 +10,6 @@ class TravelerList
     start_waypoint end_waypoint
     */
 	public:
-	std::mutex ap_mi_mtx, ao_mi_mtx, sr_mi_mtx;
 	std::unordered_set<HighwaySegment*> clinched_segments;
 	std::string traveler_name;
 	std::string *update;
