@@ -13,12 +13,8 @@ This module defines classes to represent the contents of a
 .wpt file that lists the waypoints for a given highway.
 */
 
-class Waypoint;
-#define pi 3.141592653589793238
-#include <cmath>
 #include <cstring>
 #include <dirent.h>
-#include <fstream>
 #include <thread>
 #include "classes/Arguments/Arguments.h"
 #include "classes/ClinchedDBValues/ClinchedDBValues.h"
@@ -32,6 +28,7 @@ class Waypoint;
 #include "classes/GraphGeneration/HighwayGraph.h"
 #include "classes/Region/Region.h"
 #include "classes/Waypoint/Waypoint.h"
+#include "classes/WaypointQuadtree/WaypointQuadtree.h"
 #include "classes/HighwaySegment/HighwaySegment.h"
 #include "classes/HighwaySystem/HighwaySystem.h"
 #include "classes/TravelerList/TravelerList.h"
@@ -42,8 +39,6 @@ class Waypoint;
 #include "functions/upper.h"
 #include "templates/contains.cpp"
 #include "classes/HighwaySystem/HighwaySystem.cpp"
-#include "classes/Waypoint/Waypoint.cpp"
-#include "classes/WaypointQuadtree/WaypointQuadtree.cpp"
 #include "threads/ReadWptThread.cpp"
 #include "threads/NmpSearchThread.cpp"
 #include "threads/NmpMergedThread.cpp"

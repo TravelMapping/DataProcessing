@@ -1,10 +1,11 @@
 class Route;
 #include <deque>
 #include <forward_list>
+#include <fstream>
+#include <list>
+#include <string>
+#include <unordered_set>
 #include <vector>
-
-bool sort_root_at_label(Waypoint*, Waypoint*);
-bool waypoint_simplification_sort(Waypoint*, Waypoint*);
 
 class Waypoint
 {   /* This class encapsulates the information about a single waypoint
@@ -65,3 +66,6 @@ class Waypoint
 	void us_letter();
 	void visible_distance(char *, double &, Waypoint *&);
 };
+
+bool sort_root_at_label(Waypoint*, Waypoint*);
+bool waypoint_simplification_sort(Waypoint*, Waypoint*);

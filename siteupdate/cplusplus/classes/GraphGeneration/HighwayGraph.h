@@ -6,7 +6,6 @@ class HighwaySystem;
 class TravelerList;
 class Waypoint;
 class WaypointQuadtree;
-#include "../WaypointQuadtree/WaypointQuadtree.h"
 #include <list>
 #include <unordered_map>
 #include <unordered_set>

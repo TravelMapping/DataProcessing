@@ -1,3 +1,8 @@
+#include "../Waypoint.h"
+#include "../../Route/Route.h"
+#include "../../../templates/contains.cpp"
+#include <cstring>
+
 std::string Waypoint::canonical_waypoint_name(std::list<std::string> &log, std::unordered_set<std::string> &vertex_names)
 {	/* Best name we can come up with for this point bringing in
 	information from itself and colocated points (if active/preview)

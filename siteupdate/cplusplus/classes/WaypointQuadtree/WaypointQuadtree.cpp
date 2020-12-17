@@ -1,3 +1,10 @@
+#include "WaypointQuadtree.h"
+#include "../ErrorList/ErrorList.h"
+#include "../HighwaySystem/HighwaySystem.h"
+#include "../Route/Route.h"
+#include "../Waypoint/Waypoint.h"
+#include "../../templates/contains.cpp"
+
 inline bool WaypointQuadtree::WaypointQuadtree::refined()
 {	return nw_child;
 }

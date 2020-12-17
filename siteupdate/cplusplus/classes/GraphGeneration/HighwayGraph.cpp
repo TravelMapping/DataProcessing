@@ -11,6 +11,7 @@
 #include "../Route/Route.h"
 #include "../TravelerList/TravelerList.h"
 #include "../Waypoint/Waypoint.h"
+#include "../WaypointQuadtree/WaypointQuadtree.h"
 #include "../../templates/contains.cpp"
 #include "../../templates/set_intersection.cpp"
 #include <fstream>

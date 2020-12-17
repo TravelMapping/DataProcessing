@@ -1,4 +1,12 @@
+#include "Waypoint.h"
+#include "../DatacheckEntry/DatacheckEntry.h"
+#include "../DBFieldLength/DBFieldLength.h"
+#include "../HighwaySystem/HighwaySystem.h"
+#include "../Route/Route.h"
 #include "../../functions/valid_num_str.h"
+#include <cmath>
+#include <cstring>
+#define pi 3.141592653589793238
 
 bool sort_root_at_label(Waypoint *w1, Waypoint *w2)
 {	return w1->root_at_label() < w2->root_at_label();
@@ -183,8 +191,6 @@ double Waypoint::angle(Waypoint *pred, Waypoint *succ)
 	)
 	*180/pi;
 }
-
-#include "canonical_waypoint_name/canonical_waypoint_name.cpp"
 
 std::string Waypoint::simple_waypoint_name()
 {	/* Failsafe name for a point, simply the string of route name @
@@ -549,3 +555,5 @@ void Waypoint::visible_distance(char *fstr, double &vis_dist, Waypoint *&last_vi
 	last_visible = this;
 	vis_dist = 0;
 }
+
+#undef pi

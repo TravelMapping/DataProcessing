@@ -80,7 +80,7 @@ HighwaySystem::HighwaySystem(
 }
 
 /* Return whether this is an active system */
-inline bool HighwaySystem::active()
+bool HighwaySystem::active()
 {	return level == 'a';
 }
 

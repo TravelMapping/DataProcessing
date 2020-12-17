@@ -19,6 +19,9 @@ siteupdate : \
   classes/Region/Region.o \
   classes/Route/Route.o \
   classes/TravelerList/TravelerList.o \
+  classes/Waypoint/Waypoint.o \
+  classes/Waypoint/canonical_waypoint_name/canonical_waypoint_name.o \
+  classes/WaypointQuadtree/WaypointQuadtree.o \
   functions/crawl_hwy_data.o \
   functions/double_quotes.o \
   functions/format_clinched_mi.o \
@@ -44,6 +47,9 @@ siteupdate : \
 	  classes/Region/Region.o \
 	  classes/Route/Route.o \
 	  classes/TravelerList/TravelerList.o \
+	  classes/Waypoint/Waypoint.o \
+	  classes/Waypoint/canonical_waypoint_name/canonical_waypoint_name.o \
+	  classes/WaypointQuadtree/WaypointQuadtree.o \
 	  functions/crawl_hwy_data.o \
 	  functions/double_quotes.o \
 	  functions/format_clinched_mi.o \
@@ -72,6 +78,9 @@ siteupdateST : \
   classes/Region/Region.o \
   classes/Route/Route.o \
   classes/TravelerList/TravelerList.o \
+  classes/Waypoint/Waypoint.o \
+  classes/Waypoint/canonical_waypoint_name/canonical_waypoint_name.o \
+  classes/WaypointQuadtree/WaypointQuadtree.o \
   functions/*.cpp \
   functions/crawl_hwy_data.o \
   functions/double_quotes.o \
@@ -99,6 +108,9 @@ siteupdateST : \
 	  classes/Region/Region.o \
 	  classes/Route/Route.o \
 	  classes/TravelerList/TravelerList.o \
+	  classes/Waypoint/Waypoint.o \
+	  classes/Waypoint/canonical_waypoint_name/canonical_waypoint_name.o \
+	  classes/WaypointQuadtree/WaypointQuadtree.o \
 	  functions/crawl_hwy_data.o \
 	  functions/double_quotes.o \
 	  functions/format_clinched_mi.o \
@@ -240,6 +252,28 @@ classes/TravelerList/TravelerList.o : classes/TravelerList/TravelerList.h classe
   classes/Waypoint/Waypoint.h \
   functions/upper.h
 	g++ -std=c++11 -o classes/TravelerList/TravelerList.o -c classes/TravelerList/TravelerList.cpp
+
+classes/Waypoint/Waypoint.o : classes/Waypoint/Waypoint.h classes/Waypoint/Waypoint.cpp \
+  classes/DatacheckEntry/DatacheckEntry.h \
+  classes/DBFieldLength/DBFieldLength.h \
+  classes/HighwaySystem/HighwaySystem.h \
+  classes/Route/Route.h \
+  functions/valid_num_str.h
+	g++ -std=c++11 -o classes/Waypoint/Waypoint.o -c classes/Waypoint/Waypoint.cpp
+
+classes/Waypoint/canonical_waypoint_name/canonical_waypoint_name.o : classes/Waypoint/canonical_waypoint_name/canonical_waypoint_name.cpp \
+  classes/Waypoint/Waypoint.h \
+  classes/Route/Route.h \
+  templates/contains.cpp
+	g++ -std=c++11 -o classes/Waypoint/canonical_waypoint_name/canonical_waypoint_name.o -c classes/Waypoint/canonical_waypoint_name/canonical_waypoint_name.cpp
+
+classes/WaypointQuadtree/WaypointQuadtree.o : classes/WaypointQuadtree/WaypointQuadtree.h classes/WaypointQuadtree/WaypointQuadtree.cpp \
+  classes/ErrorList/ErrorList.h \
+  classes/HighwaySystem/HighwaySystem.h \
+  classes/Route/Route.h \
+  classes/Waypoint/Waypoint.h \
+  templates/contains.cpp
+	g++ -std=c++11 -o classes/WaypointQuadtree/WaypointQuadtree.o -c classes/WaypointQuadtree/WaypointQuadtree.cpp
 
 functions/crawl_hwy_data.o : functions/crawl_hwy_data.h functions/crawl_hwy_data.cpp
 	g++ -std=c++11 -o functions/crawl_hwy_data.o -c functions/crawl_hwy_data.cpp

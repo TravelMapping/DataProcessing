@@ -3,6 +3,7 @@
 #include "HGVertex.h"
 #include "HighwayGraph.h"
 #include "../Waypoint/Waypoint.h"
+#include "../WaypointQuadtree/WaypointQuadtree.h"
 #include <cmath>
 #define pi 3.141592653589793238
 
