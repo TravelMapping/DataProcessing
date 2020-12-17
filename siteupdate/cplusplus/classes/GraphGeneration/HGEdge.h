@@ -1,7 +1,9 @@
+class HGVertex;
 class HighwayGraph;
 class HighwaySegment;
 class HighwaySystem;
 class TravelerList;
+#include <iostream>
 #include <list>
 
 class HGEdge

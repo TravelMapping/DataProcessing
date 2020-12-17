@@ -11,6 +11,7 @@ siteupdate : \
   classes/ElapsedTime/ElapsedTime.o \
   classes/ErrorList/ErrorList.o \
   classes/GraphGeneration/GraphListEntry.o \
+  classes/GraphGeneration/HGEdge.o \
   classes/GraphGeneration/HGVertex.o \
   classes/GraphGeneration/HighwayGraphMT.o \
   classes/GraphGeneration/PlaceRadius.o \
@@ -34,6 +35,7 @@ siteupdate : \
 	  classes/ElapsedTime/ElapsedTime.o \
 	  classes/ErrorList/ErrorList.o \
 	  classes/GraphGeneration/GraphListEntry.o \
+	  classes/GraphGeneration/HGEdge.o \
 	  classes/GraphGeneration/HGVertex.o \
 	  classes/GraphGeneration/HighwayGraphMT.o \
 	  classes/GraphGeneration/PlaceRadius.o \
@@ -60,6 +62,7 @@ siteupdateST : \
   classes/ElapsedTime/ElapsedTime.o \
   classes/ErrorList/ErrorList.o \
   classes/GraphGeneration/GraphListEntry.o \
+  classes/GraphGeneration/HGEdge.o \
   classes/GraphGeneration/HGVertex.o \
   classes/GraphGeneration/HighwayGraphST.o \
   classes/GraphGeneration/PlaceRadius.o \
@@ -85,6 +88,7 @@ siteupdateST : \
 	  classes/ElapsedTime/ElapsedTime.o \
 	  classes/ErrorList/ErrorList.o \
 	  classes/GraphGeneration/GraphListEntry.o \
+	  classes/GraphGeneration/HGEdge.o \
 	  classes/GraphGeneration/HGVertex.o \
 	  classes/GraphGeneration/HighwayGraphST.o \
 	  classes/GraphGeneration/PlaceRadius.o \
@@ -134,6 +138,16 @@ classes/GraphGeneration/GraphListEntry.o : classes/GraphGeneration/GraphListEntr
   classes/HighwaySystem/HighwaySystem.h \
   classes/Region/Region.h
 	g++ -std=c++11 -o classes/GraphGeneration/GraphListEntry.o -c classes/GraphGeneration/GraphListEntry.cpp
+
+classes/GraphGeneration/HGEdge.o : classes/GraphGeneration/HGEdge.h classes/GraphGeneration/HGEdge.cpp \
+  classes/GraphGeneration/HGVertex.h \
+  classes/GraphGeneration/HighwayGraph.h \
+  classes/HighwaySegment/HighwaySegment.h \
+  classes/HighwaySystem/HighwaySystem.h \
+  classes/Route/Route.h \
+  classes/Waypoint/Waypoint.h \
+  templates/contains.cpp
+	g++ -std=c++11 -o classes/GraphGeneration/HGEdge.o -c classes/GraphGeneration/HGEdge.cpp
 
 classes/GraphGeneration/HGVertex.o : classes/GraphGeneration/HGVertex.h classes/GraphGeneration/HGVertex.cpp \
   classes/DatacheckEntry/DatacheckEntry.h \

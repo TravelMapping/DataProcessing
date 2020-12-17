@@ -95,7 +95,7 @@ inline bool HighwaySystem::active_or_preview()
 }
 
 /* Return whether this is a development system */
-inline bool HighwaySystem::devel()
+bool HighwaySystem::devel()
 {	return level == 'd';
 }
 

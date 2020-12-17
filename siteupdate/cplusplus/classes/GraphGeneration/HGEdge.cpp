@@ -1,3 +1,12 @@
+#include "HGEdge.h"
+#include "HGVertex.h"
+#include "HighwayGraph.h"
+#include "../HighwaySegment/HighwaySegment.h"
+#include "../HighwaySystem/HighwaySystem.h"
+#include "../Route/Route.h"
+#include "../Waypoint/Waypoint.h"
+#include "../../templates/contains.cpp"
+
 HGEdge::HGEdge(HighwaySegment *s, HighwayGraph *graph)
 {	// initial construction is based on a HighwaySegment
 	s_written = 0; // simple

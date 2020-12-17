@@ -281,7 +281,7 @@ void Waypoint::nmplogs(std::unordered_set<std::string> &nmpfps, std::ofstream &n
 }
 
 
-inline Waypoint* Waypoint::hashpoint()
+Waypoint* Waypoint::hashpoint()
 {	// return a canonical waypoint for graph vertex hashtable lookup
 	if (!colocated) return this;
 	return colocated->front();

@@ -43,7 +43,7 @@ class Waypoint
 	bool is_or_colocated_with_active_or_preview();
 	std::string root_at_label();
 	void nmplogs(std::unordered_set<std::string> &, std::ofstream &, std::list<std::string> &);
-	inline Waypoint* hashpoint();
+	Waypoint* hashpoint();
 	bool label_references_route(Route *);
 
 	// Datacheck
