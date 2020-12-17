@@ -1,35 +1,18 @@
-class GraphListEntry
-{	/* This class encapsulates information about generated graphs for
-	inclusion in the DB table.  Field names here match column names
-	in the "graphs" DB table. */
-	public:
-	std::string filename();
-	std::string descr;
-	unsigned int vertices;
-	unsigned int edges;
-	unsigned int travelers;
-	char form;
-	std::string format();
-	char cat;
-	std::string category();
-	// additional data for the C++ version, for multithreaded subgraph writing
-	std::string root;
-	std::list<Region*> *regions;
-	std::list<HighwaySystem*> *systems;
-	PlaceRadius *placeradius;
-	std::string tag();
+#include "GraphListEntry.h"
+#include "PlaceRadius.h"
+#include "../HighwaySystem/HighwaySystem.h"
+#include "../Region/Region.h"
 
-	GraphListEntry(std::string r, std::string d, char f, char c, std::list<Region*> *rg, std::list<HighwaySystem*> *sys, PlaceRadius *pr)
-	{	root = r;
-		descr = d;
-		form = f;
-		cat = c;
+GraphListEntry::GraphListEntry(std::string r, std::string d, char f, char c, std::list<Region*> *rg, std::list<HighwaySystem*> *sys, PlaceRadius *pr)
+{	root = r;
+	descr = d;
+	form = f;
+	cat = c;
 
-		regions = rg;
-		systems = sys;
-		placeradius = pr;
-	}
-};
+	regions = rg;
+	systems = sys;
+	placeradius = pr;
+}
 
 std::string GraphListEntry::filename()
 {	switch (form)

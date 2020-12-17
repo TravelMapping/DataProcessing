@@ -1,5 +1,7 @@
+class Route;
 class Waypoint;
 #include <list>
+#include <unordered_set>
 
 class HighwaySegment
 {   /* This class represents one highway segment: the connection between two

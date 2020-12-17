@@ -15,7 +15,7 @@ if (slash)
 	if (matches == ap_coloc.size())
 	{	std::vector<std::string> routes;
 		for (Waypoint *w : ap_coloc)
-			if (!list_contains(&routes, w->route->list_entry_name()))
+			if (!contains(routes, w->route->list_entry_name()))
 				routes.push_back(w->route->list_entry_name());
 
 		std::string newname = routes[0];

@@ -1,4 +1,19 @@
+#include "sql_file.h"
 #include "double_quotes.h"
+#include "../classes/Arguments/Arguments.h"
+#include "../classes/ClinchedDBValues/ClinchedDBValues.h"
+#include "../classes/ConnectedRoute/ConnectedRoute.h"
+#include "../classes/DatacheckEntry/DatacheckEntry.h"
+#include "../classes/DBFieldLength/DBFieldLength.h"
+#include "../classes/ElapsedTime/ElapsedTime.h"
+#include "../classes/GraphGeneration/GraphListEntry.h"
+#include "../classes/HighwaySegment/HighwaySegment.h"
+#include "../classes/HighwaySystem/HighwaySystem.h"
+#include "../classes/Region/Region.h"
+#include "../classes/Route/Route.h"
+#include "../classes/TravelerList/TravelerList.h"
+#include "../classes/Waypoint/Waypoint.h"
+#include <fstream>
 
 void sqlfile1
     (	ElapsedTime *et,

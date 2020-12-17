@@ -1,3 +1,10 @@
+class ErrorList;
+class Waypoint;
+#include <forward_list>
+#include <list>
+#include <iostream>
+#include <mutex>
+
 class WaypointQuadtree
 {	// This class defines a recursive quadtree structure to store
 	// Waypoint objects for efficient geometric searching.
@@ -9,7 +16,7 @@ class WaypointQuadtree
 	unsigned int unique_locations;
 	std::recursive_mutex mtx;
 
-	inline bool refined();
+	bool refined();
 	WaypointQuadtree(double, double, double, double);
 	void refine();
 	void insert(Waypoint*, bool);

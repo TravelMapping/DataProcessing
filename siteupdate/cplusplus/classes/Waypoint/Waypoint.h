@@ -3,6 +3,9 @@ class Route;
 #include <forward_list>
 #include <vector>
 
+bool sort_root_at_label(Waypoint*, Waypoint*);
+bool waypoint_simplification_sort(Waypoint*, Waypoint*);
+
 class Waypoint
 {   /* This class encapsulates the information about a single waypoint
     from a .wpt file.

@@ -196,7 +196,7 @@ std::string HGEdge::label(std::list<HighwaySystem*> *systems)
 {	std::string the_label;
 	for (std::pair<std::string, HighwaySystem*> &ns : route_names_and_systems)
 	{	// test whether system in systems
-		if (!systems || list_contains(systems, ns.second))
+		if (!systems || contains(*systems, ns.second))
 		  if (the_label.empty())
 			the_label = ns.first;
 		  else	the_label += "," + ns.first;

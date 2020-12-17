@@ -13,24 +13,23 @@ This module defines classes to represent the contents of a
 .wpt file that lists the waypoints for a given highway.
 */
 
-class ErrorList;
 class Waypoint;
 #define pi 3.141592653589793238
 #include <cmath>
 #include <cstring>
 #include <dirent.h>
-#include <forward_list>
 #include <fstream>
 #include <thread>
 #include "classes/Arguments/Arguments.h"
 #include "classes/ClinchedDBValues/ClinchedDBValues.h"
-#include "classes/WaypointQuadtree/WaypointQuadtree.h"
 #include "classes/Route/Route.h"
 #include "classes/ConnectedRoute/ConnectedRoute.h"
 #include "classes/DatacheckEntry/DatacheckEntry.h"
 #include "classes/ElapsedTime/ElapsedTime.h"
 #include "classes/ErrorList/ErrorList.h"
+#include "classes/GraphGeneration/GraphListEntry.h"
 #include "classes/GraphGeneration/HGVertex.h"
+#include "classes/GraphGeneration/HighwayGraph.h"
 #include "classes/Region/Region.h"
 #include "classes/Waypoint/Waypoint.h"
 #include "classes/HighwaySegment/HighwaySegment.h"
@@ -39,17 +38,14 @@ class Waypoint;
 #include "classes/GraphGeneration/HGEdge.h"
 #include "classes/GraphGeneration/PlaceRadius.h"
 #include "functions/crawl_hwy_data.h"
-#include "functions/operators.cpp"
-#include "functions/list_contains.cpp"
+#include "functions/sql_file.h"
 #include "functions/upper.h"
+#include "templates/contains.cpp"
 #include "classes/HighwaySystem/HighwaySystem.cpp"
 #include "classes/Waypoint/Waypoint.cpp"
 #include "classes/WaypointQuadtree/WaypointQuadtree.cpp"
 #include "classes/HighwaySegment/HighwaySegment.cpp"
-#include "classes/GraphGeneration/GraphListEntry.cpp"
-#include "classes/GraphGeneration/HighwayGraph.cpp"
 #include "classes/GraphGeneration/HGEdge.cpp"
-#include "classes/GraphGeneration/PlaceRadius.cpp"
 #include "threads/ReadWptThread.cpp"
 #include "threads/NmpSearchThread.cpp"
 #include "threads/NmpMergedThread.cpp"
@@ -60,7 +56,6 @@ class Waypoint;
 #include "threads/UserLogThread.cpp"
 #include "threads/SubgraphThread.cpp"
 #include "threads/MasterTmgThread.cpp"
-#include "functions/sql_file.cpp"
 using namespace std;
 
 int main(int argc, char *argv[])

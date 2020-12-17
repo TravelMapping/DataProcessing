@@ -1,6 +1,8 @@
 class HighwayGraph;
 class HighwaySegment;
+class HighwaySystem;
 class TravelerList;
+#include <list>
 
 class HGEdge
 {   /* This class encapsulates information needed for a highway graph
