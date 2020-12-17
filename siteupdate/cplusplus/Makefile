@@ -15,6 +15,7 @@ siteupdate : \
   classes/GraphGeneration/HGVertex.o \
   classes/GraphGeneration/HighwayGraphMT.o \
   classes/GraphGeneration/PlaceRadius.o \
+  classes/HighwaySegment/HighwaySegment.o \
   classes/Region/Region.o \
   classes/Route/Route.o \
   classes/TravelerList/TravelerList.o \
@@ -39,6 +40,7 @@ siteupdate : \
 	  classes/GraphGeneration/HGVertex.o \
 	  classes/GraphGeneration/HighwayGraphMT.o \
 	  classes/GraphGeneration/PlaceRadius.o \
+	  classes/HighwaySegment/HighwaySegment.o \
 	  classes/Region/Region.o \
 	  classes/Route/Route.o \
 	  classes/TravelerList/TravelerList.o \
@@ -66,6 +68,7 @@ siteupdateST : \
   classes/GraphGeneration/HGVertex.o \
   classes/GraphGeneration/HighwayGraphST.o \
   classes/GraphGeneration/PlaceRadius.o \
+  classes/HighwaySegment/HighwaySegment.o \
   classes/Region/Region.o \
   classes/Route/Route.o \
   classes/TravelerList/TravelerList.o \
@@ -92,6 +95,7 @@ siteupdateST : \
 	  classes/GraphGeneration/HGVertex.o \
 	  classes/GraphGeneration/HighwayGraphST.o \
 	  classes/GraphGeneration/PlaceRadius.o \
+	  classes/HighwaySegment/HighwaySegment.o \
 	  classes/Region/Region.o \
 	  classes/Route/Route.o \
 	  classes/TravelerList/TravelerList.o \
@@ -190,6 +194,14 @@ classes/GraphGeneration/PlaceRadius.o : classes/GraphGeneration/PlaceRadius.h cl
   classes/GraphGeneration/HighwayGraph.h \
   classes/Waypoint/Waypoint.h
 	g++ -std=c++11 -o classes/GraphGeneration/PlaceRadius.o -c classes/GraphGeneration/PlaceRadius.cpp
+
+classes/HighwaySegment/HighwaySegment.o : classes/HighwaySegment/HighwaySegment.h classes/HighwaySegment/HighwaySegment.cpp \
+  classes/HighwaySegment/compute_stats_t.cpp \
+  classes/HighwaySystem/HighwaySystem.h \
+  classes/Route/Route.h \
+  classes/TravelerList/TravelerList.h \
+  classes/Waypoint/Waypoint.h
+	g++ -std=c++11 -o classes/HighwaySegment/HighwaySegment.o -c classes/HighwaySegment/HighwaySegment.cpp
 
 classes/Region/Region.o : classes/Region/Region.h classes/Region/Region.cpp \
   classes/DBFieldLength/DBFieldLength.h \

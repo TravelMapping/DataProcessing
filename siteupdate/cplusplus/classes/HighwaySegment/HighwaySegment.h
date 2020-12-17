@@ -1,6 +1,8 @@
 class Route;
+class TravelerList;
 class Waypoint;
 #include <list>
+#include <mutex>
 #include <unordered_set>
 
 class HighwaySegment
@@ -28,5 +30,5 @@ class HighwaySegment
 	unsigned int index();
 	//std::string concurrent_travelers_sanity_check();
 	std::string clinchedby_code(std::list<TravelerList*> *, unsigned int);
-	inline void compute_stats_t(TravelerList* t);
+	void compute_stats_t(TravelerList*);
 };

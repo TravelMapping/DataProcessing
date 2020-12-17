@@ -1,4 +1,4 @@
-inline void HighwaySegment::compute_stats_t(TravelerList* t)
+void HighwaySegment::compute_stats_t(TravelerList* t)
 {	// credit active+preview for this region, which it must be
 	// if this segment is clinched by anyone
 	try {	t->active_preview_mileage_by_region.at(route->region) += length/active_preview_concurrency_count;

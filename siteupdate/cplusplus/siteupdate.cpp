@@ -44,7 +44,6 @@ class Waypoint;
 #include "classes/HighwaySystem/HighwaySystem.cpp"
 #include "classes/Waypoint/Waypoint.cpp"
 #include "classes/WaypointQuadtree/WaypointQuadtree.cpp"
-#include "classes/HighwaySegment/HighwaySegment.cpp"
 #include "threads/ReadWptThread.cpp"
 #include "threads/NmpSearchThread.cpp"
 #include "threads/NmpMergedThread.cpp"
