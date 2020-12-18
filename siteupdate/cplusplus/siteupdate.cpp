@@ -39,16 +39,7 @@ This module defines classes to represent the contents of a
 #include "functions/upper.h"
 #include "templates/contains.cpp"
 #include "classes/HighwaySystem/HighwaySystem.cpp"
-#include "threads/ReadWptThread.cpp"
-#include "threads/NmpSearchThread.cpp"
-#include "threads/NmpMergedThread.cpp"
-#include "threads/ReadListThread.cpp"
-#include "threads/ConcAugThread.cpp"
-#include "threads/CompStatsRThread.cpp"
-#include "threads/CompStatsTThread.cpp"
-#include "threads/UserLogThread.cpp"
-#include "threads/SubgraphThread.cpp"
-#include "threads/MasterTmgThread.cpp"
+#include "threads/threads.h"
 using namespace std;
 
 int main(int argc, char *argv[])

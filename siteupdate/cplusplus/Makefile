@@ -29,7 +29,8 @@ siteupdate : \
   functions/split.o \
   functions/sql_fileMT.o \
   functions/upper.o \
-  functions/valid_num_str.o
+  functions/valid_num_str.o \
+  threads/threads.o
 	g++ -std=c++11 -pthread -D threading_enabled -o siteupdate siteupdate.cpp \
 	  classes/Arguments/Arguments.o \
 	  classes/ClinchedDBValues/ClinchedDBValues.o \
@@ -57,7 +58,8 @@ siteupdate : \
 	  functions/split.o \
 	  functions/sql_fileMT.o \
 	  functions/upper.o \
-	  functions/valid_num_str.o
+	  functions/valid_num_str.o \
+	  threads/threads.o
 
 siteupdateST : \
   siteupdate.cpp \
@@ -329,3 +331,16 @@ functions/upper.o : functions/upper.h functions/upper.cpp
 
 functions/valid_num_str.o : functions/valid_num_str.h functions/valid_num_str.cpp
 	g++ -std=c++11 -o functions/valid_num_str.o -c functions/valid_num_str.cpp
+
+threads/threads.o : threads/threads.h threads/threads.cpp \
+  threads/CompStatsRThread.cpp \
+  threads/CompStatsTThread.cpp \
+  threads/ConcAugThread.cpp \
+  threads/MasterTmgThread.cpp \
+  threads/NmpMergedThread.cpp \
+  threads/NmpSearchThread.cpp \
+  threads/ReadListThread.cpp \
+  threads/ReadWptThread.cpp \
+  threads/SubgraphThread.cpp \
+  threads/UserLogThread.cpp
+	g++ -std=c++11 -o threads/threads.o -c threads/threads.cpp

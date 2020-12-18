@@ -90,7 +90,7 @@ inline bool HighwaySystem::preview()
 }
 
 /* Return whether this is an active or preview system */
-inline bool HighwaySystem::active_or_preview()
+bool HighwaySystem::active_or_preview()
 {	return level == 'a' || level == 'p';
 }
 
