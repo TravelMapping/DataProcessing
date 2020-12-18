@@ -1361,6 +1361,10 @@ class TravelerList:
                         self.log_entries.append(log_entry)
                     if invchar:
                         self.log_entries[-1] += " [contains invalid character(s)]"
+                    if r not in self.routes:
+                        self.routes.add(r)
+                        if r.last_update and self.update and r.last_update[0] >= self.update:
+                            self.log_entries.append("Route updated " + r.last_update[0] + ": " + r.readable_name())
                     continue
                 # are either of the labels used duplicates?
                 duplicate = False
@@ -1377,10 +1381,18 @@ class TravelerList:
                     self.log_entries.append(log_entry)
                     duplicate = True
                 if duplicate:
+                    if r not in self.routes:
+                        self.routes.add(r)
+                        if r.last_update and self.update and r.last_update[0] >= self.update:
+                            self.log_entries.append("Route updated " + r.last_update[0] + ": " + r.readable_name())
                     continue
                 # if both labels reference the same waypoint...
                 if index1 == index2:
                     self.log_entries.append("Equivalent waypoint labels mark zero distance traveled in line: " + line)
+                    if r not in self.routes:
+                        self.routes.add(r)
+                        if r.last_update and self.update and r.last_update[0] >= self.update:
+                            self.log_entries.append("Route updated " + r.last_update[0] + ": " + r.readable_name())
                 # otherwise both labels are valid; mark in use & proceed
                 else:
                     r.system.listnamesinuse.add(lookup)
@@ -1435,6 +1447,30 @@ class TravelerList:
                     continue
                 if r1.con_route != r2.con_route:
                     self.log_entries.append(lookup1 + " and " + lookup2 + " not in same connected route in line: " + line)
+                    # log updates for routes beginning/ending r1's ConnectedRoute
+                    cr = r1.con_route.roots[0]
+                    if cr not in self.routes:
+                        self.routes.add(cr)
+                        if cr.last_update and self.update and cr.last_update[0] >= self.update:
+                            self.log_entries.append("Route updated " + cr.last_update[0] + ": " + cr.readable_name())
+                        if len(r1.con_route.roots) > 1:
+                            cr = r1.con_route.roots[-1]
+                            if cr not in self.routes:
+                                self.routes.add(cr)
+                                if cr.last_update and self.update and cr.last_update[0] >= self.update:
+                                    self.log_entries.append("Route updated " + cr.last_update[0] + ": " + cr.readable_name())
+                    # log updates for routes beginning/ending r2's ConnectedRoute
+                    cr = r2.con_route.roots[0]
+                    if cr not in self.routes:
+                        self.routes.add(cr)
+                        if cr.last_update and self.update and cr.last_update[0] >= self.update:
+                            self.log_entries.append("Route updated " + cr.last_update[0] + ": " + cr.readable_name())
+                        if len(r2.con_route.roots) > 1:
+                            cr = r2.con_route.roots[-1]
+                            if cr not in self.routes:
+                                self.routes.add(cr)
+                                if cr.last_update and self.update and cr.last_update[0] >= self.update:
+                                    self.log_entries.append("Route updated " + cr.last_update[0] + ": " + cr.readable_name())
                     continue
                 if r1.system.devel():
                     self.log_entries.append("Ignoring line matching highway in system in development: " + line)
@@ -1495,6 +1531,10 @@ class TravelerList:
                     # if both labels reference the same waypoint...
                     if index1 == index2:
                         self.log_entries.append("Equivalent waypoint labels mark zero distance traveled in line: " + line)
+                        if r1 not in self.routes:
+                            self.routes.add(r1)
+                            if r1.last_update and self.update and r1.last_update[0] >= self.update:
+                                self.log_entries.append("Route updated " + r1.last_update[0] + ": " + r1.readable_name())
                         continue
                     if index1 <= index2:
                         r1.store_traveled_segments(self, index1, index2)
@@ -3186,12 +3226,10 @@ for h in highway_systems:
 sanetravfile.close()
 """
 
-# compute lots of stats, first total mileage by route, system, overall, where
-# system and overall are stored in dictionaries by region
+# compute lots of regional stats:
+# overall, active+preview, active only,
+# and per-system which falls into just one of these categories
 print(et.et() + "Computing stats.",end="",flush=True)
-# now also keeping separate totals for active only, active+preview,
-# and all for overall (not needed for system, as a system falls into just
-# one of these categories)
 active_only_mileage_by_region = dict()
 active_preview_mileage_by_region = dict()
 overall_mileage_by_region = dict()
@@ -3261,15 +3299,12 @@ for h in highway_systems:
             # who have clinched this segment in their stats
             for t in s.clinched_by:
                 # credit active+preview for this region, which it must be
-                # if this segment is clinched by anyone but still check
-                # in case a concurrency detection might otherwise credit
-                # a traveler with miles in a devel system
-                if r.system.active_or_preview():
-                    if r.region in t.active_preview_mileage_by_region:
-                        t.active_preview_mileage_by_region[r.region] = t.active_preview_mileage_by_region[r.region] + \
-                            s.length/active_preview_concurrency_count
-                    else:
-                        t.active_preview_mileage_by_region[r.region] = s.length/active_preview_concurrency_count
+                # if this segment is clinched by anyone
+                if r.region in t.active_preview_mileage_by_region:
+                    t.active_preview_mileage_by_region[r.region] = t.active_preview_mileage_by_region[r.region] + \
+                        s.length/active_preview_concurrency_count
+                else:
+                    t.active_preview_mileage_by_region[r.region] = s.length/active_preview_concurrency_count
 
                 # credit active only for this region
                 if r.system.active():
@@ -3280,17 +3315,15 @@ for h in highway_systems:
                         t.active_only_mileage_by_region[r.region] = s.length/active_only_concurrency_count
 
 
-                # credit this system in this region in the messy dictionary
-                # of dictionaries, but skip devel system entries
-                if r.system.active_or_preview():
-                    if h.systemname not in t.system_region_mileages:
-                        t.system_region_mileages[h.systemname] = dict()
-                    t_system_dict = t.system_region_mileages[h.systemname]
-                    if r.region in t_system_dict:
-                        t_system_dict[r.region] = t_system_dict[r.region] + \
-                        s.length/system_concurrency_count
-                    else:
-                        t_system_dict[r.region] = s.length/system_concurrency_count
+                # credit this system in this region in the messy dictionary of dictionaries
+                if h.systemname not in t.system_region_mileages:
+                    t.system_region_mileages[h.systemname] = dict()
+                t_system_dict = t.system_region_mileages[h.systemname]
+                if r.region in t_system_dict:
+                    t_system_dict[r.region] = t_system_dict[r.region] + \
+                    s.length/system_concurrency_count
+                else:
+                    t_system_dict[r.region] = s.length/system_concurrency_count
 print("!", flush=True)
 
 print(et.et() + "Writing highway data stats log file (highwaydatastats.log).",flush=True)

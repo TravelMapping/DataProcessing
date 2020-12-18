@@ -39,7 +39,7 @@ class Region
 	double active_only_mileage;
 	double active_preview_mileage;
 	double overall_mileage;
-	std::mutex *ao_mi_mtx, *ap_mi_mtx, *ov_mi_mtx;
+	std::mutex *mileage_mtx;
 	std::unordered_set<HGVertex*> vertices;
 	bool is_valid;
 
@@ -50,10 +50,8 @@ class Region
 	{	active_only_mileage = 0;
 		active_preview_mileage = 0;
 		overall_mileage = 0;
-		ao_mi_mtx = new std::mutex;
-		ap_mi_mtx = new std::mutex;
-		ov_mi_mtx = new std::mutex;
-			    // deleted on termination of program
+		mileage_mtx = new std::mutex;
+			      // deleted on termination of program
 		// parse CSV line
 		size_t NumFields = 5;
 		std::string country_str, continent_str;
