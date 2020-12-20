@@ -1,5 +1,12 @@
+#include "HighwaySystem.h"
+#include "../ConnectedRoute/ConnectedRoute.h"
 #include "../DBFieldLength/DBFieldLength.h"
+#include "../ErrorList/ErrorList.h"
+#include "../Region/Region.h"
+#include "../Route/Route.h"
 #include "../../functions/split.h"
+#include <cstring>
+#include <fstream>
 
 HighwaySystem::HighwaySystem(
 	std::string &line, ErrorList &el, std::string path, std::string &systemsfile,
@@ -56,11 +63,12 @@ HighwaySystem::HighwaySystem(
 		{	// trim DOS newlines & trailing whitespace
 			while ( strchr("\r\t ", line.back()) ) line.pop_back();
 			if (line.empty()) continue;
-			route_list.emplace_back(line, this, el, region_hash);
-			if (route_list.back().root.empty())
-			{	el.add_error("Unable to find root in " + systemname +".csv line: ["+line+"]");
-				route_list.pop_back();
-			}
+			Route* r = new Route(line, this, el, region_hash);
+				   // deleted on termination of program
+			if (r->root.size()) route_list.push_back(r);
+			else {	el.add_error("Unable to find root in " + systemname +".csv line: ["+line+"]");
+				delete r;
+			     }
 		}
 	     }
 	file.close();
@@ -73,7 +81,8 @@ HighwaySystem::HighwaySystem(
 		{	// trim DOS newlines & trailing whitespace
 			while ( strchr("\r\t ", line.back()) ) line.pop_back();
 			if (line.empty()) continue;
-			con_route_list.emplace_back(line, this, el);
+			con_route_list.push_back(new ConnectedRoute(line, this, el));
+						 // deleted on termination of program
 		}
 	     }
 	file.close();
@@ -100,14 +109,14 @@ bool HighwaySystem::devel()
 }
 
 /* Return total system mileage across all regions */
-inline double HighwaySystem::total_mileage()
+double HighwaySystem::total_mileage()
 {	double mi = 0;
 	for (std::pair<Region* const, double>& rm : mileage_by_region) mi += rm.second;
 	return mi;
 }
 
 /* return full "active" / "preview" / "devel" string" */
-inline std::string HighwaySystem::level_name()
+std::string HighwaySystem::level_name()
 {	switch(level)
 	{	case 'a': return "active";
 		case 'p': return "preview";

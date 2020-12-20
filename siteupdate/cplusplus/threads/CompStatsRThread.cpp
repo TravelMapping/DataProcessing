@@ -12,7 +12,7 @@ void CompStatsRThread(unsigned int id, std::list<HighwaySystem*> *hs_list, std::
 		//printf("CompStatsRThread %02i (*it)++ OK. Releasing lock.\n", id); fflush(stdout);
 		mtx->unlock();
 		std::cout << '.' << std::flush;
-		for (Route &r : h->route_list)
-		  r.compute_stats_r();
+		for (Route *r : h->route_list)
+		  r->compute_stats_r();
 	}
 }

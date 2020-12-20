@@ -83,10 +83,10 @@ void TravelerList::userlog
 			unsigned int num_con_rtes_traveled = 0;
 			unsigned int num_con_rtes_clinched = 0;
 			log << "System " << h->systemname << " by route (traveled routes only):\n";
-			for (ConnectedRoute &cr : h->con_route_list)
+			for (ConnectedRoute *cr : h->con_route_list)
 			{	double con_clinched_miles = 0;
 				std::string to_write = "";
-				for (Route *r : cr.roots)
+				for (Route *r : cr->roots)
 				{	// find traveled mileage on this by this user
 					double miles = r->clinched_by_traveler(this);
 					if (miles)
@@ -102,17 +102,17 @@ void TravelerList::userlog
 				if (con_clinched_miles)
 				{	num_con_rtes_traveled += 1;
 					char clinched = '0';
-					if (con_clinched_miles == cr.mileage)
+					if (con_clinched_miles == cr->mileage)
 					{	num_con_rtes_clinched++;
 						clinched = '1';
 					}
 					sprintf(fstr, "%.15g", con_clinched_miles);
 					if (!strchr(fstr, '.')) strcat(fstr, ".0");
-					clin_db_val->add_ccr("('" + cr.roots[0]->root + "','" + traveler_name +
+					clin_db_val->add_ccr("('" + cr->roots[0]->root + "','" + traveler_name +
 							     "','" + std::string(fstr) + "','" + clinched + "')");
-					log << cr.readable_name() << ": " << format_clinched_mi(con_clinched_miles, cr.mileage) << '\n';
-					if (cr.roots.size() == 1)
-						log << " (" << cr.roots[0]->readable_name() << " only)\n";
+					log << cr->readable_name() << ": " << format_clinched_mi(con_clinched_miles, cr->mileage) << '\n';
+					if (cr->roots.size() == 1)
+						log << " (" << cr->roots[0]->readable_name() << " only)\n";
 					else	log << to_write << '\n';
 				}
 			}

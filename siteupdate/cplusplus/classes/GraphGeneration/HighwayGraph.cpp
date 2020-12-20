@@ -82,8 +82,8 @@ HighwayGraph::HighwayGraph
 	{	if (!h->active_or_preview()) continue;
 		if (counter % 6 == 0) std::cout << '.' << std::flush;
 		counter++;
-		for (Route &r : h->route_list)
-		  for (HighwaySegment *s : r.segment_list)
+		for (Route *r : h->route_list)
+		  for (HighwaySegment *s : r->segment_list)
 		    if (!s->concurrent || s == s->concurrent->front())
 		      new HGEdge(s, this);
 		      // deleted by ~HGVertex, called by HighwayGraph::clear
