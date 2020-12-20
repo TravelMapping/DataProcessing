@@ -1,8 +1,7 @@
 all : siteupdate siteupdateST
 
 siteupdate : \
-  siteupdate.cpp */*.cpp \
-  */*/*.h */*/*.cpp */*/*/*.cpp \
+  siteupdateMT.o \
   classes/Arguments/Arguments.o \
   classes/ClinchedDBValues/ClinchedDBValues.o \
   classes/ConnectedRoute/ConnectedRoute.o \
@@ -31,7 +30,7 @@ siteupdate : \
   functions/upper.o \
   functions/valid_num_str.o \
   threads/threads.o
-	g++ -std=c++11 -pthread -D threading_enabled -o siteupdate siteupdate.cpp \
+	g++ -std=c++11 -pthread -D threading_enabled -o siteupdate siteupdateMT.o \
 	  classes/Arguments/Arguments.o \
 	  classes/ClinchedDBValues/ClinchedDBValues.o \
 	  classes/ConnectedRoute/ConnectedRoute.o \
@@ -62,8 +61,7 @@ siteupdate : \
 	  threads/threads.o
 
 siteupdateST : \
-  siteupdate.cpp \
-  */*/*.h */*/*.cpp */*/*/*.cpp \
+  siteupdateST.o \
   classes/Arguments/Arguments.o \
   classes/ClinchedDBValues/ClinchedDBValues.o \
   classes/ConnectedRoute/ConnectedRoute.o \
@@ -83,7 +81,6 @@ siteupdateST : \
   classes/Waypoint/Waypoint.o \
   classes/Waypoint/canonical_waypoint_name/canonical_waypoint_name.o \
   classes/WaypointQuadtree/WaypointQuadtree.o \
-  functions/*.cpp \
   functions/crawl_hwy_data.o \
   functions/double_quotes.o \
   functions/format_clinched_mi.o \
@@ -91,9 +88,8 @@ siteupdateST : \
   functions/split.o \
   functions/sql_fileST.o \
   functions/upper.o \
-  functions/valid_num_str.o \
-  tasks/*.cpp
-	g++ -std=c++11 -o siteupdateST siteupdate.cpp \
+  functions/valid_num_str.o
+	g++ -std=c++11 -o siteupdateST siteupdateST.o \
 	  classes/Arguments/Arguments.o \
 	  classes/ClinchedDBValues/ClinchedDBValues.o \
 	  classes/ConnectedRoute/ConnectedRoute.o \
@@ -121,6 +117,12 @@ siteupdateST : \
 	  functions/sql_fileST.o \
 	  functions/upper.o \
 	  functions/valid_num_str.o
+
+siteupdateMT.o : siteupdate.cpp tasks/*.cpp tasks/subgraphs/*.cpp
+	g++ -std=c++11 -pthread -o siteupdateMT.o -D threading_enabled -c siteupdate.cpp
+
+siteupdateST.o : siteupdate.cpp tasks/*.cpp tasks/subgraphs/*.cpp
+	g++ -std=c++11 -pthread -o siteupdateST.o -c siteupdate.cpp
 
 classes/Arguments/Arguments.o : classes/Arguments/Arguments.h classes/Arguments/Arguments.cpp
 	g++ -std=c++11 -o classes/Arguments/Arguments.o -c classes/Arguments/Arguments.cpp
@@ -223,7 +225,8 @@ classes/Region/Region.o : classes/Region/Region.h classes/Region/Region.cpp \
   functions/split.h
 	g++ -std=c++11 -o classes/Region/Region.o -c classes/Region/Region.cpp
 
-classes/Route/Route.o : classes/Route/Route.h classes/Route/Route.cpp classes/Route/compute_stats_r.cpp \
+classes/Route/Route.o : classes/Route/Route.h classes/Route/Route.cpp \
+  classes/Route/compute_stats_r.cpp \
   classes/Route/read_wpt.cpp \
   classes/DBFieldLength/DBFieldLength.h \
   classes/ErrorList/ErrorList.h \
@@ -263,7 +266,7 @@ classes/Waypoint/Waypoint.o : classes/Waypoint/Waypoint.h classes/Waypoint/Waypo
   functions/valid_num_str.h
 	g++ -std=c++11 -o classes/Waypoint/Waypoint.o -c classes/Waypoint/Waypoint.cpp
 
-classes/Waypoint/canonical_waypoint_name/canonical_waypoint_name.o : classes/Waypoint/canonical_waypoint_name/canonical_waypoint_name.cpp \
+classes/Waypoint/canonical_waypoint_name/canonical_waypoint_name.o : classes/Waypoint/canonical_waypoint_name/*.cpp \
   classes/Waypoint/Waypoint.h \
   classes/Route/Route.h \
   templates/contains.cpp
@@ -332,15 +335,5 @@ functions/upper.o : functions/upper.h functions/upper.cpp
 functions/valid_num_str.o : functions/valid_num_str.h functions/valid_num_str.cpp
 	g++ -std=c++11 -o functions/valid_num_str.o -c functions/valid_num_str.cpp
 
-threads/threads.o : threads/threads.h threads/threads.cpp \
-  threads/CompStatsRThread.cpp \
-  threads/CompStatsTThread.cpp \
-  threads/ConcAugThread.cpp \
-  threads/MasterTmgThread.cpp \
-  threads/NmpMergedThread.cpp \
-  threads/NmpSearchThread.cpp \
-  threads/ReadListThread.cpp \
-  threads/ReadWptThread.cpp \
-  threads/SubgraphThread.cpp \
-  threads/UserLogThread.cpp
+threads/threads.o : threads/threads.h threads/*.cpp
 	g++ -std=c++11 -o threads/threads.o -c threads/threads.cpp
