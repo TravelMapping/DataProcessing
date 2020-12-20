@@ -389,7 +389,9 @@ int main(int argc, char *argv[])
 	  for (Route& r : h->route_list)
 	  {	// check for unconnected chopped routes
 		if (!r.con_route)
-		  el.add_error(r.system->systemname + ".csv: root " + r.root + " not matched by any connected route root.");
+		{	el.add_error(r.system->systemname + ".csv: root " + r.root + " not matched by any connected route root.");
+			continue;
+		}
 
 		// check for mismatched route endpoints within connected routes
 		#define q r.con_route->roots[r.rootOrder-1]

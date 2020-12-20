@@ -2937,6 +2937,7 @@ for h in highway_systems:
         # check for unconnected chopped routes
         if r.con_route is None:
             el.add_error(r.system.systemname + ".csv: root " + r.root + " not matched by any connected route root.")
+            continue
 
         # check for mismatched route endpoints within connected routes
         q = r.con_route.roots[r.rootOrder-1]
