@@ -15,6 +15,7 @@ siteupdate : \
   classes/GraphGeneration/HighwayGraphMT.o \
   classes/GraphGeneration/PlaceRadius.o \
   classes/HighwaySegment/HighwaySegment.o \
+  classes/HighwaySystem/HighwaySystem.o \
   classes/Region/Region.o \
   classes/Route/Route.o \
   classes/TravelerList/TravelerList.o \
@@ -44,6 +45,7 @@ siteupdate : \
 	  classes/GraphGeneration/HighwayGraphMT.o \
 	  classes/GraphGeneration/PlaceRadius.o \
 	  classes/HighwaySegment/HighwaySegment.o \
+	  classes/HighwaySystem/HighwaySystem.o \
 	  classes/Region/Region.o \
 	  classes/Route/Route.o \
 	  classes/TravelerList/TravelerList.o \
@@ -75,6 +77,7 @@ siteupdateST : \
   classes/GraphGeneration/HighwayGraphST.o \
   classes/GraphGeneration/PlaceRadius.o \
   classes/HighwaySegment/HighwaySegment.o \
+  classes/HighwaySystem/HighwaySystem.o \
   classes/Region/Region.o \
   classes/Route/Route.o \
   classes/TravelerList/TravelerList.o \
@@ -103,6 +106,7 @@ siteupdateST : \
 	  classes/GraphGeneration/HighwayGraphST.o \
 	  classes/GraphGeneration/PlaceRadius.o \
 	  classes/HighwaySegment/HighwaySegment.o \
+	  classes/HighwaySystem/HighwaySystem.o \
 	  classes/Region/Region.o \
 	  classes/Route/Route.o \
 	  classes/TravelerList/TravelerList.o \
@@ -218,6 +222,15 @@ classes/HighwaySegment/HighwaySegment.o : classes/HighwaySegment/HighwaySegment.
   classes/TravelerList/TravelerList.h \
   classes/Waypoint/Waypoint.h
 	g++ -std=c++11 -o classes/HighwaySegment/HighwaySegment.o -c classes/HighwaySegment/HighwaySegment.cpp
+
+classes/HighwaySystem/HighwaySystem.o : classes/HighwaySystem/HighwaySystem.h classes/HighwaySystem/HighwaySystem.cpp \
+  classes/ConnectedRoute/ConnectedRoute.h \
+  classes/DBFieldLength/DBFieldLength.h \
+  classes/ErrorList/ErrorList.h \
+  classes/Region/Region.h \
+  classes/Route/Route.h \
+  functions/split.h
+	g++ -std=c++11 -o classes/HighwaySystem/HighwaySystem.o -c classes/HighwaySystem/HighwaySystem.cpp
 
 classes/Region/Region.o : classes/Region/Region.h classes/Region/Region.cpp \
   classes/DBFieldLength/DBFieldLength.h \
