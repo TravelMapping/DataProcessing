@@ -16,7 +16,7 @@ class HGVertex
 	int *c_vertex_num;
 	int *t_vertex_num;
 
-	HGVertex(Waypoint *wpt, const std::string *n, DatacheckEntryList *datacheckerrors, unsigned int numthreads)
+	HGVertex(Waypoint *wpt, const std::string *n, unsigned int numthreads)
 	{	lat = wpt->lat;
 		lng = wpt->lng;
 		s_vertex_num = new int[numthreads];
@@ -59,7 +59,7 @@ class HGVertex
 			  if (w->is_hidden)
 				hid_list.push_back(w);
 			  else	vis_list.push_back(w);
-			datacheckerrors->add(vis_list.front()->route, vis_list.front()->label, "", "", "VISIBLE_HIDDEN_COLOC",
+			DatacheckEntry::add(vis_list.front()->route, vis_list.front()->label, "", "", "VISIBLE_HIDDEN_COLOC",
 					     hid_list.front()->route->root+"@"+hid_list.front()->label);
 			break;
 		  }

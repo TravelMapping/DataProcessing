@@ -21,7 +21,6 @@ class HighwayGraph
 	HighwayGraph
 	(	WaypointQuadtree &all_waypoints,
 		std::list<HighwaySystem*> &highway_systems,
-		DatacheckEntryList *datacheckerrors,
 		unsigned int numthreads,
 		ElapsedTime &et
 	)
@@ -41,7 +40,7 @@ class HighwayGraph
 			// come up with a unique name that brings in its meaning
 
 			// start with the canonical name
-			std::string point_name = w->canonical_waypoint_name(waypoint_naming_log, vertex_names, datacheckerrors);
+			std::string point_name = w->canonical_waypoint_name(waypoint_naming_log, vertex_names);
 			bool good_to_go = 1;
 
 			// if that's taken, append the region code
@@ -69,7 +68,7 @@ class HighwayGraph
 			}
 
 			// we're good; now construct a vertex
-			vertices[w] = new HGVertex(w, &*(vertex_names.insert(point_name).first), datacheckerrors, numthreads);
+			vertices[w] = new HGVertex(w, &*(vertex_names.insert(point_name).first), numthreads);
 				      // deleted by HighwayGraph::clear
 
 			// active/preview colocation lists are no longer needed; clear them
@@ -107,7 +106,7 @@ class HighwayGraph
 				}
 				// if >2 edges, flag HIDDEN_JUNCTION, mark as visible, and do not compress
 				if (wv.second->incident_c_edges.size() > 2)
-				{	datacheckerrors->add(wv.first->colocated->front()->route,
+				{	DatacheckEntry::add(wv.first->colocated->front()->route,
 							     wv.first->colocated->front()->label,
 							     "", "", "HIDDEN_JUNCTION", std::to_string(wv.second->incident_c_edges.size()));
 					wv.second->visibility = 2;

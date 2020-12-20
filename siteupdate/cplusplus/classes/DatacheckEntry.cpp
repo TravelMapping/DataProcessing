@@ -44,6 +44,7 @@ class DatacheckEntry
     false positive (would be set to true later)
 
     */
+	static std::mutex mtx;
 	public:
 	Route *route;
 	std::string label1;
@@ -52,6 +53,13 @@ class DatacheckEntry
 	std::string code;
 	std::string info;
 	bool fp;
+
+	static std::list<DatacheckEntry> errors;
+	static void add(Route *rte, std::string l1, std::string l2, std::string l3, std::string c, std::string i)
+	{	mtx.lock();
+		errors.emplace_back(rte, l1, l2, l3, c, i);
+		mtx.unlock();
+	}
 
 	DatacheckEntry(Route *rte, std::string l1, std::string l2, std::string l3, std::string c, std::string i)
 	{	route = rte;
@@ -83,3 +91,6 @@ class DatacheckEntry
 	{	return str() < other.str();
 	}
 };
+
+std::list<DatacheckEntry> DatacheckEntry::errors;
+std::mutex DatacheckEntry::mtx;
