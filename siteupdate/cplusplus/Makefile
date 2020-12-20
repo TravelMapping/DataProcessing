@@ -1,7 +1,6 @@
-all : siteupdate siteupdateST
-
-siteupdate : \
-  siteupdateMT.o \
+MTObjects = siteupdateMT.o classes/GraphGeneration/HighwayGraphMT.o functions/sql_fileMT.o threads/threads.o
+STObjects = siteupdateST.o classes/GraphGeneration/HighwayGraphST.o functions/sql_fileST.o
+CommonObjects = \
   classes/Arguments/Arguments.o \
   classes/ClinchedDBValues/ClinchedDBValues.o \
   classes/ConnectedRoute/ConnectedRoute.o \
@@ -12,7 +11,6 @@ siteupdate : \
   classes/GraphGeneration/GraphListEntry.o \
   classes/GraphGeneration/HGEdge.o \
   classes/GraphGeneration/HGVertex.o \
-  classes/GraphGeneration/HighwayGraphMT.o \
   classes/GraphGeneration/PlaceRadius.o \
   classes/HighwaySegment/HighwaySegment.o \
   classes/HighwaySystem/HighwaySystem.o \
@@ -27,100 +25,16 @@ siteupdate : \
   functions/format_clinched_mi.o \
   functions/lower.o \
   functions/split.o \
-  functions/sql_fileMT.o \
-  functions/upper.o \
-  functions/valid_num_str.o \
-  threads/threads.o
-	g++ -std=c++11 -pthread -D threading_enabled -o siteupdate siteupdateMT.o \
-	  classes/Arguments/Arguments.o \
-	  classes/ClinchedDBValues/ClinchedDBValues.o \
-	  classes/ConnectedRoute/ConnectedRoute.o \
-	  classes/DatacheckEntry/DatacheckEntry.o \
-	  classes/DBFieldLength/DBFieldLength.o \
-	  classes/ElapsedTime/ElapsedTime.o \
-	  classes/ErrorList/ErrorList.o \
-	  classes/GraphGeneration/GraphListEntry.o \
-	  classes/GraphGeneration/HGEdge.o \
-	  classes/GraphGeneration/HGVertex.o \
-	  classes/GraphGeneration/HighwayGraphMT.o \
-	  classes/GraphGeneration/PlaceRadius.o \
-	  classes/HighwaySegment/HighwaySegment.o \
-	  classes/HighwaySystem/HighwaySystem.o \
-	  classes/Region/Region.o \
-	  classes/Route/Route.o \
-	  classes/TravelerList/TravelerList.o \
-	  classes/Waypoint/Waypoint.o \
-	  classes/Waypoint/canonical_waypoint_name/canonical_waypoint_name.o \
-	  classes/WaypointQuadtree/WaypointQuadtree.o \
-	  functions/crawl_hwy_data.o \
-	  functions/double_quotes.o \
-	  functions/format_clinched_mi.o \
-	  functions/lower.o \
-	  functions/split.o \
-	  functions/sql_fileMT.o \
-	  functions/upper.o \
-	  functions/valid_num_str.o \
-	  threads/threads.o
-
-siteupdateST : \
-  siteupdateST.o \
-  classes/Arguments/Arguments.o \
-  classes/ClinchedDBValues/ClinchedDBValues.o \
-  classes/ConnectedRoute/ConnectedRoute.o \
-  classes/DatacheckEntry/DatacheckEntry.o \
-  classes/DBFieldLength/DBFieldLength.o \
-  classes/ElapsedTime/ElapsedTime.o \
-  classes/ErrorList/ErrorList.o \
-  classes/GraphGeneration/GraphListEntry.o \
-  classes/GraphGeneration/HGEdge.o \
-  classes/GraphGeneration/HGVertex.o \
-  classes/GraphGeneration/HighwayGraphST.o \
-  classes/GraphGeneration/PlaceRadius.o \
-  classes/HighwaySegment/HighwaySegment.o \
-  classes/HighwaySystem/HighwaySystem.o \
-  classes/Region/Region.o \
-  classes/Route/Route.o \
-  classes/TravelerList/TravelerList.o \
-  classes/Waypoint/Waypoint.o \
-  classes/Waypoint/canonical_waypoint_name/canonical_waypoint_name.o \
-  classes/WaypointQuadtree/WaypointQuadtree.o \
-  functions/crawl_hwy_data.o \
-  functions/double_quotes.o \
-  functions/format_clinched_mi.o \
-  functions/lower.o \
-  functions/split.o \
-  functions/sql_fileST.o \
   functions/upper.o \
   functions/valid_num_str.o
-	g++ -std=c++11 -o siteupdateST siteupdateST.o \
-	  classes/Arguments/Arguments.o \
-	  classes/ClinchedDBValues/ClinchedDBValues.o \
-	  classes/ConnectedRoute/ConnectedRoute.o \
-	  classes/DatacheckEntry/DatacheckEntry.o \
-	  classes/DBFieldLength/DBFieldLength.o \
-	  classes/ElapsedTime/ElapsedTime.o \
-	  classes/ErrorList/ErrorList.o \
-	  classes/GraphGeneration/GraphListEntry.o \
-	  classes/GraphGeneration/HGEdge.o \
-	  classes/GraphGeneration/HGVertex.o \
-	  classes/GraphGeneration/HighwayGraphST.o \
-	  classes/GraphGeneration/PlaceRadius.o \
-	  classes/HighwaySegment/HighwaySegment.o \
-	  classes/HighwaySystem/HighwaySystem.o \
-	  classes/Region/Region.o \
-	  classes/Route/Route.o \
-	  classes/TravelerList/TravelerList.o \
-	  classes/Waypoint/Waypoint.o \
-	  classes/Waypoint/canonical_waypoint_name/canonical_waypoint_name.o \
-	  classes/WaypointQuadtree/WaypointQuadtree.o \
-	  functions/crawl_hwy_data.o \
-	  functions/double_quotes.o \
-	  functions/format_clinched_mi.o \
-	  functions/lower.o \
-	  functions/split.o \
-	  functions/sql_fileST.o \
-	  functions/upper.o \
-	  functions/valid_num_str.o
+
+all : siteupdate siteupdateST
+
+siteupdate : $(MTObjects) $(CommonObjects)
+	g++ -std=c++11 -pthread -D threading_enabled -o siteupdate $(MTObjects) $(CommonObjects)
+
+siteupdateST : $(STObjects) $(CommonObjects)
+	g++ -std=c++11 -o siteupdateST $(STObjects) $(CommonObjects)
 
 siteupdateMT.o : siteupdate.cpp tasks/*.cpp tasks/subgraphs/*.cpp
 	g++ -std=c++11 -pthread -o siteupdateMT.o -D threading_enabled -c siteupdate.cpp
