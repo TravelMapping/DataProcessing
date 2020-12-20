@@ -1,7 +1,7 @@
 // Build a graph structure out of all highway data in active and
 // preview systems
 cout << et.et() << "Setting up for graphs of highway data." << endl;
-HighwayGraph graph_data(all_waypoints, highway_systems, datacheckerrors, args.numthreads, et);
+HighwayGraph graph_data(all_waypoints, highway_systems, args.numthreads, et);
 
 cout << et.et() << "Writing graph waypoint simplification log." << endl;
 ofstream wslogfile(args.logfilepath + "/waypointsimplification.log");

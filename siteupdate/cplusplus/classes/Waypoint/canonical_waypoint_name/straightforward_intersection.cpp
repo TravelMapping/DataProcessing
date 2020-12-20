@@ -7,8 +7,8 @@
 
 if (ap_coloc.size() == 2)
 {	// check both refs independently, because datachecks are involved
-	bool one_ref_zero = ap_coloc[1]->label_references_route(ap_coloc[0]->route, datacheckerrors);
-	bool zero_ref_one = ap_coloc[0]->label_references_route(ap_coloc[1]->route, datacheckerrors);
+	bool one_ref_zero = ap_coloc[1]->label_references_route(ap_coloc[0]->route);
+	bool zero_ref_one = ap_coloc[0]->label_references_route(ap_coloc[1]->route);
 	if (one_ref_zero && zero_ref_one)
 	{	std::string newname = ap_coloc[1]->label+"/"+ap_coloc[0]->label;
 		// if this is taken or if name_no_abbrev()s match, attempt to add in abbrevs if there's point in doing so
