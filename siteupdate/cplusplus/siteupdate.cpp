@@ -40,7 +40,9 @@ This module defines classes to represent the contents of a
 #include "functions/sql_file.h"
 #include "functions/upper.h"
 #include "templates/contains.cpp"
+#ifdef threading_enabled
 #include "threads/threads.h"
+#endif
 using namespace std;
 
 int main(int argc, char *argv[])
