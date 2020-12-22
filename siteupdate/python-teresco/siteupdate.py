@@ -314,6 +314,9 @@ class WaypointQuadtree:
             self.sw_child.sort()
         else:
             self.points.sort(key=lambda waypoint: waypoint.route.root + "@" + waypoint.label)
+            for w in self.points:
+                if w.colocated:
+                    w.colocated.sort(key=lambda waypoint: waypoint.route.root + "@" + waypoint.label)
 
 class Waypoint:
     """This class encapsulates the information about a single waypoint
@@ -2780,11 +2783,6 @@ for t in thread_list:
 
 print(et.et() + "Sorting waypoints in Quadtree.")
 all_waypoints.sort()
-
-print(et.et() + "Sorting colocated point lists.")
-for w in all_waypoints.point_list():
-    if w.colocated is not None:
-        w.colocated.sort(key=lambda waypoint: waypoint.route.root + "@" + waypoint.label)
 
 print(et.et() + "Finding unprocessed wpt files.", flush=True)
 unprocessedfile = open(args.logfilepath+'/unprocessedwpts.log','w',encoding='utf-8')
