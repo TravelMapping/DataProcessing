@@ -240,15 +240,10 @@ int main(int argc, char *argv[])
 	}
       #endif
 
-	//#include "debug/qt_and_colocate_check.cpp"
-	cout << et.et() << "Writing WaypointQuadtree.tmg." << endl;
-	all_waypoints.write_qt_tmg(args.logfilepath+"/WaypointQuadtree.tmg");
+	//cout << et.et() << "Writing WaypointQuadtree.tmg." << endl;
+	//all_waypoints.write_qt_tmg(args.logfilepath+"/WaypointQuadtree.tmg");
 	cout << et.et() << "Sorting waypoints in Quadtree." << endl;
 	all_waypoints.sort();
-	cout << et.et() << "Sorting colocated point lists." << endl;
-	for (Waypoint *w : all_waypoints.point_list())
-		if (w->colocated && w == w->colocated->front()) w->colocated->sort(sort_root_at_label);
-	//#include "debug/qt_and_colocate_check.cpp"
 
 	cout << et.et() << "Finding unprocessed wpt files." << endl;
 	if (all_wpt_files.size())

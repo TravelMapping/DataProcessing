@@ -160,11 +160,11 @@ unsigned int WaypointQuadtree::size()
 std::forward_list<Waypoint*> WaypointQuadtree::point_list()
 {	// return a list of all points in the quadtree
 	if (refined())
-	{	std::forward_list<Waypoint*> all_points, add_points;
-		add_points = sw_child->point_list();	all_points.splice_after(all_points.before_begin(), add_points);
-		add_points = se_child->point_list();	all_points.splice_after(all_points.before_begin(), add_points);
-		add_points = nw_child->point_list();	all_points.splice_after(all_points.before_begin(), add_points);
-		add_points = ne_child->point_list();	all_points.splice_after(all_points.before_begin(), add_points);
+	{	std::forward_list<Waypoint*> all_points;
+		all_points.splice_after(all_points.before_begin(), sw_child->point_list());
+		all_points.splice_after(all_points.before_begin(), se_child->point_list());
+		all_points.splice_after(all_points.before_begin(), nw_child->point_list());
+		all_points.splice_after(all_points.before_begin(), ne_child->point_list());
 		return all_points;
 	}
 	else	return points;
@@ -174,11 +174,10 @@ std::list<Waypoint*> WaypointQuadtree::graph_points()
 {	// return a list of points to be used as indices to HighwayGraph vertices
 	std::list<Waypoint*> hg_points;
 	if (refined())
-	     {	std::list<Waypoint*> add_points;
-		add_points = sw_child->graph_points();	hg_points.splice(hg_points.begin(), add_points);
-		add_points = se_child->graph_points();	hg_points.splice(hg_points.begin(), add_points);
-		add_points = nw_child->graph_points();	hg_points.splice(hg_points.begin(), add_points);
-		add_points = ne_child->graph_points();	hg_points.splice(hg_points.begin(), add_points);
+	     {	hg_points.splice(hg_points.begin(), sw_child->graph_points());
+		hg_points.splice(hg_points.begin(), se_child->graph_points());
+		hg_points.splice(hg_points.begin(), nw_child->graph_points());
+		hg_points.splice(hg_points.begin(), ne_child->graph_points());
 	     }
 	else for (Waypoint *w : points)
 	     {	// skip if this point is occupied by only waypoints in devel systems
@@ -233,12 +232,15 @@ unsigned int WaypointQuadtree::total_nodes()
 
 void WaypointQuadtree::sort()
 {	if (refined())
-	{	ne_child->sort();
+	     {	ne_child->sort();
 		nw_child->sort();
 		se_child->sort();
 		sw_child->sort();
-	}
-	else	points.sort(sort_root_at_label);
+	     }
+	else {	points.sort(sort_root_at_label);
+		for (Waypoint *w : points)
+		  if (w->colocated && w == w->colocated->front()) w->colocated->sort(sort_root_at_label);
+	     }
 }
 
 void WaypointQuadtree::get_tmg_lines(std::list<std::string> &vertices, std::list<std::string> &edges, std::string n_name)
