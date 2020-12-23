@@ -64,7 +64,7 @@ void WaypointQuadtree::insert(Waypoint *w, bool init)
 		{	//std::cout << "QTDEBUG: " << str() << " at " << unique_locations << " unique locations" << std::endl;
 			unique_locations++;
 		}
-		points.push_front(w);
+		points.push_back(w);
 		if (unique_locations > 50)  // 50 unique points max per quadtree node
 			refine();
 		mtx.unlock();
@@ -104,7 +104,7 @@ std::forward_list<Waypoint*> WaypointQuadtree::near_miss_waypoints(Waypoint *w, 
 	// first check if this is a terminal quadrant, and if it is,
 	// we search for NMPs within this quadrant
 	if (!refined())
-	{	//std::cout << "DEBUG: terminal quadrant comparing with " << std::distance(points.begin(), points.end()) << " points." << std::endl;
+	{	//std::cout << "DEBUG: terminal quadrant comparing with " << points.size() << " points." << std::endl;
 		for (Waypoint *p : points)
 		  if (p != w && !p->same_coords(w) && p->nearby(w, tolerance))
 		  {	//std::cout << "DEBUG: found nmp " << p->str() << std::endl;
@@ -121,23 +121,10 @@ std::forward_list<Waypoint*> WaypointQuadtree::near_miss_waypoints(Waypoint *w, 
 		bool look_west = (w->lng - tolerance) <= mid_lng;
 		//std::cout << "DEBUG: recursive case, " << look_north << " " << look_south << " " << look_east << " " << look_west << std::endl;
 		// now look in the appropriate child quadrants
-		std::forward_list<Waypoint*> add_points;
-		if (look_north && look_west)
-		{	add_points = nw_child->near_miss_waypoints(w, tolerance);
-			near_miss_points.splice_after(near_miss_points.before_begin(), add_points);
-		}
-		if (look_north && look_east)
-		{	add_points = ne_child->near_miss_waypoints(w, tolerance);
-			near_miss_points.splice_after(near_miss_points.before_begin(), add_points);
-		}
-		if (look_south && look_west)
-		{	add_points = sw_child->near_miss_waypoints(w, tolerance);
-			near_miss_points.splice_after(near_miss_points.before_begin(), add_points);
-		}
-		if (look_south && look_east)
-		{	add_points = se_child->near_miss_waypoints(w, tolerance);
-			near_miss_points.splice_after(near_miss_points.before_begin(), add_points);
-		}
+		if (look_north && look_west) near_miss_points.splice_after(near_miss_points.before_begin(), nw_child->near_miss_waypoints(w, tolerance));
+		if (look_north && look_east) near_miss_points.splice_after(near_miss_points.before_begin(), ne_child->near_miss_waypoints(w, tolerance));
+		if (look_south && look_west) near_miss_points.splice_after(near_miss_points.before_begin(), sw_child->near_miss_waypoints(w, tolerance));
+		if (look_south && look_east) near_miss_points.splice_after(near_miss_points.before_begin(), se_child->near_miss_waypoints(w, tolerance));
 	     }
 	return near_miss_points;
 }
@@ -147,24 +134,24 @@ std::string WaypointQuadtree::str()
 	sprintf(s, "WaypointQuadtree at (%.15g,%.15g) to (%.15g,%.15g)", min_lat, min_lng, max_lat, max_lng);
 	if (refined())
 		return std::string(s) + " REFINED";
-	else	return std::string(s) + " contains " + std::to_string(std::distance(points.begin(), points.end())) + " waypoints";
+	else	return std::string(s) + " contains " + std::to_string(points.size()) + " waypoints";
 }
 
 unsigned int WaypointQuadtree::size()
 {	// return the number of Waypoints in the tree
 	if (refined())
 		return nw_child->size() + ne_child->size() + sw_child->size() + se_child->size();
-	else	return std::distance(points.begin(), points.end());
+	else	return points.size();
 }
 
-std::forward_list<Waypoint*> WaypointQuadtree::point_list()
+std::list<Waypoint*> WaypointQuadtree::point_list()
 {	// return a list of all points in the quadtree
 	if (refined())
-	{	std::forward_list<Waypoint*> all_points;
-		all_points.splice_after(all_points.before_begin(), sw_child->point_list());
-		all_points.splice_after(all_points.before_begin(), se_child->point_list());
-		all_points.splice_after(all_points.before_begin(), nw_child->point_list());
-		all_points.splice_after(all_points.before_begin(), ne_child->point_list());
+	{	std::list<Waypoint*> all_points;
+		all_points.splice(all_points.end(), ne_child->point_list());
+		all_points.splice(all_points.end(), nw_child->point_list());
+		all_points.splice(all_points.end(), se_child->point_list());
+		all_points.splice(all_points.end(), sw_child->point_list());
 		return all_points;
 	}
 	else	return points;
@@ -198,7 +185,7 @@ bool WaypointQuadtree::is_valid(ErrorList &el)
 {	// make sure the quadtree is valid
 	if (refined())
 	{	// refined nodes should not contain points
-		if (!points.empty()) el.add_error(str() + " contains " + std::to_string(std::distance(points.begin(), points.end())) + "waypoints");
+		if (!points.empty()) el.add_error(str() + " contains " + std::to_string(points.size()) + "waypoints");
 		return nw_child->is_valid(el) && ne_child->is_valid(el) && sw_child->is_valid(el) && se_child->is_valid(el);
 		// EDB: Removed tests for whether a node has children.
 		// This made more sense in the original Python version of the code.
