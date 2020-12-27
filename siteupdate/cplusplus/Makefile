@@ -35,9 +35,9 @@ all: siteupdate siteupdateST
 %ST.d: %.cpp ; g++ -std=c++11 -MM $< | sed -r "s~.*:~$*ST.o:~" > $@
 %.d  : %.cpp ; g++ -std=c++11 -MM $< | sed -r "s~.*:~$*.o:~" > $@
 
-include $(MTObjects:.o=.d)
-include $(STObjects:.o=.d)
-include $(CommonObjects:.o=.d)
+-include $(MTObjects:.o=.d)
+-include $(STObjects:.o=.d)
+-include $(CommonObjects:.o=.d)
 
 %MT.o: ; g++ -std=c++11 -o $@ -D threading_enabled -c $<
 %ST.o: ; g++ -std=c++11 -o $@ -c $<
@@ -51,5 +51,5 @@ siteupdateST: $(STObjects) $(CommonObjects)
 	@g++ -std=c++11 -o siteupdateST $(STObjects) $(CommonObjects)
 
 clean:
-	rm -f $(MTObjects)       $(STObjects)       $(CommonObjects)
-	rm -f $(MTObjects:.o=.d) $(STObjects:.o=.d) $(CommonObjects:.o=.d)
+	@rm -f $(MTObjects)       $(STObjects)       $(CommonObjects)
+	@rm -f $(MTObjects:.o=.d) $(STObjects:.o=.d) $(CommonObjects:.o=.d)
