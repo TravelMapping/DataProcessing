@@ -1,3 +1,10 @@
+class HGEdge;
+class HGVertex;
+class HighwayGraph;
+class WaypointQuadtree;
+#include <iostream>
+#include <unordered_set>
+
 class PlaceRadius
 {	/* This class encapsulates a place name, file base name, latitude,
 	longitude, and radius (in miles) to define the area to which our

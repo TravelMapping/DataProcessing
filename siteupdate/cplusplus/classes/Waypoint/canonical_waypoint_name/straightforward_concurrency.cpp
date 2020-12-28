@@ -9,7 +9,7 @@ unsigned int matches = 0;
 for (Waypoint *w : ap_coloc)
   if (ap_coloc.front()->label == w->label || w->label[0] == '+')
   {	// avoid double route names at border crossings
-	if (!list_contains(&routes, w->route->list_entry_name()))
+	if (!contains(routes, w->route->list_entry_name()))
 		routes.push_back(w->route->list_entry_name());
 	matches++;
   }

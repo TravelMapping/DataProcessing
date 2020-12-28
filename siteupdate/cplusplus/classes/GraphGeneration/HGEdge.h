@@ -1,3 +1,11 @@
+class HGVertex;
+class HighwayGraph;
+class HighwaySegment;
+class HighwaySystem;
+class TravelerList;
+#include <iostream>
+#include <list>
+
 class HGEdge
 {   /* This class encapsulates information needed for a highway graph
     edge that can incorporate intermediate points.

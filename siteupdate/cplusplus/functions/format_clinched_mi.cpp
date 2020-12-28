@@ -1,3 +1,5 @@
+#include "format_clinched_mi.h"
+
 std::string format_clinched_mi(double clinched, double total)
 {	/* return a nicely-formatted string for a given number of miles
 	clinched and total miles, including percentage */

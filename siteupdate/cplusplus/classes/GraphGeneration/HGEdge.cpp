@@ -1,3 +1,12 @@
+#include "HGEdge.h"
+#include "HGVertex.h"
+#include "HighwayGraph.h"
+#include "../HighwaySegment/HighwaySegment.h"
+#include "../HighwaySystem/HighwaySystem.h"
+#include "../Route/Route.h"
+#include "../Waypoint/Waypoint.h"
+#include "../../templates/contains.cpp"
+
 HGEdge::HGEdge(HighwaySegment *s, HighwayGraph *graph)
 {	// initial construction is based on a HighwaySegment
 	s_written = 0; // simple
@@ -196,7 +205,7 @@ std::string HGEdge::label(std::list<HighwaySystem*> *systems)
 {	std::string the_label;
 	for (std::pair<std::string, HighwaySystem*> &ns : route_names_and_systems)
 	{	// test whether system in systems
-		if (!systems || list_contains(systems, ns.second))
+		if (!systems || contains(*systems, ns.second))
 		  if (the_label.empty())
 			the_label = ns.first;
 		  else	the_label += "," + ns.first;

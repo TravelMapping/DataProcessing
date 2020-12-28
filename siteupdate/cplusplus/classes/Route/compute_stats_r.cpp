@@ -1,4 +1,4 @@
-inline void Route::compute_stats_r()
+void Route::compute_stats_r()
 {	double active_only_mileage = 0;
 	double active_preview_mileage = 0;
 	double overall_mileage = 0;

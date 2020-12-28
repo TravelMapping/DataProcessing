@@ -1,3 +1,12 @@
+#include "PlaceRadius.h"
+#include "HGEdge.h"
+#include "HGVertex.h"
+#include "HighwayGraph.h"
+#include "../Waypoint/Waypoint.h"
+#include "../WaypointQuadtree/WaypointQuadtree.h"
+#include <cmath>
+#define pi 3.141592653589793238
+
 PlaceRadius::PlaceRadius(const char *D, const char *T, double& Y, double& X, int& R)
 {	descr = D;
 	title = T;
@@ -106,3 +115,5 @@ std::unordered_set<HGVertex*> PlaceRadius::v_search(WaypointQuadtree *qt, Highwa
 	     }
 	return vertex_set;
 }
+
+#undef pi

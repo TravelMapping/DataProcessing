@@ -1,3 +1,20 @@
+#include "sql_file.h"
+#include "double_quotes.h"
+#include "../classes/Arguments/Arguments.h"
+#include "../classes/ClinchedDBValues/ClinchedDBValues.h"
+#include "../classes/ConnectedRoute/ConnectedRoute.h"
+#include "../classes/DatacheckEntry/DatacheckEntry.h"
+#include "../classes/DBFieldLength/DBFieldLength.h"
+#include "../classes/ElapsedTime/ElapsedTime.h"
+#include "../classes/GraphGeneration/GraphListEntry.h"
+#include "../classes/HighwaySegment/HighwaySegment.h"
+#include "../classes/HighwaySystem/HighwaySystem.h"
+#include "../classes/Region/Region.h"
+#include "../classes/Route/Route.h"
+#include "../classes/TravelerList/TravelerList.h"
+#include "../classes/Waypoint/Waypoint.h"
+#include <fstream>
+
 void sqlfile1
     (	ElapsedTime *et,
 	Arguments *args,
@@ -125,10 +142,10 @@ void sqlfile1
 	first = 1;
 	csvOrder = 0;
 	for (HighwaySystem *h : *highway_systems)
-	  for (Route &r : h->route_list)
+	  for (Route *r : h->route_list)
 	  {	if (!first) sqlfile << ',';
 		first = 0;
-		sqlfile << "(" << r.csv_line() << ",'" << csvOrder << "')\n";
+		sqlfile << "(" << r->csv_line() << ",'" << csvOrder << "')\n";
 		csvOrder += 1;
 	  }
 	sqlfile << ";\n";
@@ -147,10 +164,10 @@ void sqlfile1
 	first = 1;
 	csvOrder = 0;
 	for (HighwaySystem *h : *highway_systems)
-	  for (ConnectedRoute &cr : h->con_route_list)
+	  for (ConnectedRoute *cr : h->con_route_list)
 	  {	if (!first) sqlfile << ',';
 		first = 0;
-		sqlfile << "(" << cr.csv_line() << ",'" << csvOrder << "')\n";
+		sqlfile << "(" << cr->csv_line() << ",'" << csvOrder << "')\n";
 		csvOrder += 1;
 	  }
 	sqlfile << ";\n";
@@ -165,12 +182,12 @@ void sqlfile1
 		<< "), FOREIGN KEY (firstRoot) REFERENCES connectedRoutes(firstRoot));\n";
 	first = 1;
 	for (HighwaySystem *h : *highway_systems)
-	  for (ConnectedRoute &cr : h->con_route_list)
-	    for (unsigned int i = 1; i < cr.roots.size(); i++)
+	  for (ConnectedRoute *cr : h->con_route_list)
+	    for (unsigned int i = 1; i < cr->roots.size(); i++)
 	    {	if (first) sqlfile << "INSERT INTO connectedRouteRoots VALUES\n";
 		else sqlfile << ',';
 		first = 0;
-		sqlfile << "('" << cr.roots[0]->root << "','" << cr.roots[i]->root << "')\n";
+		sqlfile << "('" << cr->roots[0]->root << "','" << cr->roots[i]->root << "')\n";
 	    }
 	sqlfile << ";\n";
 
@@ -183,10 +200,10 @@ void sqlfile1
 		<< "), PRIMARY KEY(pointId), FOREIGN KEY (root) REFERENCES routes(root));\n";
 	unsigned int point_num = 0;
 	for (HighwaySystem *h : *highway_systems)
-	  for (Route &r : h->route_list)
+	  for (Route *r : h->route_list)
 	  {	sqlfile << "INSERT INTO waypoints VALUES\n";
 		first = 1;
-		for (Waypoint *w : r.point_list)
+		for (Waypoint *w : r->point_list)
 		{	if (!first) sqlfile << ',';
 			first = 0;
 			w->point_num = point_num;
@@ -210,10 +227,10 @@ void sqlfile1
 	unsigned int segment_num = 0;
 	std::vector<std::string> clinched_list;
 	for (HighwaySystem *h : *highway_systems)
-	  for (Route &r : h->route_list)
+	  for (Route *r : h->route_list)
 	  {	sqlfile << "INSERT INTO segments VALUES\n";
 		first = 1;
-		for (HighwaySegment *s : r.segment_list)
+		for (HighwaySegment *s : r->segment_list)
 		{	if (!first) sqlfile << ',';
 			first = 0;
 			sqlfile << '(' << s->csv_line(segment_num) << ")\n";

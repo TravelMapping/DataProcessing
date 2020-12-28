@@ -6,3 +6,5 @@ siteupdate
 siteupdateST
 TravelMapping.sql
 listupdates.txt
+*.d
+*.o

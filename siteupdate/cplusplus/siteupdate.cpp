@@ -13,83 +13,36 @@ This module defines classes to represent the contents of a
 .wpt file that lists the waypoints for a given highway.
 */
 
-class ErrorList;
-class Waypoint;
-class HighwaySegment;
-class Route;
-class ConnectedRoute;
-class HighwaySystem;
-class TravelerList;
-class Region;
-class HighwayGraph;
-class HGVertex;
-class HGEdge;
-#define pi 3.141592653589793238
-#include <chrono>
-#include <cmath>
 #include <cstring>
-#include <ctime>
-#include <deque>
 #include <dirent.h>
-#include <forward_list>
-#include <fstream>
-#include <iostream>
-#include <list>
-#include <mutex>
-//#include <regex>	// Unbearably slow. Equivalent functions will be hand-coded instead.
-#include <sys/stat.h>
-#include <string>
 #include <thread>
-#include <unordered_map>
-#include <unordered_set>
-#include <vector>
-#include "classes/Arguments.cpp"
-#include "classes/ClinchedDBValues.cpp"
-#include "classes/WaypointQuadtree/WaypointQuadtree.h"
-#include "classes/Route/Route.h"
+#include "classes/Arguments/Arguments.h"
+#include "classes/DBFieldLength/DBFieldLength.h"
+#include "classes/ClinchedDBValues/ClinchedDBValues.h"
 #include "classes/ConnectedRoute/ConnectedRoute.h"
-#include "classes/Waypoint/Waypoint.h"
-#include "classes/HighwaySegment/HighwaySegment.h"
-#include "classes/TravelerList/TravelerList.h"
+#include "classes/DatacheckEntry/DatacheckEntry.h"
+#include "classes/ElapsedTime/ElapsedTime.h"
+#include "classes/ErrorList/ErrorList.h"
+#include "classes/GraphGeneration/GraphListEntry.h"
 #include "classes/GraphGeneration/HGEdge.h"
+#include "classes/GraphGeneration/HGVertex.h"
+#include "classes/GraphGeneration/HighwayGraph.h"
 #include "classes/GraphGeneration/PlaceRadius.h"
-#include "functions/lower.cpp"
-#include "functions/upper.cpp"
-#include "functions/format_clinched_mi.cpp"
-#include "functions/double_quotes.cpp"
-#include "functions/crawl_hwy_data.cpp"
-#include "functions/operators.cpp"
-#include "functions/list_contains.cpp"
-#include "functions/split.cpp"
-#include "functions/valid_num_str.cpp"
-#include "classes/DBFieldLength.cpp"
-#include "classes/ElapsedTime.cpp"
-#include "classes/ErrorList.cpp"
-#include "classes/Region.cpp"
-#include "classes/HighwaySystem.cpp"
-#include "classes/DatacheckEntry.cpp"
-#include "classes/Waypoint/Waypoint.cpp"
-#include "classes/WaypointQuadtree/WaypointQuadtree.cpp"
-#include "classes/Route/Route.cpp"
-#include "classes/ConnectedRoute/ConnectedRoute.cpp"
-#include "classes/TravelerList/TravelerList.cpp"
-#include "classes/HighwaySegment/HighwaySegment.cpp"
-#include "classes/GraphGeneration/HGVertex.cpp"
-#include "classes/GraphGeneration/GraphListEntry.cpp"
-#include "classes/GraphGeneration/HighwayGraph.cpp"
-#include "classes/GraphGeneration/HGEdge.cpp"
-#include "classes/GraphGeneration/PlaceRadius.cpp"
-#include "threads/ReadWptThread.cpp"
-#include "threads/NmpSearchThread.cpp"
-#include "threads/NmpMergedThread.cpp"
-#include "threads/ReadListThread.cpp"
-#include "threads/ConcAugThread.cpp"
-#include "threads/CompStatsRThread.cpp"
-#include "threads/CompStatsTThread.cpp"
-#include "threads/UserLogThread.cpp"
-#include "threads/SubgraphThread.cpp"
-#include "threads/MasterTmgThread.cpp"
-#include "functions/sql_file.cpp"
+#include "classes/HighwaySegment/HighwaySegment.h"
+#include "classes/HighwaySystem/HighwaySystem.h"
+#include "classes/Region/Region.h"
+#include "classes/Route/Route.h"
+#include "classes/TravelerList/TravelerList.h"
+#include "classes/Waypoint/Waypoint.h"
+#include "classes/WaypointQuadtree/WaypointQuadtree.h"
+#include "functions/crawl_hwy_data.h"
+#include "functions/split.h"
+#include "functions/sql_file.h"
+#include "functions/upper.h"
+#include "templates/contains.cpp"
+#ifdef threading_enabled
+#include "threads/threads.h"
+#endif
 using namespace std;
 
 int main(int argc, char *argv[])
@@ -281,21 +234,16 @@ int main(int argc, char *argv[])
 	for (HighwaySystem* h : highway_systems)
 	{	std::cout << h->systemname << std::flush;
 		bool usa_flag = h->country->first == "USA";
-		for (Route& r : h->route_list)
-			r.read_wpt(&all_waypoints, &el, args.highwaydatapath+"/hwy_data", usa_flag, &all_wpt_files);
+		for (Route* r : h->route_list)
+			r->read_wpt(&all_waypoints, &el, args.highwaydatapath+"/hwy_data", usa_flag, &all_wpt_files);
 		std::cout << "!" << std::endl;
 	}
       #endif
 
-	//#include "debug/qt_and_colocate_check.cpp"
-	cout << et.et() << "Writing WaypointQuadtree.tmg." << endl;
-	all_waypoints.write_qt_tmg(args.logfilepath+"/WaypointQuadtree.tmg");
+	//cout << et.et() << "Writing WaypointQuadtree.tmg." << endl;
+	//all_waypoints.write_qt_tmg(args.logfilepath+"/WaypointQuadtree.tmg");
 	cout << et.et() << "Sorting waypoints in Quadtree." << endl;
 	all_waypoints.sort();
-	cout << et.et() << "Sorting colocated point lists." << endl;
-	for (Waypoint *w : all_waypoints.point_list())
-		if (w->colocated && w == w->colocated->front()) w->colocated->sort(sort_root_at_label);
-	//#include "debug/qt_and_colocate_check.cpp"
 
 	cout << et.et() << "Finding unprocessed wpt files." << endl;
 	if (all_wpt_files.size())
@@ -374,8 +322,8 @@ int main(int argc, char *argv[])
 	      #else
 		for (HighwaySystem *h : highway_systems)
 		{	std::cout << h->systemname << std::flush;
-			for (Route &r : h->route_list)
-			  r.write_nmp_merged(args.nmpmergepath + "/" + r.rg_str);
+			for (Route *r : h->route_list)
+			  r->write_nmp_merged(args.nmpmergepath + "/" + r->rg_str);
 			std::cout << '.' << std::flush;
 		}
 	      #endif
@@ -386,72 +334,72 @@ int main(int argc, char *argv[])
 
 	cout << et.et() << "Processing waypoint labels and checking for unconnected chopped routes." << endl;
 	for (HighwaySystem* h : highway_systems)
-	  for (Route& r : h->route_list)
+	  for (Route* r : h->route_list)
 	  {	// check for unconnected chopped routes
-		if (!r.con_route)
-		{	el.add_error(r.system->systemname + ".csv: root " + r.root + " not matched by any connected route root.");
+		if (!r->con_route)
+		{	el.add_error(r->system->systemname + ".csv: root " + r->root + " not matched by any connected route root.");
 			continue;
 		}
 
 		// check for mismatched route endpoints within connected routes
-		#define q r.con_route->roots[r.rootOrder-1]
-		if ( r.rootOrder > 0 && q->point_list.size() > 1 && r.point_list.size() > 1 && !r.con_beg()->same_coords(q->con_end()) )
-		{	if ( q->con_beg()->same_coords(r.con_beg()) )
+		#define q r->con_route->roots[r->rootOrder-1]
+		if ( r->rootOrder > 0 && q->point_list.size() > 1 && r->point_list.size() > 1 && !r->con_beg()->same_coords(q->con_end()) )
+		{	if ( q->con_beg()->same_coords(r->con_beg()) )
 			{	//std::cout << "DEBUG: marking only " << q->str() << " reversed" << std::endl;
 				//if (q->is_reversed) std::cout << "DEBUG: " << q->str() << " already reversed!" << std::endl;
 				q->is_reversed = 1;
 			}
-			else if ( q->con_end()->same_coords(r.con_end()) )
-			{	//std::cout << "DEBUG: marking only " << r.str() << " reversed" << std::endl;
-				//if (r.is_reversed) std::cout << "DEBUG: " << r.str() << " already reversed!" << std::endl;
-				r.is_reversed = 1;
+			else if ( q->con_end()->same_coords(r->con_end()) )
+			{	//std::cout << "DEBUG: marking only " << r->str() << " reversed" << std::endl;
+				//if (r->is_reversed) std::cout << "DEBUG: " << r->str() << " already reversed!" << std::endl;
+				r->is_reversed = 1;
 			}
-			else if ( q->con_beg()->same_coords(r.con_end()) )
-			{	//std::cout << "DEBUG: marking both " << q->str() << " and " << r.str() << " reversed" << std::endl;
+			else if ( q->con_beg()->same_coords(r->con_end()) )
+			{	//std::cout << "DEBUG: marking both " << q->str() << " and " << r->str() << " reversed" << std::endl;
 				//if (q->is_reversed) std::cout << "DEBUG: " << q->str() << " already reversed!" << std::endl;
-				//if (r.is_reversed) std::cout << "DEBUG: " << r.str() << " already reversed!" << std::endl;
+				//if (r->is_reversed) std::cout << "DEBUG: " << r->str() << " already reversed!" << std::endl;
 				q->is_reversed = 1;
-				r.is_reversed = 1;
+				r->is_reversed = 1;
 			}
 			else
-			{	DatacheckEntry::add(&r, r.con_beg()->label, "", "",
+			{	DatacheckEntry::add(r, r->con_beg()->label, "", "",
 						     "DISCONNECTED_ROUTE", q->con_end()->root_at_label());
 				DatacheckEntry::add(q, q->con_end()->label, "", "",
-						     "DISCONNECTED_ROUTE", r.con_beg()->root_at_label());
+						     "DISCONNECTED_ROUTE", r->con_beg()->root_at_label());
 			}
 		}
 		#undef q
 
 		// create label hashes and check for duplicates
-		#define w r.point_list[index]
-		for (unsigned int index = 0; index < r.point_list.size(); index++)
+		#define w r->point_list[index]
+		for (unsigned int index = 0; index < r->point_list.size(); index++)
 		{	// ignore case and leading '+' or '*'
 			std::string upper_label = upper(w->label);
 			while (upper_label[0] == '+' || upper_label[0] == '*')
 				upper_label = upper_label.substr(1);
-			// if primary label not duplicated, add to r.pri_label_hash
-			if (r.alt_label_hash.find(upper_label) != r.alt_label_hash.end())
-			{	DatacheckEntry::add(&r, upper_label, "", "", "DUPLICATE_LABEL", "");
-				r.duplicate_labels.insert(upper_label);
+			// if primary label not duplicated, add to r->pri_label_hash
+			if (r->alt_label_hash.find(upper_label) != r->alt_label_hash.end())
+			{	DatacheckEntry::add(r, upper_label, "", "", "DUPLICATE_LABEL", "");
+				r->duplicate_labels.insert(upper_label);
 			}
-			else if (!r.pri_label_hash.insert(std::pair<std::string, unsigned int>(upper_label, index)).second)
-			{	DatacheckEntry::add(&r, upper_label, "", "", "DUPLICATE_LABEL", "");
-				r.duplicate_labels.insert(upper_label);
+			else if (!r->pri_label_hash.insert(std::pair<std::string, unsigned int>(upper_label, index)).second)
+			{	DatacheckEntry::add(r, upper_label, "", "", "DUPLICATE_LABEL", "");
+				r->duplicate_labels.insert(upper_label);
 			}
 			for (std::string& a : w->alt_labels)
 			{	// create canonical AltLabels
 				while (a[0] == '+' || a[0] == '*') a = a.substr(1);
 				upper(a.data());
 				// populate unused set
-				r.unused_alt_labels.insert(a);
+				r->unused_alt_labels.insert(a);
 				// create label->index hashes and check if AltLabels duplicated
-				if (r.pri_label_hash.find(a) != r.pri_label_hash.end())
-				{	DatacheckEntry::add(&r, a, "", "", "DUPLICATE_LABEL", "");
-					r.duplicate_labels.insert(a);
+				if (r->pri_label_hash.find(a) != r->pri_label_hash.end())
+				{	DatacheckEntry::add(r, a, "", "", "DUPLICATE_LABEL", "");
+					r->duplicate_labels.insert(a);
 				}
-				else if (!r.alt_label_hash.insert(std::pair<std::string, unsigned int>(a, index)).second)
-				{	DatacheckEntry::add(&r, a, "", "", "DUPLICATE_LABEL", "");
-					r.duplicate_labels.insert(a);
+				else if (!r->alt_label_hash.insert(std::pair<std::string, unsigned int>(a, index)).second)
+				{	DatacheckEntry::add(r, a, "", "", "DUPLICATE_LABEL", "");
+					r->duplicate_labels.insert(a);
 				}
 			}
 		}
@@ -531,10 +479,10 @@ int main(int argc, char *argv[])
 	Route::pri_list_hash.clear();
 	Route::alt_list_hash.clear();
 	for (HighwaySystem* h : highway_systems)
-	  for (Route& r : h->route_list)
-	  {	r.pri_label_hash.clear();
-		r.alt_label_hash.clear();
-		r.duplicate_labels.clear();
+	  for (Route* r : h->route_list)
+	  {	r->pri_label_hash.clear();
+		r->alt_label_hash.clear();
+		r->duplicate_labels.clear();
 	  }
 
 	cout << et.et() << "Writing pointsinuse.log, unusedaltlabels.log, listnamesinuse.log and unusedaltroutenames.log" << endl;
@@ -549,25 +497,25 @@ int main(int argc, char *argv[])
 	lniufile << "Log file created at: " << ctime(&timestamp);
 	uarnfile << "Log file created at: " << ctime(&timestamp);
 	for (HighwaySystem *h : highway_systems)
-	{	for (Route &r : h->route_list)
+	{	for (Route *r : h->route_list)
 		{	// labelsinuse.log line
-			if (r.labels_in_use.size())
-			{	piufile << r.root << '(' << r.point_list.size() << "):";
-				list<string> liu_list(r.labels_in_use.begin(), r.labels_in_use.end());
+			if (r->labels_in_use.size())
+			{	piufile << r->root << '(' << r->point_list.size() << "):";
+				list<string> liu_list(r->labels_in_use.begin(), r->labels_in_use.end());
 				liu_list.sort();
 				for (string& label : liu_list) piufile << ' ' << label;
 				piufile << '\n';
-				r.labels_in_use.clear();
+				r->labels_in_use.clear();
 			}
 			// unusedaltlabels.log lines, to be sorted by root later
-			if (r.unused_alt_labels.size())
-			{	total_unused_alt_labels += r.unused_alt_labels.size();
-				string ual_entry = r.root + '(' + to_string(r.unused_alt_labels.size()) + "):";
-				list<string> ual_list(r.unused_alt_labels.begin(), r.unused_alt_labels.end());
+			if (r->unused_alt_labels.size())
+			{	total_unused_alt_labels += r->unused_alt_labels.size();
+				string ual_entry = r->root + '(' + to_string(r->unused_alt_labels.size()) + "):";
+				list<string> ual_list(r->unused_alt_labels.begin(), r->unused_alt_labels.end());
 				ual_list.sort();
 				for (string& label : ual_list) ual_entry += ' ' + label;
 				unused_alt_labels.push_back(ual_entry);
-				r.unused_alt_labels.clear();
+				r->unused_alt_labels.clear();
 			}
 		}
 		// listnamesinuse.log line
@@ -638,8 +586,8 @@ int main(int argc, char *argv[])
 
 	/*ofstream sanetravfile(args.logfilepath+"/concurrent_travelers_sanity_check.log");
 	for (HighwaySystem *h : highway_systems)
-	    for (Route &r : h->route_list)
-		for (HighwaySegment *s : r.segment_list)
+	    for (Route *r : h->route_list)
+		for (HighwaySegment *s : r->segment_list)
 		    sanetravfile << s->concurrent_travelers_sanity_check();
 	sanetravfile.close(); //*/
 
@@ -670,9 +618,9 @@ int main(int argc, char *argv[])
 	cout << et.et() << "Computing stats." << flush;
 	for (HighwaySystem *h : highway_systems)
 	{	cout << "." << flush;
-		for (Route &r : h->route_list)
-		{ 	r.compute_stats_r();
-		  	for (HighwaySegment *s : r.segment_list)
+		for (Route *r : h->route_list)
+		{ 	r->compute_stats_r();
+		  	for (HighwaySegment *s : r->segment_list)
 			  for (TravelerList *t : s->clinched_by)
 			    s->compute_stats_t(t);
 		}
@@ -729,17 +677,17 @@ int main(int argc, char *argv[])
 			}
 		}
 		hdstatsfile << "System " << h->systemname << " by route:\n";
-		for (ConnectedRoute& cr : h->con_route_list)
+		for (ConnectedRoute* cr : h->con_route_list)
 		{	string to_write = "";
-			for (Route *r : cr.roots)
+			for (Route *r : cr->roots)
 			{	sprintf(fstr, ": %.2f mi\n", r->mileage);
 				to_write += "  " + r->readable_name() + fstr;
-				cr.mileage += r->mileage;
+				cr->mileage += r->mileage;
 			}
-			sprintf(fstr, ": %.2f mi", cr.mileage);
-			hdstatsfile << cr.readable_name() << fstr;
-			if (cr.roots.size() == 1)
-				hdstatsfile << " (" << cr.roots[0]->readable_name() << " only)\n";
+			sprintf(fstr, ": %.2f mi", cr->mileage);
+			hdstatsfile << cr->readable_name() << fstr;
+			if (cr->roots.size() == 1)
+				hdstatsfile << " (" << cr->roots[0]->readable_name() << " only)\n";
 			else	hdstatsfile << '\n' << to_write;
 		}
 	}
@@ -1014,9 +962,9 @@ int main(int argc, char *argv[])
 	unsigned int segments = 0;
 	for (HighwaySystem *h : highway_systems)
 	{	routes += h->route_list.size();
-		for (Route &r : h->route_list)
-		{	points += r.point_list.size();
-			segments += r.segment_list.size();
+		for (Route *r : h->route_list)
+		{	points += r->point_list.size();
+			segments += r->segment_list.size();
 		}
 	}
 	cout << "Processed " << routes << " routes with a total of " << points << " points and " << segments << " segments." << endl;
@@ -1058,7 +1006,7 @@ int main(int argc, char *argv[])
 	unsigned other_count = 0;
 	unsigned int total_rtes = 0;
 	for (HighwaySystem *h : highway_systems)
-	  for (Route& r : h->route_list)
+	  for (Route* r : h->route_list)
 	  {	total_rtes++;
 		if (h->devel()) d_count++;
 		else {	if (h->active()) a_count++;

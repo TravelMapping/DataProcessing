@@ -6,11 +6,11 @@ timestamp = time(0);
 concurrencyfile << "Log file created at: " << ctime(&timestamp);
 for (HighwaySystem *h : highway_systems)
 {   cout << '.' << flush;
-    for (Route &r : h->route_list)
-	for (HighwaySegment *s : r.segment_list)
+    for (Route *r : h->route_list)
+	for (HighwaySegment *s : r->segment_list)
 	    if (s->waypoint1->colocated && s->waypoint2->colocated)
 	        for ( Waypoint *w1 : *(s->waypoint1->colocated) )
-	            if (w1->route != &r)
+	            if (w1->route != r)
 	                for ( Waypoint *w2 : *(s->waypoint2->colocated) )
 	                    if (w1->route == w2->route)
 			    {   HighwaySegment *other = w1->route->find_segment_by_waypoints(w1,w2);
@@ -49,9 +49,9 @@ if (args.splitregion != "")
 	{	if (splitsystems.find(h->systemname) == splitsystems.end()) continue;
 		ofstream fralog;
 		if (args.splitregionpath != "") fralog.open(args.splitregionpath + "/logs/" + h->systemname + "-concurrencies.log");
-		for (Route &r : h->route_list)
-		{	if (r.region->code.substr(0, args.splitregion.size()) != args.splitregion) continue;
-			for (HighwaySegment *s : r.segment_list)
+		for (Route *r : h->route_list)
+		{	if (r->region->code.substr(0, args.splitregion.size()) != args.splitregion) continue;
+			for (HighwaySegment *s : r->segment_list)
 				if (!s->concurrent)
 					fralog << s->str() << " has no concurrencies\n";
 				else if (s->concurrent->size() % 2)

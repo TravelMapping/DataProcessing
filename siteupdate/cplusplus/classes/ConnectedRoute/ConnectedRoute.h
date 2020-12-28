@@ -1,3 +1,9 @@
+class ErrorList;
+class HighwaySystem;
+class Route;
+#include <iostream>
+#include <vector>
+
 class ConnectedRoute
 {   /* This class encapsulates a single 'connected route' as given
     by a single line of a _con.csv file

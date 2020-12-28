@@ -1,3 +1,12 @@
+#include "ConnectedRoute.h"
+#include "../DBFieldLength/DBFieldLength.h"
+#include "../ErrorList/ErrorList.h"
+#include "../HighwaySystem/HighwaySystem.h"
+#include "../Route/Route.h"
+#include "../../functions/double_quotes.h"
+#include "../../functions/lower.h"
+#include "../../functions/split.h"
+
 ConnectedRoute::ConnectedRoute(std::string &line, HighwaySystem *sys, ErrorList &el)
 {	mileage = 0;
 

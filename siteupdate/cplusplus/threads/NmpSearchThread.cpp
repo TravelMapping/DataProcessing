@@ -14,8 +14,8 @@ void NmpSearchThread
 		(*it)++;
 		//printf("NmpSearchThread %02i (*it)++\n", id); fflush(stdout);
 		hs_mtx->unlock();
-		for (Route &r : h->route_list)
-		  for (Waypoint *w : r.point_list)
+		for (Route *r : h->route_list)
+		  for (Waypoint *w : r->point_list)
 		    w->near_miss_points = all_waypoints->near_miss_waypoints(w, 0.0005);
 	}
 }

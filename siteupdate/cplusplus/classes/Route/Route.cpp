@@ -1,3 +1,18 @@
+#include "Route.h"
+#include "../DBFieldLength/DBFieldLength.h"
+#include "../ErrorList/ErrorList.h"
+#include "../HighwaySegment/HighwaySegment.h"
+#include "../HighwaySystem/HighwaySystem.h"
+#include "../Region/Region.h"
+#include "../TravelerList/TravelerList.h"
+#include "../Waypoint/Waypoint.h"
+#include "../../functions/double_quotes.h"
+#include "../../functions/lower.h"
+#include "../../functions/split.h"
+#include "../../functions/upper.h"
+#include <cstring>
+#include <sys/stat.h>
+
 std::unordered_map<std::string, Route*> Route::root_hash, Route::pri_list_hash, Route::alt_list_hash;
 std::mutex Route::awf_mtx;
 
@@ -210,7 +225,7 @@ void Route::write_nmp_merged(std::string filename)
 	wptfile.close();
 }
 
-inline void Route::store_traveled_segments(TravelerList* t, std::ofstream& log, unsigned int beg, unsigned int end)
+void Route::store_traveled_segments(TravelerList* t, std::ofstream& log, unsigned int beg, unsigned int end)
 {	// store clinched segments with traveler and traveler with segments
 	for (unsigned int pos = beg; pos < end; pos++)
 	{	HighwaySegment *hs = segment_list[pos];
@@ -221,11 +236,11 @@ inline void Route::store_traveled_segments(TravelerList* t, std::ofstream& log, 
 		log << "Route updated " << (*last_update)[0] << ": " << readable_name() << '\n';
 }
 
-inline Waypoint* Route::con_beg()
+Waypoint* Route::con_beg()
 {	return is_reversed ? point_list.back() : point_list.front();
 }
 
-inline Waypoint* Route::con_end()
+Waypoint* Route::con_end()
 {	return is_reversed ? point_list.front() : point_list.back();
 }
 

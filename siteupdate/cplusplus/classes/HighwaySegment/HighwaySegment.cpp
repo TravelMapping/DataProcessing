@@ -1,3 +1,10 @@
+#include "HighwaySegment.h"
+#include "../HighwaySystem/HighwaySystem.h"
+#include "../Route/Route.h"
+#include "../TravelerList/TravelerList.h"
+#include "../Waypoint/Waypoint.h"
+#include <cmath>
+
 HighwaySegment::HighwaySegment(Waypoint *w1, Waypoint *w2, Route *rte)
 {	waypoint1 = w1;
 	waypoint2 = w2;
