@@ -4,7 +4,9 @@
 #include "../Route/Route.h"
 #include "../Waypoint/Waypoint.h"
 #include "../../templates/contains.cpp"
-
+#ifdef threading_enabled
+#include <thread>
+#endif
 inline bool WaypointQuadtree::WaypointQuadtree::refined()
 {	return nw_child;
 }
@@ -217,19 +219,6 @@ unsigned int WaypointQuadtree::total_nodes()
 	else	return 1 + nw_child->total_nodes() + ne_child->total_nodes() + sw_child->total_nodes() + se_child->total_nodes();
 }
 
-void WaypointQuadtree::sort()
-{	if (refined())
-	     {	ne_child->sort();
-		nw_child->sort();
-		se_child->sort();
-		sw_child->sort();
-	     }
-	else {	points.sort(sort_root_at_label);
-		for (Waypoint *w : points)
-		  if (w->colocated && w == w->colocated->front()) w->colocated->sort(sort_root_at_label);
-	     }
-}
-
 void WaypointQuadtree::get_tmg_lines(std::list<std::string> &vertices, std::list<std::string> &edges, std::string n_name)
 {	if (refined())
 	{	double cmn_lat = min_lat;
@@ -259,3 +248,60 @@ void WaypointQuadtree::write_qt_tmg(std::string filename)
 	for (std::string& e : edges)	tmgfile << e << '\n';
 	tmgfile.close();
 }
+
+#ifdef threading_enabled
+
+void WaypointQuadtree::terminal_nodes(std::forward_list<WaypointQuadtree*>* nodes, size_t& slot, int& size)
+{	// add to an array of interleaved lists of terminal nodes
+	// for the multi-threaded WaypointQuadtree::sort function
+	if (refined())
+	     {	ne_child->terminal_nodes(nodes, slot, size);
+		nw_child->terminal_nodes(nodes, slot, size);
+		se_child->terminal_nodes(nodes, slot, size);
+		sw_child->terminal_nodes(nodes, slot, size);
+	     }
+	else {	nodes[slot].push_front(this);
+		slot = (slot+1) % size;
+	     }
+}
+
+void WaypointQuadtree::sort(int numthreads)
+{	std::forward_list<WaypointQuadtree*>* nodes = new std::forward_list<WaypointQuadtree*>[numthreads];
+	size_t slot = 0;
+	terminal_nodes(nodes, slot, numthreads);
+
+	std::thread **thr = new std::thread*[numthreads];
+	for (unsigned int t = 0; t < numthreads; t++)
+		thr[t] = new std::thread(sortnodes, nodes+t);
+	for (unsigned int t = 0; t < numthreads; t++)
+		thr[t]->join();
+	for (unsigned int t = 0; t < numthreads; t++)
+		delete thr[t];
+	delete[] thr;
+	delete[] nodes;
+}
+
+void WaypointQuadtree::sortnodes(std::forward_list<WaypointQuadtree*>* nodes)
+{	for (WaypointQuadtree* node : *nodes)
+	{	node->points.sort(sort_root_at_label);
+		for (Waypoint *w : node->points)
+		  if (w->colocated && w == w->colocated->front()) w->colocated->sort(sort_root_at_label);
+	}
+}
+
+#else
+
+void WaypointQuadtree::sort()
+{	if (refined())
+	     {	ne_child->sort();
+		nw_child->sort();
+		se_child->sort();
+		sw_child->sort();
+	     }
+	else {	points.sort(sort_root_at_label);
+		for (Waypoint *w : points)
+		  if (w->colocated && w == w->colocated->front()) w->colocated->sort(sort_root_at_label);
+	     }
+}
+
+#endif
