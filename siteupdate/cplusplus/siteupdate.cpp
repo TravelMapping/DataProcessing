@@ -243,7 +243,11 @@ int main(int argc, char *argv[])
 	//cout << et.et() << "Writing WaypointQuadtree.tmg." << endl;
 	//all_waypoints.write_qt_tmg(args.logfilepath+"/WaypointQuadtree.tmg");
 	cout << et.et() << "Sorting waypoints in Quadtree." << endl;
+      #ifdef threading_enabled
+	all_waypoints.sort(args.numthreads);
+      #else
 	all_waypoints.sort();
+      #endif
 
 	cout << et.et() << "Finding unprocessed wpt files." << endl;
 	if (all_wpt_files.size())

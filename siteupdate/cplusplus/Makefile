@@ -1,5 +1,11 @@
-MTObjects = siteupdateMT.o classes/GraphGeneration/HighwayGraphMT.o functions/sql_fileMT.o threads/threads.o
-STObjects = siteupdateST.o classes/GraphGeneration/HighwayGraphST.o functions/sql_fileST.o
+MTObjects = siteupdateMT.o functions/sql_fileMT.o threads/threads.o \
+  classes/GraphGeneration/HighwayGraphMT.o \
+  classes/WaypointQuadtree/WaypointQuadtreeMT.o
+
+STObjects = siteupdateST.o functions/sql_fileST.o \
+  classes/GraphGeneration/HighwayGraphST.o \
+  classes/WaypointQuadtree/WaypointQuadtreeST.o
+
 CommonObjects = \
   classes/Arguments/Arguments.o \
   classes/ClinchedDBValues/ClinchedDBValues.o \
@@ -19,7 +25,6 @@ CommonObjects = \
   classes/TravelerList/TravelerList.o \
   classes/Waypoint/Waypoint.o \
   classes/Waypoint/canonical_waypoint_name/canonical_waypoint_name.o \
-  classes/WaypointQuadtree/WaypointQuadtree.o \
   functions/crawl_hwy_data.o \
   functions/double_quotes.o \
   functions/format_clinched_mi.o \
