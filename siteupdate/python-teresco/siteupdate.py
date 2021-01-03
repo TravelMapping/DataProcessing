@@ -1119,6 +1119,7 @@ class ConnectedRoute:
         self.banner = ""
         self.groupname = ""
         self.roots = []
+        self.mileage = 0.0
         fields = line.split(";")
         if len(fields) != 5:
             el.add_error("Could not parse " + system.systemname + "_con.csv line: [" + line +
@@ -1165,7 +1166,6 @@ class ConnectedRoute:
         if len(self.roots) < 1:
             el.add_error("No roots in " + system.systemname + "_con.csv line: " + line)
         # will be computed for routes in active & preview systems later
-        self.mileage = 0.0
 
     def csv_line(self):
         """return csv line to insert into a table"""
