@@ -418,7 +418,7 @@ void sqlfile1
 	sqlfile << ";\n";
 	sqlfile.close();
       #ifdef threading_enabled
-	std::cout << '\n' + et->et() + "Pause writing database file " + args->databasename + ".sql.\n" << std::flush;
+	std::cout << '\n' << et->et() << "Pause writing database file " << args->databasename << ".sql.\n" << std::flush;
       #endif
      }
 

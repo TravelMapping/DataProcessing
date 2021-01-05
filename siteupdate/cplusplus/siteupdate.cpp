@@ -179,7 +179,7 @@ int main(int argc, char *argv[])
 
 	// Create a list of HighwaySystem objects, one per system in systems.csv file
 	list<HighwaySystem*> highway_systems;
-	cout << et.et() << "Reading systems list in " << args.highwaydatapath+"/"+args.systemsfile << "." << endl;
+	cout << et.et() << "Reading systems list in " << args.highwaydatapath << "/" << args.systemsfile << "." << endl;
 	file.open(args.highwaydatapath+"/"+args.systemsfile);
 	if (!file) el.add_error("Could not open "+args.highwaydatapath+"/"+args.systemsfile);
 	else {	getline(file, line); // ignore header line
@@ -252,7 +252,7 @@ int main(int argc, char *argv[])
 	cout << et.et() << "Finding unprocessed wpt files." << endl;
 	if (all_wpt_files.size())
 	{	ofstream unprocessedfile(args.logfilepath+"/unprocessedwpts.log");
-		cout << all_wpt_files.size() << " .wpt files in " << args.highwaydatapath + "/hwy_data not processed, see unprocessedwpts.log." << endl;
+		cout << all_wpt_files.size() << " .wpt files in " << args.highwaydatapath << "/hwy_data not processed, see unprocessedwpts.log." << endl;
 		list<string> all_wpts_list(all_wpt_files.begin(), all_wpt_files.end());
 		all_wpts_list.sort();
 		for (const string &f : all_wpts_list) unprocessedfile << strstr(f.data(), "hwy_data") << '\n';
