@@ -24,8 +24,6 @@ HGVertex::HGVertex(Waypoint *wpt, const std::string *n, unsigned int numthreads)
 	first_waypoint = wpt;
 	if (!wpt->colocated)
 	{	if (!wpt->is_hidden) visibility = 2;
-		regions.insert(wpt->route->region);
-		systems.insert(wpt->route->system);
 		wpt->route->region->vertices.insert(this);
 		wpt->route->system->vertices.insert(this);
 		return;
@@ -33,8 +31,6 @@ HGVertex::HGVertex(Waypoint *wpt, const std::string *n, unsigned int numthreads)
 	for (Waypoint *w : *(wpt->colocated))
 	{	// will consider hidden iff all colocated waypoints are hidden
 		if (!w->is_hidden) visibility = 2;
-		regions.insert(w->route->region);
-		systems.insert(w->route->system);
 		w->route->region->vertices.insert(this);
 		w->route->system->vertices.insert(this);
 	}
@@ -61,6 +57,4 @@ HGVertex::~HGVertex()
 	while (incident_c_edges.size()) delete incident_c_edges.front();
 	delete[] s_vertex_num;
 	delete[] c_vertex_num;
-	regions.clear();
-	systems.clear();
 }
