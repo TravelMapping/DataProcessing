@@ -55,6 +55,8 @@ HGVertex::~HGVertex()
 {	//std::cout << "deleting vertex at " << first_waypoint->str() << std::endl;
 	while (incident_s_edges.size()) delete incident_s_edges.front();
 	while (incident_c_edges.size()) delete incident_c_edges.front();
+	while (incident_t_edges.size()) delete incident_t_edges.front();
 	delete[] s_vertex_num;
 	delete[] c_vertex_num;
+	delete[] t_vertex_num;
 }
