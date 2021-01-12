@@ -1692,16 +1692,12 @@ class HGVertex:
         # note: if saving the first waypoint, no longer need
         # lat & lng and can replace with methods
         self.first_waypoint = wpt
-        self.regions = set()
-        self.systems = set()
         self.incident_s_edges = [] # simple
         self.incident_c_edges = [] # collapsed
         self.incident_t_edges = [] # traveled
         if wpt.colocated is None:
             if not wpt.is_hidden:
                 self.visibility = 2
-            self.regions.add(wpt.route.region)
-            self.systems.add(wpt.route.system)
             wpt.route.system.vertices.add(self)
             if wpt.route.region not in rg_vset_hash:
                 rg_vset_hash[wpt.route.region] = set()
@@ -1713,8 +1709,6 @@ class HGVertex:
             # will consider hidden iff all colocated waypoints are hidden
             if not w.is_hidden:
                 self.visibility = 2
-            self.regions.add(w.route.region)
-            self.systems.add(w.route.system)
             if w.route.region not in rg_vset_hash:
                 rg_vset_hash[w.route.region] = set()
                 rg_vset_hash[w.route.region].add(self)

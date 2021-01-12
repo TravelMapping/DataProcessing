@@ -15,8 +15,6 @@ class HGVertex
 	const std::string *unique_name;
 	char visibility;
 	Waypoint *first_waypoint;
-	std::unordered_set<Region*> regions;
-	std::unordered_set<HighwaySystem*> systems;
 	std::list<HGEdge*> incident_s_edges; // simple
 	std::list<HGEdge*> incident_c_edges; // collapsed
 	std::list<HGEdge*> incident_t_edges; // traveled
