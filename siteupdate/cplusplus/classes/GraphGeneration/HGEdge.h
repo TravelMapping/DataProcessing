@@ -29,9 +29,9 @@ class HGEdge
 	~HGEdge();
 
 	void detach(unsigned char);
-	std::string label(std::list<HighwaySystem*> *);
-	std::string collapsed_tmg_line(std::list<HighwaySystem*> *, unsigned int);
-	std::string traveled_tmg_line(std::list<HighwaySystem*> *, std::list<TravelerList*> *, unsigned int);
+	void write_label(std::ofstream&, std::list<HighwaySystem*> *);
+	void collapsed_tmg_line(std::ofstream&, char*, unsigned int, std::list<HighwaySystem*>*);
+	void traveled_tmg_line (std::ofstream&, char*, unsigned int, std::list<HighwaySystem*>*, std::list<TravelerList*>*);
 	std::string debug_tmg_line(std::list<HighwaySystem*> *, unsigned int);
 	std::string str();
 	std::string intermediate_point_string();

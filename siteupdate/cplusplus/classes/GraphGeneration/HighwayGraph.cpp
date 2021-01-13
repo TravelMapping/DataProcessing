@@ -293,22 +293,25 @@ void HighwayGraph::write_master_graphs_tmg(std::vector<GraphListEntry> &graph_ve
 	{	for (HGEdge *e : wv.second->incident_s_edges)
 		  if (!e->s_written)
 		  {	e->s_written = 1;
-			simplefile << e->vertex1->s_vertex_num[0] << ' ' << e->vertex2->s_vertex_num[0] << ' ' << e->label(0) << '\n';
+			simplefile << e->vertex1->s_vertex_num[0] << ' ' << e->vertex2->s_vertex_num[0] << ' ';
+			e->write_label(simplefile, 0);
+			simplefile << '\n';
 		  }
 		// write edges if vertex is visible...
 		if (wv.second->visibility >= 1)
-		{	// in traveled graph,
+		{	char fstr[57];
+			// in traveled graph,
 			for (HGEdge *e : wv.second->incident_t_edges)
 			  if (!e->t_written)
 			  {	e->t_written = 1;
-				travelfile << e->traveled_tmg_line(0, &traveler_lists, 0) << '\n';
+				e->traveled_tmg_line(travelfile, fstr, 0, 0, &traveler_lists);
 			  }
 			if (wv.second->visibility == 2)
 			{	// and in collapsed graph
 				for (HGEdge *e : wv.second->incident_c_edges)
 				  if (!e->c_written)
 				  {	e->c_written = 1;
-					collapfile << e->collapsed_tmg_line(0, 0) << '\n';
+					e->collapsed_tmg_line(collapfile, fstr, 0, 0);
 				  }
 			}
 		}
@@ -391,13 +394,16 @@ void HighwayGraph::write_subgraphs_tmg
 	}
 	// write edges
 	for (HGEdge *e : mse)
-		simplefile << e->vertex1->s_vertex_num[threadnum] << ' '
-			   << e->vertex2->s_vertex_num[threadnum] << ' '
-			   << e->label(graph_vector[graphnum].systems) << '\n';
+	{	simplefile << e->vertex1->s_vertex_num[threadnum] << ' '
+			   << e->vertex2->s_vertex_num[threadnum] << ' ';
+		e->write_label(simplefile, graph_vector[graphnum].systems);
+		simplefile << '\n';
+	}
+	char fstr[57];
 	for (HGEdge *e : mce)
-		collapfile << e->collapsed_tmg_line(graph_vector[graphnum].systems, threadnum) << '\n';
+		e->collapsed_tmg_line(collapfile, fstr, threadnum, graph_vector[graphnum].systems);
 	for (HGEdge *e : mte)
-		travelfile << e->traveled_tmg_line(graph_vector[graphnum].systems, &traveler_lists, threadnum) << '\n';
+		e->traveled_tmg_line(travelfile, fstr, threadnum, graph_vector[graphnum].systems, &traveler_lists);
 	// traveler names
 	for (TravelerList *t : traveler_lists)
 		travelfile << t->traveler_name << ' ';
