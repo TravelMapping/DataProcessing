@@ -42,7 +42,7 @@ class HighwayGraph
 		std::unordered_set<HGEdge*>&,	// matching    simple edges
 		std::unordered_set<HGEdge*>&,	// matching collapsed edges
 		std::unordered_set<HGEdge*>&,	// matching  traveled edges
-		unsigned int&, unsigned int&
+		int, unsigned int&, unsigned int&
 	);
 
 	void write_master_graphs_tmg(std::vector<GraphListEntry>&, std::string, std::list<TravelerList*>&);

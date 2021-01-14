@@ -156,7 +156,7 @@ inline void HighwayGraph::matching_vertices_and_edges
 	std::unordered_set<HGEdge*> &mse,	// matching    simple edges
 	std::unordered_set<HGEdge*> &mce,	// matching collapsed edges
 	std::unordered_set<HGEdge*> &mte,	// matching  traveled edges
-	unsigned int &cv_count, unsigned int &tv_count
+	int threadnum, unsigned int &cv_count, unsigned int &tv_count
 )
 {	// Find a set of vertices from the graph, optionally
 	// restricted by region or system or placeradius area.
@@ -165,7 +165,6 @@ inline void HighwayGraph::matching_vertices_and_edges
 	std::unordered_set<HGVertex*> rvset;	// union of all sets in regions
 	std::unordered_set<HGVertex*> svset;	// union of all sets in systems
 	std::unordered_set<HGVertex*> pvset;	// set of vertices within placeradius
-	std::unordered_set<TravelerList*> trav_set;
 
 	if (g.regions) for (Region *r : *g.regions)
 		rvset.insert(r->vertices.begin(), r->vertices.end());
@@ -220,7 +219,11 @@ inline void HighwayGraph::matching_vertices_and_edges
 			    }
 			if (system_match)
 			{	mte.insert(e);
-				for (TravelerList *t : e->segment->clinched_by) trav_set.insert(t);
+				for (TravelerList *t : e->segment->clinched_by)
+				  if (!t->in_subgraph[threadnum])
+				  {	traveler_lists.push_back(t);
+					t->in_subgraph[threadnum] = 1;
+				  }
 			}
 		    }
 		if (v->visibility < 2) continue;
@@ -238,7 +241,7 @@ inline void HighwayGraph::matching_vertices_and_edges
 			if (system_match) mce.insert(e);
 		    }
 	}
-	traveler_lists.assign(trav_set.begin(), trav_set.end());
+	for (TravelerList* t : traveler_lists) t->in_subgraph[threadnum] = 0;
 	traveler_lists.sort(sort_travelers_by_name);
 }
 
@@ -345,7 +348,7 @@ void HighwayGraph::write_subgraphs_tmg
 	std::unordered_set<HGVertex*> mv;
 	std::unordered_set<HGEdge*> mse, mce, mte;
 	std::list<TravelerList*> traveler_lists;
-	matching_vertices_and_edges(graph_vector[graphnum], qt, traveler_lists, mv, mse, mce, mte, cv_count, tv_count);
+	matching_vertices_and_edges(graph_vector[graphnum], qt, traveler_lists, mv, mse, mce, mte, threadnum, cv_count, tv_count);
 	// assign traveler numbers
 	unsigned int travnum = 0;
 	for (TravelerList *t : traveler_lists)
