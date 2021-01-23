@@ -1031,11 +1031,7 @@ class Route:
                     #    print(str(dbg_w) + " ", end="")
                     #print()
                     if len(nmps) > 0:
-                        if w.near_miss_points is None:
-                            w.near_miss_points = nmps
-                        else:
-                            w.near_miss_points.extend(nmps)
-    
+                        w.near_miss_points = nmps
                         for other_w in nmps:
                             if other_w.near_miss_points is None:
                                 other_w.near_miss_points = [ w ]
