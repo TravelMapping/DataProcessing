@@ -11,7 +11,7 @@ class HGEdge
     edge that can incorporate intermediate points.
     */
 	public:
-	bool s_written, c_written, t_written; // simple, collapsed, traveled
+	bool *s_written, *c_written, *t_written; // simple, collapsed, traveled
 	std::string segment_name;
 	HGVertex *vertex1, *vertex2;
 	std::list<HGVertex*> intermediate_points; // if more than 1, will go from vertex1 to vertex2
@@ -24,8 +24,8 @@ class HGEdge
 	static const unsigned char collapsed = 2;
 	static const unsigned char traveled = 4;
 
-	HGEdge(HighwaySegment *, HighwayGraph *);
-	HGEdge(HGVertex *, unsigned char);
+	HGEdge(HighwaySegment *, HighwayGraph *, int);
+	HGEdge(HGVertex *, unsigned char, int);
 	~HGEdge();
 
 	void detach(unsigned char);

@@ -7,11 +7,17 @@
 #include "../Waypoint/Waypoint.h"
 #include "../../templates/contains.cpp"
 
-HGEdge::HGEdge(HighwaySegment *s, HighwayGraph *graph)
+HGEdge::HGEdge(HighwaySegment *s, HighwayGraph *graph, int numthreads)
 {	// initial construction is based on a HighwaySegment
-	s_written = 0; // simple
-	c_written = 0; // collapsed
-	t_written = 0; // traveled
+	s_written = new bool[numthreads];
+	c_written = new bool[numthreads];
+	t_written = new bool[numthreads];
+		    // deleted by ~HGEdge
+	// we only need to initialize the first element, for master graphs.
+	// the rest will get zeroed out for each subgraph set.
+	s_written[0] = 0;
+	c_written[0] = 0;
+	t_written[0] = 0;
 	vertex1 = graph->vertices.at(s->waypoint1->hashpoint());
 	vertex2 = graph->vertices.at(s->waypoint2->hashpoint());
 	// checks for the very unusual cases where an edge ends up
@@ -48,10 +54,13 @@ HGEdge::HGEdge(HighwaySegment *s, HighwayGraph *graph)
 	     }
 }
 
-HGEdge::HGEdge(HGVertex *vertex, unsigned char fmt_mask)
+HGEdge::HGEdge(HGVertex *vertex, unsigned char fmt_mask, int numthreads)
 {	// build by collapsing two existing edges around a common hidden vertex
-	c_written = 0;
-	t_written = 0;
+	c_written = new bool[numthreads];
+	t_written = new bool[numthreads];
+		    // deleted by ~HGEdge
+	c_written[0] = 0;
+	t_written[0] = 0;
 	format = fmt_mask;
 	// we know there are exactly 2 incident edges, as we
 	// checked for that, and we will replace these two
@@ -198,6 +207,9 @@ HGEdge::~HGEdge()
 	segment_name.clear();
 	intermediate_points.clear();
 	route_names_and_systems.clear();
+	if (format & simple) delete[] s_written;
+	delete[] c_written;
+	delete[] t_written;
 }
 
 // compute an edge label, optionally resticted by systems
