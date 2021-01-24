@@ -60,9 +60,9 @@ HighwaySystem::HighwaySystem(
 	if (!file) el.add_error("Could not open "+path+"/"+systemname+".csv");
 	else {	getline(file, line); // ignore header line
 		while(getline(file, line))
-		{	// trim DOS newlines & trailing whitespace
+		{	if (line.empty()) continue;
+			// trim DOS newlines & trailing whitespace
 			while ( strchr("\r\t ", line.back()) ) line.pop_back();
-			if (line.empty()) continue;
 			Route* r = new Route(line, this, el, region_hash);
 				   // deleted on termination of program
 			if (r->root.size()) route_list.push_back(r);
@@ -78,9 +78,9 @@ HighwaySystem::HighwaySystem(
 	if (!file) el.add_error("Could not open "+path+"/"+systemname+"_con.csv");
 	else {	getline(file, line); // ignore header line
 		while(getline(file, line))
-		{	// trim DOS newlines & trailing whitespace
+		{	if (line.empty()) continue;
+			// trim DOS newlines & trailing whitespace
 			while ( strchr("\r\t ", line.back()) ) line.pop_back();
-			if (line.empty()) continue;
 			con_route_list.push_back(new ConnectedRoute(line, this, el));
 						 // deleted on termination of program
 		}
