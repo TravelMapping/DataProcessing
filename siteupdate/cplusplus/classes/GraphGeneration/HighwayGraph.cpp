@@ -186,7 +186,7 @@ inline void HighwayGraph::matching_vertices_and_edges
 	else if (g.placeradius)
 		mvset = pvset;
 	else	// no restrictions via region, system, or placeradius, so include everything
-		for (std::pair<const Waypoint*, HGVertex*> wv : vertices)
+		for (std::pair<Waypoint* const, HGVertex*>& wv : vertices)
 		  mvset.insert(wv.second);
 
 	// initialize *_written booleans
@@ -284,7 +284,7 @@ void HighwayGraph::write_master_graphs_tmg(std::vector<GraphListEntry> &graph_ve
 	unsigned int sv = 0;
 	unsigned int cv = 0;
 	unsigned int tv = 0;
-	for (std::pair<Waypoint* const, HGVertex*> wv : vertices)
+	for (std::pair<Waypoint* const, HGVertex*>& wv : vertices)
 	{	char fstr[57];
 		sprintf(fstr, " %.15g %.15g", wv.second->lat, wv.second->lng);
 		// all vertices for simple graph
@@ -306,7 +306,7 @@ void HighwayGraph::write_master_graphs_tmg(std::vector<GraphListEntry> &graph_ve
 		}
 	}
 	// now edges, only write if not already written
-	for (std::pair<const Waypoint*, HGVertex*> wv : vertices)
+	for (std::pair<Waypoint* const, HGVertex*>& wv : vertices)
 	{	for (HGEdge *e : wv.second->incident_s_edges)
 		  if (!e->s_written[0])
 		  {	e->s_written[0] = 1;
