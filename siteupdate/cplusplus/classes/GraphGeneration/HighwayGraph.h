@@ -7,6 +7,7 @@ class TravelerList;
 class Waypoint;
 class WaypointQuadtree;
 #include <list>
+#include <mutex>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -46,5 +47,5 @@ class HighwayGraph
 	);
 
 	void write_master_graphs_tmg(std::vector<GraphListEntry>&, std::string, std::list<TravelerList*>&);
-	void write_subgraphs_tmg(std::vector<GraphListEntry>&, std::string, size_t, unsigned int, WaypointQuadtree*, ElapsedTime*);
+	void write_subgraphs_tmg(std::vector<GraphListEntry>&, std::string, size_t, unsigned int, WaypointQuadtree*, ElapsedTime*, std::mutex*);
 };

@@ -25,7 +25,8 @@ void sqlfile1
 	std::list<TravelerList*> *traveler_lists,
 	ClinchedDBValues *clin_db_val,
 	std::list<std::array<std::string,5>> *updates,
-	std::list<std::array<std::string,5>> *systemupdates
+	std::list<std::array<std::string,5>> *systemupdates,
+	std::mutex* term_mtx
     ){
 	// Once all data is read in and processed, create a .sql file that will
 	// create all of the DB tables to be used by other parts of the project
@@ -418,7 +419,9 @@ void sqlfile1
 	sqlfile << ";\n";
 	sqlfile.close();
       #ifdef threading_enabled
+	term_mtx->lock();
 	std::cout << '\n' << et->et() << "Pause writing database file " << args->databasename << ".sql.\n" << std::flush;
+	term_mtx->unlock();
       #endif
      }
 

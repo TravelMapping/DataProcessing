@@ -333,7 +333,7 @@ void HighwayGraph::write_master_graphs_tmg(std::vector<GraphListEntry> &graph_ve
 // or to within a given area if placeradius is given
 void HighwayGraph::write_subgraphs_tmg
 (	std::vector<GraphListEntry> &graph_vector, std::string path, size_t graphnum,
-	unsigned int threadnum, WaypointQuadtree *qt, ElapsedTime *et
+	unsigned int threadnum, WaypointQuadtree *qt, ElapsedTime *et, std::mutex *term
 )
 {	unsigned int cv_count, tv_count;
 	std::ofstream simplefile(path+graph_vector[graphnum].filename());
@@ -350,6 +350,7 @@ void HighwayGraph::write_subgraphs_tmg
 		travnum++;
 	}
       #ifdef threading_enabled
+	term->lock();
 	if (graph_vector[graphnum].cat != graph_vector[graphnum-1].cat)
 		std::cout << '\n' << et->et() << "Writing " << graph_vector[graphnum].category() << " graphs.\n";
       #endif
@@ -357,6 +358,9 @@ void HighwayGraph::write_subgraphs_tmg
 		  << '(' << mv.size() << ',' << mse.size() << ") "
 		  << '(' << cv_count << ',' << mce.size() << ") "
 		  << '(' << tv_count << ',' << mte.size() << ") " << std::flush;
+      #ifdef threading_enabled
+	term->unlock();
+      #endif
 	simplefile << "TMG 1.0 simple\n";
 	collapfile << "TMG 1.0 collapsed\n";
 	travelfile << "TMG 2.0 traveled\n";

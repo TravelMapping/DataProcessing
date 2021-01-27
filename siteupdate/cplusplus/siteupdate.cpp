@@ -48,7 +48,7 @@ using namespace std;
 int main(int argc, char *argv[])
 {	ifstream file;
 	string line;
-	mutex list_mtx;
+	mutex list_mtx, term_mtx;
 	time_t timestamp;
 
 	// start a timer for including elapsed time reports in messages
@@ -879,7 +879,7 @@ int main(int argc, char *argv[])
 	thread sqlthread;
 	if   (!args.errorcheck)
 	{	std::cout << et.et() << "Start writing database file " << args.databasename << ".sql.\n" << std::flush;
-		sqlthread=thread(sqlfile1, &et, &args, &all_regions, &continents, &countries, &highway_systems, &traveler_lists, &clin_db_val, &updates, &systemupdates);
+		sqlthread=thread(sqlfile1, &et, &args, &all_regions, &continents, &countries, &highway_systems, &traveler_lists, &clin_db_val, &updates, &systemupdates, &term_mtx);
 	}
       #endif
 
@@ -946,7 +946,7 @@ int main(int argc, char *argv[])
 		std::cout << et.et() << "Resume writing database file " << args.databasename << ".sql.\n" << std::flush;
 	      #else
 		std::cout << et.et() << "Writing database file " << args.databasename << ".sql.\n" << std::flush;
-		sqlfile1(&et, &args, &all_regions, &continents, &countries, &highway_systems, &traveler_lists, &clin_db_val, &updates, &systemupdates);
+		sqlfile1(&et, &args, &all_regions, &continents, &countries, &highway_systems, &traveler_lists, &clin_db_val, &updates, &systemupdates, &term_mtx);
 	      #endif
 		sqlfile2(&et, &args, &graph_types, &graph_vector);
 	     }
