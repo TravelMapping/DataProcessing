@@ -17,6 +17,7 @@ class Arguments
 	/* t */ int numthreads;
 	/* e */ bool errorcheck;
 	/* h */ bool help;
+		const char* exec;
 
 	Arguments(int argc, char *argv[]);
 
