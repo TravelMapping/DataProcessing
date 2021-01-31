@@ -841,7 +841,7 @@ int main(int argc, char *argv[])
 	cout << et.et() << "Reading datacheckfps.csv." << endl;
 	file.open(args.highwaydatapath+"/datacheckfps.csv");
 	getline(file, line); // ignore header line
-	list<array<string, 6>> datacheckfps;
+	list<string*> datacheckfps;
 	unordered_set<string> datacheck_always_error
 	({	"BAD_ANGLE", "DISCONNECTED_ROUTE", "DUPLICATE_LABEL",
 		"HIDDEN_TERMINUS", "INTERSTATE_NO_HYPHEN",
@@ -861,7 +861,7 @@ int main(int argc, char *argv[])
 		if (line.empty()) continue;
 		// parse system updates.csv line
 		size_t NumFields = 6;
-		array<string, 6> fields;
+		string* fields = new string[6];
 		string* ptr_array[6] = {&fields[0], &fields[1], &fields[2], &fields[3], &fields[4], &fields[5]};
 		split(line, ptr_array, NumFields, ';');
 		if (NumFields != 6)
@@ -897,13 +897,14 @@ int main(int argc, char *argv[])
 	{	//cout << "Checking: " << d->str() << endl;
 		counter++;
 		if (counter % 1000 == 0) cout << '.' << flush;
-		for (list<array<string, 6>>::iterator fp = datacheckfps.begin(); fp != datacheckfps.end(); fp++)
+		for (list<string*>::iterator fp = datacheckfps.begin(); fp != datacheckfps.end(); fp++)
 		  if (d.match_except_info(*fp))
 		    if (d.info == (*fp)[5])
 		    {	//cout << "Match!" << endl;
 			d.fp = 1;
 			fpcount++;
 			datacheckfps.erase(fp);
+			delete[] *fp;
 			break;
 		    }
 		    else
@@ -921,7 +922,7 @@ int main(int argc, char *argv[])
 	timestamp = time(0);
 	fpfile << "Log file created at: " << ctime(&timestamp);
 	if (datacheckfps.empty()) fpfile << "No unmatched FP entries.\n";
-	else	for (array<string, 6>& entry : datacheckfps)
+	else	for (string* entry : datacheckfps)
 		  fpfile << entry[0] << ';' << entry[1] << ';' << entry[2] << ';' << entry[3] << ';' << entry[4] << ';' << entry[5] << '\n';
 	fpfile.close();
 

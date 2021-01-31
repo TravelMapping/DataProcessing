@@ -20,7 +20,7 @@ DatacheckEntry::DatacheckEntry(Route *rte, std::string l1, std::string l2, std::
 	fp = 0;
 }
 
-bool DatacheckEntry::match_except_info(std::array<std::string, 6> &fpentry)
+bool DatacheckEntry::match_except_info(std::string* fpentry)
 {	// Check if the fpentry from the csv file matches in all fields
 	// except the info field
 	if (fpentry[0] != route->root)	return 0;
