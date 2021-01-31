@@ -7,11 +7,17 @@
 #include "../Waypoint/Waypoint.h"
 #include "../../templates/contains.cpp"
 
-HGEdge::HGEdge(HighwaySegment *s, HighwayGraph *graph)
+HGEdge::HGEdge(HighwaySegment *s, HighwayGraph *graph, int numthreads)
 {	// initial construction is based on a HighwaySegment
-	s_written = 0; // simple
-	c_written = 0; // collapsed
-	t_written = 0; // traveled
+	s_written = new bool[numthreads];
+	c_written = new bool[numthreads];
+	t_written = new bool[numthreads];
+		    // deleted by ~HGEdge
+	// we only need to initialize the first element, for master graphs.
+	// the rest will get zeroed out for each subgraph set.
+	s_written[0] = 0;
+	c_written[0] = 0;
+	t_written[0] = 0;
 	vertex1 = graph->vertices.at(s->waypoint1->hashpoint());
 	vertex2 = graph->vertices.at(s->waypoint2->hashpoint());
 	// checks for the very unusual cases where an edge ends up
@@ -48,10 +54,13 @@ HGEdge::HGEdge(HighwaySegment *s, HighwayGraph *graph)
 	     }
 }
 
-HGEdge::HGEdge(HGVertex *vertex, unsigned char fmt_mask)
+HGEdge::HGEdge(HGVertex *vertex, unsigned char fmt_mask, int numthreads)
 {	// build by collapsing two existing edges around a common hidden vertex
-	c_written = 0;
-	t_written = 0;
+	c_written = new bool[numthreads];
+	t_written = new bool[numthreads];
+		    // deleted by ~HGEdge
+	c_written[0] = 0;
+	t_written[0] = 0;
 	format = fmt_mask;
 	// we know there are exactly 2 incident edges, as we
 	// checked for that, and we will replace these two
@@ -198,45 +207,49 @@ HGEdge::~HGEdge()
 	segment_name.clear();
 	intermediate_points.clear();
 	route_names_and_systems.clear();
+	if (format & simple) delete[] s_written;
+	delete[] c_written;
+	delete[] t_written;
 }
 
 // compute an edge label, optionally resticted by systems
-std::string HGEdge::label(std::list<HighwaySystem*> *systems)
-{	std::string the_label;
+void HGEdge::write_label(std::ofstream& file, std::list<HighwaySystem*> *systems)
+{	bool write_comma = 0;
 	for (std::pair<std::string, HighwaySystem*> &ns : route_names_and_systems)
 	{	// test whether system in systems
 		if (!systems || contains(*systems, ns.second))
-		  if (the_label.empty())
-			the_label = ns.first;
-		  else	the_label += "," + ns.first;
+		  if (!write_comma)
+		  {	file << ns.first;
+			write_comma = 1;
+		  }
+		  else	file << "," << ns.first;
 	}
-	return the_label;
 }
 
-// line appropriate for a tmg collapsed edge file
-std::string HGEdge::collapsed_tmg_line(std::list<HighwaySystem*> *systems, unsigned int threadnum)
-{	std::string line = std::to_string(vertex1->c_vertex_num[threadnum]) + " " + std::to_string(vertex2->c_vertex_num[threadnum]) + " " + label(systems);
-	char fstr[57];
+// write line to tmg collapsed edge file
+void HGEdge::collapsed_tmg_line(std::ofstream& file, char* fstr, unsigned int threadnum, std::list<HighwaySystem*> *systems)
+{	file << vertex1->c_vertex_num[threadnum] << ' ' << vertex2->c_vertex_num[threadnum] << ' ';
+	write_label(file, systems);
 	for (HGVertex *intermediate : intermediate_points)
 	{	sprintf(fstr, " %.15g %.15g", intermediate->lat, intermediate->lng);
-		line += fstr;
+		file << fstr;
 	}
-	return line;
+	file << '\n';
 }
 
-// line appropriate for a tmg traveled edge file
-std::string HGEdge::traveled_tmg_line(std::list<HighwaySystem*> *systems, std::list<TravelerList*> *traveler_lists, unsigned int threadnum)
-{	std::string line = std::to_string(vertex1->t_vertex_num[threadnum]) + " " + std::to_string(vertex2->t_vertex_num[threadnum]) + " " + label(systems);
-	line += " " + segment->clinchedby_code(traveler_lists, threadnum);
-	char fstr[57];
+// write line to tmg traveled edge file
+void HGEdge::traveled_tmg_line(std::ofstream& file, char* fstr, unsigned int threadnum, std::list<HighwaySystem*> *systems, std::list<TravelerList*> *traveler_lists)
+{	file << vertex1->t_vertex_num[threadnum] << ' ' << vertex2->t_vertex_num[threadnum] << ' ';
+	write_label(file, systems);
+	file << ' ' << segment->clinchedby_code(traveler_lists, threadnum);
 	for (HGVertex *intermediate : intermediate_points)
 	{	sprintf(fstr, " %.15g %.15g", intermediate->lat, intermediate->lng);
-		line += fstr;
+		file << fstr;
 	}
-	return line;
+	file << '\n';
 }
 
-// line appropriate for a tmg collapsed edge file, with debug info
+/* line appropriate for a tmg collapsed edge file, with debug info
 std::string HGEdge::debug_tmg_line(std::list<HighwaySystem*> *systems, unsigned int threadnum)
 {	std::string line = std::to_string(vertex1->c_vertex_num[threadnum]) + " [" + *vertex1->unique_name + "] " \
 			 + std::to_string(vertex2->c_vertex_num[threadnum]) + " [" + *vertex2->unique_name + "] " + label(systems);
@@ -246,7 +259,7 @@ std::string HGEdge::debug_tmg_line(std::list<HighwaySystem*> *systems, unsigned 
 		line += " [" + *intermediate->unique_name + fstr;
 	}
 	return line;
-}
+}*/
 
 // printable string for this edge
 std::string HGEdge::str()

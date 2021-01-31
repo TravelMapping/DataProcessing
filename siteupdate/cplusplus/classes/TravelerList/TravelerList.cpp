@@ -18,8 +18,10 @@ TravelerList::TravelerList(std::string travname, std::string* updarr[], ErrorLis
 	preview_systems_traveled = 0;
 	preview_systems_clinched = 0;
 	unsigned int list_entries = 0;
+	in_subgraph = new bool[args->numthreads];
 	traveler_num = new unsigned int[args->numthreads];
 		       // deleted on termination of program
+	for (size_t i = 0; i < args->numthreads; i++) in_subgraph[i] = 0;
 	traveler_name = travname.substr(0, travname.size()-5); // strip ".list" from end of travname
 	if (traveler_name.size() > DBFieldLength::traveler)
 	  el->add_error("Traveler name " + traveler_name + " > " + std::to_string(DBFieldLength::traveler) + "bytes");
