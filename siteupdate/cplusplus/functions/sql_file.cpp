@@ -24,8 +24,8 @@ void sqlfile1
 	std::list<HighwaySystem*> *highway_systems,
 	std::list<TravelerList*> *traveler_lists,
 	ClinchedDBValues *clin_db_val,
-	std::list<std::array<std::string,5>> *updates,
-	std::list<std::array<std::string,5>> *systemupdates
+	std::list<std::string*> *updates,
+	std::list<std::string*> *systemupdates
     ){
 	// Once all data is read in and processed, create a .sql file that will
 	// create all of the DB tables to be used by other parts of the project
@@ -389,7 +389,7 @@ void sqlfile1
 		<< "));\n";
 	sqlfile << "INSERT INTO updates VALUES\n";
 	first = 1;
-	for (std::array<std::string,5> &update : *updates)
+	for (std::string* &update : *updates)
 	{	if (!first) sqlfile << ',';
 		first = 0;
 		sqlfile << "('"  << update[0] << "','" << double_quotes(update[1]) << "','" << double_quotes(update[2])
@@ -409,7 +409,7 @@ void sqlfile1
 		<< "));\n";
 	sqlfile << "INSERT INTO systemUpdates VALUES\n";
 	first = 1;
-	for (std::array<std::string,5> &systemupdate : *systemupdates)
+	for (std::string* &systemupdate : *systemupdates)
 	{	if (!first) sqlfile << ',';
 		first = 0;
 		sqlfile << "('"  << systemupdate[0] << "','" << double_quotes(systemupdate[1])

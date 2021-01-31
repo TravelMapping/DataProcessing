@@ -859,9 +859,10 @@ int main(int argc, char *argv[])
 		while (line[0] == ' ' || line[0] == '\t')
 			line = line.substr(1);
 		if (line.empty()) continue;
-		// parse system updates.csv line
+		// parse datacheckfps.csv line
 		size_t NumFields = 6;
 		string* fields = new string[6];
+				 // deleted when FP is matched or on termination of program
 		string* ptr_array[6] = {&fields[0], &fields[1], &fields[2], &fields[3], &fields[4], &fields[5]};
 		split(line, ptr_array, NumFields, ';');
 		if (NumFields != 6)

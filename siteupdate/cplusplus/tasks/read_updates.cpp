@@ -1,6 +1,6 @@
 // Read updates.csv file, just keep in the fields list for now since we're
 // just going to drop this into the DB later anyway
-list<array<string, 5>> updates;
+list<string*> updates;
 cout << et.et() << "Reading updates file." << endl;
 file.open(args.highwaydatapath+"/updates.csv");
 getline(file, line); // ignore header line
@@ -11,7 +11,8 @@ while (getline(file, line))
 	if (line.empty()) continue;
 	// parse updates.csv line
 	size_t NumFields = 5;
-	array<string, 5> fields;
+	string* fields = new string[5];
+			 // deleted on termination of program
 	string* ptr_array[5] = {&fields[0], &fields[1], &fields[2], &fields[3], &fields[4]};
 	split(line, ptr_array, NumFields, ';');
 	if (NumFields != 5)
@@ -41,8 +42,8 @@ while (getline(file, line))
 			   + " bytes in updates.csv line " + line);
 	updates.push_back(fields);
 	try   {	Route* r = Route::root_hash.at(fields[3]);
-		if (r->last_update == 0 || (*r->last_update)[0] < fields[0])
-			r->last_update = &updates.back();
+		if (r->last_update == 0 || r->last_update[0] < fields[0])
+			r->last_update = updates.back();
 	      }
 	catch (const std::out_of_range& oor) {}
 }
@@ -51,7 +52,7 @@ file.close();
 // Same plan for systemupdates.csv file, again just keep in the fields
 // list for now since we're just going to drop this into the DB later
 // anyway
-list<array<string, 5>> systemupdates;
+list<string*> systemupdates;
 cout << et.et() << "Reading systemupdates file." << endl;
 file.open(args.highwaydatapath+"/systemupdates.csv");
 getline(file, line);  // ignore header line
@@ -60,7 +61,8 @@ while (getline(file, line))
 	if (line.empty()) continue;
 	// parse systemupdates.csv line
 	size_t NumFields = 5;
-	array<string, 5> fields;
+	string* fields = new string[5];
+			 // deleted on termination of program
 	string* ptr_array[5] = {&fields[0], &fields[1], &fields[2], &fields[3], &fields[4]};
 	split(line, ptr_array, NumFields, ';');
 	if (NumFields != 5)

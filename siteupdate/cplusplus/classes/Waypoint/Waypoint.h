@@ -21,11 +21,11 @@ class Waypoint
 
 	public:
 	Route *route;
+	std::list<Waypoint*> *colocated;
 	double lat, lng;
 	unsigned int point_num;
 	std::string label;
 	std::deque<std::string> alt_labels;
-	std::list<Waypoint*> *colocated;
 	std::vector<Waypoint*> ap_coloc;
 	std::forward_list<Waypoint*> near_miss_points;
 	bool is_hidden;

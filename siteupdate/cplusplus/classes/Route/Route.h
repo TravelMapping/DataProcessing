@@ -72,7 +72,7 @@ class Route
 	std::mutex liu_mtx;	// for locking the labels_in_use set when inserting labels during TravelerList processing
 	std::mutex ual_mtx;	// for locking the unused_alt_labels set when removing in-use alt_labels
 	std::vector<HighwaySegment*> segment_list;
-	std::array<std::string, 5> *last_update;
+	std::string* last_update;
 	double mileage;
 	int rootOrder;
 	bool is_reversed;
