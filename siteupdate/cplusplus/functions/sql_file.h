@@ -8,6 +8,7 @@ class TravelerList;
 #include <array>
 #include <iostream>
 #include <list>
+#include <mutex>
 #include <vector>
 
 void sqlfile1
@@ -20,7 +21,8 @@ void sqlfile1
 	std::list<TravelerList*>*,
 	ClinchedDBValues*,
 	std::list<std::string*>*,
-	std::list<std::string*>*
+	std::list<std::string*>*,
+	std::mutex*
 );
 
 void sqlfile2(ElapsedTime*, Arguments*, std::list<std::array<std::string,3>>*, std::vector<GraphListEntry>*);

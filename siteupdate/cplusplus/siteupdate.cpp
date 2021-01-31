@@ -48,21 +48,19 @@ using namespace std;
 int main(int argc, char *argv[])
 {	ifstream file;
 	string line;
-	mutex list_mtx;
-	time_t timestamp;
-
-	// start a timer for including elapsed time reports in messages
-	ElapsedTime et;
-
-	timestamp = time(0);
-	cout << "Start: " << ctime(&timestamp);
-
-	// create ErrorList
-	ErrorList el;
+	mutex list_mtx, term_mtx;
 
 	// argument parsing
 	Arguments args(argc, argv);
 	if (args.help) return 0;
+
+	// start a timer for including elapsed time reports in messages
+	ElapsedTime et(args.timeprecision);
+	time_t timestamp = time(0);
+	cout << "Start: " << ctime(&timestamp);
+
+	// create ErrorList
+	ErrorList el;
 
 	// Get list of travelers in the system
 	list<string> traveler_ids = args.userlist;
@@ -179,7 +177,7 @@ int main(int argc, char *argv[])
 
 	// Create a list of HighwaySystem objects, one per system in systems.csv file
 	list<HighwaySystem*> highway_systems;
-	cout << et.et() << "Reading systems list in " << args.highwaydatapath+"/"+args.systemsfile << "." << endl;
+	cout << et.et() << "Reading systems list in " << args.highwaydatapath << "/" << args.systemsfile << "." << endl;
 	file.open(args.highwaydatapath+"/"+args.systemsfile);
 	if (!file) el.add_error("Could not open "+args.highwaydatapath+"/"+args.systemsfile);
 	else {	getline(file, line); // ignore header line
@@ -252,7 +250,7 @@ int main(int argc, char *argv[])
 	cout << et.et() << "Finding unprocessed wpt files." << endl;
 	if (all_wpt_files.size())
 	{	ofstream unprocessedfile(args.logfilepath+"/unprocessedwpts.log");
-		cout << all_wpt_files.size() << " .wpt files in " << args.highwaydatapath + "/hwy_data not processed, see unprocessedwpts.log." << endl;
+		cout << all_wpt_files.size() << " .wpt files in " << args.highwaydatapath << "/hwy_data not processed, see unprocessedwpts.log." << endl;
 		list<string> all_wpts_list(all_wpt_files.begin(), all_wpt_files.end());
 		all_wpts_list.sort();
 		for (const string &f : all_wpts_list) unprocessedfile << strstr(f.data(), "hwy_data") << '\n';
@@ -880,7 +878,7 @@ int main(int argc, char *argv[])
 	thread sqlthread;
 	if   (!args.errorcheck)
 	{	std::cout << et.et() << "Start writing database file " << args.databasename << ".sql.\n" << std::flush;
-		sqlthread=thread(sqlfile1, &et, &args, &all_regions, &continents, &countries, &highway_systems, &traveler_lists, &clin_db_val, &updates, &systemupdates);
+		sqlthread=thread(sqlfile1, &et, &args, &all_regions, &continents, &countries, &highway_systems, &traveler_lists, &clin_db_val, &updates, &systemupdates, &term_mtx);
 	}
       #endif
 
@@ -948,7 +946,7 @@ int main(int argc, char *argv[])
 		std::cout << et.et() << "Resume writing database file " << args.databasename << ".sql.\n" << std::flush;
 	      #else
 		std::cout << et.et() << "Writing database file " << args.databasename << ".sql.\n" << std::flush;
-		sqlfile1(&et, &args, &all_regions, &continents, &countries, &highway_systems, &traveler_lists, &clin_db_val, &updates, &systemupdates);
+		sqlfile1(&et, &args, &all_regions, &continents, &countries, &highway_systems, &traveler_lists, &clin_db_val, &updates, &systemupdates, &term_mtx);
 	      #endif
 		sqlfile2(&et, &args, &graph_types, &graph_vector);
 	     }

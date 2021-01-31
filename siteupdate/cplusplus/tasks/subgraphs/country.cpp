@@ -25,7 +25,7 @@ for (size_t c = 0; c < countries.size()-1; c++)
 #ifndef threading_enabled
 // write new graph_vector entries to disk
 while (graphnum < graph_vector.size())
-{	graph_data.write_subgraphs_tmg(graph_vector, args.graphfilepath + "/", graphnum, 0, &all_waypoints, &et);
+{	graph_data.write_subgraphs_tmg(graph_vector, args.graphfilepath + "/", graphnum, 0, &all_waypoints, &et, &term_mtx);
 	graphnum += 3;
 }
 cout << "!" << endl;
