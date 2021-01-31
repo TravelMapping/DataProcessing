@@ -32,10 +32,10 @@ bool DatacheckEntry::match_except_info(std::array<std::string, 6> &fpentry)
 }
 
 // Original "Python list" format unused. Using "CSV style" format instead.
-std::string DatacheckEntry::str()
+std::string DatacheckEntry::str() const
 {	return route->root + ";" + label1 + ";" + label2 + ";" + label3 + ";" + code + ";" + info;
 }
 
-bool operator < (DatacheckEntry &a, DatacheckEntry &b)
+bool operator < (const DatacheckEntry &a, const DatacheckEntry &b)
 {	return a.str() < b.str();
 }
