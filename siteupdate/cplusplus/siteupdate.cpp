@@ -217,17 +217,11 @@ int main(int argc, char *argv[])
 	// Next, read all of the .wpt files for each HighwaySystem
 	cout << et.et() << "Reading waypoints for all routes." << endl;
       #ifdef threading_enabled
-	// set up for threaded processing of highway systems
+	std::vector<std::thread> thr(args.numthreads);
 	list<HighwaySystem*>::iterator hs_it = highway_systems.begin();
-
-	thread **thr = new thread*[args.numthreads];
-	for (unsigned int t = 0; t < args.numthreads; t++)
-		thr[t] = new thread(ReadWptThread, t, &highway_systems, &hs_it, &list_mtx, args.highwaydatapath+"/hwy_data",
-				    &el, &all_wpt_files, &all_waypoints);
-	for (unsigned int t = 0; t < args.numthreads; t++)
-		thr[t]->join();
-	for (unsigned int t = 0; t < args.numthreads; t++)
-		delete thr[t];
+	#define THREADLOOP for (unsigned int t = 0; t < thr.size(); t++)
+	THREADLOOP thr[t] = thread(ReadWptThread, t, &highway_systems, &hs_it, &list_mtx, args.highwaydatapath+"/hwy_data", &el, &all_wpt_files, &all_waypoints);
+	THREADLOOP thr[t].join();
       #else
 	for (HighwaySystem* h : highway_systems)
 	{	std::cout << h->systemname << std::flush;
@@ -262,15 +256,10 @@ int main(int argc, char *argv[])
 	// create NMP lists
 	cout << et.et() << "Searching for near-miss points." << endl;
       #ifdef threading_enabled
-	// set up for threaded NMP search
 	hs_it = highway_systems.begin();
 
-	for (unsigned int t = 0; t < args.numthreads; t++)
-		thr[t] = new thread(NmpSearchThread, t, &highway_systems, &hs_it, &list_mtx, &all_waypoints);
-	for (unsigned int t = 0; t < args.numthreads; t++)
-		thr[t]->join();
-	for (unsigned int t = 0; t < args.numthreads; t++)
-		delete thr[t];
+	THREADLOOP thr[t] = thread(NmpSearchThread, t, &highway_systems, &hs_it, &list_mtx, &all_waypoints);
+	THREADLOOP thr[t].join();
       #else
 	for (Waypoint *w : all_waypoints.point_list()) w->near_miss_points = all_waypoints.near_miss_waypoints(w, 0.0005);
       #endif
@@ -313,14 +302,9 @@ int main(int argc, char *argv[])
 	if (args.nmpmergepath != "" && !args.errorcheck)
 	{	cout << et.et() << "Writing near-miss point merged wpt files." << endl;
 	      #ifdef threading_enabled
-		// set up for threaded nmp_merged file writes
 		hs_it = highway_systems.begin();
-		for (unsigned int t = 0; t < args.numthreads; t++)
-			thr[t] = new thread(NmpMergedThread, t, &highway_systems, &hs_it, &list_mtx, &args.nmpmergepath);
-		for (unsigned int t = 0; t < args.numthreads; t++)
-			thr[t]->join();
-		for (unsigned int t = 0; t < args.numthreads; t++)
-			delete thr[t];//*/
+		THREADLOOP thr[t] = thread(NmpMergedThread, t, &highway_systems, &hs_it, &list_mtx, &args.nmpmergepath);
+		THREADLOOP thr[t].join();
 	      #else
 		for (HighwaySystem *h : highway_systems)
 		{	std::cout << h->systemname << std::flush;
@@ -446,13 +430,8 @@ int main(int argc, char *argv[])
 
 	cout << et.et() << "Processing traveler list files:" << endl;
       #ifdef threading_enabled
-	// set up for threaded .list file processing
-	for (unsigned int t = 0; t < args.numthreads; t++)
-		thr[t] = new thread(ReadListThread, t, &traveler_ids, &listupdates, &id_it, &traveler_lists, &list_mtx, &args, &el);
-	for (unsigned int t = 0; t < args.numthreads; t++)
-		thr[t]->join();
-	for (unsigned int t = 0; t < args.numthreads; t++)
-		delete thr[t];
+	THREADLOOP thr[t] = thread(ReadListThread, t, &traveler_ids, &listupdates, &id_it, &traveler_lists, &list_mtx, &args, &el);
+	THREADLOOP thr[t].join();
       #else
 	for (string &t : traveler_ids)
 	{	cout << t << ' ' << std::flush;
@@ -559,19 +538,13 @@ int main(int argc, char *argv[])
 	cout << et.et() << "Augmenting travelers for detected concurrent segments." << flush;
         //#include "debug/concurrency_augments.cpp"
       #ifdef threading_enabled
-	// set up for threaded concurrency augments
 	list<string>* augment_lists = new list<string>[args.numthreads];
 	list<TravelerList*>::iterator tl_it = traveler_lists.begin();
 
-	for (unsigned int t = 0; t < args.numthreads; t++)
-		thr[t] = new thread(ConcAugThread, t, &traveler_lists, &tl_it, &list_mtx, augment_lists+t);
-	for (unsigned int t = 0; t < args.numthreads; t++)
-		thr[t]->join();
+	THREADLOOP thr[t] = thread(ConcAugThread, t, &traveler_lists, &tl_it, &list_mtx, augment_lists+t);
+	THREADLOOP thr[t].join();
 	cout << "!\n" << et.et() << "Writing to concurrencies.log." << endl;
-	for (unsigned int t = 0; t < args.numthreads; t++)
-	{	for (std::string& entry : augment_lists[t]) concurrencyfile << entry << '\n';
-		delete thr[t];//*/
-	}
+	THREADLOOP for (std::string& entry : augment_lists[t]) concurrencyfile << entry << '\n';
 	delete[] augment_lists;
       #else
 	for (TravelerList *t : traveler_lists)
@@ -597,24 +570,15 @@ int main(int argc, char *argv[])
 	// overall, active+preview, active only,
 	// and per-system which falls into just one of these categories
       #ifdef threading_enabled
-	// set up for threaded stats computation
 	cout << et.et() << "Computing stats per route." << flush;
 	hs_it = highway_systems.begin();
-	for (unsigned int t = 0; t < args.numthreads; t++)
-		thr[t] = new thread(CompStatsRThread, t, &highway_systems, &hs_it, &list_mtx);
-	for (unsigned int t = 0; t < args.numthreads; t++)
-		thr[t]->join();
-	for (unsigned int t = 0; t < args.numthreads; t++)
-		delete thr[t];//*/
+	THREADLOOP thr[t] = thread(CompStatsRThread, t, &highway_systems, &hs_it, &list_mtx);
+	THREADLOOP thr[t].join();
 	cout << '!' << endl;
 	cout << et.et() << "Computing stats per traveler." << flush;
 	tl_it = traveler_lists.begin();
-	for (unsigned int t = 0; t < args.numthreads; t++)
-		thr[t] = new thread(CompStatsTThread, t, &traveler_lists, &tl_it, &list_mtx);
-	for (unsigned int t = 0; t < args.numthreads; t++)
-		thr[t]->join();
-	for (unsigned int t = 0; t < args.numthreads; t++)
-		delete thr[t];
+	THREADLOOP thr[t] = thread(CompStatsTThread, t, &traveler_lists, &tl_it, &list_mtx);
+	THREADLOOP thr[t].join();
 	cout << '!' << endl;
       #else
 	cout << et.et() << "Computing stats." << flush;
@@ -701,17 +665,12 @@ int main(int argc, char *argv[])
 	// now add user clinched stats to their log entries
 	cout << et.et() << "Creating per-traveler stats logs and augmenting data structure." << flush;
       #ifdef threading_enabled
-	// set up for threaded user logs
 	tl_it = traveler_lists.begin();
-	for (unsigned int t = 0; t < args.numthreads; t++)
-		thr[t] = new thread
-		(	UserLogThread, t, &traveler_lists, &tl_it, &list_mtx, &clin_db_val, active_only_miles,
-			active_preview_miles, &highway_systems, args.logfilepath+"/users/"
-		);
-	for (unsigned int t = 0; t < args.numthreads; t++)
-		thr[t]->join();
-	for (unsigned int t = 0; t < args.numthreads; t++)
-		delete thr[t];//*/
+	THREADLOOP thr[t] = thread
+	(	UserLogThread, t, &traveler_lists, &tl_it, &list_mtx, &clin_db_val, active_only_miles,
+		active_preview_miles, &highway_systems, args.logfilepath+"/users/"
+	);
+	THREADLOOP thr[t].join();
       #else
 	for (TravelerList *t : traveler_lists) t->userlog(&clin_db_val, active_only_miles, active_preview_miles, &highway_systems, args.logfilepath+"/users/");
       #endif

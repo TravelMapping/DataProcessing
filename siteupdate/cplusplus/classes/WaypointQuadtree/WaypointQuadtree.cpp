@@ -270,14 +270,9 @@ void WaypointQuadtree::sort(int numthreads)
 	size_t slot = 0;
 	terminal_nodes(nodes, slot, numthreads);
 
-	std::thread **thr = new std::thread*[numthreads];
-	for (unsigned int t = 0; t < numthreads; t++)
-		thr[t] = new std::thread(sortnodes, nodes+t);
-	for (unsigned int t = 0; t < numthreads; t++)
-		thr[t]->join();
-	for (unsigned int t = 0; t < numthreads; t++)
-		delete thr[t];
-	delete[] thr;
+	std::vector<std::thread> thr(numthreads);
+	for (int t = 0; t < numthreads; t++)	thr[t] = std::thread(sortnodes, nodes+t);
+	for (int t = 0; t < numthreads; t++)	thr[t].join();
 	delete[] nodes;
 }
 
