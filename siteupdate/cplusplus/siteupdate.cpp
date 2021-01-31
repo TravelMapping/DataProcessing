@@ -49,20 +49,18 @@ int main(int argc, char *argv[])
 {	ifstream file;
 	string line;
 	mutex list_mtx, term_mtx;
-	time_t timestamp;
-
-	// start a timer for including elapsed time reports in messages
-	ElapsedTime et;
-
-	timestamp = time(0);
-	cout << "Start: " << ctime(&timestamp);
-
-	// create ErrorList
-	ErrorList el;
 
 	// argument parsing
 	Arguments args(argc, argv);
 	if (args.help) return 0;
+
+	// start a timer for including elapsed time reports in messages
+	ElapsedTime et(args.timeprecision);
+	time_t timestamp = time(0);
+	cout << "Start: " << ctime(&timestamp);
+
+	// create ErrorList
+	ErrorList el;
 
 	// Get list of travelers in the system
 	list<string> traveler_ids = args.userlist;

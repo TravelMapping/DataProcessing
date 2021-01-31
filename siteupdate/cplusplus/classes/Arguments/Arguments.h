@@ -16,6 +16,7 @@ class Arguments
 	/* U */ std::list<std::string> userlist;
 	/* t */ int numthreads;
 	/* e */ bool errorcheck;
+	/* T */ int timeprecision;
 	/* h */ bool help;
 		const char* exec;
 

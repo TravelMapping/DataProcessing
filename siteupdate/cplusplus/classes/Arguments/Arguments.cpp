@@ -16,6 +16,7 @@ Arguments::Arguments(int argc, char *argv[])
 	/* U */ // nothing to do here
 	/* t */ numthreads = 4;
 	/* e */ errorcheck = 0;
+	/* T */ timeprecision = 1;
 	/* h */ help = 0;
 		const char* slash = strrchr (argv[0], '/');
 		exec = slash ? slash+1 : argv[0];
@@ -44,6 +45,8 @@ Arguments::Arguments(int argc, char *argv[])
 			splitregionpath = argv[n+1]; splitregion = argv[n+2]; n +=2; }
 		else if ( n+1 < argc && !strcmp(argv[n], "-t") || !strcmp(argv[n], "--numthreads") ) {
 			numthreads = strtol(argv[n+1], 0, 10); n++; if (numthreads<1) numthreads=1; }
+		else if ( n+1 < argc && !strcmp(argv[n], "-T") || !strcmp(argv[n], "--timeprecision") ) {
+			timeprecision = strtol(argv[n+1], 0, 10); n++; if (timeprecision<1) timeprecision=1; if (timeprecision>9) timeprecision=9; }
 		else if (               !strcmp(argv[n], "-e") || !strcmp(argv[n], "--errorcheck") )
 			errorcheck = 1;
 		else if (               !strcmp(argv[n], "-h") || !strcmp(argv[n], "--help") ) {
@@ -63,6 +66,7 @@ void Arguments::show_help()
 	std::cout  <<  indent << "        [-c CSVSTATFILEPATH] [-g GRAPHFILEPATH] [-k]\n";
 	std::cout  <<  indent << "        [-n NMPMERGEPATH] [-p SPLITREGIONPATH SPLITREGION]\n";
 	std::cout  <<  indent << "        [-U USERLIST [USERLIST ...]] [-t NUMTHREADS] [-e]\n";
+	std::cout <<	"		  [-T TIMEPRECISION] [-e]\n";
 	std::cout  <<  "\n";
 	std::cout  <<  "Create SQL, stats, graphs, and log files from highway and user data for the\n";
 	std::cout  <<  "Travel Mapping project.\n";
@@ -99,4 +103,7 @@ void Arguments::show_help()
 	std::cout  <<  "		        Number of threads to use for concurrent tasks\n";
 	std::cout  <<  "  -e, --errorcheck      Run only the subset of the process needed to verify\n";
 	std::cout  <<  "		        highway data changes\n";
+	std::cout  <<  "  -T TIMEPRECISION, --timeprecision TIMEPRECISION\n";
+	std::cout  <<  "		        Number of digits (1-9) after decimal point in\n";
+	std::cout  <<  "		        timestamp readouts\n";
 }
