@@ -232,8 +232,8 @@ void Route::store_traveled_segments(TravelerList* t, std::ofstream& log, unsigne
 		hs->add_clinched_by(t);
 		t->clinched_segments.insert(hs);
 	}
-	if (t->routes.insert(this).second && last_update && t->update && (*last_update)[0] >= *t->update)
-		log << "Route updated " << (*last_update)[0] << ": " << readable_name() << '\n';
+	if (t->routes.insert(this).second && last_update && t->update && last_update[0] >= *t->update)
+		log << "Route updated " << last_update[0] << ": " << readable_name() << '\n';
 }
 
 Waypoint* Route::con_beg()
@@ -247,8 +247,8 @@ Waypoint* Route::con_end()
 // sort routes by most recent update for use at end of user logs
 // all should have a valid updates entry pointer before being passed here
 bool sort_route_updates_oldest(const Route *r1, const Route *r2)
-{	int p = strcmp((*r1->last_update)[0].data(), (*r2->last_update)[0].data());
-	if (!p) return (*r1->last_update)[3] < (*r2->last_update)[3];
+{	int p = strcmp(r1->last_update[0].data(), r2->last_update[0].data());
+	if (!p) return r1->last_update[3] < r2->last_update[3];
 		return p < 0;
 }
 

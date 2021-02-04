@@ -68,15 +68,11 @@ else {	list<Region*> *regions;
 	#include "subgraphs/region.cpp"
       #ifdef threading_enabled
 	// write graph_vector entries to disk
-	thr[0] = new thread(MasterTmgThread, &graph_data, &graph_vector, args.graphfilepath+'/', &traveler_lists, &graphnum, &list_mtx, &all_waypoints, &et);
-	// set up for threaded subgraph generation
+	thr[0] = thread(MasterTmgThread, &graph_data, &graph_vector, args.graphfilepath+'/', &traveler_lists, &graphnum, &list_mtx, &term_mtx, &all_waypoints, &et);
 	// start at t=1, because MasterTmgThread will spawn another SubgraphThread when finished
-	for (unsigned int t = 1; t < args.numthreads; t++)
-		thr[t] = new thread(SubgraphThread, t, &graph_data, &graph_vector, &graphnum, &list_mtx, args.graphfilepath+'/', &all_waypoints, &et);
-	for (unsigned int t = 0; t < args.numthreads; t++)
-		thr[t]->join();
-	for (unsigned int t = 0; t < args.numthreads; t++)
-		delete thr[t];
+	for (unsigned int t = 1; t < thr.size(); t++)
+	  thr[t] = thread(SubgraphThread, t, &graph_data, &graph_vector, &graphnum, &list_mtx, &term_mtx, args.graphfilepath+'/', &all_waypoints, &et);
+	THREADLOOP thr[t].join();
 	cout << '!' << endl;
       #endif
      }

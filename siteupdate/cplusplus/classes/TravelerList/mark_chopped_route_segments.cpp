@@ -60,8 +60,8 @@ if (lit1 == r->alt_label_hash.end() || lit2 == r->alt_label_hash.end())
 	if (invalid_char) log << " [contains invalid character(s)]";
 	log << '\n';
 	splist << orig_line << endlines[l];
-	if (routes.insert(r).second && r->last_update && update && (*r->last_update)[0] >= *update)
-		log << "Route updated " << (*r->last_update)[0] << ": " << r->readable_name() << '\n';
+	if (routes.insert(r).second && r->last_update && update && r->last_update[0] >= *update)
+		log << "Route updated " << r->last_update[0] << ": " << r->readable_name() << '\n';
 	continue;
 }
 // are either of the labels used duplicates?
@@ -80,16 +80,16 @@ if (r->duplicate_labels.find(fields[3]) != r->duplicate_labels.end())
 }
 if (duplicate)
 {	splist << orig_line << endlines[l];
-	if (routes.insert(r).second && r->last_update && update && (*r->last_update)[0] >= *update)
-		log << "Route updated " << (*r->last_update)[0] << ": " << r->readable_name() << '\n';
+	if (routes.insert(r).second && r->last_update && update && r->last_update[0] >= *update)
+		log << "Route updated " << r->last_update[0] << ": " << r->readable_name() << '\n';
 	continue;
 }
 // if both labels reference the same waypoint...
 if (lit1->second == lit2->second)
 {	log << "Equivalent waypoint labels mark zero distance traveled in line: " << trim_line << '\n';
 	splist << orig_line << endlines[l];
-	if (routes.insert(r).second && r->last_update && update && (*r->last_update)[0] >= *update)
-		log << "Route updated " << (*r->last_update)[0] << ": " << r->readable_name() << '\n';
+	if (routes.insert(r).second && r->last_update && update && r->last_update[0] >= *update)
+		log << "Route updated " << r->last_update[0] << ": " << r->readable_name() << '\n';
 }
 // otherwise both labels are valid; mark in use & proceed
 else {	r->system->lniu_mtx.lock();

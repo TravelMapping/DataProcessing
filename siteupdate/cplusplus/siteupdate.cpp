@@ -48,21 +48,19 @@ using namespace std;
 int main(int argc, char *argv[])
 {	ifstream file;
 	string line;
-	mutex list_mtx;
-	time_t timestamp;
-
-	// start a timer for including elapsed time reports in messages
-	ElapsedTime et;
-
-	timestamp = time(0);
-	cout << "Start: " << ctime(&timestamp);
-
-	// create ErrorList
-	ErrorList el;
+	mutex list_mtx, term_mtx;
 
 	// argument parsing
 	Arguments args(argc, argv);
 	if (args.help) return 0;
+
+	// start a timer for including elapsed time reports in messages
+	ElapsedTime et(args.timeprecision);
+	time_t timestamp = time(0);
+	cout << "Start: " << ctime(&timestamp);
+
+	// create ErrorList
+	ErrorList el;
 
 	// Get list of travelers in the system
 	list<string> traveler_ids = args.userlist;
@@ -179,7 +177,7 @@ int main(int argc, char *argv[])
 
 	// Create a list of HighwaySystem objects, one per system in systems.csv file
 	list<HighwaySystem*> highway_systems;
-	cout << et.et() << "Reading systems list in " << args.highwaydatapath+"/"+args.systemsfile << "." << endl;
+	cout << et.et() << "Reading systems list in " << args.highwaydatapath << "/" << args.systemsfile << "." << endl;
 	file.open(args.highwaydatapath+"/"+args.systemsfile);
 	if (!file) el.add_error("Could not open "+args.highwaydatapath+"/"+args.systemsfile);
 	else {	getline(file, line); // ignore header line
@@ -219,17 +217,11 @@ int main(int argc, char *argv[])
 	// Next, read all of the .wpt files for each HighwaySystem
 	cout << et.et() << "Reading waypoints for all routes." << endl;
       #ifdef threading_enabled
-	// set up for threaded processing of highway systems
+	std::vector<std::thread> thr(args.numthreads);
 	list<HighwaySystem*>::iterator hs_it = highway_systems.begin();
-
-	thread **thr = new thread*[args.numthreads];
-	for (unsigned int t = 0; t < args.numthreads; t++)
-		thr[t] = new thread(ReadWptThread, t, &highway_systems, &hs_it, &list_mtx, args.highwaydatapath+"/hwy_data",
-				    &el, &all_wpt_files, &all_waypoints);
-	for (unsigned int t = 0; t < args.numthreads; t++)
-		thr[t]->join();
-	for (unsigned int t = 0; t < args.numthreads; t++)
-		delete thr[t];
+	#define THREADLOOP for (unsigned int t = 0; t < thr.size(); t++)
+	THREADLOOP thr[t] = thread(ReadWptThread, t, &highway_systems, &hs_it, &list_mtx, args.highwaydatapath+"/hwy_data", &el, &all_wpt_files, &all_waypoints);
+	THREADLOOP thr[t].join();
       #else
 	for (HighwaySystem* h : highway_systems)
 	{	std::cout << h->systemname << std::flush;
@@ -252,7 +244,7 @@ int main(int argc, char *argv[])
 	cout << et.et() << "Finding unprocessed wpt files." << endl;
 	if (all_wpt_files.size())
 	{	ofstream unprocessedfile(args.logfilepath+"/unprocessedwpts.log");
-		cout << all_wpt_files.size() << " .wpt files in " << args.highwaydatapath + "/hwy_data not processed, see unprocessedwpts.log." << endl;
+		cout << all_wpt_files.size() << " .wpt files in " << args.highwaydatapath << "/hwy_data not processed, see unprocessedwpts.log." << endl;
 		list<string> all_wpts_list(all_wpt_files.begin(), all_wpt_files.end());
 		all_wpts_list.sort();
 		for (const string &f : all_wpts_list) unprocessedfile << strstr(f.data(), "hwy_data") << '\n';
@@ -264,15 +256,10 @@ int main(int argc, char *argv[])
 	// create NMP lists
 	cout << et.et() << "Searching for near-miss points." << endl;
       #ifdef threading_enabled
-	// set up for threaded NMP search
 	hs_it = highway_systems.begin();
 
-	for (unsigned int t = 0; t < args.numthreads; t++)
-		thr[t] = new thread(NmpSearchThread, t, &highway_systems, &hs_it, &list_mtx, &all_waypoints);
-	for (unsigned int t = 0; t < args.numthreads; t++)
-		thr[t]->join();
-	for (unsigned int t = 0; t < args.numthreads; t++)
-		delete thr[t];
+	THREADLOOP thr[t] = thread(NmpSearchThread, t, &highway_systems, &hs_it, &list_mtx, &all_waypoints);
+	THREADLOOP thr[t].join();
       #else
 	for (Waypoint *w : all_waypoints.point_list()) w->near_miss_points = all_waypoints.near_miss_waypoints(w, 0.0005);
       #endif
@@ -315,14 +302,9 @@ int main(int argc, char *argv[])
 	if (args.nmpmergepath != "" && !args.errorcheck)
 	{	cout << et.et() << "Writing near-miss point merged wpt files." << endl;
 	      #ifdef threading_enabled
-		// set up for threaded nmp_merged file writes
 		hs_it = highway_systems.begin();
-		for (unsigned int t = 0; t < args.numthreads; t++)
-			thr[t] = new thread(NmpMergedThread, t, &highway_systems, &hs_it, &list_mtx, &args.nmpmergepath);
-		for (unsigned int t = 0; t < args.numthreads; t++)
-			thr[t]->join();
-		for (unsigned int t = 0; t < args.numthreads; t++)
-			delete thr[t];//*/
+		THREADLOOP thr[t] = thread(NmpMergedThread, t, &highway_systems, &hs_it, &list_mtx, &args.nmpmergepath);
+		THREADLOOP thr[t].join();
 	      #else
 		for (HighwaySystem *h : highway_systems)
 		{	std::cout << h->systemname << std::flush;
@@ -448,13 +430,8 @@ int main(int argc, char *argv[])
 
 	cout << et.et() << "Processing traveler list files:" << endl;
       #ifdef threading_enabled
-	// set up for threaded .list file processing
-	for (unsigned int t = 0; t < args.numthreads; t++)
-		thr[t] = new thread(ReadListThread, t, &traveler_ids, &listupdates, &id_it, &traveler_lists, &list_mtx, &args, &el);
-	for (unsigned int t = 0; t < args.numthreads; t++)
-		thr[t]->join();
-	for (unsigned int t = 0; t < args.numthreads; t++)
-		delete thr[t];
+	THREADLOOP thr[t] = thread(ReadListThread, t, &traveler_ids, &listupdates, &id_it, &traveler_lists, &list_mtx, &args, &el);
+	THREADLOOP thr[t].join();
       #else
 	for (string &t : traveler_ids)
 	{	cout << t << ' ' << std::flush;
@@ -561,19 +538,13 @@ int main(int argc, char *argv[])
 	cout << et.et() << "Augmenting travelers for detected concurrent segments." << flush;
         //#include "debug/concurrency_augments.cpp"
       #ifdef threading_enabled
-	// set up for threaded concurrency augments
 	list<string>* augment_lists = new list<string>[args.numthreads];
 	list<TravelerList*>::iterator tl_it = traveler_lists.begin();
 
-	for (unsigned int t = 0; t < args.numthreads; t++)
-		thr[t] = new thread(ConcAugThread, t, &traveler_lists, &tl_it, &list_mtx, augment_lists+t);
-	for (unsigned int t = 0; t < args.numthreads; t++)
-		thr[t]->join();
+	THREADLOOP thr[t] = thread(ConcAugThread, t, &traveler_lists, &tl_it, &list_mtx, augment_lists+t);
+	THREADLOOP thr[t].join();
 	cout << "!\n" << et.et() << "Writing to concurrencies.log." << endl;
-	for (unsigned int t = 0; t < args.numthreads; t++)
-	{	for (std::string& entry : augment_lists[t]) concurrencyfile << entry << '\n';
-		delete thr[t];//*/
-	}
+	THREADLOOP for (std::string& entry : augment_lists[t]) concurrencyfile << entry << '\n';
 	delete[] augment_lists;
       #else
 	for (TravelerList *t : traveler_lists)
@@ -599,24 +570,15 @@ int main(int argc, char *argv[])
 	// overall, active+preview, active only,
 	// and per-system which falls into just one of these categories
       #ifdef threading_enabled
-	// set up for threaded stats computation
 	cout << et.et() << "Computing stats per route." << flush;
 	hs_it = highway_systems.begin();
-	for (unsigned int t = 0; t < args.numthreads; t++)
-		thr[t] = new thread(CompStatsRThread, t, &highway_systems, &hs_it, &list_mtx);
-	for (unsigned int t = 0; t < args.numthreads; t++)
-		thr[t]->join();
-	for (unsigned int t = 0; t < args.numthreads; t++)
-		delete thr[t];//*/
+	THREADLOOP thr[t] = thread(CompStatsRThread, t, &highway_systems, &hs_it, &list_mtx);
+	THREADLOOP thr[t].join();
 	cout << '!' << endl;
 	cout << et.et() << "Computing stats per traveler." << flush;
 	tl_it = traveler_lists.begin();
-	for (unsigned int t = 0; t < args.numthreads; t++)
-		thr[t] = new thread(CompStatsTThread, t, &traveler_lists, &tl_it, &list_mtx);
-	for (unsigned int t = 0; t < args.numthreads; t++)
-		thr[t]->join();
-	for (unsigned int t = 0; t < args.numthreads; t++)
-		delete thr[t];
+	THREADLOOP thr[t] = thread(CompStatsTThread, t, &traveler_lists, &tl_it, &list_mtx);
+	THREADLOOP thr[t].join();
 	cout << '!' << endl;
       #else
 	cout << et.et() << "Computing stats." << flush;
@@ -703,17 +665,12 @@ int main(int argc, char *argv[])
 	// now add user clinched stats to their log entries
 	cout << et.et() << "Creating per-traveler stats logs and augmenting data structure." << flush;
       #ifdef threading_enabled
-	// set up for threaded user logs
 	tl_it = traveler_lists.begin();
-	for (unsigned int t = 0; t < args.numthreads; t++)
-		thr[t] = new thread
-		(	UserLogThread, t, &traveler_lists, &tl_it, &list_mtx, &clin_db_val, active_only_miles,
-			active_preview_miles, &highway_systems, args.logfilepath+"/users/"
-		);
-	for (unsigned int t = 0; t < args.numthreads; t++)
-		thr[t]->join();
-	for (unsigned int t = 0; t < args.numthreads; t++)
-		delete thr[t];//*/
+	THREADLOOP thr[t] = thread
+	(	UserLogThread, t, &traveler_lists, &tl_it, &list_mtx, &clin_db_val, active_only_miles,
+		active_preview_miles, &highway_systems, args.logfilepath+"/users/"
+	);
+	THREADLOOP thr[t].join();
       #else
 	for (TravelerList *t : traveler_lists) t->userlog(&clin_db_val, active_only_miles, active_preview_miles, &highway_systems, args.logfilepath+"/users/");
       #endif
@@ -841,7 +798,7 @@ int main(int argc, char *argv[])
 	cout << et.et() << "Reading datacheckfps.csv." << endl;
 	file.open(args.highwaydatapath+"/datacheckfps.csv");
 	getline(file, line); // ignore header line
-	list<array<string, 6>> datacheckfps;
+	list<string*> datacheckfps;
 	unordered_set<string> datacheck_always_error
 	({	"BAD_ANGLE", "DISCONNECTED_ROUTE", "DUPLICATE_LABEL",
 		"HIDDEN_TERMINUS", "INTERSTATE_NO_HYPHEN",
@@ -859,9 +816,10 @@ int main(int argc, char *argv[])
 		while (line[0] == ' ' || line[0] == '\t')
 			line = line.substr(1);
 		if (line.empty()) continue;
-		// parse system updates.csv line
+		// parse datacheckfps.csv line
 		size_t NumFields = 6;
-		array<string, 6> fields;
+		string* fields = new string[6];
+				 // deleted when FP is matched or on termination of program
 		string* ptr_array[6] = {&fields[0], &fields[1], &fields[2], &fields[3], &fields[4], &fields[5]};
 		split(line, ptr_array, NumFields, ';');
 		if (NumFields != 6)
@@ -879,7 +837,7 @@ int main(int argc, char *argv[])
 	thread sqlthread;
 	if   (!args.errorcheck)
 	{	std::cout << et.et() << "Start writing database file " << args.databasename << ".sql.\n" << std::flush;
-		sqlthread=thread(sqlfile1, &et, &args, &all_regions, &continents, &countries, &highway_systems, &traveler_lists, &clin_db_val, &updates, &systemupdates);
+		sqlthread=thread(sqlfile1, &et, &args, &all_regions, &continents, &countries, &highway_systems, &traveler_lists, &clin_db_val, &updates, &systemupdates, &term_mtx);
 	}
       #endif
 
@@ -897,13 +855,14 @@ int main(int argc, char *argv[])
 	{	//cout << "Checking: " << d->str() << endl;
 		counter++;
 		if (counter % 1000 == 0) cout << '.' << flush;
-		for (list<array<string, 6>>::iterator fp = datacheckfps.begin(); fp != datacheckfps.end(); fp++)
+		for (list<string*>::iterator fp = datacheckfps.begin(); fp != datacheckfps.end(); fp++)
 		  if (d.match_except_info(*fp))
 		    if (d.info == (*fp)[5])
 		    {	//cout << "Match!" << endl;
 			d.fp = 1;
 			fpcount++;
 			datacheckfps.erase(fp);
+			delete[] *fp;
 			break;
 		    }
 		    else
@@ -921,7 +880,7 @@ int main(int argc, char *argv[])
 	timestamp = time(0);
 	fpfile << "Log file created at: " << ctime(&timestamp);
 	if (datacheckfps.empty()) fpfile << "No unmatched FP entries.\n";
-	else	for (array<string, 6>& entry : datacheckfps)
+	else	for (string* entry : datacheckfps)
 		  fpfile << entry[0] << ';' << entry[1] << ';' << entry[2] << ';' << entry[3] << ';' << entry[4] << ';' << entry[5] << '\n';
 	fpfile.close();
 
@@ -946,7 +905,7 @@ int main(int argc, char *argv[])
 		std::cout << et.et() << "Resume writing database file " << args.databasename << ".sql.\n" << std::flush;
 	      #else
 		std::cout << et.et() << "Writing database file " << args.databasename << ".sql.\n" << std::flush;
-		sqlfile1(&et, &args, &all_regions, &continents, &countries, &highway_systems, &traveler_lists, &clin_db_val, &updates, &systemupdates);
+		sqlfile1(&et, &args, &all_regions, &continents, &countries, &highway_systems, &traveler_lists, &clin_db_val, &updates, &systemupdates, &term_mtx);
 	      #endif
 		sqlfile2(&et, &args, &graph_types, &graph_vector);
 	     }

@@ -28,9 +28,9 @@ HighwayGraph::HighwayGraph
 	// of its colocation list
 	unsigned int counter = 0;
 	std::list<Waypoint*> graph_points = all_waypoints.graph_points();
-	std::cout << et.et() + "Sorting graph index waypoints by name priority." << std::endl;
+	std::cout << et.et() << "Sorting graph index waypoints by name priority." << std::endl;
 	graph_points.sort(waypoint_simplification_sort);
-	std::cout << et.et() + "Creating unique names and vertices" << std::flush;
+	std::cout << et.et() << "Creating unique names and vertices" << std::flush;
 	for (Waypoint *w : graph_points)
 	{	if (counter % 10000 == 0) std::cout << '.' << std::flush;
 		counter++;
@@ -77,7 +77,7 @@ HighwayGraph::HighwayGraph
 
 	// create edges
 	counter = 0;
-	std::cout << et.et() + "Creating edges" << std::flush;
+	std::cout << et.et() << "Creating edges" << std::flush;
 	for (HighwaySystem *h : highway_systems)
 	{	if (!h->active_or_preview()) continue;
 		if (counter % 6 == 0) std::cout << '.' << std::flush;
@@ -92,7 +92,7 @@ HighwayGraph::HighwayGraph
 
 	// compress edges adjacent to hidden vertices
 	counter = 0;
-	std::cout << et.et() + "Compressing collapsed edges" << std::flush;
+	std::cout << et.et() << "Compressing collapsed edges" << std::flush;
 	for (std::pair<Waypoint* const, HGVertex*>& wv : vertices)
 	{	if (counter % 10000 == 0) std::cout << '.' << std::flush;
 		counter++;
@@ -353,7 +353,7 @@ void HighwayGraph::write_master_graphs_tmg(std::vector<GraphListEntry> &graph_ve
 // or to within a given area if placeradius is given
 void HighwayGraph::write_subgraphs_tmg
 (	std::vector<GraphListEntry> &graph_vector, std::string path, size_t graphnum,
-	unsigned int threadnum, WaypointQuadtree *qt, ElapsedTime *et
+	unsigned int threadnum, WaypointQuadtree *qt, ElapsedTime *et, std::mutex *term
 )
 {	unsigned int cv_count, tv_count;
 	std::ofstream simplefile(path+graph_vector[graphnum].filename());
@@ -370,13 +370,17 @@ void HighwayGraph::write_subgraphs_tmg
 		travnum++;
 	}
       #ifdef threading_enabled
+	term->lock();
 	if (graph_vector[graphnum].cat != graph_vector[graphnum-1].cat)
-		std::cout << '\n' + et->et() + "Writing " + graph_vector[graphnum].category() + " graphs.\n";
+		std::cout << '\n' << et->et() << "Writing " << graph_vector[graphnum].category() << " graphs.\n";
       #endif
 	std::cout << graph_vector[graphnum].tag()
 		  << '(' << mv.size() << ',' << mse.size() << ") "
 		  << '(' << cv_count << ',' << mce.size() << ") "
 		  << '(' << tv_count << ',' << mte.size() << ") " << std::flush;
+      #ifdef threading_enabled
+	term->unlock();
+      #endif
 	simplefile << "TMG 1.0 simple\n";
 	collapfile << "TMG 1.0 collapsed\n";
 	travelfile << "TMG 2.0 traveled\n";

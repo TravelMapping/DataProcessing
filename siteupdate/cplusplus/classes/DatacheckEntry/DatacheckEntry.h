@@ -63,8 +63,8 @@ class DatacheckEntry
 
 	DatacheckEntry(Route*, std::string, std::string, std::string, std::string, std::string);
 
-	bool match_except_info(std::array<std::string, 6>&);
-	std::string str();
+	bool match_except_info(std::string*);
+	std::string str() const;
 };
 
-bool operator < (DatacheckEntry &, DatacheckEntry &);
+bool operator < (const DatacheckEntry &, const DatacheckEntry &);

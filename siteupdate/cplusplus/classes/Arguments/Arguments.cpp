@@ -16,7 +16,10 @@ Arguments::Arguments(int argc, char *argv[])
 	/* U */ // nothing to do here
 	/* t */ numthreads = 4;
 	/* e */ errorcheck = 0;
+	/* T */ timeprecision = 1;
 	/* h */ help = 0;
+		const char* slash = strrchr (argv[0], '/');
+		exec = slash ? slash+1 : argv[0];
 
 	// parsing
 	for (unsigned int n = 1; n < argc; n++)
@@ -42,6 +45,8 @@ Arguments::Arguments(int argc, char *argv[])
 			splitregionpath = argv[n+1]; splitregion = argv[n+2]; n +=2; }
 		else if ( n+1 < argc && !strcmp(argv[n], "-t") || !strcmp(argv[n], "--numthreads") ) {
 			numthreads = strtol(argv[n+1], 0, 10); n++; if (numthreads<1) numthreads=1; }
+		else if ( n+1 < argc && !strcmp(argv[n], "-T") || !strcmp(argv[n], "--timeprecision") ) {
+			timeprecision = strtol(argv[n+1], 0, 10); n++; if (timeprecision<1) timeprecision=1; if (timeprecision>9) timeprecision=9; }
 		else if (               !strcmp(argv[n], "-e") || !strcmp(argv[n], "--errorcheck") )
 			errorcheck = 1;
 		else if (               !strcmp(argv[n], "-h") || !strcmp(argv[n], "--help") ) {
@@ -55,45 +60,50 @@ Arguments::Arguments(int argc, char *argv[])
 }
 
 void Arguments::show_help()
-{	std::cout <<	"usage: siteupdate.py [-h] [-w HIGHWAYDATAPATH] [-s SYSTEMSFILE]\n";
-	std::cout <<	"		     [-u USERLISTFILEPATH] [-d DATABASENAME] [-l LOGFILEPATH]\n";
-	std::cout <<	"		     [-c CSVSTATFILEPATH] [-g GRAPHFILEPATH] [-k]\n";
-	std::cout <<	"		     [-n NMPMERGEPATH] [-p SPLITREGIONPATH SPLITREGION]\n";
-	std::cout <<	"		     [-U USERLIST [USERLIST ...]] [-t NUMTHREADS] [-e]\n";
-	std::cout <<	"\n";
-	std::cout <<	"Create SQL, stats, graphs, and log files from highway and user data for the\n";
-	std::cout <<	"Travel Mapping project.\n";
-	std::cout <<	"\n";
-	std::cout <<	"optional arguments:\n";
-	std::cout <<	"  -h, --help            show this help message and exit\n";
-	std::cout <<	"  -w HIGHWAYDATAPATH, --highwaydatapath HIGHWAYDATAPATH\n";
-	std::cout <<	"		        path to the root of the highway data directory\n";
-	std::cout <<	"		        structure\n";
-	std::cout <<	"  -s SYSTEMSFILE, --systemsfile SYSTEMSFILE\n";
-	std::cout <<	"		        file of highway systems to include\n";
-	std::cout <<	"  -u USERLISTFILEPATH, --userlistfilepath USERLISTFILEPATH\n";
-	std::cout <<	"		        path to the user list file data\n";
-	std::cout <<	"  -d DATABASENAME, --databasename DATABASENAME\n";
-	std::cout <<	"		        Database name for .sql file name\n";
-	std::cout <<	"  -l LOGFILEPATH, --logfilepath LOGFILEPATH\n";
-	std::cout <<	"		        Path to write log files, which should have a \"users\"\n";
-	std::cout <<	"		        subdirectory\n";
-	std::cout <<	"  -c CSVSTATFILEPATH, --csvstatfilepath CSVSTATFILEPATH\n";
-	std::cout <<	"		        Path to write csv statistics files\n";
-	std::cout <<	"  -g GRAPHFILEPATH, --graphfilepath GRAPHFILEPATH\n";
-	std::cout <<	"		        Path to write graph format data files\n";
-	std::cout <<	"  -k, --skipgraphs      Turn off generation of graph files\n";
-	std::cout <<	"  -n NMPMERGEPATH, --nmpmergepath NMPMERGEPATH\n";
-	std::cout <<	"		        Path to write data with NMPs merged (generated only if\n";
-	std::cout <<	"		        specified)\n";
-	std::cout <<	"  -p SPLITREGIONPATH SPLITREGION, --splitregion SPLITREGIONPATH SPLITREGION\n";
-	std::cout <<	"		        Path to logs & .lists for a specific...\n";
-	std::cout <<	"		        Region being split into subregions.\n";
-	std::cout <<	"		        For Development.\n";
-	std::cout <<	"  -U USERLIST [USERLIST ...], --userlist USERLIST [USERLIST ...]\n";
-	std::cout <<	"		        For Development: list of users to use in dataset\n";
-	std::cout <<	"  -t NUMTHREADS, --numthreads NUMTHREADS\n";
-	std::cout <<	"		        Number of threads to use for concurrent tasks\n";
-	std::cout <<	"  -e, --errorcheck      Run only the subset of the process needed to verify\n";
-	std::cout <<	"		        highway data changes\n";
+{	std::string indent(strlen(exec), ' ');
+	std::cout  <<  "usage: " << exec << " [-h] [-w HIGHWAYDATAPATH] [-s SYSTEMSFILE]\n";
+	std::cout  <<  indent << "        [-u USERLISTFILEPATH] [-d DATABASENAME] [-l LOGFILEPATH]\n";
+	std::cout  <<  indent << "        [-c CSVSTATFILEPATH] [-g GRAPHFILEPATH] [-k]\n";
+	std::cout  <<  indent << "        [-n NMPMERGEPATH] [-p SPLITREGIONPATH SPLITREGION]\n";
+	std::cout  <<  indent << "        [-U USERLIST [USERLIST ...]] [-t NUMTHREADS] [-e]\n";
+	std::cout <<	"		  [-T TIMEPRECISION] [-e]\n";
+	std::cout  <<  "\n";
+	std::cout  <<  "Create SQL, stats, graphs, and log files from highway and user data for the\n";
+	std::cout  <<  "Travel Mapping project.\n";
+	std::cout  <<  "\n";
+	std::cout  <<  "optional arguments:\n";
+	std::cout  <<  "  -h, --help            show this help message and exit\n";
+	std::cout  <<  "  -w HIGHWAYDATAPATH, --highwaydatapath HIGHWAYDATAPATH\n";
+	std::cout  <<  "		        path to the root of the highway data directory\n";
+	std::cout  <<  "		        structure\n";
+	std::cout  <<  "  -s SYSTEMSFILE, --systemsfile SYSTEMSFILE\n";
+	std::cout  <<  "		        file of highway systems to include\n";
+	std::cout  <<  "  -u USERLISTFILEPATH, --userlistfilepath USERLISTFILEPATH\n";
+	std::cout  <<  "		        path to the user list file data\n";
+	std::cout  <<  "  -d DATABASENAME, --databasename DATABASENAME\n";
+	std::cout  <<  "		        Database name for .sql file name\n";
+	std::cout  <<  "  -l LOGFILEPATH, --logfilepath LOGFILEPATH\n";
+	std::cout  <<  "		        Path to write log files, which should have a \"users\"\n";
+	std::cout  <<  "		        subdirectory\n";
+	std::cout  <<  "  -c CSVSTATFILEPATH, --csvstatfilepath CSVSTATFILEPATH\n";
+	std::cout  <<  "		        Path to write csv statistics files\n";
+	std::cout  <<  "  -g GRAPHFILEPATH, --graphfilepath GRAPHFILEPATH\n";
+	std::cout  <<  "		        Path to write graph format data files\n";
+	std::cout  <<  "  -k, --skipgraphs      Turn off generation of graph files\n";
+	std::cout  <<  "  -n NMPMERGEPATH, --nmpmergepath NMPMERGEPATH\n";
+	std::cout  <<  "		        Path to write data with NMPs merged (generated only if\n";
+	std::cout  <<  "		        specified)\n";
+	std::cout  <<  "  -p SPLITREGIONPATH SPLITREGION, --splitregion SPLITREGIONPATH SPLITREGION\n";
+	std::cout  <<  "		        Path to logs & .lists for a specific...\n";
+	std::cout  <<  "		        Region being split into subregions.\n";
+	std::cout  <<  "		        For Development.\n";
+	std::cout  <<  "  -U USERLIST [USERLIST ...], --userlist USERLIST [USERLIST ...]\n";
+	std::cout  <<  "		        For Development: list of users to use in dataset\n";
+	std::cout  <<  "  -t NUMTHREADS, --numthreads NUMTHREADS\n";
+	std::cout  <<  "		        Number of threads to use for concurrent tasks\n";
+	std::cout  <<  "  -e, --errorcheck      Run only the subset of the process needed to verify\n";
+	std::cout  <<  "		        highway data changes\n";
+	std::cout  <<  "  -T TIMEPRECISION, --timeprecision TIMEPRECISION\n";
+	std::cout  <<  "		        Number of digits (1-9) after decimal point in\n";
+	std::cout  <<  "		        timestamp readouts\n";
 }
