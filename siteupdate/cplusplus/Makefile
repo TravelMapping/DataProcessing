@@ -22,6 +22,7 @@ CommonObjects = \
   classes/HighwaySystem/HighwaySystem.o \
   classes/Region/Region.o \
   classes/Route/Route.o \
+  classes/Route/label_and_connect.o \
   classes/TravelerList/TravelerList.o \
   classes/Waypoint/Waypoint.o \
   classes/Waypoint/canonical_waypoint_name/canonical_waypoint_name.o \

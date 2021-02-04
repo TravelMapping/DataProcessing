@@ -16,6 +16,7 @@ class WaypointQuadtree;
 void CompStatsRThread(unsigned int, std::list<HighwaySystem*>*, std::list<HighwaySystem*>::iterator*, std::mutex*);
 void CompStatsTThread(unsigned int, std::list<TravelerList *>*, std::list<TravelerList *>::iterator*, std::mutex*);
 void ConcAugThread   (unsigned int, std::list<TravelerList *>*, std::list<TravelerList *>::iterator*, std::mutex*, std::list<std::string>*);
+void LabelConThread  (unsigned int, std::list<HighwaySystem*>*, std::list<HighwaySystem*>::iterator*, std::mutex*, ErrorList*);
 void MasterTmgThread(HighwayGraph*, std::vector<GraphListEntry>*, std::string, std::list<TravelerList*>*, size_t*, std::mutex*, std::mutex*, WaypointQuadtree*, ElapsedTime*);
 void NmpMergedThread (unsigned int, std::list<HighwaySystem*>*, std::list<HighwaySystem*>::iterator*, std::mutex*, std::string*);
 void NmpSearchThread (unsigned int, std::list<HighwaySystem*>*, std::list<HighwaySystem*>::iterator*, std::mutex*, WaypointQuadtree*);

@@ -12,6 +12,7 @@
 #include "CompStatsRThread.cpp"
 #include "CompStatsTThread.cpp"
 #include "ConcAugThread.cpp"
+#include "LabelConThread.cpp"
 #include "MasterTmgThread.cpp"
 #include "NmpMergedThread.cpp"
 #include "NmpSearchThread.cpp"
