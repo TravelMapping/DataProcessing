@@ -1,5 +1,6 @@
 // find the route that matches and when we do, match labels
-std::string lookup = upper(fields[0]) + ( ' ' + upper(std::string(fields[1])) ); // leave fields[1] intact for potential AltRouteName note
+std::string lookup = std::string(fields[0]) + ' ' + fields[1];
+upper(lookup.data());
 // look for region/route combo, first in pri_list_hash
 std::unordered_map<std::string,Route*>::iterator rit = Route::pri_list_hash.find(lookup);
 // and then if not found, in alt_list_hash

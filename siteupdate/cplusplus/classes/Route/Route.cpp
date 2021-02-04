@@ -84,7 +84,8 @@ Route::Route(std::string &line, HighwaySystem *sys, ErrorList &el, std::unordere
 		el.add_error("Duplicate root in " + system->systemname + ".csv: " + root +
 			     " already in " + root_hash.at(root)->system->systemname + ".csv");
 	// insert list name into pri_list_hash, checking for duplicate .list names
-	std::string list_name = upper(readable_name());
+	std::string list_name(readable_name());
+	upper(list_name.data());
 	if (alt_list_hash.find(list_name) != alt_list_hash.end())
 		el.add_error("Duplicate main list name in " + root + ": '" + readable_name() +
 			     "' already points to " + alt_list_hash.at(list_name)->root);
@@ -93,7 +94,8 @@ Route::Route(std::string &line, HighwaySystem *sys, ErrorList &el, std::unordere
 			     "' already points to " + pri_list_hash.at(list_name)->root);
 	// insert alt names into alt_list_hash, checking for duplicate .list names
 	for (std::string& a : alt_route_names)
-	{   list_name = upper(rg_str + ' ' + a);
+	{   list_name = rg_str + ' ' + a;
+	    upper(list_name.data());
 	    if (pri_list_hash.find(list_name) != pri_list_hash.end())
 		el.add_error("Duplicate alt route name in " + root + ": '" + region->code + ' ' + a +
 			     "' already points to " + pri_list_hash.at(list_name)->root);
