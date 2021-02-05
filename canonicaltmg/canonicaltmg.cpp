@@ -6,6 +6,17 @@
 #include <vector>
 using namespace std;
 
+void split(const std::string& line, std::string* f, size_t &s, const char delim)
+{	size_t i = 0;
+	size_t r = 0;
+	for (size_t l = 0; r != -1 && i < s; l = r+1)
+	{	r = line.find(delim, l);
+		f[i].assign(line, l, r-l);
+		i++;
+	}
+	s = (r == -1) ? i : s+1;
+}
+
 class vertex
 {	public:
 	string label;
@@ -97,15 +108,14 @@ int main(int argc, char* argv[])
 	string firstline, tmgline;
 	getline(input, firstline);
 
-	char* cfline = new char[firstline.size()+1];
-	strcpy (cfline, firstline.data());
-	vector<string> cfline_vec;
-	for (char* token = strtok(cfline, " "); token; token = strtok(0, " ")) cfline_vec.push_back(token);
-	if ( cfline_vec.size() != 3 || cfline_vec[0] != "TMG" || (cfline_vec[2] != "simple" && cfline_vec[2] != "collapsed" && cfline_vec[2] != "traveled") )
+	size_t NumFields = 3;
+	vector<string> fields(3);
+	split(firstline, fields.data(), NumFields, ' ');
+	if ( NumFields != 3 || fields[0] != "TMG" || (fields[2] != "simple" && fields[2] != "collapsed" && fields[2] != "traveled") )
 	{	cout << '\"' << firstline << "\" unsupported.\n";
 		return 0;
 	}
-	bool traveled = cfline_vec[2] == "traveled";
+	bool traveled = fields[2] == "traveled";
 
 	input >> NumVertices;
 	input >> NumEdges;
