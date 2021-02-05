@@ -70,7 +70,7 @@ bool SortEdges(edge* e1, edge* e2)
 		if (e1->iLat[i] > e2->iLat[i])		 return 0;
 		if (e1->iLon[i] < e2->iLon[i])		 return 1;
 		if (e1->iLon[i] > e2->iLon[i])		 return 0;
-	} // we should never exit this loop without returning
+	} // we should never exit this loop
 	return 0;
 }
 
