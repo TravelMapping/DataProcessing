@@ -17,7 +17,7 @@ class vertex
 		char* l = new char[ConstLine.size()+1];
 		strcpy(l, ConstLine.data());
 		c = strchr(l, ' ')+1; *(c-1) = 0; label = l;
-		lat = strtod(c, 0); c = strchr(c, ' ')+1;
+		lat = strtod(c, &c); c++;
 		lon = strtod(c, 0);
 		vertex_num = -1;
 	}	
@@ -32,27 +32,33 @@ bool SortVertices(vertex* v1, vertex* v2)
 
 class edge
 {	public:
-	size_t BegI, EndI, qty;
+	size_t BegI, EndI;
+	//size_t qty;
 	vertex* BegP,* EndP;
 	string label, clinchedby_code;
 	vector<double> iLat, iLon;
 
 	edge(string &ConstLine, vector<vertex*> &v_vector, bool traveled)
-	{	char* line = new char[ConstLine.size()+1];
-		strcpy(line, ConstLine.data());
-		BegI = stoi(strtok(line, " "));	BegP = v_vector[BegI];
-		EndI = stoi(strtok(0, " "));	EndP = v_vector[EndI];
-		label = strtok(0, " ");
+	{	char* c;
+		char* l = new char[ConstLine.size()+2];
+		strcpy(l, ConstLine.data());
+		l[ConstLine.size()+1] = 0;
+		BegI = strtoul(l, &c, 10);	BegP = v_vector[BegI];	c++;
+		EndI = strtoul(c, &c, 10);	EndP = v_vector[EndI];	c++;
+		label = strtok(c, " ");		c += label.size();
+			// strtok(0, FOO) is not threadsafe. Don't use.
 
-		if (traveled) clinchedby_code = strtok(0, " ");
-
-		for (char* val = strtok(0, " "); val; val = strtok(0, " "))
-		{	iLat.push_back(stod(val));
-			val = strtok(0, " ");
-			iLon.push_back(stod(val));
+		if (traveled)
+		{	clinchedby_code = strtok(c+1, " ");
+			c += clinchedby_code.size() + 1;
 		}
-		qty = 1;
-		for (const char* comma = strchr(label.data(), ','); comma; qty++) comma = strchr(comma+1, ',');
+
+		while (*(c+1))
+		{	iLat.push_back(strtod(c+1, &c));
+			iLon.push_back(strtod(c+1, &c));
+		}
+		//qty = 1;
+		//for (const char* comma = strchr(label.data(), ','); comma; qty++) comma = strchr(comma+1, ',');
 	}
 };
 
