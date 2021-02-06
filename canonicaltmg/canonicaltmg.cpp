@@ -19,6 +19,7 @@ class vertex
 		c = strchr(l, ' ')+1; *(c-1) = 0; label = l;
 		lat = strtod(c, &c); c++;
 		lon = strtod(c, 0);
+		delete[] l;
 		vertex_num = -1;
 	}	
 };
@@ -57,6 +58,9 @@ class edge
 		{	iLat.push_back(strtod(c+1, &c));
 			iLon.push_back(strtod(c+1, &c));
 		}
+
+		delete[] l;
+
 		//qty = 1;
 		//for (const char* comma = strchr(label.data(), ','); comma; qty++) comma = strchr(comma+1, ',');
 	}
@@ -101,6 +105,7 @@ int main(int argc, char* argv[])
 	strcpy (cfline, firstline.data());
 	vector<string> cfline_vec;
 	for (char* token = strtok(cfline, " "); token; token = strtok(0, " ")) cfline_vec.push_back(token);
+	delete[] cfline;
 	if ( cfline_vec.size() != 3 || cfline_vec[0] != "TMG" || (cfline_vec[2] != "simple" && cfline_vec[2] != "collapsed" && cfline_vec[2] != "traveled") )
 	{	cout << '\"' << firstline << "\" unsupported.\n";
 		return 0;
