@@ -1,8 +1,11 @@
 #include <cstring>
+#include <dirent.h>
 #include <fstream>
 #include <iostream>
 #include <list>
+#include <mutex>
 #include <string>
+#include <thread>
 #include <vector>
 using namespace std;
 
@@ -88,36 +91,83 @@ void reverse(vector<double>& v)
 {	for (size_t i = 0; i < v.size()/2; i++) std::swap(v[i], v[v.size()-i-1]);
 }
 
-int main(int argc, char* argv[])
-{	ifstream input(argv[1]);
-	if (argc < 3)	{ cout << "usage: ./canonicaltmg <InputFile> <OutputFile>\n"; return 0; }
-	if (!input)	{ cout << argv[1] << " not found.\n"; return 0; }
-
-	const char* filename = &argv[1][string(argv[1]).find_last_of("/\\")+1];
-	cout << filename << "   ->   " << &argv[2][string(argv[2]).find_last_of("/\\")+1] << endl;;
-
-	// read TMG header
+class tmg
+{	public:
+	string pathname, destination, tag, version, format;
 	size_t NumVertices, NumEdges, NumTrav;
-	string firstline, tmgline;
-	getline(input, firstline);
+	bool opened, traveled;
 
-	char* cfline = new char[firstline.size()+1];
-	strcpy (cfline, firstline.data());
-	vector<string> cfline_vec;
-	for (char* token = strtok(cfline, " "); token; token = strtok(0, " ")) cfline_vec.push_back(token);
-	delete[] cfline;
-	if ( cfline_vec.size() != 3 || cfline_vec[0] != "TMG" || (cfline_vec[2] != "simple" && cfline_vec[2] != "collapsed" && cfline_vec[2] != "traveled") )
-	{	cout << '\"' << firstline << "\" unsupported.\n";
-		return 0;
+	tmg(string&& entry, std::string&& dest)
+	{	pathname = entry;
+		destination = dest;
+		opened = 1;
+		NumVertices = 0;
+		NumEdges = 0;
+		NumTrav = -1;
+		ifstream file(pathname);
+		if (!file.is_open())
+		{	opened = 0;
+			return;
+		}
+		file >> tag >> version >> format;
+		traveled = format == "traveled";
+		// enforce newline between header lines
+		string line;
+		getline(file, line);
+		file >> NumVertices >> NumEdges;
+		if (traveled) file >> NumTrav;
+		file.close();
 	}
-	bool traveled = cfline_vec[2] == "traveled";
 
-	input >> NumVertices;
-	input >> NumEdges;
-	if (traveled) input >> NumTrav;
+	bool valid_header()
+	{	if (!opened)
+		{	cout << "Unable to open file. ";
+			return 0;
+		}
+		bool valid = 1;
+		if (tag != "TMG") valid = 0;
+		else	if (version != "1.0")
+		{	if (version != "2.0" || !traveled) valid = 0;
+		}
+		else	if (format != "collapsed" && format != "simple") valid = 0;
+		if (!valid)
+		{	cout << tag << ' ' << version << ' ' << format << " unsupported. ";
+			return 0;
+		}
+		if (!NumVertices)
+		{	cout << "No vertices. ";
+			valid = 0;
+		}
+		if (!NumEdges)
+		{	cout << "No edges. ";
+			valid = 0;
+		}
+		if (traveled && NumTrav == -1)
+		{	cout << "No valid traveler count. ";
+			valid = 0;
+		}
+		return valid;
+	}
+
+	std::string filename()
+	{	return pathname.substr(pathname.find_last_of('/')+1);
+	}
+
+	void canonicaltmg();
+};
+
+bool SortGraphs(tmg& g1, tmg& g2)
+{	return g1.NumEdges < g2.NumEdges;
+}
+
+void tmg::canonicaltmg()
+{	ifstream input(pathname);
+	string tmgline;
 	vector<vertex*> v_vector;
 	list<edge*> e_list;
-	// seek to end of 2nd line
+
+	// skip header; we've already read it
+	getline(input, tmgline);
 	getline(input, tmgline);
 
 	// read vertices
@@ -138,6 +188,7 @@ int main(int argc, char* argv[])
 
 	// read traveler lists
 	if (traveled) getline(input, tmgline);
+	input.close();
 
 	// sort vertices
 	list<vertex*> v_list (v_vector.begin(), v_vector.end());
@@ -171,8 +222,8 @@ int main(int argc, char* argv[])
 	e_list.sort(SortEdges);
 
 	// write output TMG
-	ofstream output(argv[2]);
-	output << firstline << '\n';
+	ofstream output(destination);
+	output << tag << ' ' << version << ' ' << format << '\n';
 	output << NumVertices << ' ' << NumEdges;
 	if (traveled) output << ' ' << NumTrav;
 	output << '\n';
@@ -191,4 +242,82 @@ int main(int argc, char* argv[])
 		output << '\n';
 	}
 	if (traveled) output << tmgline << '\n';
+
+	// delete vertices & edges
+	for (vertex* v : v_vector) delete v;
+	for (  edge* e : e_list  ) delete e;
+}
+
+void GraphThread(size_t id, std::vector<tmg>* graphvec, size_t* index, std::mutex* mtx, std::string* msg)
+{	//std::cout << "Starting GraphThread " << id << std::endl;
+	while (*index < graphvec->size())
+	{	mtx->lock();
+		if (*index >= graphvec->size())
+		{	mtx->unlock();
+			return;
+		}
+		//std::cout << "Thread " << id << " with graphvec.size()=" << graphvec->size() << " & index=" << *index << std::endl;
+		//std::cout << "Thread " << id << " assigned " << graphvec->at(*index).filename() << std::endl;
+		size_t i = *index;
+		(*index)++;
+		cout << string(msg->size(), ' ') << '\r';
+		*msg = '[' + to_string(*index) + '/' + to_string(graphvec->size()) + "] " + graphvec->at(i).filename();
+		cout << *msg << flush << '\r';
+		mtx->unlock();
+		graphvec->at(i).canonicaltmg();
+	}
+}
+
+int main(int argc, char* argv[])
+{	list<tmg> graphlist;
+	char *src, *dest;
+	size_t i = 0;
+	size_t T = 0;
+	size_t t;
+	string msg;
+	mutex mtx;
+
+	switch (argc)
+	{	case 3 : src = argv[1];
+			 dest = argv[2];
+			 break;
+		case 5 : if (!strcmp(argv[1], "-t"))
+			 {	T = strtoul(argv[2], 0, 10);
+				src = argv[3];
+				dest = argv[4];
+				break;
+			 }
+		default: cout << "usage: " << argv[0] <<" [-t NumThreads] <InputPath> <OutputPath>\n"; return 1;
+	}
+	if (!T) T = thread::hardware_concurrency();
+	if (!T) T = 1;
+	vector<thread> thr(T);
+
+	DIR *dir;
+	dirent *ent;
+	if ((dir = opendir(src)) != NULL)
+	     {	while ((ent = readdir(dir)) != NULL)
+		{	string entry = string(src) + "/" + ent->d_name;
+			if (entry.substr(entry.size()-4) == ".tmg")
+			{	graphlist.emplace_back( move(entry), dest + entry.substr(entry.find_last_of('/')) );
+				if (!graphlist.back().valid_header())
+				{	cout << "Skipping " << graphlist.back().pathname << endl;
+					graphlist.pop_back();
+				}
+			}
+		}
+		closedir(dir);
+	     }
+	else {	graphlist.emplace_back(src, dest);
+		if (!graphlist.back().valid_header())
+		{	cout << "Skipping " << graphlist.back().pathname << endl;
+			graphlist.pop_back();
+		}
+	     }
+
+	graphlist.sort(SortGraphs);
+	vector<tmg> graphvec(graphlist.rbegin(), graphlist.rend());
+	for (t=0;t<T;t++) thr[t] = thread(GraphThread, t, &graphvec, &i, &mtx, &msg);
+	for (t=0;t<T;t++) thr[t].join();
+	cout << endl;
 }
