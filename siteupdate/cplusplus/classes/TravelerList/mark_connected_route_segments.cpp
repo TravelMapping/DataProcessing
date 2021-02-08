@@ -1,5 +1,7 @@
-std::string lookup1 = upper(std::string(fields[0]) + ' ' + fields[1]); // leave fields intact for potential AltRouteName note
-std::string lookup2 = upper(std::string(fields[3]) + ' ' + fields[4]); // leave fields intact for potential AltRouteName note
+std::string lookup1 = std::string(fields[0]) + ' ' + fields[1];
+std::string lookup2 = std::string(fields[3]) + ' ' + fields[4];
+upper(lookup1.data());
+upper(lookup2.data());
 // look for region/route combos, first in pri_list_hash
 std::unordered_map<std::string,Route*>::iterator rit1 = Route::pri_list_hash.find(lookup1);
 std::unordered_map<std::string,Route*>::iterator rit2 = Route::pri_list_hash.find(lookup2);
