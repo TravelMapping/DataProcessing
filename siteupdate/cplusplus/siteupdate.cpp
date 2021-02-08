@@ -257,7 +257,6 @@ int main(int argc, char *argv[])
 	cout << et.et() << "Searching for near-miss points." << endl;
       #ifdef threading_enabled
 	hs_it = highway_systems.begin();
-
 	THREADLOOP thr[t] = thread(NmpSearchThread, t, &highway_systems, &hs_it, &list_mtx, &all_waypoints);
 	THREADLOOP thr[t].join();
       #else
@@ -319,78 +318,15 @@ int main(int argc, char *argv[])
 	#include "tasks/concurrency_detection.cpp"
 
 	cout << et.et() << "Processing waypoint labels and checking for unconnected chopped routes." << endl;
-	for (HighwaySystem* h : highway_systems)
+      #ifdef threading_enabled
+	hs_it = highway_systems.begin();
+	THREADLOOP thr[t] = thread(LabelConThread, t, &highway_systems, &hs_it, &list_mtx, &el);
+	THREADLOOP thr[t].join();
+      #else
+	for (HighwaySystem *h : highway_systems)
 	  for (Route* r : h->route_list)
-	  {	// check for unconnected chopped routes
-		if (!r->con_route)
-		{	el.add_error(r->system->systemname + ".csv: root " + r->root + " not matched by any connected route root.");
-			continue;
-		}
-
-		// check for mismatched route endpoints within connected routes
-		#define q r->con_route->roots[r->rootOrder-1]
-		if ( r->rootOrder > 0 && q->point_list.size() > 1 && r->point_list.size() > 1 && !r->con_beg()->same_coords(q->con_end()) )
-		{	if ( q->con_beg()->same_coords(r->con_beg()) )
-			{	//std::cout << "DEBUG: marking only " << q->str() << " reversed" << std::endl;
-				//if (q->is_reversed) std::cout << "DEBUG: " << q->str() << " already reversed!" << std::endl;
-				q->is_reversed = 1;
-			}
-			else if ( q->con_end()->same_coords(r->con_end()) )
-			{	//std::cout << "DEBUG: marking only " << r->str() << " reversed" << std::endl;
-				//if (r->is_reversed) std::cout << "DEBUG: " << r->str() << " already reversed!" << std::endl;
-				r->is_reversed = 1;
-			}
-			else if ( q->con_beg()->same_coords(r->con_end()) )
-			{	//std::cout << "DEBUG: marking both " << q->str() << " and " << r->str() << " reversed" << std::endl;
-				//if (q->is_reversed) std::cout << "DEBUG: " << q->str() << " already reversed!" << std::endl;
-				//if (r->is_reversed) std::cout << "DEBUG: " << r->str() << " already reversed!" << std::endl;
-				q->is_reversed = 1;
-				r->is_reversed = 1;
-			}
-			else
-			{	DatacheckEntry::add(r, r->con_beg()->label, "", "",
-						     "DISCONNECTED_ROUTE", q->con_end()->root_at_label());
-				DatacheckEntry::add(q, q->con_end()->label, "", "",
-						     "DISCONNECTED_ROUTE", r->con_beg()->root_at_label());
-			}
-		}
-		#undef q
-
-		// create label hashes and check for duplicates
-		#define w r->point_list[index]
-		for (unsigned int index = 0; index < r->point_list.size(); index++)
-		{	// ignore case and leading '+' or '*'
-			std::string upper_label = upper(w->label);
-			while (upper_label[0] == '+' || upper_label[0] == '*')
-				upper_label = upper_label.substr(1);
-			// if primary label not duplicated, add to r->pri_label_hash
-			if (r->alt_label_hash.find(upper_label) != r->alt_label_hash.end())
-			{	DatacheckEntry::add(r, upper_label, "", "", "DUPLICATE_LABEL", "");
-				r->duplicate_labels.insert(upper_label);
-			}
-			else if (!r->pri_label_hash.insert(std::pair<std::string, unsigned int>(upper_label, index)).second)
-			{	DatacheckEntry::add(r, upper_label, "", "", "DUPLICATE_LABEL", "");
-				r->duplicate_labels.insert(upper_label);
-			}
-			for (std::string& a : w->alt_labels)
-			{	// create canonical AltLabels
-				while (a[0] == '+' || a[0] == '*') a = a.substr(1);
-				upper(a.data());
-				// populate unused set
-				r->unused_alt_labels.insert(a);
-				// create label->index hashes and check if AltLabels duplicated
-				if (r->pri_label_hash.find(a) != r->pri_label_hash.end())
-				{	DatacheckEntry::add(r, a, "", "", "DUPLICATE_LABEL", "");
-					r->duplicate_labels.insert(a);
-				}
-				else if (!r->alt_label_hash.insert(std::pair<std::string, unsigned int>(a, index)).second)
-				{	DatacheckEntry::add(r, a, "", "", "DUPLICATE_LABEL", "");
-					r->duplicate_labels.insert(a);
-				}
-			}
-		}
-		#undef w
-	  }
+	    r->label_and_connect(el);
+      #endif
 
 	#include "tasks/read_updates.cpp"
 
