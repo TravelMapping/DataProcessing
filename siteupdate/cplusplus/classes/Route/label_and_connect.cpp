@@ -51,11 +51,11 @@ void Route::label_and_connect(ErrorList& el)
 		upper(upper_label.data());
 		// if primary label not duplicated, add to pri_label_hash
 		if (alt_label_hash.find(upper_label) != alt_label_hash.end())
-		{	DatacheckEntry::add(this, upper_label, "", "", "DUPLICATE_LABEL", "");
+		{	DatacheckEntry::add(this, point_list[index]->label, "", "", "DUPLICATE_LABEL", "");
 			duplicate_labels.insert(upper_label);
 		}
 		else if (!pri_label_hash.insert(std::pair<std::string, unsigned int>(upper_label, index)).second)
-		{	DatacheckEntry::add(this, upper_label, "", "", "DUPLICATE_LABEL", "");
+		{	DatacheckEntry::add(this, point_list[index]->label, "", "", "DUPLICATE_LABEL", "");
 			duplicate_labels.insert(upper_label);
 		}
 		for (std::string& a : point_list[index]->alt_labels)
@@ -65,8 +65,9 @@ void Route::label_and_connect(ErrorList& el)
 			// populate unused set
 			unused_alt_labels.insert(a);
 			// create label->index hashes and check if AltLabels duplicated
-			if (pri_label_hash.find(a) != pri_label_hash.end())
-			{	DatacheckEntry::add(this, a, "", "", "DUPLICATE_LABEL", "");
+			std::unordered_map<std::string, unsigned int>::iterator A = pri_label_hash.find(a);
+			if (A != pri_label_hash.end())
+			{	DatacheckEntry::add(this, point_list[A->second]->label, "", "", "DUPLICATE_LABEL", "");
 				duplicate_labels.insert(a);
 			}
 			else if (!alt_label_hash.insert(std::pair<std::string, unsigned int>(a, index)).second)
