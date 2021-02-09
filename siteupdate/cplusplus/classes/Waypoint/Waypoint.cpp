@@ -327,7 +327,7 @@ void Waypoint::duplicate_coords(std::unordered_set<Waypoint*> &coords_used, char
 {	// duplicate coordinates
 	Waypoint *w;
 	if (!colocated) w = this;
-	else w = colocated->back();
+	else w = colocated->front();
 	if (!coords_used.insert(w).second)
 	  for (Waypoint *other_w : route->point_list)
 	  {	if (this == other_w) break;

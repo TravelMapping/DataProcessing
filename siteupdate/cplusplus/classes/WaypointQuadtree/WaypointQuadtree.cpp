@@ -56,13 +56,13 @@ void WaypointQuadtree::insert(Waypoint *w, bool init)
 				if (!other_w->colocated)
 				{	other_w->colocated = new std::list<Waypoint*>;
 							     // deleted on termination of program
-					other_w->colocated->push_front(other_w);
+					other_w->colocated->push_back(other_w);
 				}
-				other_w->colocated->push_front(w);
+				other_w->colocated->push_back(w);
 				w->colocated = other_w->colocated;
 			}
 		}
-		if (!w->colocated || w == w->colocated->back())
+		if (!w->colocated || w == w->colocated->front())
 		{	//std::cout << "QTDEBUG: " << str() << " at " << unique_locations << " unique locations" << std::endl;
 			unique_locations++;
 		}
