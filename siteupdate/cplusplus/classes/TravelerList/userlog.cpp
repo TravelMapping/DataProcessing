@@ -1,5 +1,12 @@
+#include "TravelerList.h"
 #include "../ClinchedDBValues/ClinchedDBValues.h"
+#include "../ConnectedRoute/ConnectedRoute.h"
+#include "../HighwaySystem/HighwaySystem.h"
+#include "../Region/Region.h"
+#include "../Route/Route.h"
 #include "../../functions/format_clinched_mi.h"
+#include <cstring>
+#include <fstream>
 
 void TravelerList::userlog
 (	ClinchedDBValues *clin_db_val,

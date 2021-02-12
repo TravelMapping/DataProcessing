@@ -25,6 +25,7 @@ CommonObjects = \
   classes/Route/label_and_connect.o \
   classes/Route/read_wpt.o \
   classes/TravelerList/TravelerList.o \
+  classes/TravelerList/userlog.o \
   classes/Waypoint/Waypoint.o \
   classes/Waypoint/canonical_waypoint_name/canonical_waypoint_name.o \
   functions/crawl_hwy_data.o \

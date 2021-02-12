@@ -10,7 +10,6 @@
 #include "../Waypoint/Waypoint.h"
 #include "../../functions/upper.h"
 #include <cstring>
-#include <fstream>
 
 TravelerList::TravelerList(std::string travname, std::string* updarr[], ErrorList *el, Arguments *args)
 {	active_systems_traveled = 0;
@@ -146,8 +145,6 @@ double TravelerList::system_region_miles(HighwaySystem *h)
 	for (std::pair<Region* const, double>& rm : system_region_mileages.at(h)) mi += rm.second;
 	return mi;
 }
-
-#include "userlog.cpp"
 
 std::mutex TravelerList::alltrav_mtx;
 
