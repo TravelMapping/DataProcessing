@@ -1,6 +1,13 @@
+#include "Route.h"
 #include "../DatacheckEntry/DatacheckEntry.h"
+#include "../ErrorList/ErrorList.h"
+#include "../HighwaySegment/HighwaySegment.h"
+#include "../HighwaySystem/HighwaySystem.h"
+#include "../Waypoint/Waypoint.h"
 #include "../WaypointQuadtree/WaypointQuadtree.h"
+#include <cstring>
 #include <fstream>
+#include <unordered_set>
 
 void Route::read_wpt
 (	WaypointQuadtree *all_waypoints, ErrorList *el, std::string path,
