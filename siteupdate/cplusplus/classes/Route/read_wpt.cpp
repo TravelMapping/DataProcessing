@@ -1,5 +1,5 @@
 #include "Route.h"
-#include "../DatacheckEntry/DatacheckEntry.h"
+#include "../Datacheck/Datacheck.h"
 #include "../ErrorList/ErrorList.h"
 #include "../HighwaySegment/HighwaySegment.h"
 #include "../HighwaySystem/HighwaySystem.h"
@@ -103,18 +103,18 @@ void Route::read_wpt
 	// per-route datachecks
 	if (point_list.size() < 2) el->add_error("Route contains fewer than 2 points: " + str());
 	else {	// look for hidden termini
-		if (point_list.front()->is_hidden)	DatacheckEntry::add(this, point_list.front()->label, "", "", "HIDDEN_TERMINUS", "");
-		if (point_list.back()->is_hidden)	DatacheckEntry::add(this, point_list.back()->label, "", "", "HIDDEN_TERMINUS", "");
+		if (point_list.front()->is_hidden)	Datacheck::add(this, point_list.front()->label, "", "", "HIDDEN_TERMINUS", "");
+		if (point_list.back()->is_hidden)	Datacheck::add(this, point_list.back()->label, "", "", "HIDDEN_TERMINUS", "");
 
 		// angle check is easier with a traditional for loop and array indices
 		for (unsigned int i = 1; i < point_list.size()-1; i++)
 		{	//cout << "computing angle for " << point_list[i-1].str() << ' ' << point_list[i].str() << ' ' << point_list[i+1].str() << endl;
 			if (point_list[i-1]->same_coords(point_list[i]) || point_list[i+1]->same_coords(point_list[i]))
-				DatacheckEntry::add(this, point_list[i-1]->label, point_list[i]->label, point_list[i+1]->label, "BAD_ANGLE", "");
+				Datacheck::add(this, point_list[i-1]->label, point_list[i]->label, point_list[i+1]->label, "BAD_ANGLE", "");
 			else {	double angle = point_list[i]->angle(point_list[i-1], point_list[i+1]);
 				if (angle > 135)
 				{	sprintf(fstr, "%.2f", angle);
-					DatacheckEntry::add(this, point_list[i-1]->label, point_list[i]->label, point_list[i+1]->label, "SHARP_ANGLE", fstr);
+					Datacheck::add(this, point_list[i-1]->label, point_list[i]->label, point_list[i+1]->label, "SHARP_ANGLE", fstr);
 				}
 			     }
 		}

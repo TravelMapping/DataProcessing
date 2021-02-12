@@ -1,6 +1,6 @@
 #include "Route.h"
 #include "../ConnectedRoute/ConnectedRoute.h"
-#include "../DatacheckEntry/DatacheckEntry.h"
+#include "../Datacheck/Datacheck.h"
 #include "../ErrorList/ErrorList.h"
 #include "../HighwaySystem/HighwaySystem.h"
 #include "../Waypoint/Waypoint.h"
@@ -34,10 +34,10 @@ void Route::label_and_connect(ErrorList& el)
 			is_reversed = 1;
 		}
 		else
-		{	DatacheckEntry::add(this, con_beg()->label, "", "",
-					    "DISCONNECTED_ROUTE", q->con_end()->root_at_label());
-			DatacheckEntry::add(q, q->con_end()->label, "", "",
-					    "DISCONNECTED_ROUTE", con_beg()->root_at_label());
+		{	Datacheck::add(this, con_beg()->label, "", "",
+				       "DISCONNECTED_ROUTE", q->con_end()->root_at_label());
+			Datacheck::add(q, q->con_end()->label, "", "",
+				       "DISCONNECTED_ROUTE", con_beg()->root_at_label());
 		}
 	}
 	#undef q
@@ -51,11 +51,11 @@ void Route::label_and_connect(ErrorList& el)
 		upper(upper_label.data());
 		// if primary label not duplicated, add to pri_label_hash
 		if (alt_label_hash.find(upper_label) != alt_label_hash.end())
-		{	DatacheckEntry::add(this, point_list[index]->label, "", "", "DUPLICATE_LABEL", "");
+		{	Datacheck::add(this, point_list[index]->label, "", "", "DUPLICATE_LABEL", "");
 			duplicate_labels.insert(upper_label);
 		}
 		else if (!pri_label_hash.insert(std::pair<std::string, unsigned int>(upper_label, index)).second)
-		{	DatacheckEntry::add(this, point_list[index]->label, "", "", "DUPLICATE_LABEL", "");
+		{	Datacheck::add(this, point_list[index]->label, "", "", "DUPLICATE_LABEL", "");
 			duplicate_labels.insert(upper_label);
 		}
 		for (std::string& a : point_list[index]->alt_labels)
@@ -67,11 +67,11 @@ void Route::label_and_connect(ErrorList& el)
 			// create label->index hashes and check if AltLabels duplicated
 			std::unordered_map<std::string, unsigned int>::iterator A = pri_label_hash.find(a);
 			if (A != pri_label_hash.end())
-			{	DatacheckEntry::add(this, point_list[A->second]->label, "", "", "DUPLICATE_LABEL", "");
+			{	Datacheck::add(this, point_list[A->second]->label, "", "", "DUPLICATE_LABEL", "");
 				duplicate_labels.insert(a);
 			}
 			else if (!alt_label_hash.insert(std::pair<std::string, unsigned int>(a, index)).second)
-			{	DatacheckEntry::add(this, a, "", "", "DUPLICATE_LABEL", "");
+			{	Datacheck::add(this, a, "", "", "DUPLICATE_LABEL", "");
 				duplicate_labels.insert(a);
 			}
 		}

@@ -3,7 +3,7 @@
 #include "HGEdge.h"
 #include "HGVertex.h"
 #include "PlaceRadius.h"
-#include "../DatacheckEntry/DatacheckEntry.h"
+#include "../Datacheck/Datacheck.h"
 #include "../ElapsedTime/ElapsedTime.h"
 #include "../HighwaySegment/HighwaySegment.h"
 #include "../HighwaySystem/HighwaySystem.h"
@@ -104,9 +104,9 @@ HighwayGraph::HighwayGraph
 			}
 			// if >2 edges, flag HIDDEN_JUNCTION, mark as visible, and do not compress
 			if (wv.second->incident_c_edges.size() > 2)
-			{	DatacheckEntry::add(wv.first->colocated->front()->route,
-						     wv.first->colocated->front()->label,
-						     "", "", "HIDDEN_JUNCTION", std::to_string(wv.second->incident_c_edges.size()));
+			{	Datacheck::add(wv.first->colocated->front()->route,
+					       wv.first->colocated->front()->label,
+					       "", "", "HIDDEN_JUNCTION", std::to_string(wv.second->incident_c_edges.size()));
 				wv.second->visibility = 2;
 				continue;
 			}

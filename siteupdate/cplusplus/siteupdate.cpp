@@ -20,7 +20,7 @@ This module defines classes to represent the contents of a
 #include "classes/DBFieldLength/DBFieldLength.h"
 #include "classes/ClinchedDBValues/ClinchedDBValues.h"
 #include "classes/ConnectedRoute/ConnectedRoute.h"
-#include "classes/DatacheckEntry/DatacheckEntry.h"
+#include "classes/Datacheck/Datacheck.h"
 #include "classes/ElapsedTime/ElapsedTime.h"
 #include "classes/ErrorList/ErrorList.h"
 #include "classes/GraphGeneration/GraphListEntry.h"
@@ -700,7 +700,7 @@ int main(int argc, char *argv[])
 		total_mi = 0;
 		for (std::pair<Region* const, double>& rm : h->mileage_by_region)
 		{	regions.push_back(rm.first);
-			total_mi += rm.second;		//TODO is this right?
+			total_mi += rm.second;
 		}
 		regions.sort(sort_regions_by_code);
 		for (Region *region : regions)
@@ -730,44 +730,8 @@ int main(int argc, char *argv[])
 		sysfile.close();
 	}
 
-	// read in the datacheck false positives list
 	cout << et.et() << "Reading datacheckfps.csv." << endl;
-	file.open(args.highwaydatapath+"/datacheckfps.csv");
-	getline(file, line); // ignore header line
-	list<string*> datacheckfps;
-	unordered_set<string> datacheck_always_error
-	({	"BAD_ANGLE", "DISCONNECTED_ROUTE", "DUPLICATE_LABEL",
-		"HIDDEN_TERMINUS", "INTERSTATE_NO_HYPHEN",
-		"INVALID_FINAL_CHAR", "INVALID_FIRST_CHAR",
-		"LABEL_INVALID_CHAR", "LABEL_PARENS", "LABEL_SLASHES",
-		"LABEL_TOO_LONG", "LABEL_UNDERSCORES", "LONG_UNDERSCORE",
-		"MALFORMED_LAT", "MALFORMED_LON", "MALFORMED_URL",
-		"NONTERMINAL_UNDERSCORE", "US_LETTER"
-	});
-	while (getline(file, line))
-	{	// trim DOS newlines & trailing whitespace
-		while (line.back() == 0x0D || line.back() == ' ' || line.back() == '\t')
-			line.pop_back();
-		// trim leading whitespace
-		while (line[0] == ' ' || line[0] == '\t')
-			line = line.substr(1);
-		if (line.empty()) continue;
-		// parse datacheckfps.csv line
-		size_t NumFields = 6;
-		string* fields = new string[6];
-				 // deleted when FP is matched or on termination of program
-		string* ptr_array[6] = {&fields[0], &fields[1], &fields[2], &fields[3], &fields[4], &fields[5]};
-		split(line, ptr_array, NumFields, ';');
-		if (NumFields != 6)
-		{	el.add_error("Could not parse datacheckfps.csv line: [" + line
-				   + "], expected 6 fields, found " + std::to_string(NumFields));
-			continue;
-		}
-		if (datacheck_always_error.find(fields[4]) != datacheck_always_error.end())
-			cout << "datacheckfps.csv line not allowed (always error): " << line << endl;
-		else	datacheckfps.push_back(fields);
-	}
-	file.close();
+	Datacheck::read_fps(args.highwaydatapath, el);
 
       #ifdef threading_enabled
 	thread sqlthread;
@@ -779,59 +743,12 @@ int main(int argc, char *argv[])
 
 	#include "tasks/graph_generation.cpp"
 
-	// now mark false positives
-	DatacheckEntry::errors.sort();
 	cout << et.et() << "Marking datacheck false positives." << flush;
-	ofstream fpfile(args.logfilepath+"/nearmatchfps.log");
-	timestamp = time(0);
-	fpfile << "Log file created at: " << ctime(&timestamp);
-	unsigned int counter = 0;
-	unsigned int fpcount = 0;
-	for (DatacheckEntry& d : DatacheckEntry::errors)
-	{	//cout << "Checking: " << d->str() << endl;
-		counter++;
-		if (counter % 1000 == 0) cout << '.' << flush;
-		for (list<string*>::iterator fp = datacheckfps.begin(); fp != datacheckfps.end(); fp++)
-		  if (d.match_except_info(*fp))
-		    if (d.info == (*fp)[5])
-		    {	//cout << "Match!" << endl;
-			d.fp = 1;
-			fpcount++;
-			datacheckfps.erase(fp);
-			delete[] *fp;
-			break;
-		    }
-		    else
-		    {	fpfile << "FP_ENTRY: " << (*fp)[0] << ';' << (*fp)[1] << ';' << (*fp)[2] << ';' << (*fp)[3] << ';' << (*fp)[4] << ';' << (*fp)[5] << '\n';
-			fpfile << "CHANGETO: " << (*fp)[0] << ';' << (*fp)[1] << ';' << (*fp)[2] << ';' << (*fp)[3] << ';' << (*fp)[4] << ';' << d.info << '\n';
-		    }
-	}
-	fpfile.close();
-	cout << '!' << endl;
-	cout << et.et() << "Found " << DatacheckEntry::errors.size() << " datacheck errors and matched " << fpcount << " FP entries." << endl;
-
-	// write log of unmatched false positives from the datacheckfps.csv
+	Datacheck::mark_fps(args.logfilepath, et);
 	cout << et.et() << "Writing log of unmatched datacheck FP entries." << endl;
-	fpfile.open(args.logfilepath+"/unmatchedfps.log");
-	timestamp = time(0);
-	fpfile << "Log file created at: " << ctime(&timestamp);
-	if (datacheckfps.empty()) fpfile << "No unmatched FP entries.\n";
-	else	for (string* entry : datacheckfps)
-		  fpfile << entry[0] << ';' << entry[1] << ';' << entry[2] << ';' << entry[3] << ';' << entry[4] << ';' << entry[5] << '\n';
-	fpfile.close();
-
-	// datacheck.log file
+	Datacheck::unmatchedfps_log(args.logfilepath);
 	cout << et.et() << "Writing datacheck.log" << endl;
-	ofstream logfile(args.logfilepath + "/datacheck.log");
-	timestamp = time(0);
-	logfile << "Log file created at: " << ctime(&timestamp);
-	logfile << "Datacheck errors that have been flagged as false positives are not included.\n";
-	logfile << "These entries should be in a format ready to paste into datacheckfps.csv.\n";
-	logfile << "Root;Waypoint1;Waypoint2;Waypoint3;Error;Info\n";
-	if (DatacheckEntry::errors.empty()) logfile << "No datacheck errors found.\n";
-	else	for (DatacheckEntry &d : DatacheckEntry::errors)
-		  if (!d.fp) logfile << d.str() << '\n';
-	logfile.close();
+	Datacheck::datacheck_log(args.logfilepath);
 
 	if   (args.errorcheck)
 		cout << et.et() << "SKIPPING database file." << endl;

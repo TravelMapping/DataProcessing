@@ -10,7 +10,7 @@ CommonObjects = \
   classes/Arguments/Arguments.o \
   classes/ClinchedDBValues/ClinchedDBValues.o \
   classes/ConnectedRoute/ConnectedRoute.o \
-  classes/DatacheckEntry/DatacheckEntry.o \
+  classes/Datacheck/Datacheck.o \
   classes/DBFieldLength/DBFieldLength.o \
   classes/ElapsedTime/ElapsedTime.o \
   classes/ErrorList/ErrorList.o \
