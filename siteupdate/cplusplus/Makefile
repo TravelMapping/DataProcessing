@@ -10,7 +10,7 @@ CommonObjects = \
   classes/Arguments/Arguments.o \
   classes/ClinchedDBValues/ClinchedDBValues.o \
   classes/ConnectedRoute/ConnectedRoute.o \
-  classes/DatacheckEntry/DatacheckEntry.o \
+  classes/Datacheck/Datacheck.o \
   classes/DBFieldLength/DBFieldLength.o \
   classes/ElapsedTime/ElapsedTime.o \
   classes/ErrorList/ErrorList.o \
@@ -23,7 +23,9 @@ CommonObjects = \
   classes/Region/Region.o \
   classes/Route/Route.o \
   classes/Route/label_and_connect.o \
+  classes/Route/read_wpt.o \
   classes/TravelerList/TravelerList.o \
+  classes/TravelerList/userlog.o \
   classes/Waypoint/Waypoint.o \
   classes/Waypoint/canonical_waypoint_name/canonical_waypoint_name.o \
   functions/crawl_hwy_data.o \

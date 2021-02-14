@@ -112,8 +112,6 @@ std::string Route::str()
 	return root + " (" + std::to_string(point_list.size()) + " total points)";
 }
 
-#include "read_wpt.cpp"
-
 void Route::print_route()
 {	for (Waypoint *point : point_list)
 		std::cout << point->str() << std::endl;

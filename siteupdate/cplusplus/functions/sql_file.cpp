@@ -3,7 +3,7 @@
 #include "../classes/Arguments/Arguments.h"
 #include "../classes/ClinchedDBValues/ClinchedDBValues.h"
 #include "../classes/ConnectedRoute/ConnectedRoute.h"
-#include "../classes/DatacheckEntry/DatacheckEntry.h"
+#include "../classes/Datacheck/Datacheck.h"
 #include "../classes/DBFieldLength/DBFieldLength.h"
 #include "../classes/ElapsedTime/ElapsedTime.h"
 #include "../classes/GraphGeneration/GraphListEntry.h"
@@ -444,10 +444,10 @@ void sqlfile2
 		<< "), code VARCHAR(" << DBFieldLength::dcErrCode
 		<< "), value VARCHAR(" << DBFieldLength::dcErrValue
 		<< "), falsePositive BOOLEAN, FOREIGN KEY (route) REFERENCES routes(root));\n";
-	if (DatacheckEntry::errors.size())
+	if (Datacheck::errors.size())
 	{	sqlfile << "INSERT INTO datacheckErrors VALUES\n";
 		bool first = 1;
-		for (DatacheckEntry &d : DatacheckEntry::errors)
+		for (Datacheck &d : Datacheck::errors)
 		{	if (!first) sqlfile << ',';
 			first = 0;
 			sqlfile << "('" << d.route->root << "',";

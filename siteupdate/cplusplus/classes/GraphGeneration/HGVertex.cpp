@@ -1,5 +1,5 @@
 #include "HGVertex.h"
-#include "../DatacheckEntry/DatacheckEntry.h"
+#include "../Datacheck/Datacheck.h"
 #include "../GraphGeneration/HGEdge.h"
 #include "../HighwaySystem/HighwaySystem.h"
 #include "../Region/Region.h"
@@ -45,8 +45,8 @@ HGVertex::HGVertex(Waypoint *wpt, const std::string *n, unsigned int numthreads)
 		  if (w->is_hidden)
 			hid_list.push_back(w);
 		  else	vis_list.push_back(w);
-		DatacheckEntry::add(vis_list.front()->route, vis_list.front()->label, "", "", "VISIBLE_HIDDEN_COLOC",
-				     hid_list.front()->route->root+"@"+hid_list.front()->label);
+		Datacheck::add(vis_list.front()->route, vis_list.front()->label, "", "", "VISIBLE_HIDDEN_COLOC",
+			       hid_list.front()->route->root+"@"+hid_list.front()->label);
 		break;
 	  }
 }
