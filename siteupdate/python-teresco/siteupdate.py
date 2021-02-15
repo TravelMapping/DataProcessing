@@ -2307,19 +2307,20 @@ class HighwayGraph:
         cv = 0
         tv = 0
         for v in self.vertices.values():
+            vstr = v.unique_name+' '+str(v.lat)+' '+str(v.lng)+'\n'
             # all vertices for simple graph
-            simplefile.write(v.unique_name+' '+str(v.lat)+' '+str(v.lng)+'\n')
+            simplefile.write(vstr)
             v.s_vertex_num = sv
             sv += 1
             # visible vertices...
             if v.visibility >= 1:
                 # for traveled graph,
-                travelfile.write(v.unique_name+' '+str(v.lat)+' '+str(v.lng)+'\n')
+                travelfile.write(vstr)
                 v.t_vertex_num = tv
                 tv += 1
                 if v.visibility == 2:
                     # and for collapsed graph
-                    collapfile.write(v.unique_name+' '+str(v.lat)+' '+str(v.lng)+'\n')
+                    collapfile.write(vstr)
                     v.c_vertex_num = cv
                     cv += 1
         # now edges, only write if not already written
@@ -2391,19 +2392,20 @@ class HighwayGraph:
         cv = 0
         tv = 0
         for v in mv:
+            vstr = v.unique_name + ' ' + str(v.lat) + ' ' + str(v.lng) + '\n'
             # all vertices, for simple graph
-            simplefile.write(v.unique_name + ' ' + str(v.lat) + ' ' + str(v.lng) + '\n')
+            simplefile.write(vstr)
             v.s_vertex_num = sv
             sv += 1
             # visible vertices
             if v.visibility >= 1:
                 # for traveled graph
-                travelfile.write(v.unique_name + ' ' + str(v.lat) + ' ' + str(v.lng) + '\n')
+                travelfile.write(vstr)
                 v.t_vertex_num = tv
                 tv += 1
                 if v.visibility == 2:
                     # for collapsed graph
-                    collapfile.write(v.unique_name + ' ' + str(v.lat) + ' ' + str(v.lng) + '\n')
+                    collapfile.write(vstr)
                     v.c_vertex_num = cv
                     cv += 1
         # write edges
