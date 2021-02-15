@@ -2135,7 +2135,7 @@ class HighwayGraph:
         # compress edges adjacent to hidden vertices
         counter = 0
         print("!\n" + et.et() + "Compressing collapsed edges", end="", flush=True)
-        for label, v in self.vertices.items():
+        for w, v in self.vertices.items():
             if counter % 10000 == 0:
                 print('.', end="", flush=True)
             counter += 1
@@ -2146,8 +2146,7 @@ class HighwayGraph:
                     continue
                 # if >2 edges, flag HIDDEN_JUNCTION, mark as visible, and do not compress
                 if len(v.incident_c_edges) > 2:
-                    datacheckerrors.append(DatacheckEntry(v.first_waypoint.colocated[0].route,
-                                           [v.first_waypoint.colocated[0].label],
+                    datacheckerrors.append(DatacheckEntry(w.colocated[0].route,[w.colocated[0].label],
                                            "HIDDEN_JUNCTION",str(len(v.incident_c_edges))))
                     v.visibility = 2
                     continue
