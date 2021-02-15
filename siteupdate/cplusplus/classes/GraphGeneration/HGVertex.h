@@ -14,7 +14,6 @@ class HGVertex
 	double lat, lng;
 	const std::string *unique_name;
 	char visibility;
-	Waypoint *first_waypoint;
 	std::list<HGEdge*> incident_s_edges; // simple
 	std::list<HGEdge*> incident_c_edges; // collapsed
 	std::list<HGEdge*> incident_t_edges; // traveled

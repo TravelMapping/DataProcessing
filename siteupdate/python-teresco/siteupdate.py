@@ -1689,9 +1689,6 @@ class HGVertex:
             # 0: never visible outside of simple graphs
             # 1: visible only in traveled graph; hidden in collapsed graph
             # 2: visible in both traveled & collapsed graphs
-        # note: if saving the first waypoint, no longer need
-        # lat & lng and can replace with methods
-        self.first_waypoint = wpt
         self.incident_s_edges = [] # simple
         self.incident_c_edges = [] # collapsed
         self.incident_t_edges = [] # traveled
