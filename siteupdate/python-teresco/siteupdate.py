@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-# Travel Mapping Project, Jim Teresco, 2015-2020
+# Travel Mapping Project, Jim Teresco, 2015-2021
 """Python code to read .csv and .wpt files and prepare for
 adding to the Travel Mapping Project database.
 
-(c) 2015-2020, Jim Teresco, Eric Bryant, and Travel Mapping Project contributors
+(c) 2015-2021, Jim Teresco, Eric Bryant, and Travel Mapping Project contributors
 
 This module defines classes to represent the contents of a
 .csv file that lists the highways within a system, and a
@@ -3916,7 +3916,10 @@ for h in highway_systems:
 
             # look for labels with invalid characters
             if not re.fullmatch('\+?\*?[a-zA-Z0-9()/_\-\.]+', w.label):
-                datacheckerrors.append(DatacheckEntry(r,[w.label],'LABEL_INVALID_CHAR'))
+                if w.label.encode('utf-8')[0:3] == b'\xef\xbb\xbf':
+                    datacheckerrors.append(DatacheckEntry(r,[w.label],'LABEL_INVALID_CHAR', "UTF-8 BOM"))
+                else:
+                    datacheckerrors.append(DatacheckEntry(r,[w.label],'LABEL_INVALID_CHAR'))
             for a in w.alt_labels:
                 if not re.fullmatch('\+?\*?[a-zA-Z0-9()/_\-\.]+', a):
                     datacheckerrors.append(DatacheckEntry(r,[a],'LABEL_INVALID_CHAR'))

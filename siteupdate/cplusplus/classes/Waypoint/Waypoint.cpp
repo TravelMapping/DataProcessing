@@ -346,7 +346,11 @@ void Waypoint::label_invalid_char()
 		if ((*c == 42 || *c == 43) && c > label.data()
 		 || (*c < 40)	|| (*c == 44)	|| (*c > 57 && *c < 65)
 		 || (*c == 96)	|| (*c > 122)	|| (*c > 90 && *c < 95))
-		  Datacheck::add(route, label, "", "", "LABEL_INVALID_CHAR", "");
+		{	if (!strncmp(label.data(), "\xEF\xBB\xBF", 3))
+				Datacheck::add(route, label, "", "", "LABEL_INVALID_CHAR", "UTF-8 BOM");
+			else	Datacheck::add(route, label, "", "", "LABEL_INVALID_CHAR", "");
+			break;
+		}
 	for (std::string& lbl : alt_labels)
 	  if (lbl == "*")
 		  Datacheck::add(route, lbl, "", "", "LABEL_INVALID_CHAR", "");
@@ -354,7 +358,9 @@ void Waypoint::label_invalid_char()
 		if (*c == '+' && c > lbl.data() || *c == '*' && (c > lbl.data()+1 || lbl[0] != '+')
 		 || (*c < 40)	|| (*c == 44)	|| (*c > 57 && *c < 65)
 		 || (*c == 96)	|| (*c > 122)	|| (*c > 90 && *c < 95))
-		  Datacheck::add(route, lbl, "", "", "LABEL_INVALID_CHAR", "");
+		{	Datacheck::add(route, lbl, "", "", "LABEL_INVALID_CHAR", "");
+			break;
+		}
 }
 
 bool Waypoint::label_too_long()
