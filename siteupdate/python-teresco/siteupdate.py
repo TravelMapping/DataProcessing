@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-# Travel Mapping Project, Jim Teresco, 2015-2020
+# Travel Mapping Project, Jim Teresco, 2015-2021
 """Python code to read .csv and .wpt files and prepare for
 adding to the Travel Mapping Project database.
 
-(c) 2015-2020, Jim Teresco, Eric Bryant, and Travel Mapping Project contributors
+(c) 2015-2021, Jim Teresco, Eric Bryant, and Travel Mapping Project contributors
 
 This module defines classes to represent the contents of a
 .csv file that lists the highways within a system, and a
@@ -1689,9 +1689,6 @@ class HGVertex:
             # 0: never visible outside of simple graphs
             # 1: visible only in traveled graph; hidden in collapsed graph
             # 2: visible in both traveled & collapsed graphs
-        # note: if saving the first waypoint, no longer need
-        # lat & lng and can replace with methods
-        self.first_waypoint = wpt
         self.incident_s_edges = [] # simple
         self.incident_c_edges = [] # collapsed
         self.incident_t_edges = [] # traveled
@@ -2135,7 +2132,7 @@ class HighwayGraph:
         # compress edges adjacent to hidden vertices
         counter = 0
         print("!\n" + et.et() + "Compressing collapsed edges", end="", flush=True)
-        for label, v in self.vertices.items():
+        for w, v in self.vertices.items():
             if counter % 10000 == 0:
                 print('.', end="", flush=True)
             counter += 1
@@ -2146,8 +2143,7 @@ class HighwayGraph:
                     continue
                 # if >2 edges, flag HIDDEN_JUNCTION, mark as visible, and do not compress
                 if len(v.incident_c_edges) > 2:
-                    datacheckerrors.append(DatacheckEntry(v.first_waypoint.colocated[0].route,
-                                           [v.first_waypoint.colocated[0].label],
+                    datacheckerrors.append(DatacheckEntry(w.colocated[0].route,[w.colocated[0].label],
                                            "HIDDEN_JUNCTION",str(len(v.incident_c_edges))))
                     v.visibility = 2
                     continue
@@ -2308,19 +2304,20 @@ class HighwayGraph:
         cv = 0
         tv = 0
         for v in self.vertices.values():
+            vstr = v.unique_name+' '+str(v.lat)+' '+str(v.lng)+'\n'
             # all vertices for simple graph
-            simplefile.write(v.unique_name+' '+str(v.lat)+' '+str(v.lng)+'\n')
+            simplefile.write(vstr)
             v.s_vertex_num = sv
             sv += 1
             # visible vertices...
             if v.visibility >= 1:
                 # for traveled graph,
-                travelfile.write(v.unique_name+' '+str(v.lat)+' '+str(v.lng)+'\n')
+                travelfile.write(vstr)
                 v.t_vertex_num = tv
                 tv += 1
                 if v.visibility == 2:
                     # and for collapsed graph
-                    collapfile.write(v.unique_name+' '+str(v.lat)+' '+str(v.lng)+'\n')
+                    collapfile.write(vstr)
                     v.c_vertex_num = cv
                     cv += 1
         # now edges, only write if not already written
@@ -2392,19 +2389,20 @@ class HighwayGraph:
         cv = 0
         tv = 0
         for v in mv:
+            vstr = v.unique_name + ' ' + str(v.lat) + ' ' + str(v.lng) + '\n'
             # all vertices, for simple graph
-            simplefile.write(v.unique_name + ' ' + str(v.lat) + ' ' + str(v.lng) + '\n')
+            simplefile.write(vstr)
             v.s_vertex_num = sv
             sv += 1
             # visible vertices
             if v.visibility >= 1:
                 # for traveled graph
-                travelfile.write(v.unique_name + ' ' + str(v.lat) + ' ' + str(v.lng) + '\n')
+                travelfile.write(vstr)
                 v.t_vertex_num = tv
                 tv += 1
                 if v.visibility == 2:
                     # for collapsed graph
-                    collapfile.write(v.unique_name + ' ' + str(v.lat) + ' ' + str(v.lng) + '\n')
+                    collapfile.write(vstr)
                     v.c_vertex_num = cv
                     cv += 1
         # write edges
@@ -3918,7 +3916,10 @@ for h in highway_systems:
 
             # look for labels with invalid characters
             if not re.fullmatch('\+?\*?[a-zA-Z0-9()/_\-\.]+', w.label):
-                datacheckerrors.append(DatacheckEntry(r,[w.label],'LABEL_INVALID_CHAR'))
+                if w.label.encode('utf-8')[0:3] == b'\xef\xbb\xbf':
+                    datacheckerrors.append(DatacheckEntry(r,[w.label],'LABEL_INVALID_CHAR', "UTF-8 BOM"))
+                else:
+                    datacheckerrors.append(DatacheckEntry(r,[w.label],'LABEL_INVALID_CHAR'))
             for a in w.alt_labels:
                 if not re.fullmatch('\+?\*?[a-zA-Z0-9()/_\-\.]+', a):
                     datacheckerrors.append(DatacheckEntry(r,[a],'LABEL_INVALID_CHAR'))
