@@ -1,6 +1,6 @@
 #include "sql_file.h"
 #include "double_quotes.h"
-#include "../classes/Arguments/Arguments.h"
+#include "../classes/Args/Args.h"
 #include "../classes/ClinchedDBValues/ClinchedDBValues.h"
 #include "../classes/ConnectedRoute/ConnectedRoute.h"
 #include "../classes/Datacheck/Datacheck.h"
@@ -17,12 +17,9 @@
 
 void sqlfile1
     (	ElapsedTime *et,
-	Arguments *args,
 	std::vector<Region*> *all_regions,
 	std::vector<std::pair<std::string,std::string>> *continents,
 	std::vector<std::pair<std::string,std::string>> *countries,
-	std::list<HighwaySystem*> *highway_systems,
-	std::list<TravelerList*> *traveler_lists,
 	ClinchedDBValues *clin_db_val,
 	std::list<std::string*> *updates,
 	std::list<std::string*> *systemupdates,
@@ -30,7 +27,7 @@ void sqlfile1
     ){
 	// Once all data is read in and processed, create a .sql file that will
 	// create all of the DB tables to be used by other parts of the project
-	std::ofstream sqlfile(args->databasename+".sql");
+	std::ofstream sqlfile(Args::databasename+".sql");
 	// Note: removed "USE" line, DB name must be specified on the mysql command line
 
 	// we have to drop tables in the right order to avoid foreign key errors
@@ -117,7 +114,7 @@ void sqlfile1
 	sqlfile << "INSERT INTO systems VALUES\n";
 	first = 1;
 	unsigned int csvOrder = 0;
-	for (HighwaySystem *h : *highway_systems)
+	for (HighwaySystem *h : HighwaySystem::syslist)
 	{	if (!first) sqlfile << ',';
 		first = 0;
 		sqlfile << "('" << h->systemname << "','" << h->country->first << "','"
@@ -142,7 +139,7 @@ void sqlfile1
 	sqlfile << "INSERT INTO routes VALUES\n";
 	first = 1;
 	csvOrder = 0;
-	for (HighwaySystem *h : *highway_systems)
+	for (HighwaySystem *h : HighwaySystem::syslist)
 	  for (Route *r : h->route_list)
 	  {	if (!first) sqlfile << ',';
 		first = 0;
@@ -164,7 +161,7 @@ void sqlfile1
 	sqlfile << "INSERT INTO connectedRoutes VALUES\n";
 	first = 1;
 	csvOrder = 0;
-	for (HighwaySystem *h : *highway_systems)
+	for (HighwaySystem *h : HighwaySystem::syslist)
 	  for (ConnectedRoute *cr : h->con_route_list)
 	  {	if (!first) sqlfile << ',';
 		first = 0;
@@ -182,7 +179,7 @@ void sqlfile1
 		<< "), root VARCHAR(" << DBFieldLength::root
 		<< "), FOREIGN KEY (firstRoot) REFERENCES connectedRoutes(firstRoot));\n";
 	first = 1;
-	for (HighwaySystem *h : *highway_systems)
+	for (HighwaySystem *h : HighwaySystem::syslist)
 	  for (ConnectedRoute *cr : h->con_route_list)
 	    for (unsigned int i = 1; i < cr->roots.size(); i++)
 	    {	if (first) sqlfile << "INSERT INTO connectedRouteRoots VALUES\n";
@@ -200,7 +197,7 @@ void sqlfile1
 		<< "), latitude DOUBLE, longitude DOUBLE, root VARCHAR(" << DBFieldLength::root
 		<< "), PRIMARY KEY(pointId), FOREIGN KEY (root) REFERENCES routes(root));\n";
 	unsigned int point_num = 0;
-	for (HighwaySystem *h : *highway_systems)
+	for (HighwaySystem *h : HighwaySystem::syslist)
 	  for (Route *r : h->route_list)
 	  {	sqlfile << "INSERT INTO waypoints VALUES\n";
 		first = 1;
@@ -227,7 +224,7 @@ void sqlfile1
 		<< "FOREIGN KEY (waypoint2) REFERENCES waypoints(pointId), FOREIGN KEY (root) REFERENCES routes(root));\n";
 	unsigned int segment_num = 0;
 	std::vector<std::string> clinched_list;
-	for (HighwaySystem *h : *highway_systems)
+	for (HighwaySystem *h : HighwaySystem::syslist)
 	  for (Route *r : h->route_list)
 	  {	sqlfile << "INSERT INTO segments VALUES\n";
 		first = 1;
@@ -289,7 +286,7 @@ void sqlfile1
 		<< "), mileage FLOAT, FOREIGN KEY (systemName) REFERENCES systems(systemName));\n";
 	sqlfile << "INSERT INTO systemMileageByRegion VALUES\n";
 	first = 1;
-	for (HighwaySystem *h : *highway_systems)
+	for (HighwaySystem *h : HighwaySystem::syslist)
 	  if (h->active_or_preview())
 	    for (std::pair<Region* const,double>& rm : h->mileage_by_region)
 	    {	if (!first) sqlfile << ',';
@@ -310,7 +307,7 @@ void sqlfile1
 		<< "), activeMileage FLOAT, activePreviewMileage FLOAT);\n";
 	sqlfile << "INSERT INTO clinchedOverallMileageByRegion VALUES\n";
 	first = 1;
-	for (TravelerList *t : *traveler_lists)
+	for (TravelerList *t : TravelerList::allusers)
 	  for (std::pair<Region* const,double>& rm : t->active_preview_mileage_by_region)
 	  {	if (!first) sqlfile << ',';
 		first = 0;
@@ -420,18 +417,13 @@ void sqlfile1
 	sqlfile.close();
       #ifdef threading_enabled
 	term_mtx->lock();
-	std::cout << '\n' << et->et() << "Pause writing database file " << args->databasename << ".sql.\n" << std::flush;
+	std::cout << '\n' << et->et() << "Pause writing database file " << Args::databasename << ".sql.\n" << std::flush;
 	term_mtx->unlock();
       #endif
      }
 
-void sqlfile2
-    (	ElapsedTime *et,
-	Arguments *args,
-	std::list<std::array<std::string,3>> *graph_types,
-	std::vector<GraphListEntry> *graph_vector
-    )
-     {	std::ofstream sqlfile(args->databasename+".sql", std::ios::app);
+void sqlfile2(ElapsedTime *et, std::list<std::array<std::string,3>> *graph_types)
+{	std::ofstream sqlfile(Args::databasename+".sql", std::ios::app);
 
 	// datacheck errors into the db
       #ifndef threading_enabled
@@ -458,7 +450,7 @@ void sqlfile2
 	sqlfile << ";\n";
 
 	// update graph info in DB if graphs were generated
-	if (!args->skipgraphs)
+	if (!Args::skipgraphs)
 	{
 	      #ifndef threading_enabled
 		std::cout << et->et() << "...graphs" << std::endl;
@@ -484,18 +476,20 @@ void sqlfile2
 			<< "format VARCHAR(" << DBFieldLength::graphFormat
 			<< "), category VARCHAR(" << DBFieldLength::graphCategory
 			<< "), FOREIGN KEY (category) REFERENCES graphTypes(category));\n";
-		if (graph_vector->size())
+		if (GraphListEntry::entries.size())
 		{	sqlfile << "INSERT INTO graphs VALUES\n";
-			for (size_t g = 0; g < graph_vector->size(); g++)
+			for (size_t g = 0; g < GraphListEntry::entries.size(); g++)
 			{	if (g) sqlfile << ',';
-				sqlfile << "('"  << graph_vector->at(g).filename() << "','" << double_quotes(graph_vector->at(g).descr)
-					<< "','" << graph_vector->at(g).vertices   << "','" << graph_vector->at(g).edges
-					<< "','" << graph_vector->at(g).travelers  << "','" << graph_vector->at(g).format()
-					<< "','" << graph_vector->at(g).category() << "')\n";
+				#define G GraphListEntry::entries[g]
+				sqlfile << "('"  << G.filename() << "','" << double_quotes(G.descr)
+					<< "','" << G.vertices   << "','" << G.edges
+					<< "','" << G.travelers  << "','" << G.format()
+					<< "','" << G.category() << "')\n";
+				#undef G
 			}
 			sqlfile << ";\n";
 		}
 	}
 
 	sqlfile.close();
-     }
+}

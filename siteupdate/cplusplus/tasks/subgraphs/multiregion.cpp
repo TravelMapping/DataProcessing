@@ -1,11 +1,13 @@
+#define ADDGRAPH(F) GraphListEntry::entries.emplace_back(\
+	fields[1], fields[0], F, 'R', regions, (list<HighwaySystem*>*)0, (PlaceRadius*)0)
 // Some additional interesting graphs, the "multiregion" graphs
 #ifndef threading_enabled
 cout << et.et() << "Creating multiregion graphs." << endl;
 #endif
-file.open(args.highwaydatapath+"/graphs/multiregion.csv");
+file.open(Args::highwaydatapath+"/graphs/multiregion.csv");
 getline(file, line);  // ignore header line
 
-// add entries to graph_vector
+// add entries to graph vector
 while (getline(file, line))
 {	if (line.empty()) continue;
 	vector<char*> fields;
@@ -32,20 +34,18 @@ while (getline(file, line))
 	    {	regions->push_back(r);
 		break;
 	    }
-	graph_vector.emplace_back(fields[1], fields[0],
-				  's', 'R', regions, (list<HighwaySystem*>*)0, (PlaceRadius*)0);
-	graph_vector.emplace_back(fields[1], fields[0],
-				  'c', 'R', (list<Region*>*)0, (list<HighwaySystem*>*)0, (PlaceRadius*)0);
-	graph_vector.emplace_back(fields[1], fields[0],
-				  't', 'R', (list<Region*>*)0, (list<HighwaySystem*>*)0, (PlaceRadius*)0);
+	ADDGRAPH('s');
+	ADDGRAPH('c');
+	ADDGRAPH('t');
+	#undef ADDGRAPH
 	delete[] cline;
 }
 file.close();
 #ifndef threading_enabled
-// write new graph_vector entries to disk
-while (graphnum < graph_vector.size())
-{	graph_data.write_subgraphs_tmg(graph_vector, args.graphfilepath + "/", graphnum, 0, &all_waypoints, &et, &term_mtx);
-	graphnum += 3;
+// write new graph vector entries to disk
+while (GraphListEntry::num < GraphListEntry::entries.size())
+{	graph_data.write_subgraphs_tmg(GraphListEntry::num, 0, &all_waypoints, &et, &term_mtx);
+	GraphListEntry::num += 3;
 }
 cout << "!" << endl;
 #endif

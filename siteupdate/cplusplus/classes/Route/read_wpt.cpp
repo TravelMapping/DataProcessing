@@ -1,4 +1,5 @@
 #include "Route.h"
+#include "../Args/Args.h"
 #include "../Datacheck/Datacheck.h"
 #include "../ErrorList/ErrorList.h"
 #include "../HighwaySegment/HighwaySegment.h"
@@ -9,16 +10,13 @@
 #include <fstream>
 #include <unordered_set>
 
-void Route::read_wpt
-(	WaypointQuadtree *all_waypoints, ErrorList *el, std::string path,
-	bool usa_flag, std::unordered_set<std::string> *all_wpt_files
-)
+void Route::read_wpt(WaypointQuadtree *all_waypoints, ErrorList *el, bool usa_flag)
 {	/* read data into the Route's waypoint list from a .wpt file */
 	//cout << "read_wpt on " << str() << endl;
-	std::string filename = path + "/" + rg_str + "/" + system->systemname + "/" + root + ".wpt";
+	std::string filename = Args::highwaydatapath + "/hwy_data" + "/" + rg_str + "/" + system->systemname + "/" + root + ".wpt";
 	// remove full path from all_wpt_files list
 	awf_mtx.lock();
-	all_wpt_files->erase(filename);
+	all_wpt_files.erase(filename);
 	awf_mtx.unlock();
 	std::vector<char*> lines;
 	std::ifstream file(filename);

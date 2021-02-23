@@ -8,6 +8,9 @@
 #include <cstring>
 #include <fstream>
 
+std::list<HighwaySystem*> HighwaySystem::syslist;
+std::list<HighwaySystem*>::iterator HighwaySystem::it;
+
 HighwaySystem::HighwaySystem(
 	std::string &line, ErrorList &el, std::string path, std::string &systemsfile,
 	std::vector<std::pair<std::string,std::string>> &countries,

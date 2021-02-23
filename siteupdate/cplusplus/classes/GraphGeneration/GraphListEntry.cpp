@@ -3,6 +3,9 @@
 #include "../HighwaySystem/HighwaySystem.h"
 #include "../Region/Region.h"
 
+std::vector<GraphListEntry> GraphListEntry::entries;
+size_t GraphListEntry::num; // iterator for entries
+
 GraphListEntry::GraphListEntry(std::string r, std::string d, char f, char c, std::list<Region*> *rg, std::list<HighwaySystem*> *sys, PlaceRadius *pr)
 {	root = r;
 	descr = d;

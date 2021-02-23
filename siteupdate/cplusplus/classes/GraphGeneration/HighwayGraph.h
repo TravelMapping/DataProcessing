@@ -33,7 +33,7 @@ class HighwayGraph
 	std::list<std::string> waypoint_naming_log;
 	std::unordered_map<Waypoint*, HGVertex*> vertices;
 
-	HighwayGraph(WaypointQuadtree&, std::list<HighwaySystem*>&, unsigned int, ElapsedTime&);
+	HighwayGraph(WaypointQuadtree&, ElapsedTime&);
 
 	void clear();
 
@@ -47,6 +47,6 @@ class HighwayGraph
 		int, unsigned int&, unsigned int&
 	);
 
-	void write_master_graphs_tmg(std::vector<GraphListEntry>&, std::string, std::list<TravelerList*>&);
-	void write_subgraphs_tmg(std::vector<GraphListEntry>&, std::string, size_t, unsigned int, WaypointQuadtree*, ElapsedTime*, std::mutex*);
+	void write_master_graphs_tmg();
+	void write_subgraphs_tmg(size_t, unsigned int, WaypointQuadtree*, ElapsedTime*, std::mutex*);
 };

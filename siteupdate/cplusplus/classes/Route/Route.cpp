@@ -1,4 +1,5 @@
 #include "Route.h"
+#include "../Args/Args.h"
 #include "../DBFieldLength/DBFieldLength.h"
 #include "../ErrorList/ErrorList.h"
 #include "../HighwaySegment/HighwaySegment.h"
@@ -14,6 +15,7 @@
 #include <sys/stat.h>
 
 std::unordered_map<std::string, Route*> Route::root_hash, Route::pri_list_hash, Route::alt_list_hash;
+std::unordered_set<std::string> Route::all_wpt_files;
 std::mutex Route::awf_mtx;
 
 Route::Route(std::string &line, HighwaySystem *sys, ErrorList &el, std::unordered_map<std::string, Region*> &region_hash)
@@ -188,8 +190,9 @@ double Route::clinched_by_traveler(TravelerList *t)
 	return readable_name() + " " + point_list[beg]->label + " " + point_list[end]->label;
 }//*/
 
-void Route::write_nmp_merged(std::string filename)
-{	mkdir(filename.data(), 0777);
+void Route::write_nmp_merged()
+{	std::string filename = Args::nmpmergepath + '/' + rg_str;
+	mkdir(filename.data(), 0777);
 	filename += "/" + system->systemname;
 	mkdir(filename.data(), 0777);
 	filename += "/" + root + ".wpt";

@@ -1,8 +1,11 @@
+#define ADDGRAPH(F) GraphListEntry::entries.emplace_back(\
+	a.title + to_string(a.r) + "-area", a.descr + " (" + to_string(a.r) + " mi radius)",\
+	F, 'a', (list<Region*>*)0, (list<HighwaySystem*>*)0, &a)
 // graphs restricted by place/area - from areagraphs.csv file
 #ifndef threading_enabled
 cout << et.et() << "Creating area data graphs." << endl;
 #endif
-file.open(args.highwaydatapath+"/graphs/areagraphs.csv");
+file.open(Args::highwaydatapath+"/graphs/areagraphs.csv");
 getline(file, line);  // ignore header line
 list<PlaceRadius> area_list;
 while (getline(file, line))
@@ -38,20 +41,18 @@ while (getline(file, line))
 }
 file.close();
 
-// add entries to graph_vector
+// add entries to graph vector
 for (PlaceRadius &a : area_list)
-{	graph_vector.emplace_back(a.title + to_string(a.r) + "-area", a.descr + " (" + to_string(a.r) + " mi radius)",
-				  's', 'a', (list<Region*>*)0, (list<HighwaySystem*>*)0, &a);
-	graph_vector.emplace_back(a.title + to_string(a.r) + "-area", a.descr + " (" + to_string(a.r) + " mi radius)",
-				  'c', 'a', (list<Region*>*)0, (list<HighwaySystem*>*)0, &a);
-	graph_vector.emplace_back(a.title + to_string(a.r) + "-area", a.descr + " (" + to_string(a.r) + " mi radius)",
-				  't', 'a', (list<Region*>*)0, (list<HighwaySystem*>*)0, &a);
+{	ADDGRAPH('s');
+	ADDGRAPH('c');
+	ADDGRAPH('t');
+	#undef ADDGRAPH
 }
 #ifndef threading_enabled
-// write new graph_vector entries to disk
-while (graphnum < graph_vector.size())
-{	graph_data.write_subgraphs_tmg(graph_vector, args.graphfilepath + "/", graphnum, 0, &all_waypoints, &et, &term_mtx);
-	graphnum += 3;
+// write new graph vector entries to disk
+while (GraphListEntry::num < GraphListEntry::entries.size())
+{	graph_data.write_subgraphs_tmg(GraphListEntry::num, 0, &all_waypoints, &et, &term_mtx);
+	GraphListEntry::num += 3;
 }
 cout << '!' << endl;
 #endif

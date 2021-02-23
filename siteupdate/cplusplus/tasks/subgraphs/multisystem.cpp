@@ -1,11 +1,12 @@
+#define ADDGRAPH(F) GraphListEntry::entries.emplace_back(fields[1], fields[0], F, 'S', (list<Region*>*)0, systems, (PlaceRadius*)0)
 // Some additional interesting graphs, the "multisystem" graphs
 #ifndef threading_enabled
 cout << et.et() << "Creating multisystem graphs." << endl;
 #endif
-file.open(args.highwaydatapath+"/graphs/multisystem.csv");
+file.open(Args::highwaydatapath+"/graphs/multisystem.csv");
 getline(file, line);  // ignore header line
 
-// add entries to graph_vector
+// add entries to graph vector
 while (getline(file, line))
 {	if (line.empty()) continue;
 	vector<char*> fields;
@@ -27,25 +28,23 @@ while (getline(file, line))
 	systems = new list<HighwaySystem*>;
 		  // deleted on termination of program
 	for(char* s = strtok(fields[2], ","); s; s = strtok(0, ","))
-	  for (HighwaySystem *h : highway_systems)
+	  for (HighwaySystem *h : HighwaySystem::syslist)
 	    if (s == h->systemname)
 	    {	systems->push_back(h);
 		break;
 	    }
-	graph_vector.emplace_back(fields[1], fields[0],
-				  's', 'S', (list<Region*>*)0, systems, (PlaceRadius*)0);
-	graph_vector.emplace_back(fields[1], fields[0],
-				  'c', 'S', (list<Region*>*)0, (list<HighwaySystem*>*)0, (PlaceRadius*)0);
-	graph_vector.emplace_back(fields[1], fields[0],
-				  't', 'S', (list<Region*>*)0, (list<HighwaySystem*>*)0, (PlaceRadius*)0);
+	ADDGRAPH('s');
+	ADDGRAPH('c');
+	ADDGRAPH('t');
+	#undef ADDGRAPH
 	delete[] cline;
 }
 file.close();
 #ifndef threading_enabled
-// write new graph_vector entries to disk
-while (graphnum < graph_vector.size())
-{	graph_data.write_subgraphs_tmg(graph_vector, args.graphfilepath + "/", graphnum, 0, &all_waypoints, &et, &term_mtx);
-	graphnum += 3;
+// write new graph vector entries to disk
+while (GraphListEntry::num < GraphListEntry::entries.size())
+{	graph_data.write_subgraphs_tmg(GraphListEntry::num, 0, &all_waypoints, &et, &term_mtx);
+	GraphListEntry::num += 3;
 }
 cout << "!" << endl;
 #endif
