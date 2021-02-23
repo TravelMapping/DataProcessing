@@ -16,8 +16,6 @@ Region::Region (const std::string &line,
 {	active_only_mileage = 0;
 	active_preview_mileage = 0;
 	overall_mileage = 0;
-	mileage_mtx = new std::mutex;
-		      // deleted on termination of program
 	// parse CSV line
 	size_t NumFields = 5;
 	std::string country_str, continent_str;
