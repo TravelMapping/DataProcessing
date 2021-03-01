@@ -2962,7 +2962,7 @@ for h in highway_systems:
                 r.unused_alt_labels.add(w.alt_labels[a])
                 # create label->index hashes and check if AltLabels duplicated
                 if w.alt_labels[a] in r.pri_label_hash:
-                    datacheckerrors.append(DatacheckEntry(r, [point_list[r.pri_label_hash[a]].label], "DUPLICATE_LABEL"))
+                    datacheckerrors.append(DatacheckEntry(r, [r.point_list[r.pri_label_hash[w.alt_labels[a]]].label], "DUPLICATE_LABEL"))
                     r.duplicate_labels.add(w.alt_labels[a])
                 elif w.alt_labels[a] in r.alt_label_hash:
                     datacheckerrors.append(DatacheckEntry(r, [w.alt_labels[a]], "DUPLICATE_LABEL"))
