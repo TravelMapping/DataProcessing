@@ -476,12 +476,8 @@ class Waypoint:
         # returning
         name = self.simple_waypoint_name()
 
-        # if no colocated points, there's nothing to do - we just use
-        # the route@label form and deal with conflicts elsewhere
-        if self.colocated is None:
-            return name
-
-        # just return the simple name if only one active/preview waypoint
+        # if no colocated active/preview points, there's nothing to do - we
+        # just return the simple name and deal with conflicts elsewhere
         if (len(self.ap_coloc) == 1):
             return name
 
@@ -499,19 +495,19 @@ class Waypoint:
             if one_ref_zero and zero_ref_one:
                 newname = self.ap_coloc[1].label+"/"+self.ap_coloc[0].label
                 # if this is taken or if name_no_abbrev()s match, attempt to add in abbrevs if there's point in doing so
-                taken = newname in vertex_names
-                if (len(self.ap_coloc[0].route.abbrev) > 0 or len(self.ap_coloc[1].route.abbrev) > 0) \
-                and (taken or self.ap_coloc[0].route.name_no_abbrev() == self.ap_coloc[1].route.name_no_abbrev()):
-                    newname = self.ap_coloc[0].route.list_entry_name() \
-                            + (self.ap_coloc[1].label[self.ap_coloc[1].label.index('_'):] if '_' in self.ap_coloc[1].label else "") \
-                            + "/" \
-                            + self.ap_coloc[1].route.list_entry_name() \
-                            + (self.ap_coloc[0].label[self.ap_coloc[0].label.index('_'):] if '_' in self.ap_coloc[0].label else "")
-                    message = "Straightforward_intersection: " + name + " -> " + newname
-                    if taken:
-                        message += " (" + self.ap_coloc[1].label+"/"+self.ap_coloc[0].label + " already taken)"
-                    log.append(message)
-                    return newname
+                if len(self.ap_coloc[0].route.abbrev) > 0 or len(self.ap_coloc[1].route.abbrev) > 0:
+                    taken = newname in vertex_names
+                    if taken or self.ap_coloc[0].route.name_no_abbrev() == self.ap_coloc[1].route.name_no_abbrev():
+                        newname = self.ap_coloc[0].route.list_entry_name() \
+                                + (self.ap_coloc[1].label[self.ap_coloc[1].label.index('_'):] if '_' in self.ap_coloc[1].label else "") \
+                                + "/" \
+                                + self.ap_coloc[1].route.list_entry_name() \
+                                + (self.ap_coloc[0].label[self.ap_coloc[0].label.index('_'):] if '_' in self.ap_coloc[0].label else "")
+                        message = "Straightforward_intersection: " + name + " -> " + newname
+                        if taken:
+                            message += " (" + self.ap_coloc[1].label+"/"+self.ap_coloc[0].label + " already taken)"
+                        log.append(message)
+                        return newname
                 log.append("Straightforward_intersection: " + name + " -> " + newname)
                 return newname
 
@@ -535,9 +531,10 @@ class Waypoint:
             newname = ""
             for r in routes:
                 newname += '/' + r
+            newname = newname[1:]
             newname += '@' + self.ap_coloc[0].label
-            log.append("Straightforward_concurrency: " + name + " -> " + newname[1:])
-            return newname[1:]
+            log.append("Straightforward_concurrency: " + name + " -> " + newname)
+            return newname
 
         # check for cases like
         # I-10@753B&US90@I-10(753B)
@@ -564,6 +561,7 @@ class Waypoint:
                 if (self.ap_coloc[check_index].label != lookfor1) and \
                    (self.ap_coloc[check_index].label != lookfor2):
                     all_match = False
+                    break
             if all_match:
                 if (self.ap_coloc[match_index].label[0:1].isnumeric()):
                     label = lookfor2
@@ -576,9 +574,6 @@ class Waypoint:
                 log.append("Exit/Intersection: " + name + " -> " + label)
                 return label
 
-        # TODO: NY5@NY16/384&NY16@NY5/384&NY384@NY5/16
-        # should become NY5/NY16/NY384
-            
         # 3+ intersection with matching or partially matching labels
         # NY5@NY16/384&NY16@NY5/384&NY384@NY5/16
         # becomes NY5/NY16/NY384
@@ -593,31 +588,27 @@ class Waypoint:
         # and a second check to find matches when labels do not include
         # the abbrev field (which they often do not)
         if len(self.ap_coloc) > 2:
-            all_match = True
             suffixes = [""] * len(self.ap_coloc)
-            for check_index in range(len(self.ap_coloc)):
-                this_match = False
-                for other_index in range(len(self.ap_coloc)):
-                    if other_index == check_index:
+            for check in self.ap_coloc:
+                match = False
+                for index, other in enumerate(self.ap_coloc):
+                    if other == check:
                         continue
-                    if self.ap_coloc[check_index].label.startswith(self.ap_coloc[other_index].route.list_entry_name()):
+                    other_no_abbrev = other.route.name_no_abbrev()
+                    if check.label.startswith(other_no_abbrev):
                         # should check here for false matches, like
                         # NY50/67 would match startswith NY5
-                        this_match = True
-                        if '_' in self.ap_coloc[check_index].label:
-                            suffix = self.ap_coloc[check_index].label[self.ap_coloc[check_index].label.find('_'):]
-                            if self.ap_coloc[other_index].route.list_entry_name() + suffix == self.ap_coloc[check_index].label:
-                                suffixes[other_index] = suffix
-                    elif self.ap_coloc[check_index].label.startswith(self.ap_coloc[other_index].route.name_no_abbrev()):
-                        this_match = True
-                        if '_' in self.ap_coloc[check_index].label:
-                            suffix = self.ap_coloc[check_index].label[self.ap_coloc[check_index].label.find('_'):]
-                            if self.ap_coloc[other_index].route.name_no_abbrev() + suffix == self.ap_coloc[check_index].label:
-                                suffixes[other_index] = suffix
-                if not this_match:
-                    all_match = False
+                        match = True
+                        if '_' in check.label:
+                            suffix = check.label[check.label.find('_'):]
+                            # we confirmed above that other_no_abbrev matches, so skip past it
+                            # we need only match the suffix with or without the abbrev
+                            if check.label[len(other_no_abbrev):] == suffix \
+                            or other.route.abbrev + suffix == check.label[len(other_no_abbrev):]:
+                                suffixes[index] = suffix
+                if not match:
                     break
-            if all_match:
+            if match:
                 label = self.ap_coloc[0].route.list_entry_name() + suffixes[0]
                 for index in range(1,len(self.ap_coloc)):
                     label += "/" + self.ap_coloc[index].route.list_entry_name() + suffixes[index]
@@ -629,48 +620,45 @@ class Waypoint:
         # Still TODO: I-39@171C(90)&I-90@171C&US14@I-39/90
         # try each as a possible route@exit type situation and look
         # for matches
-        for try_as_exit in range(len(self.ap_coloc)):
+        for exit in self.ap_coloc:
             # see if all colocated points are potential matches
-            # when considering the one at try_as_exit as a primary
+            # when considering the one at exit as a primary
             # exit number
-            if not self.ap_coloc[try_as_exit].label[0].isdigit():
+            if not exit.label[0].isdigit():
                 continue
-            all_match = True
-            # get the route number only version for one of the checks below
-            route_number_only = self.ap_coloc[try_as_exit].route.name_no_abbrev()
-            for pos in range(len(route_number_only)):
-                if route_number_only[pos].isdigit():
-                    route_number_only = route_number_only[pos:]
+            list_name = exit.route.list_entry_name()
+            no_abbrev = exit.route.name_no_abbrev()
+            nmbr_only = no_abbrev # route number only version
+            for pos in range(len(nmbr_only)):
+                if nmbr_only[pos].isdigit():
+                    nmbr_only = nmbr_only[pos:]
                     break
-            for try_as_match in range(len(self.ap_coloc)):
-                if try_as_exit == try_as_match:
+            all_match = True
+            for match in self.ap_coloc:
+                if exit == match:
                     continue
-                this_match = False
                 # check for any of the patterns that make sense as a match:
                 # exact match, match without abbrev field, match with exit
                 # number in parens, match concurrency exit number format
                 # nn(rr), match with _ suffix (like _N), match with a slash
                 # match with exit number only
-                if (   self.ap_coloc[try_as_match].label == self.ap_coloc[try_as_exit].route.name_no_abbrev()
-                    or self.ap_coloc[try_as_match].label == self.ap_coloc[try_as_exit].route.name_no_abbrev() + "(" + self.ap_coloc[try_as_exit].label + ")"
-                    or self.ap_coloc[try_as_match].label == self.ap_coloc[try_as_exit].route.list_entry_name()
-                    or self.ap_coloc[try_as_match].label == self.ap_coloc[try_as_exit].route.list_entry_name() + "(" + self.ap_coloc[try_as_exit].label + ")"
-                    or self.ap_coloc[try_as_match].label == self.ap_coloc[try_as_exit].label
-                    or self.ap_coloc[try_as_match].label == self.ap_coloc[try_as_exit].label + "(" + route_number_only + ")"
-                    or self.ap_coloc[try_as_match].label == self.ap_coloc[try_as_exit].label + "(" + self.ap_coloc[try_as_exit].route.name_no_abbrev() + ")"
-                    or self.ap_coloc[try_as_match].label.startswith(self.ap_coloc[try_as_exit].route.name_no_abbrev() + "_")
-                    or self.ap_coloc[try_as_match].label.startswith(self.ap_coloc[try_as_exit].route.name_no_abbrev() + "/")):
-                    this_match = True
-                if not this_match:
+                if (    match.label != no_abbrev
+                    and match.label != no_abbrev + "(" + exit.label + ")"
+                    and match.label != list_name
+                    and match.label != list_name + "(" + exit.label + ")"
+                    and match.label != exit.label
+                    and match.label != exit.label + "(" + nmbr_only + ")"
+                    and match.label != exit.label + "(" + no_abbrev + ")"
+                    and not match.label.startswith(no_abbrev + "_")
+                    and not match.label.startswith(no_abbrev + "/")):
                     all_match = False
-
+                    break
             if all_match:
                 label = ""
                 for pos in range(len(self.ap_coloc)):
-                    if pos == try_as_exit:
-                        label += self.ap_coloc[pos].route.list_entry_name() + "(" + self.ap_coloc[pos].label + ")"
-                    else:
-                        label += self.ap_coloc[pos].route.list_entry_name()
+                    label += self.ap_coloc[pos].route.list_entry_name()
+                    if self.ap_coloc[pos] == exit:
+                        label += "(" + self.ap_coloc[pos].label + ")"
                     if pos < len(self.ap_coloc) - 1:
                         label += "/"
                 log.append("Exit_number: " + name + " -> " + label)
@@ -683,14 +671,14 @@ class Waypoint:
         if '/' in self.label:
             slash = self.label.index('/')
             reverse = self.label[slash+1:]+'/'+self.label[:slash]
-            matches = 1
+            i = 1
             # self.ap_coloc[0].label *IS* label, so no need to check that
-            for i in range(1, len(self.ap_coloc)):
+            while i < len(self.ap_coloc):
               if self.ap_coloc[i].label == self.label or self.ap_coloc[i].label == reverse:
-                matches += 1
+                i += 1
               else:
                   break
-            if matches == len(self.ap_coloc):
+            if i == len(self.ap_coloc):
                 routes = []
                 for w in self.ap_coloc:
                     if w.route.list_entry_name() not in routes:
@@ -708,7 +696,7 @@ class Waypoint:
         # not shorter, so maybe who cares about this one?
 
         # TODO: US83@FM1263_S&US380@FM1263
-        # should probably end up as US83/US280@FM1263 or @FM1263_S
+        # should probably end up as US83/US380@FM1263 or @FM1263_S
 
         # How about?
         # I-581@4&US220@I-581(4)&US460@I-581&US11AltRoa@I-581&US220AltRoa@US220_S&VA116@I-581(4)

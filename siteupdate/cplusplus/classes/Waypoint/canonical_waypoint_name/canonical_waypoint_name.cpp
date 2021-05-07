@@ -11,11 +11,8 @@ std::string Waypoint::canonical_waypoint_name(std::list<std::string> &log, std::
 	// returning
 	std::string name = simple_waypoint_name();
 
-	// if no colocated points, there's nothing to do - we just use
-	// the route@label form and deal with conflicts elsewhere
-	if (!colocated) return name;
-
-	// just return the simple name if only one active/preview waypoint
+	// if no colocated active/preview points, there's nothing to do - we
+	// just return the simple name and deal with conflicts elsewhere
 	if (ap_coloc.size() == 1) return name;
 
 	#include "straightforward_intersection.cpp"
@@ -30,7 +27,7 @@ std::string Waypoint::canonical_waypoint_name(std::list<std::string> &log, std::
 	// not shorter, so maybe who cares about this one?
 
 	// TODO: US83@FM1263_S&US380@FM1263
-	// should probably end up as US83/US280@FM1263 or @FM1263_S
+	// should probably end up as US83/US380@FM1263 or @FM1263_S
 
 	// How about?
 	// I-581@4&US220@I-581(4)&US460@I-581&US11AltRoa@I-581&US220AltRoa@US220_S&VA116@I-581(4)
