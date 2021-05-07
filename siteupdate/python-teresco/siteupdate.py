@@ -647,14 +647,15 @@ class Waypoint:
                 # number in parens, match concurrency exit number format
                 # nn(rr), match with _ suffix (like _N), match with a slash
                 # match with exit number only
-                if (self.ap_coloc[try_as_match].label == self.ap_coloc[try_as_exit].route.list_entry_name()
-                    or self.ap_coloc[try_as_match].label == self.ap_coloc[try_as_exit].route.name_no_abbrev()
+                if (   self.ap_coloc[try_as_match].label == self.ap_coloc[try_as_exit].route.name_no_abbrev()
+                    or self.ap_coloc[try_as_match].label == self.ap_coloc[try_as_exit].route.name_no_abbrev() + "(" + self.ap_coloc[try_as_exit].label + ")"
+                    or self.ap_coloc[try_as_match].label == self.ap_coloc[try_as_exit].route.list_entry_name()
                     or self.ap_coloc[try_as_match].label == self.ap_coloc[try_as_exit].route.list_entry_name() + "(" + self.ap_coloc[try_as_exit].label + ")"
+                    or self.ap_coloc[try_as_match].label == self.ap_coloc[try_as_exit].label
                     or self.ap_coloc[try_as_match].label == self.ap_coloc[try_as_exit].label + "(" + route_number_only + ")"
                     or self.ap_coloc[try_as_match].label == self.ap_coloc[try_as_exit].label + "(" + self.ap_coloc[try_as_exit].route.name_no_abbrev() + ")"
                     or self.ap_coloc[try_as_match].label.startswith(self.ap_coloc[try_as_exit].route.name_no_abbrev() + "_")
-                    or self.ap_coloc[try_as_match].label.startswith(self.ap_coloc[try_as_exit].route.name_no_abbrev() + "/")
-                    or self.ap_coloc[try_as_match].label == self.ap_coloc[try_as_exit].label):
+                    or self.ap_coloc[try_as_match].label.startswith(self.ap_coloc[try_as_exit].route.name_no_abbrev() + "/")):
                     this_match = True
                 if not this_match:
                     all_match = False

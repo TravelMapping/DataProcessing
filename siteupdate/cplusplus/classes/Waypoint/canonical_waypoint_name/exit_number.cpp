@@ -24,25 +24,26 @@ for (unsigned int try_as_exit = 0; try_as_exit < ap_coloc.size(); try_as_exit++)
 		// number in parens, match concurrency exit number format
 		// nn(rr), match with _ suffix (like _N), match with a slash
 		// match with exit number only
-		if (ap_coloc[try_as_match]->label == ap_coloc[try_as_exit]->route->list_entry_name()
-		 || ap_coloc[try_as_match]->label == ap_coloc[try_as_exit]->route->name_no_abbrev()
-		 || ap_coloc[try_as_match]->label == ap_coloc[try_as_exit]->route->list_entry_name() + "(" + ap_coloc[try_as_exit]->label + ")"
-		 || ap_coloc[try_as_match]->label == ap_coloc[try_as_exit]->label + "(" + route_number_only + ")"
-		 || ap_coloc[try_as_match]->label == ap_coloc[try_as_exit]->label + "(" + ap_coloc[try_as_exit]->route->name_no_abbrev() + ")"
-		 || ap_coloc[try_as_match]->label.find(ap_coloc[try_as_exit]->route->name_no_abbrev() + "_") == 0
-		 || ap_coloc[try_as_match]->label.find(ap_coloc[try_as_exit]->route->name_no_abbrev() + "/") == 0
-		 || ap_coloc[try_as_match]->label == ap_coloc[try_as_exit]->label)
+		if (ap_coloc[try_as_match]->label == ap_coloc[try_as_exit]->route->name_no_abbrev()
+		 || ap_coloc[try_as_match]->label == ap_coloc[try_as_exit]->route->name_no_abbrev() + '(' + ap_coloc[try_as_exit]->label + ')'
+		 || ap_coloc[try_as_match]->label == ap_coloc[try_as_exit]->route->list_entry_name()
+		 || ap_coloc[try_as_match]->label == ap_coloc[try_as_exit]->route->list_entry_name() + '(' + ap_coloc[try_as_exit]->label + ')'
+		 || ap_coloc[try_as_match]->label == ap_coloc[try_as_exit]->label
+		 || ap_coloc[try_as_match]->label == ap_coloc[try_as_exit]->label + '(' + route_number_only + ')'
+		 || ap_coloc[try_as_match]->label == ap_coloc[try_as_exit]->label + '(' + ap_coloc[try_as_exit]->route->name_no_abbrev() + ')'
+		 || ap_coloc[try_as_match]->label.find(ap_coloc[try_as_exit]->route->name_no_abbrev() + '_') == 0
+		 || ap_coloc[try_as_match]->label.find(ap_coloc[try_as_exit]->route->name_no_abbrev() + '/') == 0)
 			this_match = 1;
 		if (!this_match) all_match = 0;
 	}
 	if (all_match)
-	{	std::string newname = "";
+	{	std::string newname;
 		for (unsigned int pos = 0; pos < ap_coloc.size(); pos++)
 		{	if (pos == try_as_exit)
-				newname += ap_coloc[pos]->route->list_entry_name() + "(" + ap_coloc[pos]->label + ")";
+				newname += ap_coloc[pos]->route->list_entry_name() + '(' + ap_coloc[pos]->label + ')';
 			else	newname += ap_coloc[pos]->route->list_entry_name();
 			if (pos < ap_coloc.size()-1)
-				newname += "/";
+				newname += '/';
 		}
 		log.push_back("Exit_number: " + name + " -> " + newname);
 		return newname;
