@@ -23,53 +23,12 @@ HighwayGraph::HighwayGraph(WaypointQuadtree &all_waypoints, ElapsedTime &et)
 	// or preview system, or is colocated and not at the front
 	// of its colocation list
 	unsigned int counter = 0;
-	std::list<Waypoint*> graph_points = all_waypoints.graph_points();
-	std::cout << et.et() << "Sorting graph index waypoints by name priority." << std::endl;
-	graph_points.sort(waypoint_simplification_sort);
+	std::vector<Waypoint*> hi_priority_points, lo_priority_points;
+	all_waypoints.graph_points(hi_priority_points, lo_priority_points);
 	std::cout << et.et() << "Creating unique names and vertices" << std::flush;
-	for (Waypoint *w : graph_points)
-	{	if (counter % 10000 == 0) std::cout << '.' << std::flush;
-		counter++;
-
-		// come up with a unique name that brings in its meaning
-
-		// start with the canonical name
-		std::string point_name = w->canonical_waypoint_name(waypoint_naming_log, vertex_names);
-		bool good_to_go = 1;
-
-		// if that's taken, append the region code
-		if (vertex_names.find(point_name) != vertex_names.end())
-		{	point_name += "|" + w->route->region->code;
-			waypoint_naming_log.push_back("Appended region: " + point_name);
-			good_to_go = 0;
-		}
-
-		// if that's taken, see if the simple name is available
-		if (!good_to_go && vertex_names.find(point_name) != vertex_names.end())
-		{	std::string simple_name = w->simple_waypoint_name();
-			if (vertex_names.find(simple_name) == vertex_names.end())
-			{	waypoint_naming_log.push_back("Revert to simple: " + simple_name + " from (taken) " + point_name);
-				point_name = simple_name;
-				good_to_go = 1;
-			}
-			else	good_to_go = 0;
-		}
-
-		// if we have not yet succeeded, add !'s until we do
-		if (!good_to_go) while (vertex_names.find(point_name) != vertex_names.end())
-		{	point_name += "!";
-			waypoint_naming_log.push_back("Appended !: " + point_name);
-		}
-
-		// we're good; now construct a vertex
-		vertices[w] = new HGVertex(w, &*(vertex_names.insert(point_name).first), Args::numthreads);
-			      // deleted by HighwayGraph::clear
-
-		// active/preview colocation lists are no longer needed; clear them
-		w->ap_coloc.clear();
-	}
+	simplify(hi_priority_points, &counter);
+	simplify(lo_priority_points, &counter);
 	std::cout << '!' << std::endl;
-	//#include "../../debug/unique_names.cpp"
 
 	// create edges
 	counter = 0;
@@ -143,6 +102,46 @@ void HighwayGraph::clear()
 	vertex_names.clear();
 	waypoint_naming_log.clear();
 	vertices.clear();
+}
+
+void HighwayGraph::simplify(std::vector<Waypoint*>& graph_points, unsigned int *counter)
+{	for (Waypoint *w : graph_points)
+	{	if (*counter % 10000 == 0) std::cout << '.' << std::flush;
+		*counter += 1;
+
+		// come up with a unique name that brings in its meaning
+
+		// start with the canonical name and attempt to insert into vertex_names set
+		std::string point_name = w->canonical_waypoint_name(waypoint_naming_log, vertex_names);
+		std::pair<std::unordered_set<std::string>::iterator,bool> insertion = vertex_names.insert(point_name);
+
+		// if that's taken, append the region code
+		if (!insertion.second)
+		{	point_name += "|" + w->route->region->code;
+			waypoint_naming_log.push_back("Appended region: " + point_name);
+			insertion = vertex_names.insert(point_name);
+		}
+
+		// if that's taken, see if the simple name is available
+		if (!insertion.second)
+		{	std::string simple_name = w->simple_waypoint_name();
+			insertion = vertex_names.insert(simple_name);
+			if (insertion.second)
+				waypoint_naming_log.push_back("Revert to simple: " + simple_name + " from (taken) " + point_name);
+			else do // if we have not yet succeeded, add !'s until we do
+			{	point_name += "!";
+				waypoint_naming_log.push_back("Appended !: " + point_name);
+				insertion = vertex_names.insert(point_name);
+			} while (!insertion.second);
+		}
+
+		// we're good; now construct a vertex
+		vertices[w] = new HGVertex(w, &*(insertion.first), Args::numthreads);
+			      // deleted by HighwayGraph::clear
+
+		// active/preview colocation lists are no longer needed; clear them
+		w->ap_coloc.clear();
+	}
 }
 
 inline void HighwayGraph::matching_vertices_and_edges

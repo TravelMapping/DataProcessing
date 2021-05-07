@@ -12,17 +12,6 @@ bool sort_root_at_label(Waypoint *w1, Waypoint *w2)
 {	return w1->root_at_label() < w2->root_at_label();
 }
 
-bool waypoint_simplification_sort(Waypoint *w1, Waypoint *w2)
-{	if (	(	w2->ap_coloc.size() != 2
-		     || w2->ap_coloc.front()->route->abbrev.size()
-		     || w2->ap_coloc.back()->route->abbrev.size()
-		)    &&	w1->ap_coloc.size() == 2
-		     && w1->ap_coloc.front()->route->abbrev.empty()
-		     && w1->ap_coloc.back()->route->abbrev.empty()
-	   ) return 1;
-	else return 0;
-}
-
 Waypoint::Waypoint(char *line, Route *rte)
 {	/* initialize object from a .wpt file line */
 	route = rte;

@@ -3,7 +3,6 @@
 #include "../HighwaySystem/HighwaySystem.h"
 #include "../Route/Route.h"
 #include "../Waypoint/Waypoint.h"
-#include "../../templates/contains.cpp"
 #ifdef threading_enabled
 #include <thread>
 #endif
@@ -159,14 +158,13 @@ std::list<Waypoint*> WaypointQuadtree::point_list()
 	else	return points;
 }
 
-std::list<Waypoint*> WaypointQuadtree::graph_points()
+void WaypointQuadtree::graph_points(std::vector<Waypoint*>& hi_priority_points, std::vector<Waypoint*>& lo_priority_points)
 {	// return a list of points to be used as indices to HighwayGraph vertices
-	std::list<Waypoint*> hg_points;
 	if (refined())
-	     {	hg_points.splice(hg_points.begin(), sw_child->graph_points());
-		hg_points.splice(hg_points.begin(), se_child->graph_points());
-		hg_points.splice(hg_points.begin(), nw_child->graph_points());
-		hg_points.splice(hg_points.begin(), ne_child->graph_points());
+	     {	ne_child->graph_points(hi_priority_points, lo_priority_points);
+		nw_child->graph_points(hi_priority_points, lo_priority_points);
+		se_child->graph_points(hi_priority_points, lo_priority_points);
+		sw_child->graph_points(hi_priority_points, lo_priority_points);
 	     }
 	else for (Waypoint *w : points)
 	     {	// skip if this point is occupied by only waypoints in devel systems
@@ -178,9 +176,13 @@ std::list<Waypoint*> WaypointQuadtree::graph_points()
 		else for (Waypoint *p : *(w->colocated))
 		  if (p->route->system->active_or_preview())
 		    w->ap_coloc.push_back(p);
-		hg_points.push_back(w);
+		// determine vertex name simplification priority
+		if (	w->ap_coloc.size() != 2
+		     || w->ap_coloc.front()->route->abbrev.size()
+		     || w->ap_coloc.back()->route->abbrev.size()
+		   )	lo_priority_points.push_back(w);
+		else	hi_priority_points.push_back(w);
 	     }
-	return hg_points;
 }
 
 bool WaypointQuadtree::is_valid(ErrorList &el)

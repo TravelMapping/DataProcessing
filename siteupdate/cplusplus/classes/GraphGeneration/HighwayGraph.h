@@ -36,6 +36,7 @@ class HighwayGraph
 	HighwayGraph(WaypointQuadtree&, ElapsedTime&);
 
 	void clear();
+	void simplify(std::vector<Waypoint*>&, unsigned int*);
 
 	inline void matching_vertices_and_edges
 	(	GraphListEntry&, WaypointQuadtree*,

@@ -224,14 +224,13 @@ class WaypointQuadtree:
         else:
             return self.points
 
-    def graph_points(self):
+    def graph_points(self, hi_priority_points, lo_priority_points):
         # return a list of points to be used as indices to HighwayGraph vertices
-        hg_points = []
         if self.points is None:
-            hg_points.extend(self.ne_child.graph_points())
-            hg_points.extend(self.nw_child.graph_points())
-            hg_points.extend(self.se_child.graph_points())
-            hg_points.extend(self.sw_child.graph_points())
+            self.ne_child.graph_points(hi_priority_points, lo_priority_points)
+            self.nw_child.graph_points(hi_priority_points, lo_priority_points)
+            self.se_child.graph_points(hi_priority_points, lo_priority_points)
+            self.sw_child.graph_points(hi_priority_points, lo_priority_points)
         else:
             for w in self.points:
                 # skip if this point is occupied by only waypoints in devel systems
@@ -248,8 +247,13 @@ class WaypointQuadtree:
                     for p in w.colocated:
                         if p.route.system.active_or_preview():
                             w.ap_coloc.append(p)
-                hg_points.append(w)
-        return hg_points
+                # determine vertex name simplification priority
+                if len(w.ap_coloc) != 2 \
+                or len(w.ap_coloc[0].route.abbrev) > 0 \
+                or len(w.ap_coloc[1].route.abbrev) > 0:
+                    lo_priority_points.append(w)
+                else:
+                    hi_priority_points.append(w)
 
     def is_valid(self):
         """make sure the quadtree is valid"""
@@ -742,14 +746,6 @@ class Waypoint:
         if self.colocated is None:
             return self
         return self.colocated[0]
-
-    def waypoint_simplification_priority(self):
-        if len(self.ap_coloc) != 2 \
-        or len(self.ap_coloc[0].route.abbrev) > 0 \
-        or len(self.ap_coloc[1].route.abbrev) > 0:
-            return 1
-        else:
-            return 0
 
     def label_references_route(self, r, datacheckerrors):
         no_abbrev = r.name_no_abbrev()
@@ -2068,8 +2064,9 @@ class HighwayGraph:
         self.vertices = {}
         # hash table containing a set of vertices for each region
         self.rg_vset_hash = {}
-        print(et.et() + "Sorting graph index waypoints by name priority.", flush=True)
-        graph_points = sorted(all_waypoints.graph_points(), key=lambda Waypoint: Waypoint.waypoint_simplification_priority())
+        hi_priority_points = []
+        lo_priority_points = []
+        all_waypoints.graph_points(hi_priority_points, lo_priority_points)
 
         # to track the waypoint name compressions, add log entries
         # to this list
@@ -2081,7 +2078,7 @@ class HighwayGraph:
         # of its colocation list
         counter = 0
         print(et.et() + "Creating unique names and vertices", end="", flush=True)
-        for w in graph_points:
+        for w in hi_priority_points + lo_priority_points:
             if counter % 10000 == 0:
                 print('.', end="", flush=True)
             counter += 1
@@ -2113,8 +2110,11 @@ class HighwayGraph:
             vertex_names.add(point_name)
             self.vertices[w] = HGVertex(w, point_name, datacheckerrors, self.rg_vset_hash)
 
+            # active/preview colocation lists are no longer needed; clear them
+            del w.ap_coloc
+
         # now that vertices are in place with names, set of unique names is no longer needed
-        vertex_names = None
+        del vertex_names
 
         # create edges
         counter = 0

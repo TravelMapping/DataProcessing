@@ -68,4 +68,3 @@ class Waypoint
 };
 
 bool sort_root_at_label(Waypoint*, Waypoint*);
-bool waypoint_simplification_sort(Waypoint*, Waypoint*);
