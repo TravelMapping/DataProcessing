@@ -21,7 +21,6 @@ for (Waypoint* exit : ap_coloc)
 	{	if (exit == match) continue;
 		// check for any of the patterns that make sense as a match:
 		// exact match,
-		// match with exit number in parens,
 		// match concurrency exit number format nn(rr),
 		// match with exit number only
 
@@ -33,10 +32,15 @@ for (Waypoint* exit : ap_coloc)
 			     || match->label[no_abbrev.size()] == '_'	// match with _ suffix (like _N)
 			     || match->label[no_abbrev.size()] == '/'	// match with a slash
 			   )	continue;
+			if (	match->label[no_abbrev.size()] == '('
+			     && !strncmp(match->label.data()+no_abbrev.size()+1,
+					 exit->label.data(),
+					 exit->label.size())
+			     && match->label[no_abbrev.size()+exit->label.size()+1] == ')'
+			   )	continue;				// match with exit number in parens
 		     }
 
-		if (match->label != no_abbrev + '(' + exit->label + ')'
-		 && match->label != list_name
+		if (match->label != list_name
 		 && match->label != list_name + '(' + exit->label + ')'
 		 && match->label != exit->label
 		 && match->label != exit->label + '(' + nmbr_only + ')'

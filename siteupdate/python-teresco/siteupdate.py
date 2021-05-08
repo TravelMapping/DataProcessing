@@ -639,7 +639,6 @@ class Waypoint:
                     continue
                 # check for any of the patterns that make sense as a match:
                 # exact match
-                # match with exit number in parens
                 # match concurrency exit number format nn(rr)
                 # match with exit number only
 
@@ -649,9 +648,12 @@ class Waypoint:
                 if match.label.startswith(no_abbrev):
                     if match.label[len(no_abbrev)] in '_/':
                         continue	# match with _ suffix (like _N) or slash
+                    if match.label[len(no_abbrev)] == '(' \
+                    and match.label[len(no_abbrev)+1:len(no_abbrev)+len(exit.label)+1] == exit.label \
+                    and match.label[len(no_abbrev)+len(exit.label)+1] == ')':
+                        continue	# match with exit number in parens
 
-                if (    match.label != no_abbrev + "(" + exit.label + ")"
-                    and match.label != list_name
+                if (    match.label != list_name
                     and match.label != list_name + "(" + exit.label + ")"
                     and match.label != exit.label
                     and match.label != exit.label + "(" + nmbr_only + ")"
