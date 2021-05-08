@@ -8,7 +8,6 @@ for (Waypoint* exit : ap_coloc)
 	// when considering the one at exit as a primary
 	// exit number
 	if (exit->label[0] < '0' || exit->label[0] > '9') continue;
-	std::string list_name = exit->route->list_entry_name();
 	std::string no_abbrev = exit->route->name_no_abbrev();
 	std::string nmbr_only = no_abbrev; // route number only version
 	for (unsigned int pos = 0; pos < nmbr_only.size(); pos++)
@@ -16,13 +15,12 @@ for (Waypoint* exit : ap_coloc)
 	  {	nmbr_only = nmbr_only.data()+pos;
 		break;
 	  }
+	size_t list_name_size = no_abbrev.size()+exit->route->abbrev.size();
+
 	bool all_match = 1;
 	for (Waypoint* match : ap_coloc)
 	{	if (exit == match) continue;
 		// check for any of the patterns that make sense as a match:
-		// exact match,
-		// match concurrency exit number format nn(rr),
-		// match with exit number only
 
 		// if label_no_abbrev() matches, check for...
 		if ( !strncmp(match->label.data(),
@@ -38,13 +36,27 @@ for (Waypoint* exit : ap_coloc)
 					 exit->label.size())
 			     && match->label[no_abbrev.size()+exit->label.size()+1] == ')'
 			   )	continue;				// match with exit number in parens
+
+			// if abbrev matches, check for...
+			if ( !strncmp(match->label.data()+no_abbrev.size(),
+				      exit->route->abbrev.data(),
+				      exit->route->abbrev.size())
+			   ) {	if (	match->label[list_name_size] == 0	// full match with abbrev field
+				     || match->label[list_name_size] == '_'	// match with _ suffix (like _N)
+				     || match->label[list_name_size] == '/'	// match with a slash
+				   )	continue;
+				if (	match->label[list_name_size] == '('
+				     && !strncmp(match->label.data()+list_name_size+1,
+						 exit->label.data(),
+						 exit->label.size())
+				     && match->label[list_name_size+exit->label.size()+1] == ')'
+				   )	continue;				// match with exit number in parens
+			     }
 		     }
 
-		if (match->label != list_name
-		 && match->label != list_name + '(' + exit->label + ')'
-		 && match->label != exit->label
-		 && match->label != exit->label + '(' + nmbr_only + ')'
-		 && match->label != exit->label + '(' + no_abbrev + ')')
+		if (match->label != exit->label				 // match with exit number only
+		 && match->label != exit->label + '(' + nmbr_only + ')'	 // match concurrency exit
+		 && match->label != exit->label + '(' + no_abbrev + ')') // number format nn(rr)
 		{	all_match = 0;
 			break;
 		}

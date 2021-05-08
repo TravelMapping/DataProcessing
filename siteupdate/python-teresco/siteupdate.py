@@ -626,7 +626,6 @@ class Waypoint:
             # exit number
             if not exit.label[0].isdigit():
                 continue
-            list_name = exit.route.list_entry_name()
             no_abbrev = exit.route.name_no_abbrev()
             nmbr_only = no_abbrev # route number only version
             for pos in range(len(nmbr_only)):
@@ -638,26 +637,30 @@ class Waypoint:
                 if exit == match:
                     continue
                 # check for any of the patterns that make sense as a match:
-                # exact match
-                # match concurrency exit number format nn(rr)
-                # match with exit number only
 
                 # if label_no_abbrev() matches, check for...
                 if match.label == no_abbrev:
                     continue		# full match without abbrev field
                 if match.label.startswith(no_abbrev):
-                    if match.label[len(no_abbrev)] in '_/':
+                    the_rest = match.label[len(no_abbrev):]
+                    if the_rest[0] in '_/':
                         continue	# match with _ suffix (like _N) or slash
-                    if match.label[len(no_abbrev)] == '(' \
-                    and match.label[len(no_abbrev)+1:len(no_abbrev)+len(exit.label)+1] == exit.label \
-                    and match.label[len(no_abbrev)+len(exit.label)+1] == ')':
+                    if the_rest.startswith("(" + exit.label + ")"):
                         continue	# match with exit number in parens
 
-                if (    match.label != list_name
-                    and match.label != list_name + "(" + exit.label + ")"
-                    and match.label != exit.label
-                    and match.label != exit.label + "(" + nmbr_only + ")"
-                    and match.label != exit.label + "(" + no_abbrev + ")"):
+                    # if abbrev matches, check for...
+                    if the_rest == exit.route.abbrev:
+                        continue	# full match with abbrev field
+                    if the_rest.startswith(exit.route.abbrev):
+                        the_rest = the_rest[len(exit.route.abbrev):]
+                        if the_rest[0] in '_/':
+                            continue	# match with _ suffix (like _N) or slash
+                        if the_rest.startswith("(" + exit.label + ")"):
+                            continue	# match with exit number in parens
+
+                if (    match.label != exit.label                           # match with exit number only
+                    and match.label != exit.label + "(" + nmbr_only + ")"   # match concurrency exit
+                    and match.label != exit.label + "(" + no_abbrev + ")"): # number format nn(rr)
                     all_match = False
                     break
             if all_match:
