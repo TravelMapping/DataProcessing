@@ -638,19 +638,24 @@ class Waypoint:
                 if exit == match:
                     continue
                 # check for any of the patterns that make sense as a match:
-                # exact match, match without abbrev field, match with exit
-                # number in parens, match concurrency exit number format
-                # nn(rr), match with _ suffix (like _N), match with a slash
+                # exact match
+                # match with exit number in parens
+                # match concurrency exit number format nn(rr)
                 # match with exit number only
-                if (    match.label != no_abbrev
-                    and match.label != no_abbrev + "(" + exit.label + ")"
+
+                # if label_no_abbrev() matches, check for...
+                if match.label == no_abbrev:
+                    continue		# full match without abbrev field
+                if match.label.startswith(no_abbrev):
+                    if match.label[len(no_abbrev)] in '_/':
+                        continue	# match with _ suffix (like _N) or slash
+
+                if (    match.label != no_abbrev + "(" + exit.label + ")"
                     and match.label != list_name
                     and match.label != list_name + "(" + exit.label + ")"
                     and match.label != exit.label
                     and match.label != exit.label + "(" + nmbr_only + ")"
-                    and match.label != exit.label + "(" + no_abbrev + ")"
-                    and not match.label.startswith(no_abbrev + "_")
-                    and not match.label.startswith(no_abbrev + "/")):
+                    and match.label != exit.label + "(" + no_abbrev + ")"):
                     all_match = False
                     break
             if all_match:

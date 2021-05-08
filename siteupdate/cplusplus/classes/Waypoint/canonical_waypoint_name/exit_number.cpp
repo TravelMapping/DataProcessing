@@ -20,19 +20,27 @@ for (Waypoint* exit : ap_coloc)
 	for (Waypoint* match : ap_coloc)
 	{	if (exit == match) continue;
 		// check for any of the patterns that make sense as a match:
-		// exact match, match without abbrev field, match with exit
-		// number in parens, match concurrency exit number format
-		// nn(rr), match with _ suffix (like _N), match with a slash
+		// exact match,
+		// match with exit number in parens,
+		// match concurrency exit number format nn(rr),
 		// match with exit number only
-		if (match->label != no_abbrev
-		 && match->label != no_abbrev + '(' + exit->label + ')'
+
+		// if label_no_abbrev() matches, check for...
+		if ( !strncmp(match->label.data(),
+			      no_abbrev.data(),
+			      no_abbrev.size())
+		   ) {	if (	match->label[no_abbrev.size()] == 0	// full match without abbrev field
+			     || match->label[no_abbrev.size()] == '_'	// match with _ suffix (like _N)
+			     || match->label[no_abbrev.size()] == '/'	// match with a slash
+			   )	continue;
+		     }
+
+		if (match->label != no_abbrev + '(' + exit->label + ')'
 		 && match->label != list_name
 		 && match->label != list_name + '(' + exit->label + ')'
 		 && match->label != exit->label
 		 && match->label != exit->label + '(' + nmbr_only + ')'
-		 && match->label != exit->label + '(' + no_abbrev + ')'
-		 && match->label.find(no_abbrev + '_') != 0
-		 && match->label.find(no_abbrev + '/') != 0)
+		 && match->label != exit->label + '(' + no_abbrev + ')')
 		{	all_match = 0;
 			break;
 		}
