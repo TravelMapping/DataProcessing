@@ -1,10 +1,10 @@
 // concurrency detection -- will augment our structure with list of concurrent
 // segments with each segment (that has a concurrency)
 cout << et.et() << "Concurrent segment detection." << flush;
-ofstream concurrencyfile(args.logfilepath+"/concurrencies.log");
+ofstream concurrencyfile(Args::logfilepath+"/concurrencies.log");
 timestamp = time(0);
 concurrencyfile << "Log file created at: " << ctime(&timestamp);
-for (HighwaySystem *h : highway_systems)
+for (HighwaySystem *h : HighwaySystem::syslist)
 {   cout << '.' << flush;
     for (Route *r : h->route_list)
 	for (HighwaySegment *s : r->segment_list)
@@ -44,13 +44,13 @@ for (HighwaySystem *h : highway_systems)
 cout << "!\n";
 
 // When splitting a region, perform a sanity check on concurrencies in its systems
-if (args.splitregion != "")
-{	for (HighwaySystem *h : highway_systems)
+if (Args::splitregion != "")
+{	for (HighwaySystem *h : HighwaySystem::syslist)
 	{	if (splitsystems.find(h->systemname) == splitsystems.end()) continue;
 		ofstream fralog;
-		if (args.splitregionpath != "") fralog.open(args.splitregionpath + "/logs/" + h->systemname + "-concurrencies.log");
+		if (Args::splitregionpath != "") fralog.open(Args::splitregionpath + "/logs/" + h->systemname + "-concurrencies.log");
 		for (Route *r : h->route_list)
-		{	if (r->region->code.substr(0, args.splitregion.size()) != args.splitregion) continue;
+		{	if (r->region->code.substr(0, Args::splitregion.size()) != Args::splitregion) continue;
 			for (HighwaySegment *s : r->segment_list)
 				if (!s->concurrent)
 					fralog << s->str() << " has no concurrencies\n";

@@ -16,7 +16,7 @@ This module defines classes to represent the contents of a
 #include <cstring>
 #include <dirent.h>
 #include <thread>
-#include "classes/Arguments/Arguments.h"
+#include "classes/Args/Args.h"
 #include "classes/DBFieldLength/DBFieldLength.h"
 #include "classes/ClinchedDBValues/ClinchedDBValues.h"
 #include "classes/ConnectedRoute/ConnectedRoute.h"
@@ -51,11 +51,10 @@ int main(int argc, char *argv[])
 	mutex list_mtx, term_mtx;
 
 	// argument parsing
-	Arguments args(argc, argv);
-	if (args.help) return 0;
+	if (Args::init(argc, argv)) return 1;
 
 	// start a timer for including elapsed time reports in messages
-	ElapsedTime et(args.timeprecision);
+	ElapsedTime et(Args::timeprecision);
 	time_t timestamp = time(0);
 	cout << "Start: " << ctime(&timestamp);
 
@@ -63,30 +62,29 @@ int main(int argc, char *argv[])
 	ErrorList el;
 
 	// Get list of travelers in the system
-	list<string> traveler_ids = args.userlist;
-	args.userlist.clear();
-	if (traveler_ids.empty())
+	TravelerList::ids = move(Args::userlist);
+	if (TravelerList::ids.empty())
 	{	DIR *dir;
 		dirent *ent;
-		if ((dir = opendir (args.userlistfilepath.data())) != NULL)
+		if ((dir = opendir (Args::userlistfilepath.data())) != NULL)
 		{	while ((ent = readdir (dir)) != NULL)
 			{	string trav = ent->d_name;
 				if (trav.size() > 5 && trav.substr(trav.size()-5, string::npos) == ".list")
-					traveler_ids.push_back(trav);
+					TravelerList::ids.push_back(trav);
 			}
 			closedir(dir);
 		}
-		else	el.add_error("Error opening user list file path \""+args.userlistfilepath+"\". (Not found?)");
+		else	el.add_error("Error opening user list file path \""+Args::userlistfilepath+"\". (Not found?)");
 	}
-	else for (string &id : traveler_ids) id += ".list";
+	else for (string &id : TravelerList::ids) id += ".list";
 
 	// read region, country, continent descriptions
 	cout << et.et() << "Reading region, country, and continent descriptions." << endl;
 
 	// continents
 	vector<pair<string, string>> continents;
-	file.open(args.highwaydatapath+"/continents.csv");
-	if (!file) el.add_error("Could not open "+args.highwaydatapath+"/continents.csv");
+	file.open(Args::highwaydatapath+"/continents.csv");
+	if (!file) el.add_error("Could not open "+Args::highwaydatapath+"/continents.csv");
 	else {	getline(file, line); // ignore header line
 		while(getline(file, line))
 		{	if (line.back() == 0x0D) line.erase(line.end()-1);	// trim DOS newlines
@@ -120,8 +118,8 @@ int main(int argc, char *argv[])
 
 	// countries
 	vector<pair<string, string>> countries;
-	file.open(args.highwaydatapath+"/countries.csv");
-	if (!file) el.add_error("Could not open "+args.highwaydatapath+"/countries.csv");
+	file.open(Args::highwaydatapath+"/countries.csv");
+	if (!file) el.add_error("Could not open "+Args::highwaydatapath+"/countries.csv");
 	else {	getline(file, line); // ignore header line
 		while(getline(file, line))
 		{	if (line.back() == 0x0D) line.erase(line.end()-1);	// trim DOS newlines
@@ -154,10 +152,8 @@ int main(int argc, char *argv[])
 	countries.emplace_back(pair<string, string>("error", "unrecognized country code"));
 
 	//regions
-	vector<Region*> all_regions;
-	unordered_map<string, Region*> region_hash;
-	file.open(args.highwaydatapath+"/regions.csv");
-	if (!file) el.add_error("Could not open "+args.highwaydatapath+"/regions.csv");
+	file.open(Args::highwaydatapath+"/regions.csv");
+	if (!file) el.add_error("Could not open "+Args::highwaydatapath+"/regions.csv");
 	else {	getline(file, line); // ignore header line
 		while(getline(file, line))
 		{	if (line.back() == 0x0D) line.erase(line.end()-1);	// trim DOS newlines
@@ -165,34 +161,33 @@ int main(int argc, char *argv[])
 			Region* r = new Region(line, countries, continents, el);
 				    // deleted on termination of program
 			if (r->is_valid)
-			{	all_regions.push_back(r);
-				region_hash[r->code] = r;
+			{	Region::allregions.push_back(r);
+				Region::code_hash[r->code] = r;
 			} else	delete r;
 		}
 	     }
 	file.close();
 	// create a dummy region to catch unrecognized region codes in .csv files
-	all_regions.push_back(new Region("error;unrecognized region code;error;error;unrecognized region code", countries, continents, el));
-	region_hash[all_regions.back()->code] = all_regions.back();
+	Region::allregions.push_back(new Region("error;unrecognized region code;error;error;unrecognized region code", countries, continents, el));
+	Region::code_hash[Region::allregions.back()->code] = Region::allregions.back();
 
 	// Create a list of HighwaySystem objects, one per system in systems.csv file
-	list<HighwaySystem*> highway_systems;
-	cout << et.et() << "Reading systems list in " << args.highwaydatapath << "/" << args.systemsfile << "." << endl;
-	file.open(args.highwaydatapath+"/"+args.systemsfile);
-	if (!file) el.add_error("Could not open "+args.highwaydatapath+"/"+args.systemsfile);
+	cout << et.et() << "Reading systems list in " << Args::highwaydatapath << "/" << Args::systemsfile << "." << endl;
+	file.open(Args::highwaydatapath+"/"+Args::systemsfile);
+	if (!file) el.add_error("Could not open "+Args::highwaydatapath+"/"+Args::systemsfile);
 	else {	getline(file, line); // ignore header line
 		list<string> ignoring;
 		while(getline(file, line))
 		{	if (line.back() == 0x0D) line.erase(line.end()-1);	// trim DOS newlines
 			if (line.empty()) continue;
 			if (line[0] == '#')
-			{	ignoring.push_back("Ignored comment in " + args.systemsfile + ": " + line);
+			{	ignoring.push_back("Ignored comment in " + Args::systemsfile + ": " + line);
 				continue;
 			}
-			HighwaySystem *hs = new HighwaySystem(line, el, args.highwaydatapath+"/hwy_data/_systems", args.systemsfile, countries, region_hash);
+			HighwaySystem *hs = new HighwaySystem(line, el, countries);
 					    // deleted on termination of program
 			if (!hs->is_valid) delete hs;
-			else {	highway_systems.push_back(hs);
+			else {	HighwaySystem::syslist.push_back(hs);
 			     }
 		}
 		cout << endl;
@@ -206,9 +201,9 @@ int main(int argc, char *argv[])
 	// that do not have a .csv file entry that causes them to be
 	// read into the data
 	cout << et.et() << "Finding all .wpt files. " << flush;
-	unordered_set<string> all_wpt_files, splitsystems;
-	crawl_hwy_data(args.highwaydatapath+"/hwy_data", all_wpt_files, splitsystems, args.splitregion, 0);
-	cout << all_wpt_files.size() << " files found." << endl;
+	unordered_set<string> splitsystems;
+	crawl_hwy_data(Args::highwaydatapath+"/hwy_data", Route::all_wpt_files, splitsystems, Args::splitregion, 0);
+	cout << Route::all_wpt_files.size() << " files found." << endl;
 
 	// For finding colocated Waypoints and concurrent segments, we have
 	// quadtree of all Waypoints in existence to find them efficiently
@@ -217,47 +212,47 @@ int main(int argc, char *argv[])
 	// Next, read all of the .wpt files for each HighwaySystem
 	cout << et.et() << "Reading waypoints for all routes." << endl;
       #ifdef threading_enabled
-	std::vector<std::thread> thr(args.numthreads);
-	list<HighwaySystem*>::iterator hs_it = highway_systems.begin();
+	std::vector<std::thread> thr(Args::numthreads);
+	HighwaySystem::it = HighwaySystem::syslist.begin();
 	#define THREADLOOP for (unsigned int t = 0; t < thr.size(); t++)
-	THREADLOOP thr[t] = thread(ReadWptThread, t, &highway_systems, &hs_it, &list_mtx, args.highwaydatapath+"/hwy_data", &el, &all_wpt_files, &all_waypoints);
+	THREADLOOP thr[t] = thread(ReadWptThread, t, &list_mtx, &el, &all_waypoints);
 	THREADLOOP thr[t].join();
       #else
-	for (HighwaySystem* h : highway_systems)
+	for (HighwaySystem* h : HighwaySystem::syslist)
 	{	std::cout << h->systemname << std::flush;
 		bool usa_flag = h->country->first == "USA";
 		for (Route* r : h->route_list)
-			r->read_wpt(&all_waypoints, &el, args.highwaydatapath+"/hwy_data", usa_flag, &all_wpt_files);
+			r->read_wpt(&all_waypoints, &el, usa_flag);
 		std::cout << "!" << std::endl;
 	}
       #endif
 
 	//cout << et.et() << "Writing WaypointQuadtree.tmg." << endl;
-	//all_waypoints.write_qt_tmg(args.logfilepath+"/WaypointQuadtree.tmg");
+	//all_waypoints.write_qt_tmg(Args::logfilepath+"/WaypointQuadtree.tmg");
 	cout << et.et() << "Sorting waypoints in Quadtree." << endl;
       #ifdef threading_enabled
-	all_waypoints.sort(args.numthreads);
+	all_waypoints.sort(Args::numthreads);
       #else
 	all_waypoints.sort();
       #endif
 
 	cout << et.et() << "Finding unprocessed wpt files." << endl;
-	if (all_wpt_files.size())
-	{	ofstream unprocessedfile(args.logfilepath+"/unprocessedwpts.log");
-		cout << all_wpt_files.size() << " .wpt files in " << args.highwaydatapath << "/hwy_data not processed, see unprocessedwpts.log." << endl;
-		list<string> all_wpts_list(all_wpt_files.begin(), all_wpt_files.end());
+	if (Route::all_wpt_files.size())
+	{	ofstream unprocessedfile(Args::logfilepath+"/unprocessedwpts.log");
+		cout << Route::all_wpt_files.size() << " .wpt files in " << Args::highwaydatapath << "/hwy_data not processed, see unprocessedwpts.log." << endl;
+		list<string> all_wpts_list(Route::all_wpt_files.begin(), Route::all_wpt_files.end());
 		all_wpts_list.sort();
 		for (const string &f : all_wpts_list) unprocessedfile << strstr(f.data(), "hwy_data") << '\n';
 		unprocessedfile.close();
-		all_wpt_files.clear();
+		Route::all_wpt_files.clear();
 	}
-	else	cout << "All .wpt files in " << args.highwaydatapath << "/hwy_data processed." << endl;
+	else	cout << "All .wpt files in " << Args::highwaydatapath << "/hwy_data processed." << endl;
 
 	// create NMP lists
 	cout << et.et() << "Searching for near-miss points." << endl;
       #ifdef threading_enabled
-	hs_it = highway_systems.begin();
-	THREADLOOP thr[t] = thread(NmpSearchThread, t, &highway_systems, &hs_it, &list_mtx, &all_waypoints);
+	HighwaySystem::it = HighwaySystem::syslist.begin();
+	THREADLOOP thr[t] = thread(NmpSearchThread, t, &list_mtx, &all_waypoints);
 	THREADLOOP thr[t].join();
       #else
 	for (Waypoint *w : all_waypoints.point_list()) w->near_miss_points = all_waypoints.near_miss_waypoints(w, 0.0005);
@@ -268,7 +263,7 @@ int main(int argc, char *argv[])
 
 	// read in fp file
 	unordered_set<string> nmpfps;
-	file.open(args.highwaydatapath+"/nmpfps.log");
+	file.open(Args::highwaydatapath+"/nmpfps.log");
 	while (getline(file, line))
 	{	while (line.back() == 0x0D || line.back() == ' ') line.erase(line.end()-1);	// trim DOS newlines & whitespace
 		if (line.size()) nmpfps.insert(line);
@@ -276,8 +271,8 @@ int main(int argc, char *argv[])
 	file.close();
 
 	list<string> nmploglines;
-	ofstream nmplog(args.logfilepath+"/nearmisspoints.log");
-	ofstream nmpnmp(args.logfilepath+"/tm-master.nmp");
+	ofstream nmplog(Args::logfilepath+"/nearmisspoints.log");
+	ofstream nmpnmp(Args::logfilepath+"/tm-master.nmp");
 	for (Waypoint *w : all_waypoints.point_list()) w->nmplogs(nmpfps, nmpnmp, nmploglines);
 	nmpnmp.close();
 
@@ -288,7 +283,7 @@ int main(int argc, char *argv[])
 	nmplog.close();
 
 	// report any unmatched nmpfps.log entries
-	ofstream nmpfpsunmatchedfile(args.logfilepath+"/nmpfpsunmatched.log");
+	ofstream nmpfpsunmatchedfile(Args::logfilepath+"/nmpfpsunmatched.log");
 	list<string> nmpfplist(nmpfps.begin(), nmpfps.end());
 	nmpfplist.sort();
 	for (string &line : nmpfplist)
@@ -298,17 +293,17 @@ int main(int argc, char *argv[])
 	nmpfps.clear();
 
 	// if requested, rewrite data with near-miss points merged in
-	if (args.nmpmergepath != "" && !args.errorcheck)
+	if (Args::nmpmergepath != "" && !Args::errorcheck)
 	{	cout << et.et() << "Writing near-miss point merged wpt files." << endl;
 	      #ifdef threading_enabled
-		hs_it = highway_systems.begin();
-		THREADLOOP thr[t] = thread(NmpMergedThread, t, &highway_systems, &hs_it, &list_mtx, &args.nmpmergepath);
+		HighwaySystem::it = HighwaySystem::syslist.begin();
+		THREADLOOP thr[t] = thread(NmpMergedThread, t, &list_mtx);
 		THREADLOOP thr[t].join();
 	      #else
-		for (HighwaySystem *h : highway_systems)
+		for (HighwaySystem *h : HighwaySystem::syslist)
 		{	std::cout << h->systemname << std::flush;
 			for (Route *r : h->route_list)
-			  r->write_nmp_merged(args.nmpmergepath + "/" + r->rg_str);
+			  r->write_nmp_merged();
 			std::cout << '.' << std::flush;
 		}
 	      #endif
@@ -319,11 +314,11 @@ int main(int argc, char *argv[])
 
 	cout << et.et() << "Processing waypoint labels and checking for unconnected chopped routes." << endl;
       #ifdef threading_enabled
-	hs_it = highway_systems.begin();
-	THREADLOOP thr[t] = thread(LabelConThread, t, &highway_systems, &hs_it, &list_mtx, &el);
+	HighwaySystem::it = HighwaySystem::syslist.begin();
+	THREADLOOP thr[t] = thread(LabelConThread, t, &list_mtx, &el);
 	THREADLOOP thr[t].join();
       #else
-	for (HighwaySystem *h : highway_systems)
+	for (HighwaySystem *h : HighwaySystem::syslist)
 	  for (Route* r : h->route_list)
 	    r->label_and_connect(el);
       #endif
@@ -334,7 +329,6 @@ int main(int argc, char *argv[])
 	// one line for each traveler, containing 4 space-separated fields:
 	// 0: username with .list extension
 	// 1-3: date, time, and time zone as written by "git log -n 1 --pretty=%ci"
-	unordered_map<string, string**> listupdates;
 	file.open("listupdates.txt");
 	if (file.is_open()) cout << et.et() << "Reading .list updates file." << endl;
 	while(getline(file, line))
@@ -355,38 +349,36 @@ int main(int argc, char *argv[])
 			delete[] fields;
 			continue;
 		}
-		listupdates[*fields[0]] = fields;
+		TravelerList::listupdates[*fields[0]] = fields;
 		delete fields[0];
 	}
 	file.close();
 
 	// Create a list of TravelerList objects, one per person
-	list<TravelerList*> traveler_lists;
-	list<string>::iterator id_it = traveler_ids.begin();
-
 	cout << et.et() << "Processing traveler list files:" << endl;
       #ifdef threading_enabled
-	THREADLOOP thr[t] = thread(ReadListThread, t, &traveler_ids, &listupdates, &id_it, &traveler_lists, &list_mtx, &args, &el);
+	TravelerList::id_it = TravelerList::ids.begin();
+	THREADLOOP thr[t] = thread(ReadListThread, t, &list_mtx, &el);
 	THREADLOOP thr[t].join();
       #else
-	for (string &t : traveler_ids)
+	for (string &t : TravelerList::ids)
 	{	cout << t << ' ' << std::flush;
 		std::string** update;
-		try {	update = listupdates.at(t);
+		try {	update = TravelerList::listupdates.at(t);
 		    }
 		catch (const std::out_of_range& oor)
 		    {	update = 0;
 		    }
-		traveler_lists.push_back(new TravelerList(t, update, &el, &args));
+		TravelerList::allusers.push_back(new TravelerList(t, update, &el));
 	}
       #endif
-	traveler_ids.clear();
-	listupdates.clear();
-	cout << endl << et.et() << "Processed " << traveler_lists.size() << " traveler list files." << endl;
-	traveler_lists.sort(sort_travelers_by_name);
+	TravelerList::ids.clear();
+	TravelerList::listupdates.clear();
+	cout << endl << et.et() << "Processed " << TravelerList::allusers.size() << " traveler list files." << endl;
+	TravelerList::allusers.sort(sort_travelers_by_name);
 	// assign traveler numbers for master traveled graph
 	unsigned int travnum = 0;
-	for (TravelerList *t : traveler_lists)
+	for (TravelerList *t : TravelerList::allusers)
 	{	t->traveler_num[0] = travnum;
 		travnum++;
 	}
@@ -395,7 +387,7 @@ int main(int argc, char *argv[])
 	Route::root_hash.clear();
 	Route::pri_list_hash.clear();
 	Route::alt_list_hash.clear();
-	for (HighwaySystem* h : highway_systems)
+	for (HighwaySystem* h : HighwaySystem::syslist)
 	  for (Route* r : h->route_list)
 	  {	r->pri_label_hash.clear();
 		r->alt_label_hash.clear();
@@ -406,14 +398,14 @@ int main(int argc, char *argv[])
 	unsigned int total_unused_alt_labels = 0;
 	unsigned int total_unusedaltroutenames = 0;
 	list<string> unused_alt_labels;
-	ofstream piufile(args.logfilepath+"/pointsinuse.log");
-	ofstream lniufile(args.logfilepath+"/listnamesinuse.log");
-	ofstream uarnfile(args.logfilepath+"/unusedaltroutenames.log");
+	ofstream piufile(Args::logfilepath+"/pointsinuse.log");
+	ofstream lniufile(Args::logfilepath+"/listnamesinuse.log");
+	ofstream uarnfile(Args::logfilepath+"/unusedaltroutenames.log");
 	timestamp = time(0);
 	piufile << "Log file created at: " << ctime(&timestamp);
 	lniufile << "Log file created at: " << ctime(&timestamp);
 	uarnfile << "Log file created at: " << ctime(&timestamp);
-	for (HighwaySystem *h : highway_systems)
+	for (HighwaySystem *h : HighwaySystem::syslist)
 	{	for (Route *r : h->route_list)
 		{	// labelsinuse.log line
 			if (r->labels_in_use.size())
@@ -461,7 +453,7 @@ int main(int argc, char *argv[])
 	uarnfile.close();
 	// sort lines and write unusedaltlabels.log
 	unused_alt_labels.sort();
-	ofstream ualfile(args.logfilepath+"/unusedaltlabels.log");
+	ofstream ualfile(Args::logfilepath+"/unusedaltlabels.log");
 	timestamp = time(0);
 	ualfile << "Log file created at: " << ctime(&timestamp);
 	for (string &ual_entry : unused_alt_labels) ualfile << ual_entry << '\n';
@@ -474,16 +466,15 @@ int main(int argc, char *argv[])
 	cout << et.et() << "Augmenting travelers for detected concurrent segments." << flush;
         //#include "debug/concurrency_augments.cpp"
       #ifdef threading_enabled
-	list<string>* augment_lists = new list<string>[args.numthreads];
-	list<TravelerList*>::iterator tl_it = traveler_lists.begin();
-
-	THREADLOOP thr[t] = thread(ConcAugThread, t, &traveler_lists, &tl_it, &list_mtx, augment_lists+t);
+	list<string>* augment_lists = new list<string>[Args::numthreads];
+	TravelerList::tl_it = TravelerList::allusers.begin();
+	THREADLOOP thr[t] = thread(ConcAugThread, t, &list_mtx, augment_lists+t);
 	THREADLOOP thr[t].join();
 	cout << "!\n" << et.et() << "Writing to concurrencies.log." << endl;
 	THREADLOOP for (std::string& entry : augment_lists[t]) concurrencyfile << entry << '\n';
 	delete[] augment_lists;
       #else
-	for (TravelerList *t : traveler_lists)
+	for (TravelerList *t : TravelerList::allusers)
 	{	cout << '.' << flush;
 		for (HighwaySegment *s : t->clinched_segments)
 		  if (s->concurrent)
@@ -495,8 +486,8 @@ int main(int argc, char *argv[])
       #endif
 	concurrencyfile.close();
 
-	/*ofstream sanetravfile(args.logfilepath+"/concurrent_travelers_sanity_check.log");
-	for (HighwaySystem *h : highway_systems)
+	/*ofstream sanetravfile(Args::logfilepath+"/concurrent_travelers_sanity_check.log");
+	for (HighwaySystem *h : HighwaySystem::syslist)
 	    for (Route *r : h->route_list)
 		for (HighwaySegment *s : r->segment_list)
 		    sanetravfile << s->concurrent_travelers_sanity_check();
@@ -507,18 +498,18 @@ int main(int argc, char *argv[])
 	// and per-system which falls into just one of these categories
       #ifdef threading_enabled
 	cout << et.et() << "Computing stats per route." << flush;
-	hs_it = highway_systems.begin();
-	THREADLOOP thr[t] = thread(CompStatsRThread, t, &highway_systems, &hs_it, &list_mtx);
+	HighwaySystem::it = HighwaySystem::syslist.begin();
+	THREADLOOP thr[t] = thread(CompStatsRThread, t, &list_mtx);
 	THREADLOOP thr[t].join();
 	cout << '!' << endl;
 	cout << et.et() << "Computing stats per traveler." << flush;
-	tl_it = traveler_lists.begin();
-	THREADLOOP thr[t] = thread(CompStatsTThread, t, &traveler_lists, &tl_it, &list_mtx);
+	TravelerList::tl_it = TravelerList::allusers.begin();
+	THREADLOOP thr[t] = thread(CompStatsTThread, t, &list_mtx);
 	THREADLOOP thr[t].join();
 	cout << '!' << endl;
       #else
 	cout << et.et() << "Computing stats." << flush;
-	for (HighwaySystem *h : highway_systems)
+	for (HighwaySystem *h : HighwaySystem::syslist)
 	{	cout << "." << flush;
 		for (Route *r : h->route_list)
 		{ 	r->compute_stats_r();
@@ -532,14 +523,14 @@ int main(int argc, char *argv[])
 
 	cout << et.et() << "Writing highway data stats log file (highwaydatastats.log)." << endl;
 	char fstr[112];
-	ofstream hdstatsfile(args.logfilepath+"/highwaydatastats.log");
+	ofstream hdstatsfile(Args::logfilepath+"/highwaydatastats.log");
 	timestamp = time(0);
 	hdstatsfile << "Travel Mapping highway mileage as of " << ctime(&timestamp);
 
 	double active_only_miles = 0;
 	double active_preview_miles = 0;
 	double overall_miles = 0;
-	for (Region* r : all_regions)
+	for (Region* r : Region::allregions)
 	{	active_only_miles += r->active_only_mileage;
 		active_preview_miles += r->active_preview_mileage;
 		overall_miles += r->overall_mileage;
@@ -555,7 +546,7 @@ int main(int argc, char *argv[])
 	// a nice enhancement later here might break down by continent, then country,
 	// then region
 	list<string> region_entries;
-	for (Region* region : all_regions)
+	for (Region* region : Region::allregions)
 	  if (region->overall_mileage)
 	  {	sprintf(fstr, ": %.2f (active), %.2f (active, preview) %.2f (active, preview, devel)\n",
 			region->active_only_mileage, region->active_preview_mileage, region->overall_mileage);
@@ -564,7 +555,7 @@ int main(int argc, char *argv[])
 	region_entries.sort();
 	for (string& e : region_entries) hdstatsfile << e;
 
-	for (HighwaySystem *h : highway_systems)
+	for (HighwaySystem *h : HighwaySystem::syslist)
 	{	sprintf(fstr, ") total: %.2f mi\n", h->total_mileage());
 		hdstatsfile << "System " << h->systemname << " (" << h->level_name() << fstr;
 		if (h->mileage_by_region.size() > 1)
@@ -601,14 +592,12 @@ int main(int argc, char *argv[])
 	// now add user clinched stats to their log entries
 	cout << et.et() << "Creating per-traveler stats logs and augmenting data structure." << flush;
       #ifdef threading_enabled
-	tl_it = traveler_lists.begin();
-	THREADLOOP thr[t] = thread
-	(	UserLogThread, t, &traveler_lists, &tl_it, &list_mtx, &clin_db_val, active_only_miles,
-		active_preview_miles, &highway_systems, args.logfilepath+"/users/"
-	);
+	TravelerList::tl_it = TravelerList::allusers.begin();
+	THREADLOOP thr[t] = thread(UserLogThread, t, &list_mtx, &clin_db_val, active_only_miles, active_preview_miles);
 	THREADLOOP thr[t].join();
       #else
-	for (TravelerList *t : traveler_lists) t->userlog(&clin_db_val, active_only_miles, active_preview_miles, &highway_systems, args.logfilepath+"/users/");
+	for (TravelerList *t : TravelerList::allusers)
+		t->userlog(&clin_db_val, active_only_miles, active_preview_miles);
       #endif
 	cout << "!" << endl;
 
@@ -617,11 +606,11 @@ int main(int argc, char *argv[])
 	double total_mi;
 
 	// first, overall per traveler by region, both active only and active+preview
-	ofstream allfile(args.csvstatfilepath + "/allbyregionactiveonly.csv");
+	ofstream allfile(Args::csvstatfilepath + "/allbyregionactiveonly.csv");
 	allfile << "Traveler,Total";
 	std::list<Region*> regions;
 	total_mi = 0;
-	for (Region* r : all_regions)
+	for (Region* r : Region::allregions)
 	  if (r->active_only_mileage)
 	  {	regions.push_back(r);
 		total_mi += r->active_only_mileage;
@@ -630,7 +619,7 @@ int main(int argc, char *argv[])
 	for (Region *region : regions)
 		allfile << ',' << region->code;
 	allfile << '\n';
-	for (TravelerList *t : traveler_lists)
+	for (TravelerList *t : TravelerList::allusers)
 	{	double t_total_mi = 0;
 		for (std::pair<Region* const, double>& rm : t->active_only_mileage_by_region)
 			t_total_mi += rm.second;
@@ -655,11 +644,11 @@ int main(int argc, char *argv[])
 	allfile.close();
 
 	// active+preview
-	allfile.open(args.csvstatfilepath + "/allbyregionactivepreview.csv");
+	allfile.open(Args::csvstatfilepath + "/allbyregionactivepreview.csv");
 	allfile << "Traveler,Total";
 	regions.clear();
 	total_mi = 0;
-	for (Region* r : all_regions)
+	for (Region* r : Region::allregions)
 	  if (r->active_preview_mileage)
 	  {	regions.push_back(r);
 		total_mi += r->active_preview_mileage;
@@ -668,7 +657,7 @@ int main(int argc, char *argv[])
 	for (Region *region : regions)
 		allfile << ',' << region->code;
 	allfile << '\n';
-	for (TravelerList *t : traveler_lists)
+	for (TravelerList *t : TravelerList::allusers)
 	{	double t_total_mi = 0;
 		for (std::pair<Region* const, double>& rm : t->active_preview_mileage_by_region)
 			t_total_mi += rm.second;
@@ -693,8 +682,8 @@ int main(int argc, char *argv[])
 	allfile.close();
 
 	// now, a file for each system, again per traveler by region
-	for (HighwaySystem *h : highway_systems)
-	{	ofstream sysfile(args.csvstatfilepath + "/" + h->systemname + "-all.csv");
+	for (HighwaySystem *h : HighwaySystem::syslist)
+	{	ofstream sysfile(Args::csvstatfilepath + "/" + h->systemname + "-all.csv");
 		sysfile << "Traveler,Total";
 		regions.clear();
 		total_mi = 0;
@@ -706,7 +695,7 @@ int main(int argc, char *argv[])
 		for (Region *region : regions)
 			sysfile << ',' << region->code;
 		sysfile << '\n';
-		for (TravelerList *t : traveler_lists)
+		for (TravelerList *t : TravelerList::allusers)
 		  // only include entries for travelers who have any mileage in system
 		  if (t->system_region_mileages.find(h) != t->system_region_mileages.end())
 		  {	sprintf(fstr, ",%.2f", t->system_region_miles(h));
@@ -731,36 +720,36 @@ int main(int argc, char *argv[])
 	}
 
 	cout << et.et() << "Reading datacheckfps.csv." << endl;
-	Datacheck::read_fps(args.highwaydatapath, el);
+	Datacheck::read_fps(Args::highwaydatapath, el);
 
       #ifdef threading_enabled
 	thread sqlthread;
-	if   (!args.errorcheck)
-	{	std::cout << et.et() << "Start writing database file " << args.databasename << ".sql.\n" << std::flush;
-		sqlthread=thread(sqlfile1, &et, &args, &all_regions, &continents, &countries, &highway_systems, &traveler_lists, &clin_db_val, &updates, &systemupdates, &term_mtx);
+	if   (!Args::errorcheck)
+	{	std::cout << et.et() << "Start writing database file " << Args::databasename << ".sql.\n" << std::flush;
+		sqlthread=thread(sqlfile1, &et, &continents, &countries, &clin_db_val, &updates, &systemupdates, &term_mtx);
 	}
       #endif
 
 	#include "tasks/graph_generation.cpp"
 
 	cout << et.et() << "Marking datacheck false positives." << flush;
-	Datacheck::mark_fps(args.logfilepath, et);
+	Datacheck::mark_fps(Args::logfilepath, et);
 	cout << et.et() << "Writing log of unmatched datacheck FP entries." << endl;
-	Datacheck::unmatchedfps_log(args.logfilepath);
+	Datacheck::unmatchedfps_log(Args::logfilepath);
 	cout << et.et() << "Writing datacheck.log" << endl;
-	Datacheck::datacheck_log(args.logfilepath);
+	Datacheck::datacheck_log(Args::logfilepath);
 
-	if   (args.errorcheck)
+	if   (Args::errorcheck)
 		cout << et.et() << "SKIPPING database file." << endl;
 	else {
 	      #ifdef threading_enabled
 		sqlthread.join();
-		std::cout << et.et() << "Resume writing database file " << args.databasename << ".sql.\n" << std::flush;
+		std::cout << et.et() << "Resume writing database file " << Args::databasename << ".sql.\n" << std::flush;
 	      #else
-		std::cout << et.et() << "Writing database file " << args.databasename << ".sql.\n" << std::flush;
-		sqlfile1(&et, &args, &all_regions, &continents, &countries, &highway_systems, &traveler_lists, &clin_db_val, &updates, &systemupdates, &term_mtx);
+		std::cout << et.et() << "Writing database file " << Args::databasename << ".sql.\n" << std::flush;
+		sqlfile1(&et, &continents, &countries, &clin_db_val, &updates, &systemupdates, &term_mtx);
 	      #endif
-		sqlfile2(&et, &args, &graph_types, &graph_vector);
+		sqlfile2(&et, &graph_types);
 	     }
 
 	// See if we have any errors that should be fatal to the site update process
@@ -772,11 +761,11 @@ int main(int argc, char *argv[])
 	}
 
 	// print some statistics
-	cout << et.et() << "Processed " << highway_systems.size() << " highway systems." << endl;
+	cout << et.et() << "Processed " << HighwaySystem::syslist.size() << " highway systems." << endl;
 	unsigned int routes = 0;
 	unsigned int points = 0;
 	unsigned int segments = 0;
-	for (HighwaySystem *h : highway_systems)
+	for (HighwaySystem *h : HighwaySystem::syslist)
 	{	routes += h->route_list.size();
 		for (Route *r : h->route_list)
 		{	points += r->point_list.size();
@@ -788,7 +777,7 @@ int main(int argc, char *argv[])
 	  cout << "MISMATCH: all_waypoints contains " << all_waypoints.size() << " waypoints!" << endl;
 	cout << "WaypointQuadtree contains " << all_waypoints.total_nodes() << " total nodes." << endl;
 
-	if (!args.errorcheck)
+	if (!Args::errorcheck)
 	{	// compute colocation of waypoints stats
 		cout << et.et() << "Computing waypoint colocation stats, reporting all with 8 or more colocations:" << endl;
 		unsigned int largest_colocate_count = all_waypoints.max_colocated();
@@ -821,7 +810,7 @@ int main(int argc, char *argv[])
 	unsigned int d_count = 0;
 	unsigned other_count = 0;
 	unsigned int total_rtes = 0;
-	for (HighwaySystem *h : highway_systems)
+	for (HighwaySystem *h : HighwaySystem::syslist)
 	  for (Route* r : h->route_list)
 	  {	total_rtes++;
 		if (h->devel()) d_count++;
@@ -837,7 +826,7 @@ int main(int argc, char *argv[])
 	if (other_count) cout << other_count << " routes not designated active/preview/devel!" << endl;
 	cout << total_rtes << " total routes." << endl;//*/
 
-	if (args.errorcheck)
+	if (Args::errorcheck)
 	    cout << "!!! DATA CHECK SUCCESSFUL !!!" << endl;
 
 	timestamp = time(0);

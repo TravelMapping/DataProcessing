@@ -1,4 +1,5 @@
 #include "TravelerList.h"
+#include "../Args/Args.h"
 #include "../ClinchedDBValues/ClinchedDBValues.h"
 #include "../ConnectedRoute/ConnectedRoute.h"
 #include "../HighwaySystem/HighwaySystem.h"
@@ -8,16 +9,10 @@
 #include <cstring>
 #include <fstream>
 
-void TravelerList::userlog
-(	ClinchedDBValues *clin_db_val,
-	const double total_active_only_miles,
-	const double total_active_preview_miles,
-	std::list<HighwaySystem*> *highway_systems,
-	std::string path
-)
+void TravelerList::userlog(ClinchedDBValues *clin_db_val, const double total_active_only_miles, const double total_active_preview_miles)
 {	char fstr[112];
 	std::cout << "." << std::flush;
-	std::ofstream log(path+traveler_name+".log", std::ios::app);
+	std::ofstream log(Args::logfilepath+"/users/"+traveler_name+".log", std::ios::app);
 	log << "Clinched Highway Statistics\n";
 	log << "Overall in active systems: " << format_clinched_mi(active_only_miles(), total_active_only_miles) << '\n';
 	log << "Overall in active+preview systems: " << format_clinched_mi(active_preview_miles(), total_active_preview_miles) << '\n';
@@ -44,7 +39,7 @@ void TravelerList::userlog
 	// present stats by system here, also generate entries for
 	// DB table clinchedSystemMileageByRegion as we compute and
 	// have the data handy
-	for (HighwaySystem *h : *highway_systems)
+	for (HighwaySystem *h : HighwaySystem::syslist)
 	  if (h->active_or_preview())
 	  {	if (h->active()) active_systems++;
 		else	preview_systems++;

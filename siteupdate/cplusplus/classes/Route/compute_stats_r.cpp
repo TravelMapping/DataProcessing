@@ -45,11 +45,11 @@ void Route::compute_stats_r()
 		system_mileage += s->length/s->system_concurrency_count;
 	}
 	// now that we have the subtotal for this route, add it to the regional totals
-	region->mileage_mtx->lock();
+	region->mtx.lock();
 	region->overall_mileage += overall_mileage;
 	region->active_preview_mileage += active_preview_mileage;
 	region->active_only_mileage += active_only_mileage;
-	region->mileage_mtx->unlock();
+	region->mtx.unlock();
 	try {	system->mileage_by_region.at(region) += system_mileage;
 	    }
 	catch (const std::out_of_range& oor)

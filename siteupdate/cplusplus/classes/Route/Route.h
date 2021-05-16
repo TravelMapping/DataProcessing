@@ -67,8 +67,6 @@ class Route
 	std::unordered_set<std::string> unused_alt_labels;
 	std::unordered_set<std::string> duplicate_labels;
 	std::unordered_map<std::string, unsigned int> pri_label_hash, alt_label_hash;
-	static std::unordered_map<std::string, Route*> root_hash, pri_list_hash, alt_list_hash;
-	static std::mutex awf_mtx;	// for locking the all_wpt_files set when erasing processed WPTs
 	std::mutex liu_mtx;	// for locking the labels_in_use set when inserting labels during TravelerList processing
 	std::mutex ual_mtx;	// for locking the unused_alt_labels set when removing in-use alt_labels
 	std::vector<HighwaySegment*> segment_list;
@@ -77,10 +75,14 @@ class Route
 	int rootOrder;
 	bool is_reversed;
 
-	Route(std::string &, HighwaySystem *, ErrorList &, std::unordered_map<std::string, Region*> &);
+	static std::unordered_map<std::string, Route*> root_hash, pri_list_hash, alt_list_hash;
+	static std::unordered_set<std::string>	all_wpt_files;
+	static std::mutex awf_mtx;		// for locking the all_wpt_files set when erasing processed WPTs
+
+	Route(std::string &, HighwaySystem *, ErrorList &);
 
 	std::string str();
-	void read_wpt(WaypointQuadtree *, ErrorList *, std::string, bool, std::unordered_set<std::string> *);
+	void read_wpt(WaypointQuadtree *, ErrorList *, bool);
 	void print_route();
 	HighwaySegment* find_segment_by_waypoints(Waypoint*, Waypoint*);
 	std::string chopped_rtes_line();
@@ -90,7 +92,7 @@ class Route
 	std::string name_no_abbrev();
 	double clinched_by_traveler(TravelerList *);
 	//std::string list_line(int, int);
-	void write_nmp_merged(std::string);
+	void write_nmp_merged();
 	void store_traveled_segments(TravelerList*, std::ofstream &, unsigned int, unsigned int);
 	void compute_stats_r();
 	void label_and_connect(ErrorList&);

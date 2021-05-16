@@ -2,6 +2,7 @@ class ErrorList;
 class HGVertex;
 #include <mutex>
 #include <string>
+#include <unordered_map>
 #include <unordered_set>
 #include <utility>
 #include <vector>
@@ -43,9 +44,12 @@ class Region
 	double active_only_mileage;
 	double active_preview_mileage;
 	double overall_mileage;
-	std::mutex *mileage_mtx;
+	std::mutex mtx;
 	std::unordered_set<HGVertex*> vertices;
 	bool is_valid;
+
+	static std::vector<Region*> allregions;
+	static std::unordered_map<std::string, Region*> code_hash;
 
 	Region (const std::string&,
 		std::vector<std::pair<std::string, std::string>>&,

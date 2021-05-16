@@ -1,30 +1,27 @@
-void ReadListThread
-(	unsigned int id, std::list<std::string> *traveler_ids, std::unordered_map<std::string, std::string**> *listupdates,
-	std::list<std::string>::iterator *it, std::list<TravelerList*> *traveler_lists, std::mutex *tl_mtx, Arguments *args, ErrorList *el
-)
+void ReadListThread(unsigned int id, std::mutex* tl_mtx, ErrorList* el)
 {	//printf("Starting ReadListThread %02i\n", id); fflush(stdout);
-	while (*it != traveler_ids->end())
+	while (TravelerList::id_it != TravelerList::ids.end())
 	{	tl_mtx->lock();
-		if (*it == traveler_ids->end())
+		if (TravelerList::id_it == TravelerList::ids.end())
 		{	tl_mtx->unlock();
 			return;
 		}
-		std::string tl(**it);
+		std::string tl(*TravelerList::id_it);
 		//printf("ReadListThread %02i assigned %s\n", id, tl.data()); fflush(stdout);
-		(*it)++;
+		TravelerList::id_it++;
 		//printf("ReadListThread %02i (*it)++\n", id); fflush(stdout);
 		std::cout << tl << ' ' << std::flush;
 		tl_mtx->unlock();
 		std::string** update;
-		try {	update = listupdates->at(tl);
+		try {	update = TravelerList::listupdates.at(tl);
 		    }
 		catch (const std::out_of_range& oor)
 		    {	update = 0;
 		    }
-		TravelerList *t = new TravelerList(tl, update, el, args);
+		TravelerList *t = new TravelerList(tl, update, el);
 				  // deleted on termination of program
-		TravelerList::alltrav_mtx.lock();
-		traveler_lists->push_back(t);
-		TravelerList::alltrav_mtx.unlock();
+		TravelerList::mtx.lock();
+		TravelerList::allusers.push_back(t);
+		TravelerList::mtx.unlock();
 	}
 }

@@ -120,7 +120,7 @@ else {	r->system->lniu_mtx.lock();
 	     }
 	r->store_traveled_segments(this, log, index1, index2);
 	// new .list lines for region split-ups
-	if (args->splitregion == r->region->code)
+	if (Args::splitregion == r->region->code)
 	{
 		#define r1 r
 		#define r2 r

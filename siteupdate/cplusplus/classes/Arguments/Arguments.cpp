@@ -1,72 +1,75 @@
-#include "Arguments.h"
+#include "Args.h"
 #include <cstring>
 
-Arguments::Arguments(int argc, char *argv[])
-{	// defaults
-	/* w */ highwaydatapath = "../../../HighwayData";
-	/* s */ systemsfile = "systems.csv";
-	/* u */ userlistfilepath = "../../../UserData/list_files";
-	/* d */ databasename = "TravelMapping";
-	/* l */ logfilepath = ".";
-	/* c */ csvstatfilepath = ".";
-	/* g */ graphfilepath = ".";
-	/* k */ skipgraphs = 0;
-	/* n */ nmpmergepath = "";
-	/* p */ splitregionpath = "";
-	/* U */ // nothing to do here
-	/* t */ numthreads = 4;
-	/* e */ errorcheck = 0;
-	/* T */ timeprecision = 1;
-	/* h */ help = 0;
-		const char* slash = strrchr (argv[0], '/');
-		exec = slash ? slash+1 : argv[0];
+/* t */ int Args::numthreads = 4;
+/* T */ int Args::timeprecision = 1;
+/* e */ bool Args::errorcheck = 0;
+/* k */ bool Args::skipgraphs = 0;
+/* w */ std::string Args::highwaydatapath = "../../../HighwayData";
+/* s */ std::string Args::systemsfile = "systems.csv";
+/* u */ std::string Args::userlistfilepath = "../../../UserData/list_files";
+/* d */ std::string Args::databasename = "TravelMapping";
+/* l */ std::string Args::logfilepath = ".";
+/* c */ std::string Args::csvstatfilepath = ".";
+/* g */ std::string Args::graphfilepath = ".";
+/* n */ std::string Args::nmpmergepath = "";
+/* p */ std::string Args::splitregionpath = "";
+/* p */ std::string Args::splitregion;
+/* U */ std::list<std::string> Args::userlist;
+const char* Args::exec;
+
+bool Args::init(int argc, char *argv[])
+{	const char* slash = strrchr (argv[0], '/');
+	exec = slash ? slash+1 : argv[0];
 
 	// parsing
 	for (unsigned int n = 1; n < argc; n++)
-	{	     if ( n+1 < argc && !strcmp(argv[n], "-w") || !strcmp(argv[n], "--highwaydatapath") ) {
-			highwaydatapath = argv[n+1]; n++; }
-		else if ( n+1 < argc && !strcmp(argv[n], "-s") || !strcmp(argv[n], "--systemsfile") ) {
-			systemsfile = argv[n+1]; n++; }
-		else if ( n+1 < argc && !strcmp(argv[n], "-u") || !strcmp(argv[n], "--userlistfilepath") ) {
-			userlistfilepath = argv[n+1]; n++; }
-		else if ( n+1 < argc && !strcmp(argv[n], "-d") || !strcmp(argv[n], "--databasename") ) {
-			databasename = argv[n+1]; n++; }
-		else if ( n+1 < argc && !strcmp(argv[n], "-l") || !strcmp(argv[n], "--logfilepath") ) {
-			logfilepath = argv[n+1]; n++; }
-		else if ( n+1 < argc && !strcmp(argv[n], "-c") || !strcmp(argv[n], "--csvstatfilepath") ) {
-			csvstatfilepath = argv[n+1]; n++; }
-		else if ( n+1 < argc && !strcmp(argv[n], "-g") || !strcmp(argv[n], "--graphfilepath") ) {
-			graphfilepath = argv[n+1]; n++; }
-		else if (               !strcmp(argv[n], "-k") || !strcmp(argv[n], "--skipgraphs") )
-			skipgraphs = 1;
-		else if ( n+1 < argc && !strcmp(argv[n], "-n") || !strcmp(argv[n], "--nmpmergepath") ) {
-			nmpmergepath = argv[n+1]; n++; }
-		else if ( n+2 < argc && !strcmp(argv[n], "-p") || !strcmp(argv[n], "--splitregion") ) {
-			splitregionpath = argv[n+1]; splitregion = argv[n+2]; n +=2; }
-		else if ( n+1 < argc && !strcmp(argv[n], "-t") || !strcmp(argv[n], "--numthreads") ) {
-			numthreads = strtol(argv[n+1], 0, 10); n++; if (numthreads<1) numthreads=1; }
-		else if ( n+1 < argc && !strcmp(argv[n], "-T") || !strcmp(argv[n], "--timeprecision") ) {
-			timeprecision = strtol(argv[n+1], 0, 10); n++; if (timeprecision<1) timeprecision=1; if (timeprecision>9) timeprecision=9; }
-		else if (               !strcmp(argv[n], "-e") || !strcmp(argv[n], "--errorcheck") )
-			errorcheck = 1;
-		else if (               !strcmp(argv[n], "-h") || !strcmp(argv[n], "--help") ) {
-			help = 1; show_help(); }
-		else if ( n+1 < argc && !strcmp(argv[n], "-U") || !strcmp(argv[n], "--userlist") )
+	#define ARG(N,S,L) ( n+N < argc && !strcmp(argv[n],S) || !strcmp(argv[n],L) )
+	{	     if ARG(0, "-e", "--errorcheck")		 errorcheck = 1;
+		else if ARG(0, "-k", "--skipgraphs")		 skipgraphs = 1;
+		else if ARG(0, "-h", "--help")			{show_help(); return 1;}
+		else if ARG(1, "-w", "--highwaydatapath")	{highwaydatapath  = argv[n+1]; n++;}
+		else if ARG(1, "-s", "--systemsfile")		{systemsfile      = argv[n+1]; n++;}
+		else if ARG(1, "-u", "--userlistfilepath")	{userlistfilepath = argv[n+1]; n++;}
+		else if ARG(1, "-d", "--databasename")		{databasename     = argv[n+1]; n++;}
+		else if ARG(1, "-l", "--logfilepath")		{logfilepath      = argv[n+1]; n++;}
+		else if ARG(1, "-c", "--csvstatfilepath")	{csvstatfilepath  = argv[n+1]; n++;}
+		else if ARG(1, "-g", "--graphfilepath")		{graphfilepath    = argv[n+1]; n++;}
+		else if ARG(1, "-n", "--nmpmergepath")		{nmpmergepath     = argv[n+1]; n++;}
+		else if ARG(1, "-t", "--numthreads")
+		{	numthreads = strtol(argv[n+1], 0, 10);
+			if (numthreads<1) numthreads=1;
+			n++;
+		}
+		else if ARG(1, "-T", "--timeprecision")
+		{	timeprecision = strtol(argv[n+1], 0, 10);
+			if (timeprecision<1) timeprecision=1;
+			if (timeprecision>9) timeprecision=9;
+			n++;
+		}
+		else if ARG(1, "-U", "--userlist")
 			while (n+1 < argc && argv[n+1][0] != '-')
 			{	userlist.push_back(argv[n+1]);
 				n++;
 			}
+		else if ARG(2, "-p", "--splitregion")
+		{	splitregionpath = argv[n+1];
+			splitregion = argv[n+2];
+			n += 2;
+		}
 	}
+	#undef ARG
+	return 0;
 }
 
-void Arguments::show_help()
+void Args::show_help()
 {	std::string indent(strlen(exec), ' ');
 	std::cout  <<  "usage: " << exec << " [-h] [-w HIGHWAYDATAPATH] [-s SYSTEMSFILE]\n";
 	std::cout  <<  indent << "        [-u USERLISTFILEPATH] [-d DATABASENAME] [-l LOGFILEPATH]\n";
 	std::cout  <<  indent << "        [-c CSVSTATFILEPATH] [-g GRAPHFILEPATH] [-k]\n";
 	std::cout  <<  indent << "        [-n NMPMERGEPATH] [-p SPLITREGIONPATH SPLITREGION]\n";
 	std::cout  <<  indent << "        [-U USERLIST [USERLIST ...]] [-t NUMTHREADS] [-e]\n";
-	std::cout <<	"		  [-T TIMEPRECISION] [-e]\n";
+	std::cout  <<  indent << "        [-T TIMEPRECISION] [-e]\n";
 	std::cout  <<  "\n";
 	std::cout  <<  "Create SQL, stats, graphs, and log files from highway and user data for the\n";
 	std::cout  <<  "Travel Mapping project.\n";

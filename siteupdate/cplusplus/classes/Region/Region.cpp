@@ -9,6 +9,9 @@ std::pair<std::string, std::string> *country_or_continent_by_code(std::string co
 	return 0;
 }
 
+std::vector<Region*> Region::allregions;
+std::unordered_map<std::string, Region*> Region::code_hash;
+
 Region::Region (const std::string &line,
 		std::vector<std::pair<std::string, std::string>> &countries,
 		std::vector<std::pair<std::string, std::string>> &continents,
@@ -16,8 +19,6 @@ Region::Region (const std::string &line,
 {	active_only_mileage = 0;
 	active_preview_mileage = 0;
 	overall_mileage = 0;
-	mileage_mtx = new std::mutex;
-		      // deleted on termination of program
 	// parse CSV line
 	size_t NumFields = 5;
 	std::string country_str, continent_str;

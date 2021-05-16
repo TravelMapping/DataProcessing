@@ -42,9 +42,10 @@ class HighwaySystem
 	std::mutex lniu_mtx, uarn_mtx;
 	bool is_valid;
 
-	HighwaySystem(std::string &, ErrorList &, std::string, std::string &,
-		      std::vector<std::pair<std::string,std::string>> &,
-		      std::unordered_map<std::string, Region*> &);
+	static std::list<HighwaySystem*> syslist;
+	static std::list<HighwaySystem*>::iterator it;
+
+	HighwaySystem(std::string &, ErrorList &, std::vector<std::pair<std::string,std::string>> &);
 
 	bool active();			// Return whether this is an active system
 	bool preview();			// Return whether this is a preview system
