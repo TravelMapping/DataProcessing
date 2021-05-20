@@ -86,12 +86,6 @@ Waypoint::Waypoint(char *line, Route *rte)
 
 std::string Waypoint::str()
 {	std::string ans = route->root + " " + label;
-	if (alt_labels.size())
-	{	ans += " [alt: ['" + alt_labels[0] + '\'';
-		for (size_t i = 1; i < alt_labels.size(); i++)
-			ans += ", \'" + alt_labels[i] + '\'';
-		ans += "]]";
-	}
 	char coordstr[51];
 	sprintf(coordstr, "%.15g", lat);
 	if (!strchr(coordstr, '.')) strcat(coordstr, ".0"); // add single trailing zero to ints for compatibility with Python
