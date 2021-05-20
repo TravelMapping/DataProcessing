@@ -514,9 +514,18 @@ class Waypoint:
         # straightforward concurrency example with matching waypoint
         # labels, use route/route/route@label, except also matches
         # any hidden label
+
         # TODO: compress when some but not all labels match, such as
-        # E127@Kan&AH60@Kan_N&AH64@Kan&AH67@Kan&M38@Kan
-        # or possibly just compress ignoring the _ suffixes here
+        #	E127@Kan&AH60@Kan_N&AH64@Kan&AH67@Kan&M38@Kan
+        #	ME9@PondRd&ME137@PondRd_Alb&US202@PondRd
+        #	or possibly just compress ignoring the _ suffixes here
+        # TODO: US83@FM1263_S&US380@FM1263
+        #	should probably end up as US83/US380@FM1263 or @FM1263_S
+        #  TRY: Use _suffix if all are the same; else drop
+        # TODO: ME11@I-95(109)&ME17@I-95&ME100@I-95(109)&US202@I-95(109)
+        #	I-95 doesn't have a point here, due to a double trumpet.
+        #  TRY: Use (suffix) if all are the same; else drop
+
         routes = []
         matches = 0
         for w in self.ap_coloc:
@@ -577,10 +586,12 @@ class Waypoint:
         # 3+ intersection with matching or partially matching labels
         # NY5@NY16/384&NY16@NY5/384&NY384@NY5/16
         # becomes NY5/NY16/NY384
-
         # or a more complex case:
         # US1@US21/176&US21@US1/378&US176@US1/378&US321@US1/378&US378@US21/176
         # becomes US1/US21/US176/US321/US378
+
+        # TODO: N493@RingSpi&RingSpi@N493_E&RingSpi@N493_W -> N493_W/RingSpi/RingSpi
+
         # approach: check if each label starts with some route number
         # in the list of colocated routes, and if so, create a label
         # slashing together all of the route names, and save any _
@@ -616,8 +627,19 @@ class Waypoint:
                 return label
 
         # Exit number simplification: I-90@47B(94)&I-94@47B
-        # becomes I-90/I-94@47B, with many other cases also matched
-        # Still TODO: I-39@171C(90)&I-90@171C&US14@I-39/90
+        # becomes I-90/I-94(47B), with many other cases also matched
+
+        # TODO: I-20@76&I-77@16
+        #	should become I-20/I-77 or maybe I-20(76)/I-77(16)
+        #	not shorter, so maybe who cares about this one?
+        # TODO: HutRivPkwy@1&I-95@6B&I-278@I-95&I-295@I-95&I-678@19
+        # TODO: I-39@171C(90)&I-90@171C&US14@I-39/90
+        #	I-95@182&I-395@1&ME15@I-95/395
+        # TODO: I-610@TX288&I-610@38&TX288@I-610
+        #	this is the overlap point of a loop
+        # TODO: I-581@4&US220@I-581(4)&US460@I-581&US11AltRoa@I-581&US220AltRoa@US220_S&VA116@I-581(4)
+        #	I-93@12&MA3@12(93)&MA3APly@MA3_N&MA203@I-93&US1@I-93(12)
+
         # try each as a possible route@exit type situation and look
         # for matches
         for exit in self.ap_coloc:
@@ -700,19 +722,6 @@ class Waypoint:
                 newname += '@' + self.label
                 log.append("Reversed_border_labels: " + name + " -> " + newname)
                 return newname
-
-        # TODO: I-20@76&I-77@16
-        # should become I-20/I-77 or maybe I-20(76)/I-77(16)
-        # not shorter, so maybe who cares about this one?
-
-        # TODO: US83@FM1263_S&US380@FM1263
-        # should probably end up as US83/US380@FM1263 or @FM1263_S
-
-        # How about?
-        # I-581@4&US220@I-581(4)&US460@I-581&US11AltRoa@I-581&US220AltRoa@US220_S&VA116@I-581(4)
-
-        # TODO: I-610@TX288&I-610@38&TX288@I-610
-        # this is the overlap point of a loop
 
         log.append("Keep_failsafe: " + name)
         return name
@@ -2062,6 +2071,8 @@ class HighwayGraph:
         self.vertices = {}
         # hash table containing a set of vertices for each region
         self.rg_vset_hash = {}
+	# create lists of graph points in or colocated with active/preview
+	# systems, either singleton at at the front of their colocation lists
         hi_priority_points = []
         lo_priority_points = []
         all_waypoints.graph_points(hi_priority_points, lo_priority_points)
@@ -2070,10 +2081,6 @@ class HighwayGraph:
         # to this list
         self.waypoint_naming_log = []
 
-        # loop for each Waypoint, create a unique name and vertex
-        # unless it's a point not in or colocated with any active
-        # or preview system, or is colocated and not at the front
-        # of its colocation list
         counter = 0
         print(et.et() + "Creating unique names and vertices", end="", flush=True)
         for w in hi_priority_points + lo_priority_points:

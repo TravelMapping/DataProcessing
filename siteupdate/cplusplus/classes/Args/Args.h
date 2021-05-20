@@ -17,6 +17,7 @@ class Args
 	/* t */ static int numthreads;
 	/* e */ static bool errorcheck;
 	/* T */ static int timeprecision;
+	/* v */ static bool mtvertices;
 		static const char* exec;
 
 	static bool init(int argc, char *argv[]);

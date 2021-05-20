@@ -33,7 +33,7 @@ for (unsigned int match_index = 0; match_index < ap_coloc.size(); match_index++)
 		{	if (match_index == add_index) continue;
 			newname += '/' + ap_coloc[add_index]->route->list_entry_name();
 		}
-		log.push_back("Exit/Intersection: " + name + " -> " + newname);
+		g->namelog("Exit/Intersection: " + name + " -> " + newname);
 		return newname;
 	}
 }

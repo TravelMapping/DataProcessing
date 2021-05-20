@@ -58,6 +58,7 @@ class Region
 
 	std::string &country_code();
 	std::string &continent_code();
+	void insert_vertex(HGVertex*);
 };
 
 bool sort_regions_by_code(const Region*, const Region*);

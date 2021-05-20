@@ -125,3 +125,9 @@ std::string HighwaySystem::level_name()
 		default:  return "ERROR";
 	}
 }
+
+void HighwaySystem::insert_vertex(HGVertex* v)
+{	lniu_mtx.lock();	// re-use an existing mutex...
+	vertices.insert(v);
+	lniu_mtx.unlock();	// ...rather than make a new one
+}

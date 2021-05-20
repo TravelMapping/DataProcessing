@@ -52,6 +52,9 @@ int main(int argc, char *argv[])
 
 	// argument parsing
 	if (Args::init(argc, argv)) return 1;
+      #ifndef threading_enabled
+	Args::numthreads = 1;
+      #endif
 
 	// start a timer for including elapsed time reports in messages
 	ElapsedTime et(Args::timeprecision);

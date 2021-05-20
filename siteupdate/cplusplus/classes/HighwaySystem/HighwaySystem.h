@@ -53,4 +53,5 @@ class HighwaySystem
 	bool devel();			// Return whether this is a development system
 	double total_mileage();		// Return total system mileage across all regions
 	std::string level_name();	// return full "active" / "preview" / "devel" string"
+	void insert_vertex(HGVertex*);
 };

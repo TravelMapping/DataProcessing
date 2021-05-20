@@ -13,7 +13,9 @@ if (ap_coloc.size() == 2)
 	{	std::string newname = ap_coloc[1]->label+'/'+ap_coloc[0]->label;
 		// if this is taken or if name_no_abbrev()s match, attempt to add in abbrevs if there's point in doing so
 		if (ap_coloc[0]->route->abbrev.size() || ap_coloc[1]->route->abbrev.size())
-		{    bool taken = vertex_names.find(newname) != vertex_names.end();
+		{    g->set_mtx[newname.back()].lock();
+		     bool taken = g->vertex_names[newname.back()].find(newname) != g->vertex_names[newname.back()].end();
+		     g->set_mtx[newname.back()].unlock();
 		     if (taken || ap_coloc[0]->route->name_no_abbrev() == ap_coloc[1]->route->name_no_abbrev())
 		     {	const char *u0 = strchr(ap_coloc[0]->label.data(), '_');
 			const char *u1 = strchr(ap_coloc[1]->label.data(), '_');
@@ -21,11 +23,11 @@ if (ap_coloc.size() == 2)
 					    + (ap_coloc[1]->route->list_entry_name() + (u0 ? u0 : ""));
 			std::string message = "Straightforward_intersection: " + name + " -> " + newname;
 			if (taken) message += " (" + ap_coloc[1]->label+'/'+ap_coloc[0]->label + " already taken)";
-			log.push_back(message);
+			g->namelog(std::move(message));
 			return newname;
 		     }
 		}
-		log.push_back("Straightforward_intersection: " + name + " -> " + newname);
+		g->namelog("Straightforward_intersection: " + name + " -> " + newname);
 		return newname;
 	}
 }

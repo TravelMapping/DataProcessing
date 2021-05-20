@@ -34,14 +34,14 @@ else {	list<Region*> *regions;
 	GRAPH(1).edges = 0;	GRAPH(1).vertices = 0;
 	GRAPH(2).edges = 0;	GRAPH(2).vertices = 0;
 	// get master graph vertex & edge counts for terminal output before writing files
-	for (std::pair<Waypoint* const, HGVertex*>& wv : graph_data.vertices)
-	{	GRAPH(0).edges += wv.second->incident_s_edges.size();
-		if (wv.second->visibility >= 1)
+	for (HGVertex* v : graph_data.vertices)
+	{	GRAPH(0).edges += v->incident_s_edges.size();
+		if (v->visibility >= 1)
 		{	GRAPH(2).vertices++;
-			GRAPH(2).edges += wv.second->incident_t_edges.size();
-			if (wv.second->visibility == 2)
+			GRAPH(2).edges += v->incident_t_edges.size();
+			if (v->visibility == 2)
 			{	GRAPH(1).vertices++;
-				GRAPH(1).edges += wv.second->incident_c_edges.size();
+				GRAPH(1).edges += v->incident_c_edges.size();
 			}
 		}
 	}
