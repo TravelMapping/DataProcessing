@@ -3008,6 +3008,9 @@ for line in lines:
         el.add_error("description > " + str(DBFieldLength.updateText) +
                      " bytes in updates.csv line " + line)
 
+    # error checks
+    if not re.fullmatch('[0-9]{4}-[01][0-9]-[0-3][0-9]', fields[0]):
+        el.add_error("no valid YYYY-MM-DD date in updates.csv line " + line)
     if fields[2] == "":
         el.add_error("no route name in updates.csv line " + line)
 

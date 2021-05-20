@@ -41,6 +41,15 @@ while (getline(file, line))
 		el.add_error("description > " + std::to_string(DBFieldLength::updateText)
 			   + " bytes in updates.csv line " + line);
 
+	// error checks
+	if (	fields[0].size() != 10
+	     || !isdigit(fields[0][0]) || !isdigit(fields[0][1])
+	     || !isdigit(fields[0][2]) || !isdigit(fields[0][3])
+	     || fields[0][4] != '-'
+	     || fields[0][5] < '0' || fields[0][5] > '1' || !isdigit(fields[0][6])
+	     || fields[0][7] != '-'
+	     || fields[0][8] < '0' || fields[0][8] > '3' || !isdigit(fields[0][9])
+	   )	el.add_error("no valid YYYY-MM-DD date in updates.csv line " + line);
 	if (fields[2].empty()) el.add_error("no route name in updates.csv line " + line);
 
 	updates.push_back(fields);
