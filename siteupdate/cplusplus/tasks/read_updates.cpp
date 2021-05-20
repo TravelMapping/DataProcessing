@@ -40,6 +40,9 @@ while (getline(file, line))
 	if (fields[4].size() > DBFieldLength::updateText)
 		el.add_error("description > " + std::to_string(DBFieldLength::updateText)
 			   + " bytes in updates.csv line " + line);
+
+	if (fields[2].empty()) el.add_error("no route name in updates.csv line " + line);
+
 	updates.push_back(fields);
 	try   {	Route* r = Route::root_hash.at(fields[3]);
 		if (r->last_update == 0 || r->last_update[0] < fields[0])

@@ -3007,6 +3007,10 @@ for line in lines:
     if len(fields[4].encode('utf-8')) > DBFieldLength.updateText:
         el.add_error("description > " + str(DBFieldLength.updateText) +
                      " bytes in updates.csv line " + line)
+
+    if fields[2] == "":
+        el.add_error("no route name in updates.csv line " + line)
+
     updates.append(fields)
     try:
         r = Route.root_hash[fields[3]]
