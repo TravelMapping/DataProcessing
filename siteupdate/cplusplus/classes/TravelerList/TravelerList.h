@@ -1,4 +1,3 @@
-class Arguments;
 class ClinchedDBValues;
 class ErrorList;
 class HighwaySegment;
@@ -36,15 +35,20 @@ class TravelerList
 	unsigned int active_systems_clinched;
 	unsigned int preview_systems_traveled;
 	unsigned int preview_systems_clinched;
-	// for locking the traveler_lists list when reading .lists from disk
+	// for locking the allusers list when reading .lists from disk
 	// and avoiding data races when creating userlog timestamps
-	static std::mutex alltrav_mtx;
+	static std::mutex mtx;
+	static std::list<std::string> ids;
+	static std::list<std::string>::iterator id_it;
+	static std::list<TravelerList*> allusers;
+	static std::list<TravelerList*>::iterator tl_it;
+	static std::unordered_map<std::string, std::string**> listupdates;
 
-	TravelerList(std::string, std::string*[], ErrorList *, Arguments *);
+	TravelerList(std::string, std::string*[], ErrorList*);
 	double active_only_miles();
 	double active_preview_miles();
 	double system_region_miles(HighwaySystem *);
-	void userlog(ClinchedDBValues *, const double, const double, std::list<HighwaySystem*>*, std::string path);
+	void userlog(ClinchedDBValues *, const double, const double);
 };
 
 bool sort_travelers_by_name(const TravelerList*, const TravelerList*);

@@ -1,3 +1,5 @@
+class HGVertex;
+class HighwayGraph;
 class Route;
 #include <deque>
 #include <forward_list>
@@ -22,6 +24,7 @@ class Waypoint
 	public:
 	Route *route;
 	std::list<Waypoint*> *colocated;
+	HGVertex *vertex;
 	double lat, lng;
 	unsigned int point_num;
 	std::string label;
@@ -39,7 +42,7 @@ class Waypoint
 	unsigned int num_colocated();
 	double distance_to(Waypoint *);
 	double angle(Waypoint *, Waypoint *);
-	std::string canonical_waypoint_name(std::list<std::string> &, std::unordered_set<std::string> &);
+	std::string canonical_waypoint_name(HighwayGraph*);
 	std::string simple_waypoint_name();
 	bool is_or_colocated_with_active_or_preview();
 	std::string root_at_label();
@@ -68,4 +71,3 @@ class Waypoint
 };
 
 bool sort_root_at_label(Waypoint*, Waypoint*);
-bool waypoint_simplification_sort(Waypoint*, Waypoint*);

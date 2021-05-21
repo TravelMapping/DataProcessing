@@ -8,8 +8,8 @@ if (slash)
 {	std::string reverse = (slash+1)+('/'+label.substr(0, slash-label.data()));
 	unsigned int matches = 1;
 	// ap_coloc[0]->label *IS* label, so no need to check that
-	for (unsigned int i = 1; i < ap_coloc.size(); i++)
-	  if (ap_coloc[i]->label == label || ap_coloc[i]->label == reverse)
+	while (matches < ap_coloc.size())
+	  if (ap_coloc[matches]->label == label || ap_coloc[matches]->label == reverse)
 	    matches++;
 	  else break;
 	if (matches == ap_coloc.size())
@@ -22,7 +22,7 @@ if (slash)
 		for (unsigned int i = 1; i < routes.size(); i++)
 			newname += '/' + routes[i];
 		newname += '@' + label;
-		log.push_back("Reversed_border_labels: " + name + " -> " + newname);
+		g->namelog("Reversed_border_labels: " + name + " -> " + newname);
 		return newname;
 	}
 }

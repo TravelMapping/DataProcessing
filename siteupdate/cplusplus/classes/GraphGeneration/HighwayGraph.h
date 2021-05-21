@@ -26,16 +26,17 @@ class HighwayGraph
     */
 
 	public:
-	// first, find unique waypoints and create vertex labels
-	std::unordered_set<std::string> vertex_names;
-	// to track the waypoint name compressions, add log entries
-	// to this list
-	std::list<std::string> waypoint_naming_log;
-	std::unordered_map<Waypoint*, HGVertex*> vertices;
+	std::unordered_set<std::string> vertex_names[256];	// unique vertex labels
+	std::list<std::string> waypoint_naming_log;		// to track waypoint name compressions
+	std::vector<HGVertex*> vertices;
+	std::mutex set_mtx[256], log_mtx;
 
-	HighwayGraph(WaypointQuadtree&, std::list<HighwaySystem*>&, unsigned int, ElapsedTime&);
+	HighwayGraph(WaypointQuadtree&, ElapsedTime&);
 
 	void clear();
+	void namelog(std::string&&);
+	void simplify(int, std::vector<Waypoint*>*, unsigned int*, std::vector<HGVertex*>*);
+	inline std::pair<std::unordered_set<std::string>::iterator,bool> vertex_name(std::string&);
 
 	inline void matching_vertices_and_edges
 	(	GraphListEntry&, WaypointQuadtree*,
@@ -47,6 +48,6 @@ class HighwayGraph
 		int, unsigned int&, unsigned int&
 	);
 
-	void write_master_graphs_tmg(std::vector<GraphListEntry>&, std::string, std::list<TravelerList*>&);
-	void write_subgraphs_tmg(std::vector<GraphListEntry>&, std::string, size_t, unsigned int, WaypointQuadtree*, ElapsedTime*, std::mutex*);
+	void write_master_graphs_tmg();
+	void write_subgraphs_tmg(size_t, unsigned int, WaypointQuadtree*, ElapsedTime*, std::mutex*);
 };

@@ -96,7 +96,7 @@ std::unordered_set<HGVertex*> PlaceRadius::v_search(WaypointQuadtree *qt, Highwa
 		  if (	(!p->colocated || p == p->colocated->front())
 		  &&	p->is_or_colocated_with_active_or_preview()
 		  &&	contains_vertex(p->lat, p->lng)
-		     )	vertex_set.insert(g->vertices.at(p));
+		     )	vertex_set.insert(p->vertex);
 	}
 	// if we're not a terminal quadrant, we need to determine which
 	// of our child quadrants we need to search and recurse into each

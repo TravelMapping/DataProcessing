@@ -4,6 +4,7 @@ class Waypoint;
 #include <list>
 #include <iostream>
 #include <mutex>
+#include <vector>
 
 class WaypointQuadtree
 {	// This class defines a recursive quadtree structure to store
@@ -25,7 +26,7 @@ class WaypointQuadtree
 	std::string str();
 	unsigned int size();
 	std::list<Waypoint*> point_list();
-	std::list<Waypoint*> graph_points();
+	void graph_points(std::vector<Waypoint*>&, std::vector<Waypoint*>&);
 	bool is_valid(ErrorList &);
 	unsigned int max_colocated();
 	unsigned int total_nodes();

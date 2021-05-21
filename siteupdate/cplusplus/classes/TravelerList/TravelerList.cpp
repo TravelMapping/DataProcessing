@@ -1,5 +1,5 @@
 #include "TravelerList.h"
-#include "../Arguments/Arguments.h"
+#include "../Args/Args.h"
 #include "../ConnectedRoute/ConnectedRoute.h"
 #include "../DBFieldLength/DBFieldLength.h"
 #include "../ErrorList/ErrorList.h"
@@ -11,30 +11,30 @@
 #include "../../functions/upper.h"
 #include <cstring>
 
-TravelerList::TravelerList(std::string travname, std::string* updarr[], ErrorList *el, Arguments *args)
+TravelerList::TravelerList(std::string travname, std::string* updarr[], ErrorList* el)
 {	active_systems_traveled = 0;
 	active_systems_clinched = 0;
 	preview_systems_traveled = 0;
 	preview_systems_clinched = 0;
 	unsigned int list_entries = 0;
-	in_subgraph = new bool[args->numthreads];
-	traveler_num = new unsigned int[args->numthreads];
+	in_subgraph = new bool[Args::numthreads];
+	traveler_num = new unsigned int[Args::numthreads];
 		       // deleted on termination of program
-	for (size_t i = 0; i < args->numthreads; i++) in_subgraph[i] = 0;
+	for (size_t i = 0; i < Args::numthreads; i++) in_subgraph[i] = 0;
 	traveler_name = travname.substr(0, travname.size()-5); // strip ".list" from end of travname
 	if (traveler_name.size() > DBFieldLength::traveler)
 	  el->add_error("Traveler name " + traveler_name + " > " + std::to_string(DBFieldLength::traveler) + "bytes");
-	std::ofstream log(args->logfilepath+"/users/"+traveler_name+".log");
+	std::ofstream log(Args::logfilepath+"/users/"+traveler_name+".log");
 	std::ofstream splist;
-	if (args->splitregionpath != "") splist.open(args->splitregionpath+"/list_files/"+travname);
+	if (Args::splitregionpath != "") splist.open(Args::splitregionpath+"/list_files/"+travname);
 	time_t StartTime = time(0);
 	log << "Log file created at: ";
-	alltrav_mtx.lock();
+	mtx.lock();
 	log << ctime(&StartTime);
-	alltrav_mtx.unlock();
+	mtx.unlock();
 	std::vector<char*> lines;
 	std::vector<std::string> endlines;
-	std::ifstream file(args->userlistfilepath+"/"+travname);
+	std::ifstream file(Args::userlistfilepath+"/"+travname);
 	// we can't getline here because it only allows one delimiter, and we need two; '\r' and '\n'.
 	// at least one .list file contains newlines using only '\r' (0x0D):
 	// https://github.com/TravelMapping/UserData/blob/6309036c44102eb3325d49515b32c5eef3b3cb1e/list_files/whopperman.list
@@ -146,7 +146,12 @@ double TravelerList::system_region_miles(HighwaySystem *h)
 	return mi;
 }
 
-std::mutex TravelerList::alltrav_mtx;
+std::mutex TravelerList::mtx;
+std::list<std::string> TravelerList::ids;
+std::list<std::string>::iterator TravelerList::id_it;
+std::list<TravelerList*> TravelerList::allusers;
+std::list<TravelerList*>::iterator TravelerList::tl_it;
+std::unordered_map<std::string, std::string**> TravelerList::listupdates;
 
 bool sort_travelers_by_name(const TravelerList *t1, const TravelerList *t2)
 {	return t1->traveler_name < t2->traveler_name;

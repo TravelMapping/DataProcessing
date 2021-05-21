@@ -184,7 +184,7 @@ r2->unused_alt_labels.erase(fields[5]);
 r2->ual_mtx.unlock();
 list_entries++;
 // new .list lines for region split-ups
-if (args->splitregion == r1->region->code || args->splitregion == r2->region->code)
+if (Args::splitregion == r1->region->code || Args::splitregion == r2->region->code)
 {
 	#include "splitregion.cpp"
 }

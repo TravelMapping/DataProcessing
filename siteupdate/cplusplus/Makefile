@@ -7,7 +7,7 @@ STObjects = siteupdateST.o functions/sql_fileST.o \
   classes/WaypointQuadtree/WaypointQuadtreeST.o
 
 CommonObjects = \
-  classes/Arguments/Arguments.o \
+  classes/Args/Args.o \
   classes/ClinchedDBValues/ClinchedDBValues.o \
   classes/ConnectedRoute/ConnectedRoute.o \
   classes/Datacheck/Datacheck.o \

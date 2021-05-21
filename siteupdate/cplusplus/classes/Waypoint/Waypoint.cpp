@@ -12,17 +12,6 @@ bool sort_root_at_label(Waypoint *w1, Waypoint *w2)
 {	return w1->root_at_label() < w2->root_at_label();
 }
 
-bool waypoint_simplification_sort(Waypoint *w1, Waypoint *w2)
-{	if (	(	w2->ap_coloc.size() != 2
-		     || w2->ap_coloc.front()->route->abbrev.size()
-		     || w2->ap_coloc.back()->route->abbrev.size()
-		)    &&	w1->ap_coloc.size() == 2
-		     && w1->ap_coloc.front()->route->abbrev.empty()
-		     && w1->ap_coloc.back()->route->abbrev.empty()
-	   ) return 1;
-	else return 0;
-}
-
 Waypoint::Waypoint(char *line, Route *rte)
 {	/* initialize object from a .wpt file line */
 	route = rte;
@@ -295,19 +284,19 @@ Waypoint* Waypoint::hashpoint()
 
 bool Waypoint::label_references_route(Route *r)
 {	std::string no_abbrev = r->name_no_abbrev();
-	if (label.substr(0, no_abbrev.size()) != no_abbrev)
+	if ( strncmp(label.data(), no_abbrev.data(), no_abbrev.size()) )
 		return 0;
 	if (label[no_abbrev.size()] == 0 || label[no_abbrev.size()] == '_')
 		return 1;
-	if (label.substr(no_abbrev.size(), r->abbrev.size()) != r->abbrev)
+	if ( strncmp(label.data()+no_abbrev.size(), r->abbrev.data(), r->abbrev.size()) )
 	{	/*if (label[no_abbrev.size()] == '/')
-			Datacheck::add(route, label, "", "", "UNEXPECTED_DESIGNATION", label.substr(no_abbrev.size()+1));//*/
+			Datacheck::add(route, label, "", "", "UNEXPECTED_DESIGNATION", label.data()+no_abbrev.size()+1);//*/
 		return 0;
 	}
 	if (label[no_abbrev.size() + r->abbrev.size()] == 0 || label[no_abbrev.size() + r->abbrev.size()] == '_')
 		return 1;
 	/*if (label[no_abbrev.size() + r->abbrev.size()] == '/')
-		Datacheck::add(route, label, "", "", "UNEXPECTED_DESIGNATION", label.substr(no_abbrev.size()+r->abbrev.size()+1));//*/
+		Datacheck::add(route, label, "", "", "UNEXPECTED_DESIGNATION", label.data()+no_abbrev.size()+r->abbrev.size()+1);//*/
 	return 0;
 }
 
@@ -367,7 +356,7 @@ bool Waypoint::label_too_long()
 {	// label longer than the DB can store
 	if (label.size() > DBFieldLength::label)
 	{	// save the excess beyond what can fit in a DB field, to put in the info/value column
-		std::string excess = label.substr(DBFieldLength::label-3);
+		std::string excess = label.data()+DBFieldLength::label-3;
 		// strip any partial multi-byte characters off the beginning
 		while (excess.front() < 0)	excess.erase(excess.begin());
 		// if it's too long for the info/value column,

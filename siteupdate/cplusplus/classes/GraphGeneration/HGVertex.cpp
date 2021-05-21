@@ -9,6 +9,7 @@
 HGVertex::HGVertex(Waypoint *wpt, const std::string *n, unsigned int numthreads)
 {	lat = wpt->lat;
 	lng = wpt->lng;
+	wpt->vertex = this;
 	s_vertex_num = new int[numthreads];
 	c_vertex_num = new int[numthreads];
 	t_vertex_num = new int[numthreads];
@@ -21,15 +22,15 @@ HGVertex::HGVertex(Waypoint *wpt, const std::string *n, unsigned int numthreads)
 	    // 2: visible in both traveled & collapsed graphs
 	if (!wpt->colocated)
 	{	if (!wpt->is_hidden) visibility = 2;
-		wpt->route->region->vertices.insert(this);
-		wpt->route->system->vertices.insert(this);
+		wpt->route->region->insert_vertex(this);
+		wpt->route->system->insert_vertex(this);
 		return;
 	}
 	for (Waypoint *w : *(wpt->colocated))
 	{	// will consider hidden iff all colocated waypoints are hidden
 		if (!w->is_hidden) visibility = 2;
-		w->route->region->vertices.insert(this);
-		w->route->system->vertices.insert(this);
+		w->route->region->insert_vertex(this);
+		w->route->system->insert_vertex(this);
 	}
 	// VISIBLE_HIDDEN_COLOC datacheck
 	std::list<Waypoint*>::iterator p = wpt->colocated->begin();

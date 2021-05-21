@@ -14,13 +14,15 @@
 
 for (unsigned int match_index = 0; match_index < ap_coloc.size(); match_index++)
 {	std::string lookfor1 = ap_coloc[match_index]->route->list_entry_name();
-	std::string lookfor2 = ap_coloc[match_index]->route->list_entry_name() + "(" + ap_coloc[match_index]->label + ")";
+	std::string lookfor2 = ap_coloc[match_index]->route->list_entry_name() + '(' + ap_coloc[match_index]->label + ')';
 	bool all_match = 1;
 	for (unsigned int check_index = 0; check_index < ap_coloc.size(); check_index++)
 	{	if (match_index == check_index) continue;
 		if ((ap_coloc[check_index]->label != lookfor1)
 		&&  (ap_coloc[check_index]->label != lookfor2))
-			all_match = 0;
+		{	all_match = 0;
+			break;
+		}
 	}
 	if (all_match)
 	{	std::string newname;
@@ -29,9 +31,9 @@ for (unsigned int match_index = 0; match_index < ap_coloc.size(); match_index++)
 		else	newname = lookfor1;
 		for (unsigned int add_index = 0; add_index < ap_coloc.size(); add_index++)
 		{	if (match_index == add_index) continue;
-			newname += "/" + ap_coloc[add_index]->route->list_entry_name();
+			newname += '/' + ap_coloc[add_index]->route->list_entry_name();
 		}
-		log.push_back("Exit/Intersection: " + name + " -> " + newname);
+		g->namelog("Exit/Intersection: " + name + " -> " + newname);
 		return newname;
 	}
 }

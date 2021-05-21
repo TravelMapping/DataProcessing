@@ -1,4 +1,3 @@
-class Arguments;
 class ClinchedDBValues;
 class ElapsedTime;
 class GraphListEntry;
@@ -13,16 +12,12 @@ class TravelerList;
 
 void sqlfile1
 (	ElapsedTime*,
-	Arguments*,
-	std::vector<Region*>*,
 	std::vector<std::pair<std::string,std::string>>*,
 	std::vector<std::pair<std::string,std::string>>*,
-	std::list<HighwaySystem*>*,
-	std::list<TravelerList*>*,
 	ClinchedDBValues*,
 	std::list<std::string*>*,
 	std::list<std::string*>*,
 	std::mutex*
 );
 
-void sqlfile2(ElapsedTime*, Arguments*, std::list<std::array<std::string,3>>*, std::vector<GraphListEntry>*);
+void sqlfile2(ElapsedTime*, std::list<std::array<std::string,3>>*);

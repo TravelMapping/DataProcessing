@@ -1,4 +1,5 @@
 #include "Route.h"
+#include "../Args/Args.h"
 #include "../DBFieldLength/DBFieldLength.h"
 #include "../ErrorList/ErrorList.h"
 #include "../HighwaySegment/HighwaySegment.h"
@@ -14,9 +15,10 @@
 #include <sys/stat.h>
 
 std::unordered_map<std::string, Route*> Route::root_hash, Route::pri_list_hash, Route::alt_list_hash;
+std::unordered_set<std::string> Route::all_wpt_files;
 std::mutex Route::awf_mtx;
 
-Route::Route(std::string &line, HighwaySystem *sys, ErrorList &el, std::unordered_map<std::string, Region*> &region_hash)
+Route::Route(std::string &line, HighwaySystem *sys, ErrorList &el)
 {	/* initialize object from a .csv file line,
 	but do not yet read in waypoint file */
 	con_route = 0;
@@ -43,12 +45,12 @@ Route::Route(std::string &line, HighwaySystem *sys, ErrorList &el, std::unordere
 		el.add_error("System mismatch parsing " + system->systemname
 			   + ".csv line [" + line + "], expected " + system->systemname);
 	// region
-	try {	region = region_hash.at(rg_str);
+	try {	region = Region::code_hash.at(rg_str);
 	    }
 	catch (const std::out_of_range& oor)
 	    {	el.add_error("Unrecognized region in " + system->systemname
 			   + ".csv line: " + line);
-		region = region_hash.at("error");
+		region = Region::code_hash.at("error");
 	    }
 	// route
 	if (route.size() > DBFieldLength::route)
@@ -188,8 +190,9 @@ double Route::clinched_by_traveler(TravelerList *t)
 	return readable_name() + " " + point_list[beg]->label + " " + point_list[end]->label;
 }//*/
 
-void Route::write_nmp_merged(std::string filename)
-{	mkdir(filename.data(), 0777);
+void Route::write_nmp_merged()
+{	std::string filename = Args::nmpmergepath + '/' + rg_str;
+	mkdir(filename.data(), 0777);
 	filename += "/" + system->systemname;
 	mkdir(filename.data(), 0777);
 	filename += "/" + root + ".wpt";

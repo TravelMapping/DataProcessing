@@ -18,8 +18,8 @@ HGEdge::HGEdge(HighwaySegment *s, HighwayGraph *graph, int numthreads)
 	s_written[0] = 0;
 	c_written[0] = 0;
 	t_written[0] = 0;
-	vertex1 = graph->vertices.at(s->waypoint1->hashpoint());
-	vertex2 = graph->vertices.at(s->waypoint2->hashpoint());
+	vertex1 = s->waypoint1->hashpoint()->vertex;
+	vertex2 = s->waypoint2->hashpoint()->vertex;
 	// checks for the very unusual cases where an edge ends up
 	// in the system as itself and its "reverse"
 	for (HGEdge *e : vertex1->incident_s_edges)

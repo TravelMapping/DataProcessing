@@ -3,7 +3,7 @@ Waypoint *w1, *w2;
 splist << "##### " << orig_line << newline << "  ";
 
 // 1st waypoint
-if (args->splitregion != r1->region->code)
+if (Args::splitregion != r1->region->code)
 	// if not in splitregion, just use canonical .list name and waypoint label
 	w1 = r1->point_list[index1];
 else {	HighwaySegment *orig_hs = r1->segment_list[index1 == r1->segment_list.size() ? index1-1 : index1];
@@ -30,7 +30,7 @@ else {	HighwaySegment *orig_hs = r1->segment_list[index1 == r1->segment_list.siz
      }
 
 // 2nd waypoint
-if (args->splitregion != r2->region->code)
+if (Args::splitregion != r2->region->code)
 	// if not in splitregion, just use canonical .list name and waypoint label
 	w2 = r2->point_list[index2];
 else {	HighwaySegment *orig_hs = r2->segment_list[index2 ? index2-1 : 0];
