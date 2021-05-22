@@ -385,11 +385,7 @@ class Waypoint:
         self.near_miss_points = None
 
     def __str__(self):
-        ans = self.route.root + " " + self.label
-        if len(self.alt_labels) > 0:
-            ans = ans + " [alt: " + str(self.alt_labels) + "]"
-        ans = ans + " (" + str(self.lat) + "," + str(self.lng) + ")"
-        return ans
+        return self.route.root + " " + self.label + " (" + str(self.lat) + "," + str(self.lng) + ")"
 
     def csv_line(self,id):
         """return csv line to insert into a table"""
