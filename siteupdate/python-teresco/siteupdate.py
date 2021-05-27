@@ -3007,6 +3007,13 @@ for line in lines:
     if len(fields[4].encode('utf-8')) > DBFieldLength.updateText:
         el.add_error("description > " + str(DBFieldLength.updateText) +
                      " bytes in updates.csv line " + line)
+
+    # error checks
+    if not re.fullmatch('[0-9]{4}-[01][0-9]-[0-3][0-9]', fields[0]):
+        el.add_error("no valid YYYY-MM-DD date in updates.csv line " + line)
+    if fields[2] == "":
+        el.add_error("no route name in updates.csv line " + line)
+
     updates.append(fields)
     try:
         r = Route.root_hash[fields[3]]
