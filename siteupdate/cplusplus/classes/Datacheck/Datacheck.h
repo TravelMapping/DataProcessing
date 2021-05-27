@@ -18,6 +18,7 @@ class Datacheck
     code is the error code | info is additional
     string, one of:        | information, if used:
     -----------------------+--------------------------------------------
+    ABBREV_AS_BANNER       | offending line # in chopped route CSV
     BAD_ANGLE              |
     BUS_WITH_I             |
     DISCONNECTED_ROUTE     | adjacent root's expected connection point
