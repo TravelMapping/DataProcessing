@@ -55,4 +55,11 @@ void Route::compute_stats_r()
 	catch (const std::out_of_range& oor)
 	    {	system->mileage_by_region[region] = system_mileage;
 	    }
+
+	// datachecks
+	if (abbrev.empty())
+	     {	if ( banner.size() && !strncmp(banner.data(), city.data(), banner.size()) )
+		  Datacheck::add(this, "", "", "", "ABBREV_AS_BANNER",
+				 std::to_string(system->route_index(this)+2));
+	     }
 }

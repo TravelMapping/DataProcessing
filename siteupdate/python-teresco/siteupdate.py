@@ -1256,6 +1256,13 @@ class HighwaySystem:
     def devel(self):
         return self.level == "devel"
 
+    """Return index of a specified Route within route_list"""
+    def route_index(self, r):
+        for i in range(len(self.route_list)):
+            if self.route_list[i] == r:
+                return i
+        return None # error, Route not found
+
     """String representation"""
     def __str__(self):
         return self.systemname
@@ -1605,6 +1612,7 @@ class DatacheckEntry:
     code is the error code | info is additional
     string, one of:        | information, if used:
     -----------------------+--------------------------------------------
+    ABBREV_AS_BANNER       | chopped route CSV filename
     BAD_ANGLE              |
     BUS_WITH_I             |
     DISCONNECTED_ROUTE     | adjacent root's expected connection point
@@ -3225,7 +3233,7 @@ sanetravfile.close()
 # compute lots of regional stats:
 # overall, active+preview, active only,
 # and per-system which falls into just one of these categories
-print(et.et() + "Computing stats.",end="",flush=True)
+print(et.et() + "Performing per-route data checks and computing stats.",end="",flush=True)
 active_only_mileage_by_region = dict()
 active_preview_mileage_by_region = dict()
 overall_mileage_by_region = dict()
@@ -3320,6 +3328,12 @@ for h in highway_systems:
                     s.length/system_concurrency_count
                 else:
                     t_system_dict[r.region] = s.length/system_concurrency_count
+
+        # datachecks
+        if r.abbrev == "":
+            if len(r.banner) and r.city.startswith(r.banner):
+                datacheckerrors.append(DatacheckEntry(r, [], "ABBREV_AS_BANNER",
+                                       str(r.system.route_index(r)+2)))
 print("!", flush=True)
 
 print(et.et() + "Writing highway data stats log file (highwaydatastats.log).",flush=True)
@@ -3610,13 +3624,26 @@ file.close()
 
 lines.pop(0)  # ignore header line
 datacheckfps = []
-datacheck_always_error = [ 'BAD_ANGLE', 'DISCONNECTED_ROUTE', 'DUPLICATE_LABEL', 
-                           'HIDDEN_TERMINUS', 'INTERSTATE_NO_HYPHEN',
-                           'INVALID_FINAL_CHAR', 'INVALID_FIRST_CHAR',
-                           'LABEL_INVALID_CHAR', 'LABEL_PARENS', 'LABEL_SLASHES',
-                           'LABEL_TOO_LONG', 'LABEL_UNDERSCORES', 'LONG_UNDERSCORE',
-                           'MALFORMED_LAT', 'MALFORMED_LON', 'MALFORMED_URL',
-                           'NONTERMINAL_UNDERSCORE', 'US_LETTER' ]
+datacheck_always_error = [ \
+    'ABBREV_AS_BANNER',
+    'BAD_ANGLE',
+    'DISCONNECTED_ROUTE',
+    'DUPLICATE_LABEL',
+    'HIDDEN_TERMINUS',
+    'INTERSTATE_NO_HYPHEN',
+    'INVALID_FINAL_CHAR',
+    'INVALID_FIRST_CHAR',
+    'LABEL_INVALID_CHAR',
+    'LABEL_PARENS',
+    'LABEL_SLASHES',
+    'LABEL_TOO_LONG',
+    'LABEL_UNDERSCORES',
+    'LONG_UNDERSCORE',
+    'MALFORMED_LAT',
+    'MALFORMED_LON',
+    'MALFORMED_URL',
+    'NONTERMINAL_UNDERSCORE',
+    'US_LETTER' ]
 for line in lines:
     line=line.strip()
     if len(line) == 0:

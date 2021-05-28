@@ -500,7 +500,7 @@ int main(int argc, char *argv[])
 	// overall, active+preview, active only,
 	// and per-system which falls into just one of these categories
       #ifdef threading_enabled
-	cout << et.et() << "Computing stats per route." << flush;
+	cout << et.et() << "Performing per-route data checks and computing stats." << flush;
 	HighwaySystem::it = HighwaySystem::syslist.begin();
 	THREADLOOP thr[t] = thread(CompStatsRThread, t, &list_mtx);
 	THREADLOOP thr[t].join();
@@ -511,7 +511,7 @@ int main(int argc, char *argv[])
 	THREADLOOP thr[t].join();
 	cout << '!' << endl;
       #else
-	cout << et.et() << "Computing stats." << flush;
+	cout << et.et() << "Performing per-route data checks and computing stats." << flush;
 	for (HighwaySystem *h : HighwaySystem::syslist)
 	{	cout << "." << flush;
 		for (Route *r : h->route_list)

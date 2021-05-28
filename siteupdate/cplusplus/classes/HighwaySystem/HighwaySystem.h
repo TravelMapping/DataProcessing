@@ -34,7 +34,7 @@ class HighwaySystem
 	short tier;
 	char level; // 'a' for active, 'p' for preview, 'd' for devel
 
-	std::list<Route*> route_list;
+	std::vector<Route*> route_list;
 	std::list<ConnectedRoute*> con_route_list;
 	std::unordered_map<Region*, double> mileage_by_region;
 	std::unordered_set<HGVertex*> vertices;
@@ -52,6 +52,7 @@ class HighwaySystem
 	bool active_or_preview();	// Return whether this is an active or preview system
 	bool devel();			// Return whether this is a development system
 	double total_mileage();		// Return total system mileage across all regions
-	std::string level_name();	// return full "active" / "preview" / "devel" string"
+	std::string level_name();	// Return full "active" / "preview" / "devel" string"
+	size_t route_index(Route*);	// Return index of a specified Route* within route_list
 	void insert_vertex(HGVertex*);
 };

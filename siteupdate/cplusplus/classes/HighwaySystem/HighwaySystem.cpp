@@ -126,6 +126,13 @@ std::string HighwaySystem::level_name()
 	}
 }
 
+/* Return index of a specified Route within route_list */
+size_t HighwaySystem::route_index(Route* r)
+{	for (size_t i = 0; i < route_list.size(); i++)
+	  if (route_list[i] == r) return i;
+	return -1; // error, Route not found
+}
+
 void HighwaySystem::insert_vertex(HGVertex* v)
 {	lniu_mtx.lock();	// re-use an existing mutex...
 	vertices.insert(v);
