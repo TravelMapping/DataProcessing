@@ -59,7 +59,8 @@ void Route::compute_stats_r()
 	// datachecks
 	if (abbrev.empty())
 	     {	if ( banner.size() && !strncmp(banner.data(), city.data(), banner.size()) )
-		  Datacheck::add(this, "", "", "", "ABBREV_AS_BANNER",
+		  Datacheck::add(this, "", "", "", "ABBREV_AS_CHOP_BANNER",
+				 system->systemname + ".csv#L" +
 				 std::to_string(system->route_index(this)+2));
 	     }
 }

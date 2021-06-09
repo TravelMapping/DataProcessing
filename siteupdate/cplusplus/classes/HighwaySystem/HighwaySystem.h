@@ -35,7 +35,7 @@ class HighwaySystem
 	char level; // 'a' for active, 'p' for preview, 'd' for devel
 
 	std::vector<Route*> route_list;
-	std::list<ConnectedRoute*> con_route_list;
+	std::vector<ConnectedRoute*> con_route_list;
 	std::unordered_map<Region*, double> mileage_by_region;
 	std::unordered_set<HGVertex*> vertices;
 	std::unordered_set<std::string>listnamesinuse, unusedaltroutenames;
@@ -54,5 +54,7 @@ class HighwaySystem
 	double total_mileage();		// Return total system mileage across all regions
 	std::string level_name();	// Return full "active" / "preview" / "devel" string"
 	size_t route_index(Route*);	// Return index of a specified Route* within route_list
+	size_t con_route_index(ConnectedRoute*); // same thing for ConnectedRoutes
+	void route_integrity(ErrorList& el);
 	void insert_vertex(HGVertex*);
 };

@@ -20,9 +20,9 @@ CommonObjects = \
   classes/GraphGeneration/PlaceRadius.o \
   classes/HighwaySegment/HighwaySegment.o \
   classes/HighwaySystem/HighwaySystem.o \
+  classes/HighwaySystem/route_integrity.o \
   classes/Region/Region.o \
   classes/Route/Route.o \
-  classes/Route/label_and_connect.o \
   classes/Route/read_wpt.o \
   classes/TravelerList/TravelerList.o \
   classes/TravelerList/userlog.o \
