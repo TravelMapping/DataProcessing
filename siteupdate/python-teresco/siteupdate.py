@@ -1103,6 +1103,21 @@ class Route:
     def con_end(self):
         return self.point_list[0] if self.is_reversed else self.point_list[-1]
 
+    # datacheck
+    def con_mismatch(self):
+        if self.route != self.con_route.route:
+            datacheckerrors.append(DatacheckEntry(self, [], "CON_ROUTE_MISMATCH",
+                                   self.route+" <-> "+self.con_route.route))
+        if self.banner != self.con_route.banner:
+            if len(self.abbrev) and self.abbrev == self.con_route.banner:
+                datacheckerrors.append(DatacheckEntry(self, [], "ABBREV_AS_CON_BANNER",
+                                       self.system.systemname + "_con.csv#L" +
+                                       str(self.system.con_route_index(self.con_route)+2)))
+            else:
+                datacheckerrors.append(DatacheckEntry(self, [], "CON_BANNER_MISMATCH",
+                                       (self.banner if len(self.banner) else "(blank)") + " <-> " +
+                                       (self.con_route.banner if len(self.con_route.banner) else "(blank)")))
+
 class ConnectedRoute:
     """This class encapsulates a single 'connected route' as given
     by a single line of a _con.csv file
@@ -1160,7 +1175,7 @@ class ConnectedRoute:
                 el.add_error("Could not find Route matching ConnectedRoute root " + root +
                              " in system " + system.systemname + '.')
         if len(self.roots) < 1:
-            el.add_error("No roots in " + system.systemname + "_con.csv line: " + line)
+            el.add_error("No valid roots in " + system.systemname + "_con.csv line: " + line)
         # will be computed for routes in active & preview systems later
 
     def csv_line(self):
@@ -1262,6 +1277,13 @@ class HighwaySystem:
             if self.route_list[i] == r:
                 return i
         return None # error, Route not found
+
+    """Return index of a specified ConnectedRoute within con_route_list"""
+    def con_route_index(self, cr):
+        for i in range(len(self.con_route_list)):
+            if self.con_route_list[i] == cr:
+                return i
+        return None # error, ConnectedRoute not found
 
     """String representation"""
     def __str__(self):
@@ -1612,9 +1634,12 @@ class DatacheckEntry:
     code is the error code | info is additional
     string, one of:        | information, if used:
     -----------------------+--------------------------------------------
-    ABBREV_AS_BANNER       | chopped route CSV filename
+    ABBREV_AS_CHOP_BANNER  | offending line # in chopped route CSV
+    ABBREV_AS_CON_BANNER   | offending line # in connected route CSV
     BAD_ANGLE              |
     BUS_WITH_I             |
+    CON_BANNER_MISMATCH    | Banner field in chopped & connected CSVs
+    CON_ROUTE_MISMATCH     | Route field in chopped & connected CSVs
     DISCONNECTED_ROUTE     | adjacent root's expected connection point
     DUPLICATE_COORDS       | coordinate pair
     DUPLICATE_LABEL        |
@@ -2927,33 +2952,15 @@ if args.nmpmergepath != "" and not args.errorcheck:
         print(".", end="", flush=True)
     print()
 
-print(et.et() + "Processing waypoint labels and checking for unconnected chopped routes.",flush=True)
+print(et.et() + "Creating label hashes and checking route integrity.",flush=True)
 for h in highway_systems:
     for r in h.route_list:
         # check for unconnected chopped routes
         if r.con_route is None:
             el.add_error(r.system.systemname + ".csv: root " + r.root + " not matched by any connected route root.")
-            continue
-
-        # check for mismatched route endpoints within connected routes
-        q = r.con_route.roots[r.rootOrder-1]
-        if r.rootOrder > 0 and len(q.point_list) > 1 and len(r.point_list) > 1 and not r.con_beg().same_coords(q.con_end()):
-            if q.con_beg().same_coords(r.con_beg()):
-                q.is_reversed = True
-            elif q.con_end().same_coords(r.con_end()):
-                r.is_reversed = True
-            elif q.con_beg().same_coords(r.con_end()):
-                q.is_reversed = True
-                r.is_reversed = True
-            else:
-                datacheckerrors.append(DatacheckEntry(r, [r.con_beg().label],
-                                       "DISCONNECTED_ROUTE", q.root + '@' + q.con_end().label))
-                datacheckerrors.append(DatacheckEntry(q, [q.con_end().label],
-                                       "DISCONNECTED_ROUTE", r.root + '@' + r.con_beg().label))
 
         # create label hashes and check for duplicates
-        index = 0
-        for w in r.point_list:
+        for index, w in enumerate(r.point_list):
             # ignore case and leading '+' or '*'
             upper_label = w.label.lstrip('+*').upper()
             # if primary label not duplicated, add to r.pri_label_hash
@@ -2979,7 +2986,30 @@ for h in highway_systems:
                     r.duplicate_labels.add(w.alt_labels[a])
                 else:
                     r.alt_label_hash[w.alt_labels[a]] = index
-            index += 1
+
+    for cr in h.con_route_list:
+        if len(cr.roots) == 0:
+            continue # because there could be an invalid _con.csv entry
+        # check cr.roots[0] by itself outside of loop
+        cr.roots[0].con_mismatch()
+        for i in range(1,len(cr.roots)):
+            # check for mismatched route endpoints within connected routes
+            q = cr.roots[i-1]
+            r = cr.roots[i]
+            r.con_mismatch()
+            if r.rootOrder > 0 and len(q.point_list) > 1 and len(r.point_list) > 1 and not r.con_beg().same_coords(q.con_end()):
+                if q.con_beg().same_coords(r.con_beg()):
+                    q.is_reversed = True
+                elif q.con_end().same_coords(r.con_end()):
+                    r.is_reversed = True
+                elif q.con_beg().same_coords(r.con_end()):
+                    q.is_reversed = True
+                    r.is_reversed = True
+                else:
+                    datacheckerrors.append(DatacheckEntry(r, [r.con_beg().label],
+                                           "DISCONNECTED_ROUTE", q.root + '@' + q.con_end().label))
+                    datacheckerrors.append(DatacheckEntry(q, [q.con_end().label],
+                                           "DISCONNECTED_ROUTE", r.root + '@' + r.con_beg().label))
 
 # Read updates.csv file, just keep in the fields array for now since we're
 # just going to drop this into the DB later anyway
@@ -3332,8 +3362,8 @@ for h in highway_systems:
         # datachecks
         if r.abbrev == "":
             if len(r.banner) and r.city.startswith(r.banner):
-                datacheckerrors.append(DatacheckEntry(r, [], "ABBREV_AS_BANNER",
-                                       str(r.system.route_index(r)+2)))
+                datacheckerrors.append(DatacheckEntry(r, [], "ABBREV_AS_CHOP_BANNER",
+                                       h.systemname + ".csv#L" + str(r.system.route_index(r)+2)))
 print("!", flush=True)
 
 print(et.et() + "Writing highway data stats log file (highwaydatastats.log).",flush=True)
@@ -3625,8 +3655,11 @@ file.close()
 lines.pop(0)  # ignore header line
 datacheckfps = []
 datacheck_always_error = [ \
-    'ABBREV_AS_BANNER',
+    'ABBREV_AS_CHOP_BANNER',
+    'ABBREV_AS_CON_BANNER',
     'BAD_ANGLE',
+    'CON_BANNER_MISMATCH',
+    'CON_ROUTE_MISMATCH',
     'DISCONNECTED_ROUTE',
     'DUPLICATE_LABEL',
     'HIDDEN_TERMINUS',

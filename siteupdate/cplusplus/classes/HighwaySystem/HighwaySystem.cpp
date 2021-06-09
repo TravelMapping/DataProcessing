@@ -133,6 +133,13 @@ size_t HighwaySystem::route_index(Route* r)
 	return -1; // error, Route not found
 }
 
+/* Return index of a specified ConnectedRoute within con_route_list */
+size_t HighwaySystem::con_route_index(ConnectedRoute* cr)
+{	for (size_t i = 0; i < con_route_list.size(); i++)
+	  if (con_route_list[i] == cr) return i;
+	return -1; // error, ConnectedRoute not found
+}
+
 void HighwaySystem::insert_vertex(HGVertex* v)
 {	lniu_mtx.lock();	// re-use an existing mutex...
 	vertices.insert(v);

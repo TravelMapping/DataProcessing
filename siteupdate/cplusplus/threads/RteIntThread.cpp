@@ -1,4 +1,4 @@
-void LabelConThread(unsigned int id, std::mutex* hs_mtx,  ErrorList* el)
+void RteIntThread(unsigned int id, std::mutex* hs_mtx,  ErrorList* el)
 {	//printf("Starting LabelConThread %02i\n", id); fflush(stdout);
 	while (HighwaySystem::it != HighwaySystem::syslist.end())
 	{	hs_mtx->lock();
@@ -11,6 +11,6 @@ void LabelConThread(unsigned int id, std::mutex* hs_mtx,  ErrorList* el)
 		HighwaySystem::it++;
 		//printf("LabelConThread %02i HighwaySystem::it++\n", id); fflush(stdout);
 		hs_mtx->unlock();
-		for (Route* r : h->route_list) r->label_and_connect(*el);
+		h->route_integrity(*el);
 	}
 }

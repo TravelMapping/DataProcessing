@@ -133,8 +133,11 @@ bool operator < (const Datacheck &a, const Datacheck &b)
 std::list<std::string*> Datacheck::fps;
 
 std::unordered_set<std::string> Datacheck::always_error
-{	"ABBREV_AS_BANNER",
+{	"ABBREV_AS_CHOP_BANNER",
+	"ABBREV_AS_CON_BANNER",
 	"BAD_ANGLE",
+	"CON_BANNER_MISMATCH",
+	"CON_ROUTE_MISMATCH",
 	"DISCONNECTED_ROUTE",
 	"DUPLICATE_LABEL",
 	"HIDDEN_TERMINUS",

@@ -61,7 +61,7 @@ ConnectedRoute::ConnectedRoute(std::string &line, HighwaySystem *sys, ErrorList 
 					" in system " + system->systemname + '.');
 		    }
 	}
-	if (roots.size() < 1) el.add_error("No roots in " + system->systemname + "_con.csv line: " + line);
+	if (roots.size() < 1) el.add_error("No valid roots in " + system->systemname + "_con.csv line: " + line);
 }
 
 std::string ConnectedRoute::connected_rtes_line()

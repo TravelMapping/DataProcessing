@@ -315,15 +315,14 @@ int main(int argc, char *argv[])
 
 	#include "tasks/concurrency_detection.cpp"
 
-	cout << et.et() << "Processing waypoint labels and checking for unconnected chopped routes." << endl;
+	cout << et.et() << "Creating label hashes and checking route integrity." << endl;
       #ifdef threading_enabled
 	HighwaySystem::it = HighwaySystem::syslist.begin();
-	THREADLOOP thr[t] = thread(LabelConThread, t, &list_mtx, &el);
+	THREADLOOP thr[t] = thread(RteIntThread, t, &list_mtx, &el);
 	THREADLOOP thr[t].join();
       #else
 	for (HighwaySystem *h : HighwaySystem::syslist)
-	  for (Route* r : h->route_list)
-	    r->label_and_connect(el);
+	  h->route_integrity(el);
       #endif
 
 	#include "tasks/read_updates.cpp"

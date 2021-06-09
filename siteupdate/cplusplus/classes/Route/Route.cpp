@@ -1,5 +1,6 @@
 #include "Route.h"
 #include "../Args/Args.h"
+#include "../ConnectedRoute/ConnectedRoute.h"
 #include "../Datacheck/Datacheck.h"
 #include "../DBFieldLength/DBFieldLength.h"
 #include "../ErrorList/ErrorList.h"
@@ -246,6 +247,20 @@ Waypoint* Route::con_beg()
 
 Waypoint* Route::con_end()
 {	return is_reversed ? point_list.front() : point_list.back();
+}
+
+// datacheck
+void Route::con_mismatch()
+{	if (route != con_route->route)
+		Datacheck::add(this, "", "", "", "CON_ROUTE_MISMATCH",
+			       route+" <-> "+con_route->route);
+	if (banner != con_route->banner)
+	  if (abbrev.size() && abbrev == con_route->banner)
+		Datacheck::add(this, "", "", "", "ABBREV_AS_CON_BANNER", system->systemname + "_con.csv#L" +
+			       std::to_string(system->con_route_index(con_route)+2));
+	  else	Datacheck::add(this, "", "", "", "CON_BANNER_MISMATCH",
+			       (banner.size() ? banner : "(blank)") + " <-> " +
+			       (con_route->banner.size() ? con_route->banner : "(blank)"));
 }
 
 // sort routes by most recent update for use at end of user logs
