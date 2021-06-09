@@ -32,21 +32,6 @@ HGVertex::HGVertex(Waypoint *wpt, const std::string *n, unsigned int numthreads)
 		w->route->region->insert_vertex(this);
 		w->route->system->insert_vertex(this);
 	}
-	// VISIBLE_HIDDEN_COLOC datacheck
-	std::list<Waypoint*>::iterator p = wpt->colocated->begin();
-	for (p++; p != wpt->colocated->end(); p++)
-	  if ((*p)->is_hidden != wpt->colocated->front()->is_hidden)
-	  {	// determine which route, label, and info to use for this entry asciibetically
-		std::list<Waypoint*> vis_list;
-		std::list<Waypoint*> hid_list;
-		for (Waypoint *w : *(wpt->colocated))
-		  if (w->is_hidden)
-			hid_list.push_back(w);
-		  else	vis_list.push_back(w);
-		Datacheck::add(vis_list.front()->route, vis_list.front()->label, "", "", "VISIBLE_HIDDEN_COLOC",
-			       hid_list.front()->route->root+"@"+hid_list.front()->label);
-		break;
-	  }
 }
 
 HGVertex::~HGVertex()

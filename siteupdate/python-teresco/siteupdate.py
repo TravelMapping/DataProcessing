@@ -233,11 +233,22 @@ class WaypointQuadtree:
             self.sw_child.graph_points(hi_priority_points, lo_priority_points)
         else:
             for w in self.points:
+                if  w.colocated is not None:
+                    # skip if not at front of list
+                    if w != w.colocated[0]:
+                        continue
+                    # VISIBLE_HIDDEN_COLOC datacheck
+                    for p in w.colocated[1:]:
+                        if p.is_hidden != w.colocated[0].is_hidden:
+                            if p.is_hidden:
+                                datacheckerrors.append(DatacheckEntry(w.route,[w.label],"VISIBLE_HIDDEN_COLOC",
+                                                                      p.route.root+"@"+p.label))
+                            else:
+                                datacheckerrors.append(DatacheckEntry(p.route,[p.label],"VISIBLE_HIDDEN_COLOC",
+                                                                      w.route.root+"@"+w.label))
+                            break;
                 # skip if this point is occupied by only waypoints in devel systems
                 if not w.is_or_colocated_with_active_or_preview():
-                    continue
-                # skip if colocated and not at front of list
-                if  w.colocated is not None and w != w.colocated[0]:
                     continue
                 # store a colocated list with any devel system entries removed
                 if w.colocated is None:
@@ -1745,20 +1756,6 @@ class HGVertex:
             else:
                 rg_vset_hash[w.route.region].add(self)
             w.route.system.vertices.add(self)
-        # VISIBLE_HIDDEN_COLOC datacheck
-        for p in range(1, len(wpt.colocated)):
-            if wpt.colocated[p].is_hidden != wpt.colocated[0].is_hidden:
-                # determine which route, label, and info to use for this entry asciibetically
-                vis_list = []
-                hid_list = []
-                for w in wpt.colocated:
-                    if w.is_hidden:
-                        hid_list.append(w)
-                    else:
-                        vis_list.append(w)
-                datacheckerrors.append(DatacheckEntry(vis_list[0].route,[vis_list[0].label],"VISIBLE_HIDDEN_COLOC",
-                                                      hid_list[0].route.root+"@"+hid_list[0].label))
-                break;
 
     # printable string
     def __str__(self):
