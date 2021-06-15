@@ -641,11 +641,12 @@ class Waypoint:
         #	not shorter, so maybe who cares about this one?
         # TODO: HutRivPkwy@1&I-95@6B&I-278@I-95&I-295@I-95&I-678@19
         # TODO: I-39@171C(90)&I-90@171C&US14@I-39/90
+        #	I-90@134&I-93@16&MA3@16(93)&US1@I-93(16)
+        #	I-93@12&MA3@12(93)&MA3APly@MA3_N&MA203@I-93&US1@I-93(12)
         #	I-95@182&I-395@1&ME15@I-95/395
         # TODO: I-610@TX288&I-610@38&TX288@I-610
         #	this is the overlap point of a loop
         # TODO: I-581@4&US220@I-581(4)&US460@I-581&US11AltRoa@I-581&US220AltRoa@US220_S&VA116@I-581(4)
-        #	I-93@12&MA3@12(93)&MA3APly@MA3_N&MA203@I-93&US1@I-93(12)
 
         # try each as a possible route@exit type situation and look
         # for matches
