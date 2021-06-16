@@ -54,7 +54,9 @@ for (Waypoint* match : ap_coloc)
 		if (match->label[0] >= '0' && match->label[0] <= '9')
 			newname +=  '(' + match->label + ')';
 		for (unsigned int add_index = 0; add_index < ap_coloc.size(); add_index++)
-		{	if (match == ap_coloc[add_index]) continue;
+		{	if (match == ap_coloc[add_index]
+			 || (add_index && ap_coloc[add_index]->route == ap_coloc[add_index-1]->route)
+			   ) continue;
 			newname += '/' + ap_coloc[add_index]->route->list_entry_name();
 		}
 		g->namelog("Exit/Intersection: " + name + " -> " + newname);

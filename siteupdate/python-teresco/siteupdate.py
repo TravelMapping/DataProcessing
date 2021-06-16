@@ -596,7 +596,8 @@ class Waypoint:
                 if (match.label[0].isnumeric()):
                     label += "(" + match.label + ")"
                 for add_index in range(0,len(self.ap_coloc)):
-                    if match == self.ap_coloc[add_index]:
+                    if match == self.ap_coloc[add_index] \
+                    or (add_index and self.ap_coloc[add_index].route == self.ap_coloc[add_index-1].route):
                         continue
                     label += '/' + self.ap_coloc[add_index].route.list_entry_name()
                 log.append("Exit/Intersection: " + name + " -> " + label)
