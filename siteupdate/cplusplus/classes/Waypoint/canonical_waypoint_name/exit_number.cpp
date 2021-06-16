@@ -34,7 +34,7 @@ for (Waypoint* exit : ap_coloc)
 	{	if (exit == match) continue;
 		// check for any of the patterns that make sense as a match:
 
-		// if label_no_abbrev() matches, check for...
+		// if name_no_abbrev() matches, check for...
 		if ( !strncmp(match->label.data(),
 			      no_abbrev.data(),
 			      no_abbrev.size())
