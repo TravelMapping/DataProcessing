@@ -707,13 +707,10 @@ class Waypoint:
                     all_match = False
                     break
             if all_match:
-                label = ""
+                label = exit.route.list_entry_name() + '(' + exit.label + ')'
                 for pos in range(len(self.ap_coloc)):
-                    label += self.ap_coloc[pos].route.list_entry_name()
-                    if self.ap_coloc[pos] == exit:
-                        label += "(" + self.ap_coloc[pos].label + ")"
-                    if pos < len(self.ap_coloc) - 1:
-                        label += "/"
+                    if self.ap_coloc[pos] != exit:
+                        label += "/" + self.ap_coloc[pos].route.list_entry_name()
                 log.append("Exit_number: " + name + " -> " + label)
                 return label
 
