@@ -18,6 +18,7 @@ class Args
 	/* e */ static bool errorcheck;
 	/* T */ static int timeprecision;
 	/* v */ static bool mtvertices;
+	/* C */ static bool stcsvfiles;
 		static const char* exec;
 
 	static bool init(int argc, char *argv[]);

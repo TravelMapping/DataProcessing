@@ -609,7 +609,7 @@ int main(int argc, char *argv[])
 	cout << et.et() << "Writing stats csv files." << endl;
       #ifdef threading_enabled
 	HighwaySystem::it = HighwaySystem::syslist.begin();
-	switch(Args::numthreads)
+	switch(Args::stcsvfiles ? 1 : Args::numthreads)
 	{   case 1:
       #endif
 		cout << et.et() << "Writing allbyregionactiveonly.csv." << endl;

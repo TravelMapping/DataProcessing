@@ -6,6 +6,7 @@
 /* e */ bool Args::errorcheck = 0;
 /* k */ bool Args::skipgraphs = 0;
 /* v */ bool Args::mtvertices = 0;
+/* C */ bool Args::stcsvfiles = 0;
 /* w */ std::string Args::highwaydatapath = "../../../HighwayData";
 /* s */ std::string Args::systemsfile = "systems.csv";
 /* u */ std::string Args::userlistfilepath = "../../../UserData/list_files";
@@ -29,6 +30,7 @@ bool Args::init(int argc, char *argv[])
 	{	     if ARG(0, "-e", "--errorcheck")		 errorcheck = 1;
 		else if ARG(0, "-k", "--skipgraphs")		 skipgraphs = 1;
 		else if ARG(0, "-v", "--mt-vertices")		 mtvertices = 1;
+		else if ARG(0, "-C", "--st-csvs")		 stcsvfiles = 1;
 		else if ARG(0, "-h", "--help")			{show_help(); return 1;}
 		else if ARG(1, "-w", "--highwaydatapath")	{highwaydatapath  = argv[n+1]; n++;}
 		else if ARG(1, "-s", "--systemsfile")		{systemsfile      = argv[n+1]; n++;}
@@ -112,4 +114,5 @@ void Args::show_help()
 	std::cout  <<  "		        Number of digits (1-9) after decimal point in\n";
 	std::cout  <<  "		        timestamp readouts\n";
 	std::cout  <<  "  -v, --mt-vertices     Use multi-threaded vertex construction\n";
+	std::cout  <<  "  -C, --st-csvs         Disable multi-threaded stats csv files for systems with low memory bandwidth.\n";
 }
