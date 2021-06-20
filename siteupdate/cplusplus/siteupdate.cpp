@@ -43,6 +43,8 @@ This module defines classes to represent the contents of a
 #ifdef threading_enabled
 #include "threads/threads.h"
 #endif
+void allbyregionactiveonly(std::mutex*);
+void allbyregionactivepreview(std::mutex*);
 using namespace std;
 
 int main(int argc, char *argv[])
@@ -605,121 +607,34 @@ int main(int argc, char *argv[])
 
 	// write stats csv files
 	cout << et.et() << "Writing stats csv files." << endl;
-	double total_mi;
-
-	// first, overall per traveler by region, both active only and active+preview
-	ofstream allfile(Args::csvstatfilepath + "/allbyregionactiveonly.csv");
-	allfile << "Traveler,Total";
-	std::list<Region*> regions;
-	total_mi = 0;
-	for (Region* r : Region::allregions)
-	  if (r->active_only_mileage)
-	  {	regions.push_back(r);
-		total_mi += r->active_only_mileage;
-	  }
-	regions.sort(sort_regions_by_code);
-	for (Region *region : regions)
-		allfile << ',' << region->code;
-	allfile << '\n';
-	for (TravelerList *t : TravelerList::allusers)
-	{	double t_total_mi = 0;
-		for (std::pair<Region* const, double>& rm : t->active_only_mileage_by_region)
-			t_total_mi += rm.second;
-		sprintf(fstr, "%.2f", t_total_mi);
-		allfile << t->traveler_name << ',' << fstr;
-		for (Region *region : regions)
-		  try {	sprintf(fstr, "%.2f", t->active_only_mileage_by_region.at(region));
-			allfile << ',' << fstr;
-		      }
-		  catch (const std::out_of_range& oor)
-		      {	allfile << ",0";
-		      }
-		allfile << '\n';
+      #ifdef threading_enabled
+	HighwaySystem::it = HighwaySystem::syslist.begin();
+	switch(Args::numthreads)
+	{   case 1:
+      #endif
+		cout << et.et() << "Writing allbyregionactiveonly.csv." << endl;
+		allbyregionactiveonly(0);
+		cout << et.et() << "Writing allbyregionactivepreview.csv." << endl;
+		allbyregionactivepreview(0);
+		cout << et.et() << "Writing per-system stats csv files." << endl;
+		for (HighwaySystem* h : HighwaySystem::syslist) h->stats_csv();
+      #ifdef threading_enabled
+		break;
+	   case 2:
+		thr[0] = thread(allbyregionactiveonly, &list_mtx);
+		thr[1] = thread(allbyregionactivepreview, &list_mtx);
+		thr[0].join();
+		thr[1].join();
+		break;
+	   default:
+		thr[0] = thread(allbyregionactiveonly, (std::mutex*)0);
+		thr[1] = thread(allbyregionactivepreview, (std::mutex*)0);
+		thr[2] = thread(StatsCsvThread, 2, &list_mtx);
+		thr[0].join();
+		thr[1].join();
+		thr[2].join();
 	}
-	sprintf(fstr, "TOTAL,%.2f", total_mi);
-	allfile << fstr;
-	for (Region *region : regions)
-	{	sprintf(fstr, ",%.2f", region->active_only_mileage);
-		allfile << fstr;
-	}
-	allfile << '\n';
-	allfile.close();
-
-	// active+preview
-	allfile.open(Args::csvstatfilepath + "/allbyregionactivepreview.csv");
-	allfile << "Traveler,Total";
-	regions.clear();
-	total_mi = 0;
-	for (Region* r : Region::allregions)
-	  if (r->active_preview_mileage)
-	  {	regions.push_back(r);
-		total_mi += r->active_preview_mileage;
-	  }
-	regions.sort(sort_regions_by_code);
-	for (Region *region : regions)
-		allfile << ',' << region->code;
-	allfile << '\n';
-	for (TravelerList *t : TravelerList::allusers)
-	{	double t_total_mi = 0;
-		for (std::pair<Region* const, double>& rm : t->active_preview_mileage_by_region)
-			t_total_mi += rm.second;
-		sprintf(fstr, "%.2f", t_total_mi);
-		allfile << t->traveler_name << ',' << fstr;
-		for (Region *region : regions)
-		  try {	sprintf(fstr, "%.2f", t->active_preview_mileage_by_region.at(region));
-			allfile << ',' << fstr;
-		      }
-		  catch (const std::out_of_range& oor)
-		      {	allfile << ",0";
-		      }
-		allfile << '\n';
-	}
-	sprintf(fstr, "TOTAL,%.2f", total_mi);
-	allfile << fstr;
-	for (Region *region : regions)
-	{	sprintf(fstr, ",%.2f", region->active_preview_mileage);
-		allfile << fstr;
-	}
-	allfile << '\n';
-	allfile.close();
-
-	// now, a file for each system, again per traveler by region
-	for (HighwaySystem *h : HighwaySystem::syslist)
-	{	ofstream sysfile(Args::csvstatfilepath + "/" + h->systemname + "-all.csv");
-		sysfile << "Traveler,Total";
-		regions.clear();
-		total_mi = 0;
-		for (std::pair<Region* const, double>& rm : h->mileage_by_region)
-		{	regions.push_back(rm.first);
-			total_mi += rm.second;
-		}
-		regions.sort(sort_regions_by_code);
-		for (Region *region : regions)
-			sysfile << ',' << region->code;
-		sysfile << '\n';
-		for (TravelerList *t : TravelerList::allusers)
-		  // only include entries for travelers who have any mileage in system
-		  if (t->system_region_mileages.find(h) != t->system_region_mileages.end())
-		  {	sprintf(fstr, ",%.2f", t->system_region_miles(h));
-			sysfile << t->traveler_name << fstr;
-			for (Region *region : regions)
-			  try {	sprintf(fstr, ",%.2f", t->system_region_mileages.at(h).at(region));
-				sysfile << fstr;
-			      }
-			  catch (const std::out_of_range& oor)
-			      {	sysfile << ",0";
-			      }
-			sysfile << '\n';
-		  }
-		sprintf(fstr, "TOTAL,%.2f", h->total_mileage());
-		sysfile << fstr;
-		for (Region *region : regions)
-		{	sprintf(fstr, ",%.2f", h->mileage_by_region.at(region));
-			sysfile << fstr;
-		}
-		sysfile << '\n';
-		sysfile.close();
-	}
+      #endif
 
 	cout << et.et() << "Reading datacheckfps.csv." << endl;
 	Datacheck::read_fps(Args::highwaydatapath, el);

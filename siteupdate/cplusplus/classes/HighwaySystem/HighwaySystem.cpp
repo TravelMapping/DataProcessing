@@ -5,6 +5,7 @@
 #include "../ErrorList/ErrorList.h"
 #include "../Region/Region.h"
 #include "../Route/Route.h"
+#include "../TravelerList/TravelerList.h"
 #include "../../functions/split.h"
 #include <cstring>
 #include <fstream>
@@ -144,4 +145,42 @@ void HighwaySystem::insert_vertex(HGVertex* v)
 {	lniu_mtx.lock();	// re-use an existing mutex...
 	vertices.insert(v);
 	lniu_mtx.unlock();	// ...rather than make a new one
+}
+
+void HighwaySystem::stats_csv()
+{	std::ofstream sysfile(Args::csvstatfilepath + "/" + systemname + "-all.csv");
+	sysfile << "Traveler,Total";
+	std::list<Region*> regions;
+	double total_mi = 0;
+	char fstr[112];
+	for (std::pair<Region* const, double>& rm : mileage_by_region)
+	{	regions.push_back(rm.first);
+		total_mi += rm.second;
+	}
+	regions.sort(sort_regions_by_code);
+	for (Region *region : regions)
+		sysfile << ',' << region->code;
+	sysfile << '\n';
+	for (TravelerList *t : TravelerList::allusers)
+	  // only include entries for travelers who have any mileage in system
+	  if (t->system_region_mileages.find(this) != t->system_region_mileages.end())
+	  {	sprintf(fstr, ",%.2f", t->system_region_miles(this));
+		sysfile << t->traveler_name << fstr;
+		for (Region *region : regions)
+		  try {	sprintf(fstr, ",%.2f", t->system_region_mileages.at(this).at(region));
+			sysfile << fstr;
+		      }
+		  catch (const std::out_of_range& oor)
+		      {	sysfile << ",0";
+		      }
+		sysfile << '\n';
+	  }
+	sprintf(fstr, "TOTAL,%.2f", total_mileage());
+	sysfile << fstr;
+	for (Region *region : regions)
+	{	sprintf(fstr, ",%.2f", mileage_by_region.at(region));
+		sysfile << fstr;
+	}
+	sysfile << '\n';
+	sysfile.close();
 }
