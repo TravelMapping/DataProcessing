@@ -12,25 +12,51 @@
 // becomes
 // US20/NY30A/NY162
 
-for (unsigned int match_index = 0; match_index < ap_coloc.size(); match_index++)
-{	std::string lookfor1 = ap_coloc[match_index]->route->list_entry_name();
-	std::string lookfor2 = ap_coloc[match_index]->route->list_entry_name() + '(' + ap_coloc[match_index]->label + ')';
+for (Waypoint* match : ap_coloc)
+{	std::string no_abbrev = match->route->name_no_abbrev();
+	size_t list_name_size = no_abbrev.size()+match->route->abbrev.size();
 	bool all_match = 1;
-	for (unsigned int check_index = 0; check_index < ap_coloc.size(); check_index++)
-	{	if (match_index == check_index) continue;
-		if ((ap_coloc[check_index]->label != lookfor1)
-		&&  (ap_coloc[check_index]->label != lookfor2))
-		{	all_match = 0;
-			break;
-		}
+	for (Waypoint* check : ap_coloc)
+	{	if (check == match) continue;
+
+		// if name_no_abbrev() matches, check for...
+		if ( !strncmp(check->label.data(),
+			      no_abbrev.data(),
+			      no_abbrev.size())
+		   ) {	if (	check->label[no_abbrev.size()] == 0	// no_abbrev match
+			   )	continue;
+			if (	check->label[no_abbrev.size()] == '('
+			     && !strncmp(check->label.data()+no_abbrev.size()+1,
+					 match->label.data(),
+					 match->label.size())
+			     && check->label[no_abbrev.size()+match->label.size()+1] == ')'
+			   )	continue;				// match with exit number in parens
+
+			// if abbrev matches, check for...
+			if ( !strncmp(check->label.data()+no_abbrev.size(),
+				      match->route->abbrev.data(),
+				      match->route->abbrev.size())
+			   ) {	if (	check->label[list_name_size] == 0	// full match with abbrev field
+				   )	continue;
+				if (	check->label[list_name_size] == '('
+				     && !strncmp(check->label.data()+list_name_size+1,
+						 match->label.data(),
+						 match->label.size())
+				     && check->label[list_name_size+match->label.size()+1] == ')'
+				   )	continue;				// match with exit number in parens
+			     }
+		     }
+		all_match = 0;
+		break;
 	}
 	if (all_match)
-	{	std::string newname;
-		if (ap_coloc[match_index]->label[0] >= '0' && ap_coloc[match_index]->label[0] <= '9')
-			newname = lookfor2;
-		else	newname = lookfor1;
+	{	std::string newname(match->route->list_entry_name());
+		if (match->label[0] >= '0' && match->label[0] <= '9')
+			newname +=  '(' + match->label + ')';
 		for (unsigned int add_index = 0; add_index < ap_coloc.size(); add_index++)
-		{	if (match_index == add_index) continue;
+		{	if (match == ap_coloc[add_index]
+			 || (add_index && ap_coloc[add_index]->route == ap_coloc[add_index-1]->route)
+			   ) continue;
 			newname += '/' + ap_coloc[add_index]->route->list_entry_name();
 		}
 		g->namelog("Exit/Intersection: " + name + " -> " + newname);

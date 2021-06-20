@@ -566,25 +566,38 @@ class Waypoint:
         # becomes
         # US20/NY30A/NY162
 
-        for match_index in range(0,len(self.ap_coloc)):
-            lookfor1 = self.ap_coloc[match_index].route.list_entry_name()
-            lookfor2 = self.ap_coloc[match_index].route.list_entry_name() + \
-               '(' + self.ap_coloc[match_index].label + ')'
+        for match in self.ap_coloc:
+            no_abbrev = match.route.name_no_abbrev()
+            list_name_size = len(no_abbrev)+len(match.route.abbrev);
             all_match = True
-            for check_index in range(0,len(self.ap_coloc)):
-                if match_index == check_index:
+            for check in self.ap_coloc:
+                if match == check:
                     continue
-                if (self.ap_coloc[check_index].label != lookfor1) and \
-                   (self.ap_coloc[check_index].label != lookfor2):
-                    all_match = False
-                    break
+
+                # if name_no_abbrev() matches, check for...
+                if check.label == no_abbrev:
+                    continue		# full match without abbrev field
+                if check.label.startswith(no_abbrev):
+                    the_rest = check.label[len(no_abbrev):]
+                    if the_rest.startswith("(" + match.label + ")"):
+                        continue	# match with exit number in parens
+
+                    # if abbrev matches, check for...
+                    if the_rest == match.route.abbrev:
+                        continue	# full match with abbrev field
+                    if the_rest.startswith(match.route.abbrev):
+                        the_rest = the_rest[len(match.route.abbrev):]
+                        if the_rest.startswith("(" + match.label + ")"):
+                            continue	# match with exit number in parens
+                all_match = False
+                break
             if all_match:
-                if (self.ap_coloc[match_index].label[0:1].isnumeric()):
-                    label = lookfor2
-                else:
-                    label = lookfor1
+                label = match.route.list_entry_name()
+                if (match.label[0].isnumeric()):
+                    label += "(" + match.label + ")"
                 for add_index in range(0,len(self.ap_coloc)):
-                    if match_index == add_index:
+                    if match == self.ap_coloc[add_index] \
+                    or (add_index and self.ap_coloc[add_index].route == self.ap_coloc[add_index-1].route):
                         continue
                     label += '/' + self.ap_coloc[add_index].route.list_entry_name()
                 log.append("Exit/Intersection: " + name + " -> " + label)
@@ -668,7 +681,7 @@ class Waypoint:
                     continue
                 # check for any of the patterns that make sense as a match:
 
-                # if label_no_abbrev() matches, check for...
+                # if name_no_abbrev() matches, check for...
                 if match.label == no_abbrev:
                     continue		# full match without abbrev field
                 if match.label.startswith(no_abbrev):
@@ -694,13 +707,10 @@ class Waypoint:
                     all_match = False
                     break
             if all_match:
-                label = ""
+                label = exit.route.list_entry_name() + '(' + exit.label + ')'
                 for pos in range(len(self.ap_coloc)):
-                    label += self.ap_coloc[pos].route.list_entry_name()
-                    if self.ap_coloc[pos] == exit:
-                        label += "(" + self.ap_coloc[pos].label + ")"
-                    if pos < len(self.ap_coloc) - 1:
-                        label += "/"
+                    if self.ap_coloc[pos] != exit:
+                        label += "/" + self.ap_coloc[pos].route.list_entry_name()
                 log.append("Exit_number: " + name + " -> " + label)
                 return label
 

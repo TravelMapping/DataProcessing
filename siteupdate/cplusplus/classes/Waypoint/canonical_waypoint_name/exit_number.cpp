@@ -34,7 +34,7 @@ for (Waypoint* exit : ap_coloc)
 	{	if (exit == match) continue;
 		// check for any of the patterns that make sense as a match:
 
-		// if label_no_abbrev() matches, check for...
+		// if name_no_abbrev() matches, check for...
 		if ( !strncmp(match->label.data(),
 			      no_abbrev.data(),
 			      no_abbrev.size())
@@ -74,14 +74,11 @@ for (Waypoint* exit : ap_coloc)
 		}
 	}
 	if (all_match)
-	{	std::string newname;
+	{	std::string newname(exit->route->list_entry_name() + '(' + exit->label + ')');
 		for (unsigned int pos = 0; pos < ap_coloc.size(); pos++)
-		{	if (ap_coloc[pos] == exit)
-				newname += ap_coloc[pos]->route->list_entry_name() + '(' + ap_coloc[pos]->label + ')';
-			else	newname += ap_coloc[pos]->route->list_entry_name();
-			newname += '/';
+		{	if (ap_coloc[pos] != exit)
+				newname += '/' + ap_coloc[pos]->route->list_entry_name();
 		}
-		newname.pop_back();
 		g->namelog("Exit_number: " + name + " -> " + newname);
 		return newname;
 	}
