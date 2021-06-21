@@ -15,5 +15,6 @@ void NmpSearchThread (unsigned int, std::mutex*, WaypointQuadtree*);
 void ReadListThread  (unsigned int, std::mutex*, ErrorList*);
 void ReadWptThread   (unsigned int, std::mutex*, ErrorList*, WaypointQuadtree*);
 void RteIntThread    (unsigned int, std::mutex*, ErrorList*);
+void StatsCsvThread  (unsigned int, std::mutex*);
 void SubgraphThread  (unsigned int, std::mutex*, std::mutex*, HighwayGraph*, WaypointQuadtree*, ElapsedTime*);
 void UserLogThread   (unsigned int, std::mutex*, ClinchedDBValues*, const double, const double);

@@ -18,5 +18,6 @@
 #include "ReadListThread.cpp"
 #include "ReadWptThread.cpp"
 #include "RteIntThread.cpp"
+#include "StatsCsvThread.cpp"
 #include "SubgraphThread.cpp"
 #include "UserLogThread.cpp"
