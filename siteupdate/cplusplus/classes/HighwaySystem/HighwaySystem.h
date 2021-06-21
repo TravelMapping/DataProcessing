@@ -57,4 +57,5 @@ class HighwaySystem
 	size_t con_route_index(ConnectedRoute*); // same thing for ConnectedRoutes
 	void route_integrity(ErrorList& el);
 	void insert_vertex(HGVertex*);
+	void stats_csv();
 };

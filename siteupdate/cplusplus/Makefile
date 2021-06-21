@@ -1,10 +1,14 @@
 MTObjects = siteupdateMT.o functions/sql_fileMT.o threads/threads.o \
   classes/GraphGeneration/HighwayGraphMT.o \
-  classes/WaypointQuadtree/WaypointQuadtreeMT.o
+  classes/WaypointQuadtree/WaypointQuadtreeMT.o \
+  functions/allbyregionactiveonlyMT.o \
+  functions/allbyregionactivepreviewMT.o
 
 STObjects = siteupdateST.o functions/sql_fileST.o \
   classes/GraphGeneration/HighwayGraphST.o \
-  classes/WaypointQuadtree/WaypointQuadtreeST.o
+  classes/WaypointQuadtree/WaypointQuadtreeST.o \
+  functions/allbyregionactiveonlyST.o \
+  functions/allbyregionactivepreviewST.o
 
 CommonObjects = \
   classes/Args/Args.o \
