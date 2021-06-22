@@ -7,21 +7,21 @@ class Region;
 
 class GraphListEntry
 {	/* This class encapsulates information about generated graphs for
-	inclusion in the DB table.  Field names here match column names
-	in the "graphs" DB table. */
+	inclusion in the DB table.  Field names here
+	(or function names if both are on the same line)
+	match column names in the "graphs" DB table. */
 	public:
-	std::string filename();
+	std::string root;	std::string filename();
 	std::string descr;
+	std::list<Region*> *regions;		// C++ only, not in DB or Python
+	std::list<HighwaySystem*> *systems;	// C++ only, not in DB or Python
+	PlaceRadius *placeradius;		// C++ only, not in DB or Python
 	unsigned int vertices;
 	unsigned int edges;
 	unsigned int travelers;
-	char form;	std::string format();
-	char cat;	std::string category();
-	// additional data for the C++ version, for multithreaded subgraph writing
-	std::string root;
-	std::list<Region*> *regions;
-	std::list<HighwaySystem*> *systems;
-	PlaceRadius *placeradius;
+	char form;		std::string format();
+	char cat;		std::string category();
+
 	static std::vector<GraphListEntry> entries;
 	static size_t num; // iterator for entries
 	std::string tag();
