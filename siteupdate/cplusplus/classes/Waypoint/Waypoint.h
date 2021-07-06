@@ -13,12 +13,9 @@ class Waypoint
 {   /* This class encapsulates the information about a single waypoint
     from a .wpt file.
 
-    The line consists of one or more labels, at most one of which can
-    be a "regular" label.  Others are "hidden" labels and must begin with
-    a '+'.  Then an OSM URL which encodes the latitude and longitude.
-
-    root is the unique identifier for the route in which this waypoint
-    is defined
+    The line consists of one or more labels, the first of which is
+    a "regular" label; all others are "hidden" labels.
+    Then an OSM URL which encodes the latitude and longitude.
     */
 
 	public:

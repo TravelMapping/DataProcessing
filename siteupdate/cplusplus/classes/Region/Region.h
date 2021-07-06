@@ -23,7 +23,7 @@ class Region
 
     code: the region code, as used in .list files, or HB or stats
     queries, etc.
-    E.G. AB, ABW, ACT, etc.
+    E.G. AB, ABW, AUS-ACT, etc.
 
     name: the full name of the region
     E.G. Alberta, Aruba, Australian Capital Territory, etc.
