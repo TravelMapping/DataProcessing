@@ -12,11 +12,11 @@
 #include <cstring>
 
 TravelerList::TravelerList(std::string travname, std::string* updarr[], ErrorList* el)
-{	active_systems_traveled = 0;
+{	// initialize object variables
+	active_systems_traveled = 0;
 	active_systems_clinched = 0;
 	preview_systems_traveled = 0;
 	preview_systems_clinched = 0;
-	unsigned int list_entries = 0;
 	in_subgraph = new bool[Args::numthreads];
 	traveler_num = new unsigned int[Args::numthreads];
 		       // deleted on termination of program
@@ -24,20 +24,33 @@ TravelerList::TravelerList(std::string travname, std::string* updarr[], ErrorLis
 	traveler_name = travname.substr(0, travname.size()-5); // strip ".list" from end of travname
 	if (traveler_name.size() > DBFieldLength::traveler)
 	  el->add_error("Traveler name " + traveler_name + " > " + std::to_string(DBFieldLength::traveler) + "bytes");
-	std::ofstream log(Args::logfilepath+"/users/"+traveler_name+".log");
+
+	// variables used in construction
+	unsigned int list_entries = 0;
 	std::ofstream splist;
 	if (Args::splitregionpath != "") splist.open(Args::splitregionpath+"/list_files/"+travname);
+
+	// init user log
+	std::ofstream log(Args::logfilepath+"/users/"+traveler_name+".log");
 	time_t StartTime = time(0);
 	log << "Log file created at: ";
 	mtx.lock();
 	log << ctime(&StartTime);
 	mtx.unlock();
-	std::vector<char*> lines;
-	std::vector<std::string> endlines;
+	// write last update date & time if known
+	if (updarr)
+	{	log << travname << " last updated: " << *updarr[1] << ' ' << *updarr[2] << ' ' << *updarr[3] << '\n';
+		update = updarr[1];
+		delete updarr[2];
+		delete updarr[3];
+		delete[] updarr;
+	} else	update = 0;
+
+	// read .list file into memory
+	  // we can't getline here because it only allows one delimiter, and we need two; '\r' and '\n'.
+	  // at least one .list file contains newlines using only '\r' (0x0D):
+	  // https://github.com/TravelMapping/UserData/blob/6309036c44102eb3325d49515b32c5eef3b3cb1e/list_files/whopperman.list
 	std::ifstream file(Args::userlistfilepath+"/"+travname);
-	// we can't getline here because it only allows one delimiter, and we need two; '\r' and '\n'.
-	// at least one .list file contains newlines using only '\r' (0x0D):
-	// https://github.com/TravelMapping/UserData/blob/6309036c44102eb3325d49515b32c5eef3b3cb1e/list_files/whopperman.list
 	file.seekg(0, std::ios::end);
 	unsigned long listdatasize = file.tellg();
 	file.seekg(0, std::ios::beg);
@@ -58,6 +71,8 @@ TravelerList::TravelerList(std::string travname, std::string* updarr[], ErrorLis
 		else				newline = "\r\n";
 
 	// separate listdata into series of lines & newlines
+	std::vector<char*> lines;
+	std::vector<std::string> endlines;
 	size_t spn = 0;
 	for (char *c = listdata; *c; c += spn)
 	{	endlines.push_back("");
@@ -68,20 +83,14 @@ TravelerList::TravelerList(std::string travname, std::string* updarr[], ErrorLis
 		lines.push_back(c);
 	}
 	lines.push_back(listdata+listdatasize+1); // add a dummy "past-the-end" element to make lines[l+1]-2 work
+
 	// strip UTF-8 byte order mark if present
 	if (!strncmp(lines[0], "\xEF\xBB\xBF", 3))
 	{	lines[0] += 3;
 		splist << "\xEF\xBB\xBF";
 	}
-	// write last update date & time to log if known
-	if (updarr)
-	{	log << travname << " last updated: " << *updarr[1] << ' ' << *updarr[2] << ' ' << *updarr[3] << '\n';
-		update = updarr[1];
-		delete updarr[2];
-		delete updarr[3];
-		delete[] updarr;
-	} else	update = 0;
 
+	// process lines
 	for (unsigned int l = 0; l < lines.size()-1; l++)
 	{	std::string orig_line(lines[l]);
 		// strip whitespace
