@@ -73,7 +73,7 @@ void Args::show_help()
 	std::cout  <<  indent << "        [-c CSVSTATFILEPATH] [-g GRAPHFILEPATH] [-k]\n";
 	std::cout  <<  indent << "        [-n NMPMERGEPATH] [-p SPLITREGIONPATH SPLITREGION]\n";
 	std::cout  <<  indent << "        [-U USERLIST [USERLIST ...]] [-t NUMTHREADS] [-e]\n";
-	std::cout  <<  indent << "        [-T TIMEPRECISION] [-v]\n";
+	std::cout  <<  indent << "        [-T TIMEPRECISION] [-v] [-C]\n";
 	std::cout  <<  "\n";
 	std::cout  <<  "Create SQL, stats, graphs, and log files from highway and user data for the\n";
 	std::cout  <<  "Travel Mapping project.\n";

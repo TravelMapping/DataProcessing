@@ -12,13 +12,18 @@
 
 void Route::read_wpt(WaypointQuadtree *all_waypoints, ErrorList *el, bool usa_flag)
 {	/* read data into the Route's waypoint list from a .wpt file */
-	//cout << "read_wpt on " << str() << endl;
 	std::string filename = Args::highwaydatapath + "/hwy_data" + "/" + rg_str + "/" + system->systemname + "/" + root + ".wpt";
+	std::unordered_set<Waypoint*> coords_used; // for finding duplicates
+	Waypoint *last_visible = 0;
+	double vis_dist = 0;
+	char fstr[112];
+
 	// remove full path from all_wpt_files list
 	awf_mtx.lock();
 	all_wpt_files.erase(filename);
 	awf_mtx.unlock();
-	std::vector<char*> lines;
+
+	// read .wpt file into memory
 	std::ifstream file(filename);
 	if (!file)
 	{	el->add_error("[Errno 2] No such file or directory: '" + filename + '\'');
@@ -34,34 +39,27 @@ void Route::read_wpt(WaypointQuadtree *all_waypoints, ErrorList *el, bool usa_fl
 	file.close();
 
 	// split file into lines
+	std::vector<char*> lines;
 	size_t spn = 0;
 	for (char* c = wptdata; *c; c += spn)
 	{	for (spn = strcspn(c, "\n\r"); c[spn] == '\n' || c[spn] == '\r'; spn++) c[spn] = 0;
 		lines.emplace_back(c);
 	}
-
 	lines.push_back(wptdata+wptdatasize+1); // add a dummy "past-the-end" element to make lines[l+1]-2 work
-	// set to be used for finding duplicate coordinates
-	std::unordered_set<Waypoint*> coords_used;
-	double vis_dist = 0;
-	Waypoint *last_visible = 0;
-	char fstr[112];
 
 	for (unsigned int l = 0; l < lines.size()-1; l++)
-	{	// strip whitespace
-		while (lines[l][0] == ' ' || lines[l][0] == '\t') lines[l]++;
-		char * endchar = lines[l+1]-2; // -2 skips over the 0 inserted while splitting wptdata into lines
-		while (*endchar == 0) endchar--;  // skip back more for CRLF cases, and lines followed by blank lines
+	{	// strip whitespace from end...
+		char* endchar = lines[l+1]-2;		// -2 skips over the 0 inserted while splitting wptdata into lines
+		while (*endchar == 0) endchar--;	// skip back more for CRLF cases, and lines followed by blank lines
+		if (endchar <= lines[l]) continue;	// line is blank; skip
 		while (*endchar == ' ' || *endchar == '\t')
 		{	*endchar = 0;
 			endchar--;
-		}
-		if (lines[l][0] == 0) continue;
+		} // ...and from beginning
+		while (lines[l][0] == ' ' || lines[l][0] == '\t') lines[l]++;
 		Waypoint *w = new Waypoint(lines[l], this);
 			      // deleted on termination of program, or immediately below if invalid
-		bool malformed_url = w->lat == 0 && w->lng == 0;
-		bool label_too_long = w->label_too_long();
-		if (malformed_url || label_too_long)
+		if (w->label_too_long() || (w->lat == 0 && w->lng == 0))
 		{	delete w;
 			continue;
 		}
