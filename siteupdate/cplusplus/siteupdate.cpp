@@ -15,7 +15,6 @@ This module defines classes to represent the contents of a
 
 #include <cstring>
 #include <dirent.h>
-#include <thread>
 #include "classes/Args/Args.h"
 #include "classes/DBFieldLength/DBFieldLength.h"
 #include "classes/ClinchedDBValues/ClinchedDBValues.h"
@@ -38,9 +37,9 @@ This module defines classes to represent the contents of a
 #include "functions/crawl_hwy_data.h"
 #include "functions/split.h"
 #include "functions/sql_file.h"
-#include "functions/upper.h"
 #include "templates/contains.cpp"
 #ifdef threading_enabled
+#include <thread>
 #include "threads/threads.h"
 #endif
 void allbyregionactiveonly(std::mutex*);
