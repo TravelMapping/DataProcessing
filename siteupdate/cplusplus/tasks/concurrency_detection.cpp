@@ -23,19 +23,15 @@ for (HighwaySystem *h : HighwaySystem::syslist)
 	                                s->concurrent->push_back(other);
 	                                concurrencyfile << "New concurrency [" << s->str() << "][" << other->str() << "] (" << s->concurrent->size() << ")\n";
 				    }
-	                            else
+	                            else if (!contains(*s->concurrent, other))
 	                            {   other->concurrent = s->concurrent;
-					std::list<HighwaySegment*>::iterator it = s->concurrent->begin();
-					while (it != s->concurrent->end() && *it != other) it++;
-	                                if (it == s->concurrent->end())
-	                                {   s->concurrent->push_back(other);
-	                                    //concurrencyfile << "Added concurrency [" << s->str() << "]-[" \
-							      << other->str() << "] (" << s->concurrent->size() << ")\n";
-	                                    concurrencyfile << "Extended concurrency ";
-	                                    for (HighwaySegment *x : *(s->concurrent))
-	                                        concurrencyfile << '[' << x->str() << ']';
-	                                    concurrencyfile << " (" << s->concurrent->size() << ")\n";
-					}
+	                                s->concurrent->push_back(other);
+	                                //concurrencyfile << "Added concurrency [" << s->str() << "]-[" \
+							  << other->str() << "] (" << s->concurrent->size() << ")\n";
+	                                concurrencyfile << "Extended concurrency ";
+	                                for (HighwaySegment *x : *(s->concurrent))
+	                                    concurrencyfile << '[' << x->str() << ']';
+	                                concurrencyfile << " (" << s->concurrent->size() << ")\n";
 				    }
 			    }
     // see https://github.com/TravelMapping/DataProcessing/issues/137
