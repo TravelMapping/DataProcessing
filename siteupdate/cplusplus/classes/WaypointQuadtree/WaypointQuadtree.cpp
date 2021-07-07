@@ -26,6 +26,13 @@ WaypointQuadtree::WaypointQuadtree(double MinLat, double MinLng, double MaxLat, 
 	unique_locations = 0;
 }
 
+WaypointQuadtree::~WaypointQuadtree()
+{	if(nw_child) delete nw_child;
+	if(ne_child) delete ne_child;
+	if(sw_child) delete sw_child;
+	if(se_child) delete se_child;
+}
+
 void WaypointQuadtree::refine()
 {	// refine a quadtree into 4 sub-quadrants"""
 	//std::cout << "QTDEBUG: " << str() << " being refined" << std::endl;

@@ -88,8 +88,8 @@ void Datacheck::mark_fps(std::string& path, ElapsedTime &et)
 		    {	//std::cout << "Match!" << std::endl;
 			d.fp = 1;
 			fpcount++;
-			fps.erase(fp);
 			delete[] *fp;
+			fps.erase(fp);
 			break;
 		    }
 		    else
