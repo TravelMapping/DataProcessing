@@ -13,3 +13,7 @@ std::string ElapsedTime::et()
 	sprintf(str, format.data(), elapsed.count());
 	return str;
 }
+
+ElapsedTime::~ElapsedTime()
+{	delete[] str;
+}

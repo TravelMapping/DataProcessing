@@ -9,5 +9,6 @@ class ElapsedTime
 
 	public:
 	ElapsedTime(int);
+	~ElapsedTime();
 	std::string et();
 };
