@@ -20,18 +20,6 @@ HGEdge::HGEdge(HighwaySegment *s, HighwayGraph *graph, int numthreads)
 	t_written[0] = 0;
 	vertex1 = s->waypoint1->hashpoint()->vertex;
 	vertex2 = s->waypoint2->hashpoint()->vertex;
-	// checks for the very unusual cases where an edge ends up
-	// in the system as itself and its "reverse"
-	for (HGEdge *e : vertex1->incident_s_edges)
-	  if (e->vertex1 == vertex2 && e->vertex2 == vertex1)
-	  {	delete this;
-		return;
-	  }
-	for (HGEdge *e : vertex2->incident_s_edges)
-	  if (e->vertex1 == vertex2 && e->vertex2 == vertex1)
-	  {	delete this;
-		return;
-	  }
 	format = simple | collapsed | traveled;
 	segment_name = s->segment_name();
 	vertex1->incident_s_edges.push_back(this);

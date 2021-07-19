@@ -1809,14 +1809,6 @@ class HGEdge:
                     if cs.route.system.devel():
                         continue
                     self.route_names_and_systems.append((cs.route.list_entry_name(), cs.route.system))
-            # checks for the very unusual cases where an edge ends up
-            # in the system as itself and its "reverse"
-            for e in self.vertex1.incident_s_edges:
-                if e.vertex1 == self.vertex2 and e.vertex2 == self.vertex1:
-                    return
-            for e in self.vertex2.incident_s_edges:
-                if e.vertex1 == self.vertex2 and e.vertex2 == self.vertex1:
-                    return
             self.vertex1.incident_s_edges.append(self)
             self.vertex2.incident_s_edges.append(self)
             self.vertex1.incident_c_edges.append(self)
@@ -3220,32 +3212,27 @@ for h in highway_systems:
     print(".",end="",flush=True)
     for r in h.route_list:
         for s in r.segment_list:
-            if s.waypoint1.colocated is not None and s.waypoint2.colocated is not None:
+            if s.concurrent is None and s.waypoint1.colocated is not None and s.waypoint2.colocated is not None:
                 for w1 in s.waypoint1.colocated:
-                    if w1.route is not r:
-                        for w2 in s.waypoint2.colocated:
-                            if w1.route is w2.route:
-                                other = w1.route.find_segment_by_waypoints(w1,w2)
-                                if other is not None:
-                                    if s.concurrent is None:
-                                        s.concurrent = []
-                                        other.concurrent = s.concurrent
-                                        s.concurrent.append(s)
-                                        s.concurrent.append(other)
-                                        concurrencyfile.write("New concurrency [" + str(s) + "][" + str(other) + "] (" + str(len(s.concurrent)) + ")\n")
-                                    else:
-                                        other.concurrent = s.concurrent
-                                        if other not in s.concurrent:
-                                            s.concurrent.append(other)
-                                            #concurrencyfile.write("Added concurrency [" + str(s) + "]-[" + str(other) + "] ("+ str(len(s.concurrent)) + ")\n")
-                                            concurrencyfile.write("Extended concurrency ")
-                                            for x in s.concurrent:
-                                                concurrencyfile.write("[" + str(x) + "]")
-                                            concurrencyfile.write(" (" + str(len(s.concurrent)) + ")\n")
+                    for w2 in s.waypoint2.colocated:
+                        if w1.route is w2.route and (w1 != s.waypoint1 or w2 != s.waypoint2) and (w1 != s.waypoint2 and w2 != s.waypoint1):
+                            other = w1.route.find_segment_by_waypoints(w1,w2)
+                            if other is not None:
+                                if s.concurrent is None:
+                                    s.concurrent = [s]
+                                    other.concurrent = s.concurrent
+                                    s.concurrent.append(other)
+                                    concurrencyfile.write("New concurrency [" + str(s) + "][" + str(other) + "] (2)\n")
+                                else:
+                                    other.concurrent = s.concurrent
+                                    s.concurrent.append(other)
+                                    concurrencyfile.write("Extended concurrency ")
+                                    for x in s.concurrent:
+                                        concurrencyfile.write("[" + str(x) + "]")
+                                    concurrencyfile.write(" (" + str(len(s.concurrent)) + ")\n")
 print("!")
 
 # now augment any traveler clinched segments for concurrencies
-
 print(et.et() + "Augmenting travelers for detected concurrent segments.",end="",flush=True)
 for t in traveler_lists:
     print(".",end="",flush=True)
