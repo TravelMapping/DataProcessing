@@ -269,7 +269,8 @@ int main(int argc, char *argv[])
 	unordered_set<string> nmpfps;
 	file.open(Args::highwaydatapath+"/nmpfps.log");
 	while (getline(file, line))
-	{	while (line.back() == 0x0D || line.back() == ' ') line.erase(line.end()-1);	// trim DOS newlines & whitespace
+	{	while (line.size() && (line.back() == 0x0D || line.back() == ' '))
+			line.pop_back(); // trim DOS newlines & whitespace
 		if (line.size()) nmpfps.insert(line);
 	}
 	file.close();
