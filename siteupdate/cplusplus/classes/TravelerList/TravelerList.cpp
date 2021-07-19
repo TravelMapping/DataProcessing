@@ -55,6 +55,7 @@ TravelerList::TravelerList(std::string travname, std::string* updarr[], ErrorLis
 	unsigned long listdatasize = file.tellg();
 	file.seekg(0, std::ios::beg);
 	char *listdata = new char[listdatasize+1];
+			 // deleted after processing lines
 	file.read(listdata, listdatasize);
 	listdata[listdatasize] = 0; // add null terminator
 	file.close();

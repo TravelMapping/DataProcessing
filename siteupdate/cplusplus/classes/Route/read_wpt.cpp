@@ -34,6 +34,7 @@ void Route::read_wpt(WaypointQuadtree *all_waypoints, ErrorList *el, bool usa_fl
 	unsigned long wptdatasize = file.tellg();
 	file.seekg(0, std::ios::beg);
 	char *wptdata = new char[wptdatasize+1];
+			// deleted after processing lines
 	file.read(wptdata, wptdatasize);
 	wptdata[wptdatasize] = 0; // add null terminator
 	file.close();
@@ -47,6 +48,7 @@ void Route::read_wpt(WaypointQuadtree *all_waypoints, ErrorList *el, bool usa_fl
 	}
 	lines.push_back(wptdata+wptdatasize+1); // add a dummy "past-the-end" element to make lines[l+1]-2 work
 
+	// process lines
 	for (unsigned int l = 0; l < lines.size()-1; l++)
 	{	// strip whitespace from end...
 		char* endchar = lines[l+1]-2;		// -2 skips over the 0 inserted while splitting wptdata into lines
