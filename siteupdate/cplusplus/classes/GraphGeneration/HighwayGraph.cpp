@@ -203,7 +203,7 @@ inline void HighwayGraph::matching_vertices_and_edges
 	if (g.placeradius)
 		pvset = g.placeradius->vertices(qt, this);
 
-	// determine which vertices are within our region(s) and/or system(s)
+	// determine which vertices are within our PlaceRadius, region(s) and/or system(s)
 	if (g.regions)
 	{	mvset = rvset;
 		if (g.placeradius)	mvset = mvset & pvset;

@@ -2233,7 +2233,7 @@ class HighwayGraph:
         if placeradius is not None:
             pvset = placeradius.vertices(qt, self)
 
-        # determine which vertices are within our region(s) and/or system(s)
+        # determine which vertices are within our PlaceRadius, region(s) and/or system(s)
         if regions is not None:
             mvset = rvset
             if placeradius is not None:
