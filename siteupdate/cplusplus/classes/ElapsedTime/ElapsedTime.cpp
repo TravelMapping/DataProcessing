@@ -5,6 +5,7 @@ ElapsedTime::ElapsedTime(int precision)
 	format = "[%.1f] ";
 	format[3] = '0' + precision;
 	str = new char[15+precision];
+	      // deleted by ~ElapsedTime
 }
 
 std::string ElapsedTime::et()
@@ -12,4 +13,8 @@ std::string ElapsedTime::et()
 	duration<double> elapsed = duration_cast<duration<double>>(steady_clock::now() - start_time);
 	sprintf(str, format.data(), elapsed.count());
 	return str;
+}
+
+ElapsedTime::~ElapsedTime()
+{	delete[] str;
 }
