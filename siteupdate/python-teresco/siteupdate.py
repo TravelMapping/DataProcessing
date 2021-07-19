@@ -2310,7 +2310,7 @@ class HighwayGraph:
     #
     def write_master_graphs_tmg(self, graph_list, path, traveler_lists):
         simplefile = open(path+"tm-master-simple.tmg","w",encoding='utf-8')
-        collapfile = open(path+"tm-master-collapsed.tmg","w",encoding='utf-8')
+        collapfile = open(path+"tm-master.tmg","w",encoding='utf-8')
         travelfile = open(path+"tm-master-traveled.tmg","w",encoding='utf-8')
         cv = 0
         tv = 0
@@ -2387,7 +2387,7 @@ class HighwayGraph:
         collapfile.close()
         travelfile.close()
         graph_list.append(GraphListEntry('tm-master-simple.tmg', 'All Travel Mapping Data', sv, se, 0, 'simple', 'master'))
-        graph_list.append(GraphListEntry('tm-master-collapsed.tmg', 'All Travel Mapping Data', cv, ce, 0, 'collapsed', 'master'))
+        graph_list.append(GraphListEntry('tm-master.tmg', 'All Travel Mapping Data', cv, ce, 0, 'collapsed', 'master'))
         graph_list.append(GraphListEntry('tm-master-traveled.tmg', 'All Travel Mapping Data', tv, te, len(traveler_lists), 'traveled', 'master'))
         # print summary info
         print("   Simple graph has " + str(len(self.vertices)) +
@@ -2404,7 +2404,7 @@ class HighwayGraph:
     # or to within a given area if placeradius is given
     def write_subgraphs_tmg(self, graph_list, path, root, descr, category, regions, systems, placeradius, qt):
         simplefile = open(path+root+"-simple.tmg","w",encoding='utf-8')
-        collapfile = open(path+root+"-collapsed.tmg","w",encoding='utf-8')
+        collapfile = open(path+root+".tmg","w",encoding='utf-8')
         travelfile = open(path+root+"-traveled.tmg","w",encoding='utf-8')
         (mv, cv_count, tv_count, mse, mce, mte, traveler_lists) = self.matching_vertices_and_edges(qt, regions, systems, placeradius, self.rg_vset_hash)
         """if len(traveler_lists) == 0:
@@ -2462,9 +2462,9 @@ class HighwayGraph:
         collapfile.close()
         travelfile.close()
 
-        graph_list.append(GraphListEntry(root+   "-simple.tmg", descr, len(mv),  len(mse), 0, "simple",    category))
-        graph_list.append(GraphListEntry(root+"-collapsed.tmg", descr, cv_count, len(mce), 0, "collapsed", category))
-        graph_list.append(GraphListEntry(root+ "-traveled.tmg", descr, tv_count, len(mte), len(traveler_lists), "traveled",  category))
+        graph_list.append(GraphListEntry(root+  "-simple.tmg", descr, len(mv),  len(mse), 0, "simple",    category))
+        graph_list.append(GraphListEntry(root+         ".tmg", descr, cv_count, len(mce), 0, "collapsed", category))
+        graph_list.append(GraphListEntry(root+"-traveled.tmg", descr, tv_count, len(mte), len(traveler_lists), "traveled",  category))
 
 def format_clinched_mi(clinched,total):
     """return a nicely-formatted string for a given number of miles

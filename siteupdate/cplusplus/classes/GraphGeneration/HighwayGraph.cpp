@@ -300,7 +300,7 @@ inline void HighwayGraph::matching_vertices_and_edges
 //
 void HighwayGraph::write_master_graphs_tmg()
 {	std::ofstream simplefile(Args::graphfilepath + "/tm-master-simple.tmg");
-	std::ofstream collapfile(Args::graphfilepath + "/tm-master-collapsed.tmg");
+	std::ofstream collapfile(Args::graphfilepath + "/tm-master.tmg");
 	std::ofstream travelfile(Args::graphfilepath + "/tm-master-traveled.tmg");
 	simplefile << "TMG 1.0 simple\n";
 	collapfile << "TMG 1.0 collapsed\n";
