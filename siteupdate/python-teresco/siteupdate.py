@@ -4157,7 +4157,7 @@ fpfile.close()
 print("!", flush=True)
 print(et.et() + "Found " + str(len(datacheckerrors)) + " datacheck errors and matched " + str(fpcount) + " FP entries.", flush=True)
 
-# write log of unmatched false positives from the datacheckfps.csv
+# write log of unmatched false positives from datacheckfps.csv
 print(et.et() + "Writing log of unmatched datacheck FP entries.", flush=True)
 fpfile = open(args.logfilepath+'/unmatchedfps.log','w',encoding='utf-8')
 fpfile.write("Log file created at: " + str(datetime.datetime.now()) + "\n")

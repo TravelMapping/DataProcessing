@@ -56,7 +56,7 @@ void Datacheck::read_fps(std::string& path, ErrorList &el)
 		// parse datacheckfps.csv line
 		size_t NumFields = 6;
 		std::string* fields = new std::string[6];
-				 // deleted when FP is matched or on termination of program
+				 // deleted when FP is matched or when writing unmatchedfps.log
 		std::string* ptr_array[6] = {&fields[0], &fields[1], &fields[2], &fields[3], &fields[4], &fields[5]};
 		split(line, ptr_array, NumFields, ';');
 		if (NumFields != 6)
@@ -103,13 +103,15 @@ void Datacheck::mark_fps(std::string& path, ElapsedTime &et)
 }
 
 void Datacheck::unmatchedfps_log(std::string& path)
-{	// write log of unmatched false positives from the datacheckfps.csv
+{	// write log of unmatched false positives from datacheckfps.csv
 	std::ofstream fpfile(path+"/unmatchedfps.log");
 	time_t timestamp = time(0);
 	fpfile << "Log file created at: " << ctime(&timestamp);
 	if (fps.empty()) fpfile << "No unmatched FP entries.\n";
 	else for (std::string* entry : fps)
-		fpfile << entry[0] << ';' << entry[1] << ';' << entry[2] << ';' << entry[3] << ';' << entry[4] << ';' << entry[5] << '\n';
+	     {	fpfile << entry[0] << ';' << entry[1] << ';' << entry[2] << ';' << entry[3] << ';' << entry[4] << ';' << entry[5] << '\n';
+		delete[] entry;
+	     }
 	fpfile.close();
 }
 
