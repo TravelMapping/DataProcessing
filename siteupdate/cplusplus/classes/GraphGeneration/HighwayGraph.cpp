@@ -401,7 +401,7 @@ void HighwayGraph::write_subgraphs_tmg
 	}
       #ifdef threading_enabled
 	term->lock();
-	if (GRAPH(0).cat != GraphListEntry::entries[graphnum-1].cat)
+	if (GRAPH(0).cat != GRAPH(-1).cat)
 		std::cout << '\n' << et->et() << "Writing " << GRAPH(0).category() << " graphs.\n";
       #endif
 	std::cout << GRAPH(0).tag()
@@ -462,6 +462,8 @@ void HighwayGraph::write_subgraphs_tmg
 	simplefile.close();
 	collapfile.close();
 	travelfile.close();
+	if (GRAPH(0).regions) delete GRAPH(0).regions;
+	if (GRAPH(0).systems) delete GRAPH(0).systems;
 
 	GRAPH(0).vertices = mv.size(); GRAPH(0).edges = mse.size(); GRAPH(0).travelers = 0;
 	GRAPH(1).vertices = cv_count;  GRAPH(1).edges = mce.size(); GRAPH(1).travelers = 0;

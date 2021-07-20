@@ -11,7 +11,7 @@ cout << et.et() << "Creating regional data graphs." << endl;
 for (Region* region : Region::allregions)
 {	if (region->active_preview_mileage == 0) continue;
 	regions = new list<Region*>(1, region);
-		  // deleted on termination of program
+		  // deleted @ end of HighwayGraph::write_subgraphs_tmg
 	ADDGRAPH('s');
 	ADDGRAPH('c');
 	ADDGRAPH('t');

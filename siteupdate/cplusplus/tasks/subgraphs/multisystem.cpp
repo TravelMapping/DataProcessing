@@ -26,7 +26,7 @@ while (getline(file, line))
 	  el.add_error("title > " + std::to_string(DBFieldLength::graphFilename-14)
 		     + " bytes in multisystem.csv line: " + line);
 	systems = new list<HighwaySystem*>;
-		  // deleted on termination of program
+		  // deleted @ end of HighwayGraph::write_subgraphs_tmg
 	for(char* s = strtok(fields[2], ","); s; s = strtok(0, ","))
 	  for (HighwaySystem *h : HighwaySystem::syslist)
 	    if (s == h->systemname)

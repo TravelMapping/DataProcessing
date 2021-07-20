@@ -20,7 +20,7 @@ while (getline(file, line))
 	  }
 	if (h)
 	{	systems = new list<HighwaySystem*>(1, h);
-			  // deleted on termination of program
+			  // deleted @ end of HighwayGraph::write_subgraphs_tmg
 		ADDGRAPH('s');
 		ADDGRAPH('c');
 		ADDGRAPH('t');
