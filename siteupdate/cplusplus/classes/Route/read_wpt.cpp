@@ -46,10 +46,15 @@ void Route::read_wpt(WaypointQuadtree *all_waypoints, ErrorList *el, bool usa_fl
 	{	for (spn = strcspn(c, "\n\r"); c[spn] == '\n' || c[spn] == '\r'; spn++) c[spn] = 0;
 		lines.emplace_back(c);
 	}
+	if (lines.empty())
+	{	delete[] wptdata;
+		el->add_error(filename + " is empty or begins with null zero");
+		return;
+	}
 	lines.push_back(wptdata+wptdatasize+1); // add a dummy "past-the-end" element to make lines[l+1]-2 work
 
 	// process lines
-	for (unsigned int l = 0; l < lines.size()-1; l++)
+	for (unsigned int l = lines[1] < wptdata+2; l < lines.size()-1; l++)
 	{	// strip whitespace from end...
 		char* endchar = lines[l+1]-2;		// -2 skips over the 0 inserted while splitting wptdata into lines
 		while (*endchar == 0) endchar--;	// skip back more for CRLF cases, and lines followed by blank lines
