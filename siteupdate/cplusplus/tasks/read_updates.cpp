@@ -12,7 +12,7 @@ while (getline(file, line))
 	// parse updates.csv line
 	size_t NumFields = 5;
 	string* fields = new string[5];
-			 // deleted on termination of program
+			 // deleted as DB table is written
 	string* ptr_array[5] = {&fields[0], &fields[1], &fields[2], &fields[3], &fields[4]};
 	split(line, ptr_array, NumFields, ';');
 	if (NumFields != 5)
@@ -74,7 +74,7 @@ while (getline(file, line))
 	// parse systemupdates.csv line
 	size_t NumFields = 5;
 	string* fields = new string[5];
-			 // deleted on termination of program
+			 // deleted as DB table is written
 	string* ptr_array[5] = {&fields[0], &fields[1], &fields[2], &fields[3], &fields[4]};
 	split(line, ptr_array, NumFields, ';');
 	if (NumFields != 5)
