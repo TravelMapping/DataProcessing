@@ -1809,14 +1809,6 @@ class HGEdge:
                     if cs.route.system.devel():
                         continue
                     self.route_names_and_systems.append((cs.route.list_entry_name(), cs.route.system))
-            # checks for the very unusual cases where an edge ends up
-            # in the system as itself and its "reverse"
-            for e in self.vertex1.incident_s_edges:
-                if e.vertex1 == self.vertex2 and e.vertex2 == self.vertex1:
-                    return
-            for e in self.vertex2.incident_s_edges:
-                if e.vertex1 == self.vertex2 and e.vertex2 == self.vertex1:
-                    return
             self.vertex1.incident_s_edges.append(self)
             self.vertex2.incident_s_edges.append(self)
             self.vertex1.incident_c_edges.append(self)
@@ -2233,7 +2225,7 @@ class HighwayGraph:
         if placeradius is not None:
             pvset = placeradius.vertices(qt, self)
 
-        # determine which vertices are within our region(s) and/or system(s)
+        # determine which vertices are within our PlaceRadius, region(s) and/or system(s)
         if regions is not None:
             mvset = rvset
             if placeradius is not None:
@@ -2310,7 +2302,7 @@ class HighwayGraph:
     #
     def write_master_graphs_tmg(self, graph_list, path, traveler_lists):
         simplefile = open(path+"tm-master-simple.tmg","w",encoding='utf-8')
-        collapfile = open(path+"tm-master-collapsed.tmg","w",encoding='utf-8')
+        collapfile = open(path+"tm-master.tmg","w",encoding='utf-8')
         travelfile = open(path+"tm-master-traveled.tmg","w",encoding='utf-8')
         cv = 0
         tv = 0
@@ -2387,7 +2379,7 @@ class HighwayGraph:
         collapfile.close()
         travelfile.close()
         graph_list.append(GraphListEntry('tm-master-simple.tmg', 'All Travel Mapping Data', sv, se, 0, 'simple', 'master'))
-        graph_list.append(GraphListEntry('tm-master-collapsed.tmg', 'All Travel Mapping Data', cv, ce, 0, 'collapsed', 'master'))
+        graph_list.append(GraphListEntry('tm-master.tmg', 'All Travel Mapping Data', cv, ce, 0, 'collapsed', 'master'))
         graph_list.append(GraphListEntry('tm-master-traveled.tmg', 'All Travel Mapping Data', tv, te, len(traveler_lists), 'traveled', 'master'))
         # print summary info
         print("   Simple graph has " + str(len(self.vertices)) +
@@ -2404,7 +2396,7 @@ class HighwayGraph:
     # or to within a given area if placeradius is given
     def write_subgraphs_tmg(self, graph_list, path, root, descr, category, regions, systems, placeradius, qt):
         simplefile = open(path+root+"-simple.tmg","w",encoding='utf-8')
-        collapfile = open(path+root+"-collapsed.tmg","w",encoding='utf-8')
+        collapfile = open(path+root+".tmg","w",encoding='utf-8')
         travelfile = open(path+root+"-traveled.tmg","w",encoding='utf-8')
         (mv, cv_count, tv_count, mse, mce, mte, traveler_lists) = self.matching_vertices_and_edges(qt, regions, systems, placeradius, self.rg_vset_hash)
         """if len(traveler_lists) == 0:
@@ -2462,9 +2454,9 @@ class HighwayGraph:
         collapfile.close()
         travelfile.close()
 
-        graph_list.append(GraphListEntry(root+   "-simple.tmg", descr, len(mv),  len(mse), 0, "simple",    category))
-        graph_list.append(GraphListEntry(root+"-collapsed.tmg", descr, cv_count, len(mce), 0, "collapsed", category))
-        graph_list.append(GraphListEntry(root+ "-traveled.tmg", descr, tv_count, len(mte), len(traveler_lists), "traveled",  category))
+        graph_list.append(GraphListEntry(root+  "-simple.tmg", descr, len(mv),  len(mse), 0, "simple",    category))
+        graph_list.append(GraphListEntry(root+         ".tmg", descr, cv_count, len(mce), 0, "collapsed", category))
+        graph_list.append(GraphListEntry(root+"-traveled.tmg", descr, tv_count, len(mte), len(traveler_lists), "traveled",  category))
 
 def format_clinched_mi(clinched,total):
     """return a nicely-formatted string for a given number of miles
@@ -3220,32 +3212,27 @@ for h in highway_systems:
     print(".",end="",flush=True)
     for r in h.route_list:
         for s in r.segment_list:
-            if s.waypoint1.colocated is not None and s.waypoint2.colocated is not None:
+            if s.concurrent is None and s.waypoint1.colocated is not None and s.waypoint2.colocated is not None:
                 for w1 in s.waypoint1.colocated:
-                    if w1.route is not r:
-                        for w2 in s.waypoint2.colocated:
-                            if w1.route is w2.route:
-                                other = w1.route.find_segment_by_waypoints(w1,w2)
-                                if other is not None:
-                                    if s.concurrent is None:
-                                        s.concurrent = []
-                                        other.concurrent = s.concurrent
-                                        s.concurrent.append(s)
-                                        s.concurrent.append(other)
-                                        concurrencyfile.write("New concurrency [" + str(s) + "][" + str(other) + "] (" + str(len(s.concurrent)) + ")\n")
-                                    else:
-                                        other.concurrent = s.concurrent
-                                        if other not in s.concurrent:
-                                            s.concurrent.append(other)
-                                            #concurrencyfile.write("Added concurrency [" + str(s) + "]-[" + str(other) + "] ("+ str(len(s.concurrent)) + ")\n")
-                                            concurrencyfile.write("Extended concurrency ")
-                                            for x in s.concurrent:
-                                                concurrencyfile.write("[" + str(x) + "]")
-                                            concurrencyfile.write(" (" + str(len(s.concurrent)) + ")\n")
+                    for w2 in s.waypoint2.colocated:
+                        if w1.route is w2.route and (w1 != s.waypoint1 or w2 != s.waypoint2) and (w1 != s.waypoint2 and w2 != s.waypoint1):
+                            other = w1.route.find_segment_by_waypoints(w1,w2)
+                            if other is not None:
+                                if s.concurrent is None:
+                                    s.concurrent = [s]
+                                    other.concurrent = s.concurrent
+                                    s.concurrent.append(other)
+                                    concurrencyfile.write("New concurrency [" + str(s) + "][" + str(other) + "] (2)\n")
+                                else:
+                                    other.concurrent = s.concurrent
+                                    s.concurrent.append(other)
+                                    concurrencyfile.write("Extended concurrency ")
+                                    for x in s.concurrent:
+                                        concurrencyfile.write("[" + str(x) + "]")
+                                    concurrencyfile.write(" (" + str(len(s.concurrent)) + ")\n")
 print("!")
 
 # now augment any traveler clinched segments for concurrencies
-
 print(et.et() + "Augmenting travelers for detected concurrent segments.",end="",flush=True)
 for t in traveler_lists:
     print(".",end="",flush=True)
@@ -4170,7 +4157,7 @@ fpfile.close()
 print("!", flush=True)
 print(et.et() + "Found " + str(len(datacheckerrors)) + " datacheck errors and matched " + str(fpcount) + " FP entries.", flush=True)
 
-# write log of unmatched false positives from the datacheckfps.csv
+# write log of unmatched false positives from datacheckfps.csv
 print(et.et() + "Writing log of unmatched datacheck FP entries.", flush=True)
 fpfile = open(args.logfilepath+'/unmatchedfps.log','w',encoding='utf-8')
 fpfile.write("Log file created at: " + str(datetime.datetime.now()) + "\n")

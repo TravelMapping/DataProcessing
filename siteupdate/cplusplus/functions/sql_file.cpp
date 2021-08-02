@@ -391,6 +391,7 @@ void sqlfile1
 		first = 0;
 		sqlfile << "('"  << update[0] << "','" << double_quotes(update[1]) << "','" << double_quotes(update[2])
 			<< "','" << update[3] << "','" << double_quotes(update[4]) << "')\n";
+		delete[] update;
 	}
 	sqlfile << ";\n";
 
@@ -411,6 +412,7 @@ void sqlfile1
 		first = 0;
 		sqlfile << "('"  << systemupdate[0] << "','" << double_quotes(systemupdate[1])
 			<< "','" << systemupdate[2] << "','" << double_quotes(systemupdate[3]) << "','" << systemupdate[4] << "')\n";
+		delete[] systemupdate;
 	}
 	sqlfile << ";\n";
 	sqlfile.close();

@@ -55,6 +55,7 @@ TravelerList::TravelerList(std::string travname, std::string* updarr[], ErrorLis
 	unsigned long listdatasize = file.tellg();
 	file.seekg(0, std::ios::beg);
 	char *listdata = new char[listdatasize+1];
+			 // deleted after processing lines
 	file.read(listdata, listdatasize);
 	listdata[listdatasize] = 0; // add null terminator
 	file.close();
@@ -96,11 +97,12 @@ TravelerList::TravelerList(std::string travname, std::string* updarr[], ErrorLis
 		// strip whitespace
 		while (lines[l][0] == ' ' || lines[l][0] == '\t') lines[l]++;
 		char * endchar = lines[l+1]-2; // -2 skips over the 0 inserted while separating listdata into lines
-		while (*endchar == 0 && endchar > lines[l]) endchar--;  // skip back more for CRLF cases, and lines followed by blank lines
-		while (*endchar == ' ' || *endchar == '\t')
-		{	*endchar = 0;
+		while (endchar > lines[l] && *endchar == 0) endchar--;  // skip back more for CRLF cases, and lines followed by blank lines
+		if (endchar > lines[l])
+		  while (*endchar == ' ' || *endchar == '\t')
+		  {	*endchar = 0;
 			endchar--;
-		}
+		  }
 		std::string trim_line(lines[l]);
 		// ignore empty or "comment" lines
 		if (lines[l][0] == 0 || lines[l][0] == '#')

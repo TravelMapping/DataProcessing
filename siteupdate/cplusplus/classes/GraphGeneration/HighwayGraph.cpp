@@ -203,7 +203,7 @@ inline void HighwayGraph::matching_vertices_and_edges
 	if (g.placeradius)
 		pvset = g.placeradius->vertices(qt, this);
 
-	// determine which vertices are within our region(s) and/or system(s)
+	// determine which vertices are within our PlaceRadius, region(s) and/or system(s)
 	if (g.regions)
 	{	mvset = rvset;
 		if (g.placeradius)	mvset = mvset & pvset;
@@ -300,7 +300,7 @@ inline void HighwayGraph::matching_vertices_and_edges
 //
 void HighwayGraph::write_master_graphs_tmg()
 {	std::ofstream simplefile(Args::graphfilepath + "/tm-master-simple.tmg");
-	std::ofstream collapfile(Args::graphfilepath + "/tm-master-collapsed.tmg");
+	std::ofstream collapfile(Args::graphfilepath + "/tm-master.tmg");
 	std::ofstream travelfile(Args::graphfilepath + "/tm-master-traveled.tmg");
 	simplefile << "TMG 1.0 simple\n";
 	collapfile << "TMG 1.0 collapsed\n";
@@ -401,7 +401,7 @@ void HighwayGraph::write_subgraphs_tmg
 	}
       #ifdef threading_enabled
 	term->lock();
-	if (GRAPH(0).cat != GraphListEntry::entries[graphnum-1].cat)
+	if (GRAPH(0).cat != GRAPH(-1).cat)
 		std::cout << '\n' << et->et() << "Writing " << GRAPH(0).category() << " graphs.\n";
       #endif
 	std::cout << GRAPH(0).tag()
@@ -462,6 +462,8 @@ void HighwayGraph::write_subgraphs_tmg
 	simplefile.close();
 	collapfile.close();
 	travelfile.close();
+	if (GRAPH(0).regions) delete GRAPH(0).regions;
+	if (GRAPH(0).systems) delete GRAPH(0).systems;
 
 	GRAPH(0).vertices = mv.size(); GRAPH(0).edges = mse.size(); GRAPH(0).travelers = 0;
 	GRAPH(1).vertices = cv_count;  GRAPH(1).edges = mce.size(); GRAPH(1).travelers = 0;

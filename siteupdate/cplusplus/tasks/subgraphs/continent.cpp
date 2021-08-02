@@ -8,7 +8,7 @@ cout << et.et() << "Creating continent graphs." << endl;
 // add entries to graph vector
 for (size_t c = 0; c < continents.size()-1; c++)
 {	regions = new list<Region*>;
-		  // deleted on termination of program
+		  // deleted @ end of HighwayGraph::write_subgraphs_tmg
 	for (Region* r : Region::allregions)
 	  // does it match this continent and have routes?
 	  if (&continents[c] == r->continent && r->active_preview_mileage)

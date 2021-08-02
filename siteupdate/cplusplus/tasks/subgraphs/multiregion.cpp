@@ -27,7 +27,7 @@ while (getline(file, line))
 	  el.add_error("title > " + std::to_string(DBFieldLength::graphFilename-14)
 		     + " bytes in multiregion.csv line: " + line);
 	regions = new list<Region*>;
-		  // deleted on termination of program
+		  // deleted @ end of HighwayGraph::write_subgraphs_tmg
 	for(char* rg = strtok(fields[2], ","); rg; rg = strtok(0, ","))
 	  for (Region* r : Region::allregions)
 	    if (rg == r->code)

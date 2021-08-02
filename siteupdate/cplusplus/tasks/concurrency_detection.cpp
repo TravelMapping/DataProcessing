@@ -8,34 +8,29 @@ for (HighwaySystem *h : HighwaySystem::syslist)
 {   cout << '.' << flush;
     for (Route *r : h->route_list)
 	for (HighwaySegment *s : r->segment_list)
-	    if (s->waypoint1->colocated && s->waypoint2->colocated)
-	        for ( Waypoint *w1 : *(s->waypoint1->colocated) )
-	            if (w1->route != r)
-	                for ( Waypoint *w2 : *(s->waypoint2->colocated) )
-	                    if (w1->route == w2->route)
-			    {   HighwaySegment *other = w1->route->find_segment_by_waypoints(w1,w2);
-	                        if (other)
-	                            if (!s->concurrent)
-	                            {   s->concurrent = new list<HighwaySegment*>;
-							// deleted on termination of program
-	                                other->concurrent = s->concurrent;
-	                                s->concurrent->push_back(s);
-	                                s->concurrent->push_back(other);
-	                                concurrencyfile << "New concurrency [" << s->str() << "][" << other->str() << "] (" << s->concurrent->size() << ")\n";
-				    }
-	                            else if (!contains(*s->concurrent, other))
-	                            {   other->concurrent = s->concurrent;
-	                                s->concurrent->push_back(other);
-	                                //concurrencyfile << "Added concurrency [" << s->str() << "]-[" \
-							  << other->str() << "] (" << s->concurrent->size() << ")\n";
-	                                concurrencyfile << "Extended concurrency ";
-	                                for (HighwaySegment *x : *(s->concurrent))
-	                                    concurrencyfile << '[' << x->str() << ']';
-	                                concurrencyfile << " (" << s->concurrent->size() << ")\n";
-				    }
-			    }
-    // see https://github.com/TravelMapping/DataProcessing/issues/137
-    // changes not yet implemented in either the original Python or this C++ version.
+	    if (!s->concurrent && s->waypoint1->colocated && s->waypoint2->colocated)
+		for ( Waypoint *w1 : *(s->waypoint1->colocated) )
+		    for ( Waypoint *w2 : *(s->waypoint2->colocated) )
+			if (w1->route == w2->route && (w1 != s->waypoint1 || w2 != s->waypoint2) && (w1 != s->waypoint2 || w2 != s->waypoint1))
+			{   HighwaySegment *other = w1->route->find_segment_by_waypoints(w1,w2);
+			    if (other)
+				if (!s->concurrent)
+				{   s->concurrent = new list<HighwaySegment*>;
+						    // deleted by ~HighwaySegment
+				    other->concurrent = s->concurrent;
+				    s->concurrent->push_back(s);
+				    s->concurrent->push_back(other);
+				    concurrencyfile << "New concurrency [" << s->str() << "][" << other->str() << "] (2)\n";
+				}
+				else
+				{   other->concurrent = s->concurrent;
+				    s->concurrent->push_back(other);
+				    concurrencyfile << "Extended concurrency ";
+				    for (HighwaySegment *x : *(s->concurrent))
+					concurrencyfile << '[' << x->str() << ']';
+				    concurrencyfile << " (" << s->concurrent->size() << ")\n";
+				}
+			}
 }
 cout << "!\n";
 
