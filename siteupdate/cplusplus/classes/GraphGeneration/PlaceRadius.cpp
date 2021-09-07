@@ -45,11 +45,6 @@ bool PlaceRadius::contains_vertex(double vlat, double vlng)
 	return ans <= r;
 }
 
-bool PlaceRadius::contains_edge(HGEdge *e)
-{	/* return whether both endpoints of edge e are within this area */
-	return contains_vertex(e->vertex1) and contains_vertex(e->vertex2);
-}
-
 std::unordered_set<HGVertex*> PlaceRadius::vertices(WaypointQuadtree *qt, HighwayGraph *g)
 {	// Compute and return a set of graph vertices within r miles of (lat, lng).
 	// This function handles setup & sanity checks, passing control over
