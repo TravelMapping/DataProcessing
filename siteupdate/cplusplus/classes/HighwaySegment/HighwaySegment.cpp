@@ -90,7 +90,7 @@ std::string HighwaySegment::clinchedby_code(std::list<TravelerList*> *traveler_l
 		//std::cout << "\t" << num << ": TravNum%4 = " << TravNum%4 << std::endl;
 		//std::cout << "\t" << num << ": 2 ^ TravNum%4 = " << pow(2, TravNum%4) << std::endl;
 		//std::cout << "\t" << num << ": code[" << TravNum/4 << "] += int(" << pow(2, TravNum%4) << ")" << std::endl;
-		code[t->traveler_num[threadnum]/4] += int(pow(2, t->traveler_num[threadnum]%4));
+		code[t->traveler_num[threadnum]/4] += 1 << t->traveler_num[threadnum]%4;
 		//num++;
 	}
 	//std::cout << "travelers written to array" << std::endl;

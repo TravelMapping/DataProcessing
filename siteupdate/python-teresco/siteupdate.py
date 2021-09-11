@@ -874,7 +874,7 @@ class HighwaySegment:
         code = ""
         clinch_array = [0]*( math.ceil(len(traveler_lists)/4) )
         for t in self.clinched_by:
-            clinch_array[t.traveler_num // 4] += 2 ** (t.traveler_num % 4)
+            clinch_array[t.traveler_num // 4] += 1 << t.traveler_num % 4
         for c in clinch_array:
             code += "0123456789ABCDEF"[c]
         return code
