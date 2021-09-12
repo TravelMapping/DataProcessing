@@ -874,7 +874,7 @@ class HighwaySegment:
         code = ""
         clinch_array = [0]*( math.ceil(len(traveler_lists)/4) )
         for t in self.clinched_by:
-            clinch_array[t.traveler_num // 4] += 2 ** (t.traveler_num % 4)
+            clinch_array[t.traveler_num // 4] += 1 << t.traveler_num % 4
         for c in clinch_array:
             code += "0123456789ABCDEF"[c]
         return code
@@ -1919,7 +1919,7 @@ class HGEdge:
                 self.vertex1.incident_t_edges.append(self)
                 self.vertex2.incident_t_edges.append(self)
 
-    # compute an edge label, optionally resticted by systems
+    # compute an edge label, optionally restricted by systems
     def label(self,systems=None):
         the_label = ""
         for (name, system) in self.route_names_and_systems:
@@ -2008,11 +2008,6 @@ class PlaceRadius:
 
         return ans <= self.r
 
-    def contains_edge(self, e):
-        """return whether both endpoints of edge e are within this area"""
-        return (self.contains_vertex(e.vertex1) and
-                self.contains_vertex(e.vertex2))
-        
     def vertices(self, qt, g):
         # Compute and return a set of graph vertices within r miles of (lat, lng).
         # This function handles setup & sanity checks, passing control over
@@ -2208,9 +2203,9 @@ class HighwayGraph:
         # mvset		 # a set of vertices, optionally restricted by region or system or placeradius area
         cv_count = 0	 # the number of collapsed vertices in this set
         tv_count = 0	 # the number of traveled vertices in this set
-        mse = set()	 # matching    simple edges
-        mce = set()	 # matching collapsed edges
-        mte = set()	 # matching  traveled edges
+        mse = []	 # matching    simple edges
+        mce = []	 # matching collapsed edges
+        mte = []	 # matching  traveled edges
         trav_set = set() # sorted into a list of travelers for traveled graphs
         # ...as a tuple
 
@@ -2243,12 +2238,21 @@ class HighwayGraph:
             for v in self.vertices.values():
                 mvset.add(v)
         
+        # initialize *_written booleans
+        for v in mvset:
+            for e in v.incident_s_edges:
+                e.s_written = 0
+            for e in v.incident_c_edges:
+                e.c_written = 0
+            for e in v.incident_t_edges:
+                e.t_written = 0
+
         # Compute sets of edges for subgraphs, optionally
         # restricted by region or system or placeradius.
         # Keep a count of collapsed & traveled vertices as we go.
         for v in mvset:
             for e in v.incident_s_edges:
-                if placeradius is None or placeradius.contains_edge(e):
+                if not e.s_written and (placeradius is None or e.vertex1 in mvset and e.vertex2 in mvset):
                     if regions is None or e.segment.route.region in regions:
                         system_match = systems is None
                         if not system_match:
@@ -2257,12 +2261,13 @@ class HighwayGraph:
                                     system_match = True
                                     break
                         if system_match:
-                            mse.add(e)
+                            mse.append(e)
+                            e.s_written = 1
             if v.visibility < 1:
                 continue
             tv_count += 1
             for e in v.incident_t_edges:
-                if placeradius is None or placeradius.contains_edge(e):
+                if not e.t_written and (placeradius is None or e.vertex1 in mvset and e.vertex2 in mvset):
                     if regions is None or e.segment.route.region in regions:
                         system_match = systems is None
                         if not system_match:
@@ -2271,14 +2276,15 @@ class HighwayGraph:
                                     system_match = True
                                     break
                         if system_match:
-                            mte.add(e)
+                            mte.append(e)
+                            e.t_written = 1
                             for t in e.segment.clinched_by:
                                 trav_set.add(t)
             if v.visibility < 2:
                 continue
             cv_count += 1
             for e in v.incident_c_edges:
-                if placeradius is None or placeradius.contains_edge(e):
+                if not e.c_written and (placeradius is None or e.vertex1 in mvset and e.vertex2 in mvset):
                     if regions is None or e.segment.route.region in regions:
                         system_match = systems is None
                         if not system_match:
@@ -2287,7 +2293,8 @@ class HighwayGraph:
                                     system_match = True
                                     break
                         if system_match:
-                            mce.add(e)
+                            mce.append(e)
+                            e.c_written = 1
         return (mvset, cv_count, tv_count, mse, mce, mte, sorted(trav_set, key=lambda TravelerList: TravelerList.traveler_name))
 
     # write the entire set of highway data in .tmg format.

@@ -77,4 +77,5 @@ else {	list<Region*> *regions;
       #endif
      }
 
+cout << et.et() << "Clearing HighwayGraph contents from memory." << endl;
 graph_data.clear();

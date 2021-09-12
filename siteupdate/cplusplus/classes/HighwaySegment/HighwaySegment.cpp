@@ -3,6 +3,7 @@
 #include "../Route/Route.h"
 #include "../TravelerList/TravelerList.h"
 #include "../Waypoint/Waypoint.h"
+#include "../../templates/contains.cpp"
 #include <cmath>
 
 HighwaySegment::HighwaySegment(Waypoint *w1, Waypoint *w2, Route *rte)
@@ -89,13 +90,44 @@ std::string HighwaySegment::clinchedby_code(std::list<TravelerList*> *traveler_l
 		//std::cout << "\t" << num << ": TravNum%4 = " << TravNum%4 << std::endl;
 		//std::cout << "\t" << num << ": 2 ^ TravNum%4 = " << pow(2, TravNum%4) << std::endl;
 		//std::cout << "\t" << num << ": code[" << TravNum/4 << "] += int(" << pow(2, TravNum%4) << ")" << std::endl;
-		code[t->traveler_num[threadnum]/4] += int(pow(2, t->traveler_num[threadnum]%4));
+		code[t->traveler_num[threadnum]/4] += 1 << t->traveler_num[threadnum]%4;
 		//num++;
 	}
 	//std::cout << "travelers written to array" << std::endl;
 	for (char &nibble : code) if (nibble > '9') nibble += 7;
 	//std::cout << "nibbles >9 -> letters" << std::endl;
 	return code;
+}
+
+bool HighwaySegment::system_match(std::list<HighwaySystem*>* systems)
+{	if (!systems) return 1;
+	// devel routes are already excluded from graphs,
+	// so no need to check on non-concurrent segments
+	if (!concurrent) return contains(*systems, route->system);
+	for (HighwaySegment *cs : *(concurrent))
+	  // no devel systems should be listed
+	  // in CSVs, so no need for that check
+	  if (contains(*systems, cs->route->system)) return 1;
+	return 0;
+}
+
+// compute an edge label, optionally restricted by systems
+void HighwaySegment::write_label(std::ofstream& file, std::list<HighwaySystem*> *systems)
+{	if (concurrent)
+	     {	bool write_comma = 0;
+		for (HighwaySegment* cs : *concurrent)
+		  if ( !cs->route->system->devel() && (!systems || contains(*systems, cs->route->system)) )
+		  {	if  (write_comma) file << ',';
+			else write_comma = 1;
+			file << cs->route->route;
+			file << cs->route->banner;
+			file << cs->route->abbrev;
+		  }
+	     }
+	else {	file << route->route;
+		file << route->banner;
+		file << route->abbrev;
+	     }
 }
 
 #include "compute_stats_t.cpp"

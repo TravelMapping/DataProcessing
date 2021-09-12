@@ -32,11 +32,9 @@ class WaypointQuadtree
 	unsigned int total_nodes();
 	void get_tmg_lines(std::list<std::string> &, std::list<std::string> &, std::string);
 	void write_qt_tmg(std::string);
-      #ifdef threading_enabled
-	void terminal_nodes(std::forward_list<WaypointQuadtree*>*, size_t&, int&);
-	void sort(int);
-	static void sortnodes(std::forward_list<WaypointQuadtree*>*);
-      #else
 	void sort();
+      #ifdef threading_enabled
+	void terminal_nodes(std::forward_list<WaypointQuadtree*>*, size_t&);
+	static void sortnodes(std::forward_list<WaypointQuadtree*>*);
       #endif
 };

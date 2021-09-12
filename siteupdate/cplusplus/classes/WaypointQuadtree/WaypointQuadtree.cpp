@@ -1,4 +1,5 @@
 #include "WaypointQuadtree.h"
+#include "../Args/Args.h"
 #include "../Datacheck/Datacheck.h"
 #include "../ErrorList/ErrorList.h"
 #include "../HighwaySystem/HighwaySystem.h"
@@ -266,28 +267,28 @@ void WaypointQuadtree::write_qt_tmg(std::string filename)
 
 #ifdef threading_enabled
 
-void WaypointQuadtree::terminal_nodes(std::forward_list<WaypointQuadtree*>* nodes, size_t& slot, int& size)
+void WaypointQuadtree::terminal_nodes(std::forward_list<WaypointQuadtree*>* nodes, size_t& slot)
 {	// add to an array of interleaved lists of terminal nodes
 	// for the multi-threaded WaypointQuadtree::sort function
 	if (refined())
-	     {	ne_child->terminal_nodes(nodes, slot, size);
-		nw_child->terminal_nodes(nodes, slot, size);
-		se_child->terminal_nodes(nodes, slot, size);
-		sw_child->terminal_nodes(nodes, slot, size);
+	     {	ne_child->terminal_nodes(nodes, slot);
+		nw_child->terminal_nodes(nodes, slot);
+		se_child->terminal_nodes(nodes, slot);
+		sw_child->terminal_nodes(nodes, slot);
 	     }
 	else {	nodes[slot].push_front(this);
-		slot = (slot+1) % size;
+		slot = (slot+1) % Args::numthreads;
 	     }
 }
 
-void WaypointQuadtree::sort(int numthreads)
-{	std::forward_list<WaypointQuadtree*>* nodes = new std::forward_list<WaypointQuadtree*>[numthreads];
+void WaypointQuadtree::sort()
+{	std::forward_list<WaypointQuadtree*>* nodes = new std::forward_list<WaypointQuadtree*>[Args::numthreads];
 	size_t slot = 0;
-	terminal_nodes(nodes, slot, numthreads);
+	terminal_nodes(nodes, slot);
 
-	std::vector<std::thread> thr(numthreads);
-	for (int t = 0; t < numthreads; t++)	thr[t] = std::thread(sortnodes, nodes+t);
-	for (int t = 0; t < numthreads; t++)	thr[t].join();
+	std::vector<std::thread> thr(Args::numthreads);
+	for (int t = 0; t < Args::numthreads; t++)	thr[t] = std::thread(sortnodes, nodes+t);
+	for (int t = 0; t < Args::numthreads; t++)	thr[t].join();
 	delete[] nodes;
 }
 
