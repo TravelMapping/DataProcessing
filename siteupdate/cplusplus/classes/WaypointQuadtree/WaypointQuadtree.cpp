@@ -83,21 +83,6 @@ void WaypointQuadtree::insert(Waypoint *w, bool init)
 	     }
 }
 
-Waypoint *WaypointQuadtree::waypoint_at_same_point(Waypoint *w)
-{	// find an existing waypoint at the same coordinates as w
-	if (refined())
-		if (w->lat < mid_lat)
-			if (w->lng < mid_lng)
-				return sw_child->waypoint_at_same_point(w);
-			else	return se_child->waypoint_at_same_point(w);
-		else	if (w->lng < mid_lng)
-				return nw_child->waypoint_at_same_point(w);
-			else	return ne_child->waypoint_at_same_point(w);
-	for (Waypoint *p : points)
-		if (p->same_coords(w)) return p;
-	return 0;
-}
-
 std::forward_list<Waypoint*> WaypointQuadtree::near_miss_waypoints(Waypoint *w, double tolerance)
 {	// compute and return a list of existing waypoints which are
 	// within the near-miss tolerance (in degrees lat, lng) of w
