@@ -34,7 +34,7 @@ void WaypointQuadtree::refine()
 	ne_child = new WaypointQuadtree(mid_lat, mid_lng, max_lat, max_lng);
 	sw_child = new WaypointQuadtree(min_lat, min_lng, mid_lat, mid_lng);
 	se_child = new WaypointQuadtree(min_lat, mid_lng, mid_lat, max_lng);
-		   // deleted on termination of program
+		   // deleted by final_report
 	for (Waypoint *p : points) insert(p, 0);
 	points.clear();
 }
@@ -56,7 +56,7 @@ void WaypointQuadtree::insert(Waypoint *w, bool init)
 			{	// see if this is the first point colocated with other_w
 				if (!other_w->colocated)
 				{	other_w->colocated = new std::list<Waypoint*>;
-							     // deleted on termination of program
+							     // deleted by final_report
 					other_w->colocated->push_back(other_w);
 				}
 				other_w->colocated->push_back(w);
@@ -219,15 +219,6 @@ bool WaypointQuadtree::is_valid(ErrorList &el)
 	return 1;
 }
 
-unsigned int WaypointQuadtree::max_colocated()
-{	// return the maximum number of waypoints colocated at any one location
-	unsigned int max_col = 1;
-	for (Waypoint *p : point_list())
-	  if (max_col < p->num_colocated()) max_col = p->num_colocated();
-	//std::cout << "Largest colocate count = " << max_col << std::endl;
-	return max_col;
-}
-
 unsigned int WaypointQuadtree::total_nodes()
 {	if (!refined())
 		// not refined, no children, return 1 for self
@@ -263,6 +254,34 @@ void WaypointQuadtree::write_qt_tmg(std::string filename)
 	for (std::string& v : vertices)	tmgfile << v << '\n';
 	for (std::string& e : edges)	tmgfile << e << '\n';
 	tmgfile.close();
+}
+
+void WaypointQuadtree::final_report(std::vector<unsigned int>& colocate_counts)
+{	// gather & print info for final colocation stats report,
+	// in the process deleting nodes, waypoints & coloc lists
+	if (refined())
+	     {	ne_child->final_report(colocate_counts); delete ne_child;
+		nw_child->final_report(colocate_counts); delete nw_child;
+		se_child->final_report(colocate_counts); delete se_child;
+		sw_child->final_report(colocate_counts); delete sw_child;
+	     }
+	else for (Waypoint *w : points)
+	     {	if (!w->colocated) colocate_counts[1] +=1;
+		else if (w == w->colocated->front())
+		{   while (w->colocated->size() >= colocate_counts.size()) colocate_counts.push_back(0);
+		    colocate_counts[w->colocated->size()] += 1;
+		    if (w->colocated->size() >= 8)
+		    {	printf("(%.15g, %.15g) is occupied by %i waypoints: ['", w->lat, w->lng, (unsigned int)w->colocated->size());
+			std::list<Waypoint*>::iterator p = w->colocated->begin();
+			std::cout << (*p)->route->root << ' ' << (*p)->label << '\'';
+			for (p++; p != w->colocated->end(); p++)
+				std::cout << ", '" << (*p)->route->root << ' ' << (*p)->label << '\'';
+			std::cout << "]\n";
+		    }
+		}
+		else if (w == w->colocated->back()) delete w->colocated;
+		delete w;
+	     }
 }
 
 #ifdef threading_enabled

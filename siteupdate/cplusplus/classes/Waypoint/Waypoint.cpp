@@ -106,12 +106,6 @@ bool Waypoint::nearby(Waypoint *other, double tolerance)
 	return fabs(lat - other->lat) < tolerance && fabs(lng - other->lng) < tolerance;
 }
 
-unsigned int Waypoint::num_colocated()
-{	/* return the number of points colocated with this one (including itself) */
-	if (!colocated) return 1;
-	else return colocated->size();
-}
-
 double Waypoint::distance_to(Waypoint *other)
 {	/* return the distance in miles between this waypoint and another
 	including the factor defined by the CHM project to adjust for

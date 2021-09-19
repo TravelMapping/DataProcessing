@@ -28,10 +28,10 @@ class WaypointQuadtree
 	std::list<Waypoint*> point_list();
 	void graph_points(std::vector<Waypoint*>&, std::vector<Waypoint*>&);
 	bool is_valid(ErrorList &);
-	unsigned int max_colocated();
 	unsigned int total_nodes();
 	void get_tmg_lines(std::list<std::string> &, std::list<std::string> &, std::string);
 	void write_qt_tmg(std::string);
+	void final_report(std::vector<unsigned int>&);
 	void sort();
       #ifdef threading_enabled
 	void terminal_nodes(std::forward_list<WaypointQuadtree*>*, size_t&);

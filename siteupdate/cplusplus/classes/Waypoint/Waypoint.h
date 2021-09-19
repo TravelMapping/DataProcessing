@@ -36,7 +36,6 @@ class Waypoint
 	std::string csv_line(unsigned int);
 	bool same_coords(Waypoint *);
 	bool nearby(Waypoint *, double);
-	unsigned int num_colocated();
 	double distance_to(Waypoint *);
 	double angle(Waypoint *, Waypoint *);
 	std::string canonical_waypoint_name(HighwayGraph*);

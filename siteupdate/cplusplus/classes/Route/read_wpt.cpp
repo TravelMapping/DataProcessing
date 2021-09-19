@@ -65,7 +65,7 @@ void Route::read_wpt(WaypointQuadtree *all_waypoints, ErrorList *el, bool usa_fl
 		} // ...and from beginning
 		while (lines[l][0] == ' ' || lines[l][0] == '\t') lines[l]++;
 		Waypoint *w = new Waypoint(lines[l], this);
-			      // deleted on termination of program, or immediately below if invalid
+			      // deleted by WaypointQuadtree::final_report, or immediately below if invalid
 		if (w->label_too_long() || (w->lat == 0 && w->lng == 0))
 		{	delete w;
 			continue;
