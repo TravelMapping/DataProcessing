@@ -4620,7 +4620,7 @@ print("Processed " + str(routes) + " routes with a total of " + \
           str(points) + " points and " + str(segments) + " segments.", flush=True)
 if points != all_waypoints.size():
     print("MISMATCH: all_waypoints contains " + str(all_waypoints.size()) + " waypoints!", flush=True)
-print("WaypointQuadtree contains " + str(all_waypoints.total_nodes()) + " total nodes.", flush=True)
+print(et.et() + "WaypointQuadtree contains " + str(all_waypoints.total_nodes()) + " total nodes.", flush=True)
 
 if not args.errorcheck:
     # compute colocation of waypoints stats

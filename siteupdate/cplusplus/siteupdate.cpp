@@ -687,7 +687,7 @@ int main(int argc, char *argv[])
 	cout << "Processed " << routes << " routes with a total of " << points << " points and " << segments << " segments." << endl;
 	if (points != all_waypoints.size())
 	  cout << "MISMATCH: all_waypoints contains " << all_waypoints.size() << " waypoints!" << endl;
-	cout << "WaypointQuadtree contains " << all_waypoints.total_nodes() << " total nodes." << endl;
+	cout << et.et() << "WaypointQuadtree contains " << all_waypoints.total_nodes() << " total nodes." << endl;
 
 	if (!Args::errorcheck)
 	{	// compute colocation of waypoints stats
