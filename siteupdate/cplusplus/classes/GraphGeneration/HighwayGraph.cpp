@@ -59,7 +59,7 @@ HighwayGraph::HighwayGraph(WaypointQuadtree &all_waypoints, ElapsedTime &et)
 		  for (HighwaySegment *s : r->segment_list)
 		    if (!s->concurrent || s == s->concurrent->front())
 		      new HGEdge(s, this);
-		      // deleted by ~HGVertex, called by HighwayGraph::clear
+		      // deleted by HGEdge::detach via ~HGVertex via HighwayGraph::clear
 	}
 	std::cout << '!' << std::endl;
 
@@ -106,9 +106,9 @@ HighwayGraph::HighwayGraph(WaypointQuadtree &all_waypoints, ElapsedTime &et)
 				new HGEdge(w->vertex, HGEdge::collapsed | HGEdge::traveled);
 			else {	new HGEdge(w->vertex, HGEdge::collapsed);
 				new HGEdge(w->vertex, HGEdge::traveled);
-				// Final collapsed edges are deleted by ~HGVertex, called by HighwayGraph::clear.
-				// Partially collapsed edges created during the compression process are deleted
-				// upon detachment from all graphs.
+				// Final collapsed edges are deleted by HGEdge::detach via ~HGVertex via HighwayGraph::clear.
+				// Partially collapsed edges created during the compression process
+				// are deleted by HGEdge::detach upon detachment from all graphs.
 			     }
 		}
 	}

@@ -692,25 +692,13 @@ int main(int argc, char *argv[])
 	if (!Args::errorcheck)
 	{	// compute colocation of waypoints stats
 		cout << et.et() << "Computing waypoint colocation stats, reporting all with 8 or more colocations:" << endl;
-		unsigned int largest_colocate_count = all_waypoints.max_colocated();
-		vector<unsigned int> colocate_counts(largest_colocate_count+1, 0);
-		for (Waypoint *w : all_waypoints.point_list())
-		{	unsigned int c = w->num_colocated();
-			colocate_counts[c] += 1;
-			if (c >= 8 && w == w->colocated->front())
-			{	printf("(%.15g, %.15g) is occupied by %i waypoints: ['", w->lat, w->lng, c);
-				list<Waypoint*>::iterator p = w->colocated->begin();
-				cout << (*p)->route->root << ' ' << (*p)->label << '\'';
-				for (p++; p != w->colocated->end(); p++)
-					cout << ", '" << (*p)->route->root << ' ' << (*p)->label << '\'';
-				cout << "]\n";//*/
-			}
-		}
+		vector<unsigned int> colocate_counts(2,0);
+		all_waypoints.final_report(colocate_counts);
 		cout << "Waypoint colocation counts:" << endl;
 		unsigned int unique_locations = 0;
-		for (unsigned int c = 1; c <= largest_colocate_count; c++)
-		{	unique_locations += colocate_counts[c]/c;
-			printf("%6i are each occupied by %2i waypoints.\n", colocate_counts[c]/c, c);
+		for (unsigned int c = 1; c < colocate_counts.size(); c++)
+		{	unique_locations += colocate_counts[c];
+			printf("%6i are each occupied by %2i waypoints.\n", colocate_counts[c], c);
 		}
 		cout << "Unique locations: " << unique_locations << endl;
 	}

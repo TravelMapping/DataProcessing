@@ -49,14 +49,6 @@ std::string HighwaySegment::segment_name()
 	return segment_name;
 }
 
-unsigned int HighwaySegment::index()
-{	// segment number:
-	// return this segment's index within its route's segment_list vector
-	for (unsigned int i = 0; i < route->segment_list.size(); i++)
-	  if (route->segment_list[i] == this) return i;
-	return -1;	// error; this segment not found in vector
-}
-
 /*std::string HighwaySegment::concurrent_travelers_sanity_check()
 {	if (route->system->devel()) return "";
 	if (concurrent)
