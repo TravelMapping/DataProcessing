@@ -286,15 +286,6 @@ class WaypointQuadtree:
 
         return True
 
-    def max_colocated(self):
-        """return the maximum number of waypoints colocated at any one location"""
-        max_col = 1
-        for p in self.point_list():
-            if max_col < p.num_colocated():
-                max_col = p.num_colocated()
-        print("Largest colocate count = " + str(max_col))
-        return max_col
-
     def total_nodes(self):
         if self.points is not None:
             # not refined, no children, return 1 for self
@@ -313,6 +304,25 @@ class WaypointQuadtree:
             for w in self.points:
                 if w.colocated:
                     w.colocated.sort(key=lambda waypoint: waypoint.route.root + "@" + waypoint.label)
+
+    def final_report(self, colocate_counts):
+        """gather & print info for final colocation stats report"""
+        if self.points is None:
+            self.ne_child.final_report(colocate_counts)
+            self.nw_child.final_report(colocate_counts)
+            self.se_child.final_report(colocate_counts)
+            self.sw_child.final_report(colocate_counts)
+        else:
+            for w in self.points:
+                if w.colocated is None:
+                    colocate_counts[1] +=1
+                elif w == w.colocated[0]:
+                    while len(w.colocated) >= len(colocate_counts):
+                        colocate_counts.append(0)
+                    colocate_counts[len(w.colocated)] += 1
+                    if len(w.colocated) >= 8:
+                        print('('+str(w.lat)+', '+str(w.lng)+') is occupied by '+str(len(w.colocated))+\
+                              ' waypoints: '+str([p.route.root+' '+p.label for p in w.colocated]), flush=True)
 
 class Waypoint:
     """This class encapsulates the information about a single waypoint
@@ -390,13 +400,6 @@ class Waypoint:
         tolerance (in degrees) of the other"""
         return abs(self.lat - other.lat) < tolerance and \
             abs(self.lng - other.lng) < tolerance
-
-    def num_colocated(self):
-        """return the number of points colocated with this one (including itself)"""
-        if self.colocated is None:
-            return 1
-        else:
-            return len(self.colocated)
 
     def distance_to(self,other):
         """return the distance in miles between this waypoint and another
@@ -4622,32 +4625,13 @@ print("WaypointQuadtree contains " + str(all_waypoints.total_nodes()) + " total 
 if not args.errorcheck:
     # compute colocation of waypoints stats
     print(et.et() + "Computing waypoint colocation stats, reporting all with 8 or more colocations:", flush=True)
-    largest_colocate_count = all_waypoints.max_colocated()
-    colocate_counts = [0]*(largest_colocate_count+1)
-    big_colocate_locations = dict()
-    for w in all_waypoints.point_list():
-        c = w.num_colocated()
-        if c >= 8:
-            point = (w.lat, w.lng)
-            entry = w.route.root + " " + w.label
-            if point in big_colocate_locations:
-                the_list = big_colocate_locations[point]
-                the_list.append(entry)
-                big_colocate_locations[point] = the_list
-            else:
-                the_list = []
-                the_list.append(entry)
-                big_colocate_locations[point] = the_list
-            #print(str(w) + " with " + str(c) + " other points.", flush=True)
-        colocate_counts[c] += 1
-    for place in big_colocate_locations:
-        the_list = big_colocate_locations[place]
-        print(str(place) + " is occupied by " + str(len(the_list)) + " waypoints: " + str(the_list), flush=True)
+    colocate_counts = [0,0]
+    all_waypoints.final_report(colocate_counts)
     print("Waypoint colocation counts:", flush=True)
     unique_locations = 0
-    for c in range(1,largest_colocate_count+1):
-        unique_locations += colocate_counts[c]//c
-        print("{0:6d} are each occupied by {1:2d} waypoints.".format(colocate_counts[c]//c, c), flush=True)
+    for c in range(1,len(colocate_counts)):
+        unique_locations += colocate_counts[c]
+        print("{0:6d} are each occupied by {1:2d} waypoints.".format(colocate_counts[c], c), flush=True)
     print("Unique locations: " + str(unique_locations), flush=True)
 
 if args.errorcheck:
