@@ -21,7 +21,6 @@ class WaypointQuadtree
 	WaypointQuadtree(double, double, double, double);
 	void refine();
 	void insert(Waypoint*, bool);
-	Waypoint *waypoint_at_same_point(Waypoint*);
 	std::forward_list<Waypoint*> near_miss_waypoints(Waypoint*, double);
 	std::string str();
 	unsigned int size();

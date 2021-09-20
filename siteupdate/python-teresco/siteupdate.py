@@ -140,25 +140,6 @@ class WaypointQuadtree:
                 else:
                     self.ne_child.insert(w, init)
 
-    def waypoint_at_same_point(self,w):
-        """find an existing waypoint at the same coordinates as w"""
-        if self.points is not None:
-            for p in self.points:
-                if p.same_coords(w):
-                    return p
-            return None
-        else:
-            if w.lat < self.mid_lat:
-                if w.lng < self.mid_lng:
-                    return self.sw_child.waypoint_at_same_point(w)
-                else:
-                    return self.se_child.waypoint_at_same_point(w)
-            else:
-                if w.lng < self.mid_lng:
-                    return self.nw_child.waypoint_at_same_point(w)
-                else:
-                    return self.ne_child.waypoint_at_same_point(w)
-
     def near_miss_waypoints(self, w, tolerance):
         """compute and return a list of existing waypoints which are
         within the near-miss tolerance (in degrees lat, lng) of w"""
