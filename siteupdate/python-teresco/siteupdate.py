@@ -3119,7 +3119,7 @@ for t in traveler_ids:
         traveler_lists.append(TravelerList(t,update,el,args.userlistfilepath))
 del traveler_ids
 del listupdates
-print('\n' + et.et() + "Processed " + str(len(traveler_lists)) + " traveler list files.")
+print('\n' + et.et() + "Processed " + str(len(traveler_lists)) + " traveler list files. Sorting and numbering.")
 traveler_lists.sort(key=lambda TravelerList: TravelerList.traveler_name)
 # assign traveler numbers
 travnum = 0
