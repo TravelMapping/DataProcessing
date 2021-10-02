@@ -1,3 +1,6 @@
+CXX = clang++
+CXXFLAGS = -std=c++11 -Wno-comment -Wno-dangling-else -Wno-logical-op-parentheses
+
 MTObjects = siteupdateMT.o functions/sql_fileMT.o threads/threads.o \
   classes/GraphGeneration/HighwayGraphMT.o \
   classes/WaypointQuadtree/WaypointQuadtreeMT.o \
@@ -43,24 +46,36 @@ CommonObjects = \
 .PHONY: all clean
 all: siteupdate siteupdateST
 
-%MT.d: %.cpp ; g++ -std=c++11 -MM -D threading_enabled $< | sed -r "s~.*:~$*MT.o:~" > $@
-%ST.d: %.cpp ; g++ -std=c++11 -MM $< | sed -r "s~.*:~$*ST.o:~" > $@
-%.d  : %.cpp ; g++ -std=c++11 -MM $< | sed -r "s~.*:~$*.o:~" > $@
+%MT.d: %.cpp
+	@echo $@
+	@$(CXX) $(CXXFLAGS) -MM -D threading_enabled $< | sed -r "s~.*:~$*MT.o:~" > $@
+%ST.d: %.cpp
+	@echo $@
+	@$(CXX) $(CXXFLAGS) -MM $< | sed -r "s~.*:~$*ST.o:~" > $@
+%.d  : %.cpp
+	@echo $@
+	@$(CXX) $(CXXFLAGS) -MM $< | sed -r "s~.*:~$*.o:~" > $@
 
 -include $(MTObjects:.o=.d)
 -include $(STObjects:.o=.d)
 -include $(CommonObjects:.o=.d)
 
-%MT.o: ; g++ -std=c++11 -o $@ -D threading_enabled -c $<
-%ST.o: ; g++ -std=c++11 -o $@ -c $<
-%.o  : ; g++ -std=c++11 -o $@ -c $<
+%MT.o:
+	@echo $@
+	@$(CXX) $(CXXFLAGS) -o $@ -D threading_enabled -c $<
+%ST.o:
+	@echo $@
+	@$(CXX) $(CXXFLAGS) -o $@ -c $<
+%.o:
+	@echo $@
+	@$(CXX) $(CXXFLAGS) -o $@ -c $<
 
 siteupdate: $(MTObjects) $(CommonObjects)
-	@echo Linking siteupdate...
-	@g++ -std=c++11 -pthread -o siteupdate $(MTObjects) $(CommonObjects)
+	@echo $@
+	@$(CXX) $(CXXFLAGS) -pthread -o siteupdate $(MTObjects) $(CommonObjects)
 siteupdateST: $(STObjects) $(CommonObjects)
-	@echo Linking siteupdateST...
-	@g++ -std=c++11 -o siteupdateST $(STObjects) $(CommonObjects)
+	@echo $@
+	@$(CXX) $(CXXFLAGS) -o siteupdateST $(STObjects) $(CommonObjects)
 
 clean:
 	@rm -f $(MTObjects)       $(STObjects)       $(CommonObjects)
