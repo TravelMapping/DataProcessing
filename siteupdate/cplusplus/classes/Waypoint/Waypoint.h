@@ -47,7 +47,6 @@ class Waypoint
 
 	// Datacheck
 	void distance_update(char *, double &, Waypoint *);
-	void duplicate_coords(std::unordered_set<Waypoint*> &, char *);
 	void label_invalid_char();
 	void out_of_bounds(char *);
 	// checks for visible points

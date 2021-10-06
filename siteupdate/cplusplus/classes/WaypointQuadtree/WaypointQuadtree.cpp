@@ -59,6 +59,13 @@ void WaypointQuadtree::insert(Waypoint *w, bool init)
 							     // deleted by final_report
 					other_w->colocated->push_back(other_w);
 				}
+				// DUPLICATE_COORDS datacheck
+				for (Waypoint* p : *other_w->colocated)
+				  if (p->route == w->route)
+				  {	char fstr[44];
+					sprintf(fstr, "(%.15g,%.15g)", w->lat, w->lng);
+					Datacheck::add(w->route, p->label, w->label, "", "DUPLICATE_COORDS", fstr);
+				  }
 				other_w->colocated->push_back(w);
 				w->colocated = other_w->colocated;
 			}

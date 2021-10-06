@@ -8,12 +8,10 @@
 #include "../WaypointQuadtree/WaypointQuadtree.h"
 #include <cstring>
 #include <fstream>
-#include <unordered_set>
 
 void Route::read_wpt(WaypointQuadtree *all_waypoints, ErrorList *el, bool usa_flag)
 {	/* read data into the Route's waypoint list from a .wpt file */
 	std::string filename = Args::highwaydatapath + "/hwy_data" + "/" + rg_str + "/" + system->systemname + "/" + root + ".wpt";
-	std::unordered_set<Waypoint*> coords_used; // for finding duplicates
 	Waypoint *last_visible = 0;
 	double vis_dist = 0;
 	char fstr[112];
@@ -76,7 +74,6 @@ void Route::read_wpt(WaypointQuadtree *all_waypoints, ErrorList *el, bool usa_fl
 
 		// single-point Datachecks, and HighwaySegment
 		w->out_of_bounds(fstr);
-		w->duplicate_coords(coords_used, fstr);
 		w->label_invalid_char();
 		if (point_list.size() > 1)
 		{	w->distance_update(fstr, vis_dist, point_list[point_list.size()-2]);

@@ -325,21 +325,6 @@ void Waypoint::distance_update(char *fstr, double &vis_dist, Waypoint *prev_w)
 	}
 }
 
-void Waypoint::duplicate_coords(std::unordered_set<Waypoint*> &coords_used, char *fstr)
-{	// duplicate coordinates
-	Waypoint *w;
-	if (!colocated) w = this;
-	else w = colocated->front();
-	if (!coords_used.insert(w).second)
-	  for (Waypoint *other_w : route->point_list)
-	  {	if (this == other_w) break;
-		if (lat == other_w->lat && lng == other_w->lng)
-		{	sprintf(fstr, "(%.15g,%.15g)", lat, lng);
-			Datacheck::add(route, other_w->label, label, "", "DUPLICATE_COORDS", fstr);
-		}
-	  }
-}
-
 void Waypoint::label_invalid_char()
 {	// look for labels with invalid characters
 	if (label == "*")
