@@ -320,7 +320,7 @@ class WaypointQuadtree:
                     while len(w.colocated) >= len(colocate_counts):
                         colocate_counts.append(0)
                     colocate_counts[len(w.colocated)] += 1
-                    if len(w.colocated) >= 8:
+                    if len(w.colocated) >= 9:
                         print('('+str(w.lat)+', '+str(w.lng)+') is occupied by '+str(len(w.colocated))+\
                               ' waypoints: '+str([p.route.root+' '+p.label for p in w.colocated]), flush=True)
 
@@ -335,14 +335,48 @@ class Waypoint:
     def __init__(self,line,route,datacheckerrors):
         """initialize object from a .wpt file line"""
         self.route = route
+
+        # split line into fields
         parts = line.split()
         self.label = parts[0]
-        self.is_hidden = self.label.startswith('+')
         if len(parts) > 2:
             # all except first and last
             self.alt_labels = parts[1:-1]
         else:
             self.alt_labels = []
+
+        # datachecks
+        valid_line = True
+        if len(self.label.encode('utf-8')) > DBFieldLength.label:
+            # SINGLE_FIELD_LINE, looks like a URL
+            if len(parts) == 1 and self.label.startswith("http"):	# If the "label" is a URL, and the only field...
+                slicepoint = len(self.label)-DBFieldLength.label+3	# the end is more useful than "http://www.openstreetma..."
+                while len(self.label[slicepoint:].encode('utf-8')) > DBFieldLength.label-3:	# While still too many bytes to fit,
+                    slicepoint += 1					# remove more characters from beginning
+                datacheckerrors.append(DatacheckEntry(self.route,["..."+self.label[slicepoint:]],"SINGLE_FIELD_LINE"))
+                self.lat = 0.0
+                self.lng = 0.0
+                return
+            # LABEL_TOO_LONG
+            slicepoint = DBFieldLength.label-3				# Prepare a truncated label that will fit in the DB
+            while len(self.label[:slicepoint].encode('utf-8')) > DBFieldLength.label-3:	# While still too many bytes to fit,
+                slicepoint -= 1						# remove more characters from the end
+            excess = "..."+self.label[slicepoint:]			# Save excess beyond what fits in DB, to put in info field
+            if len(excess.encode('utf-8')) > DBFieldLength.dcErrValue:	# If it's too long for the info field,
+                slicepoint2 = DBFieldLength.dcErrValue-3		# cut it down to what will fit,
+                while len(excess[:slicepoint2].encode('utf-8')) > DBFieldLength.dcErrValue-3:
+                        slicepoint2 -= 1
+                excess = excess[:slicepoint2]+"..."			# appending "..."
+            self.label = self.label[:slicepoint]			# Now truncate the label itself
+            datacheckerrors.append(DatacheckEntry(self.route,[self.label+'...'],"LABEL_TOO_LONG", excess))
+            valid_line = False
+        # SINGLE_FIELD_LINE, looks like a label
+        if len(parts) == 1:
+            datacheckerrors.append(DatacheckEntry(self.route,[self.label],"SINGLE_FIELD_LINE"))
+            self.lat = 0.0
+            self.lng = 0.0
+            return
+
         # last has the URL, which needs more work to get lat/lng
         url_parts = parts[-1].split('=')
         if len(url_parts) < 3:
@@ -355,7 +389,7 @@ class Waypoint:
             return
         lat_string = url_parts[1].split("&")[0] # chop off "&lon"
         lng_string = url_parts[2].split("&")[0] # chop off possible "&zoom"
-        valid_coords = True
+
         if not valid_num_str(lat_string):
             if len(lat_string.encode('utf-8')) > DBFieldLength.dcErrValue:
                 slicepoint = DBFieldLength.dcErrValue-3
@@ -363,7 +397,8 @@ class Waypoint:
                         slicepoint -= 1
                 lat_string = lat_string[:slicepoint]+"..."
             datacheckerrors.append(DatacheckEntry(route, [self.label], "MALFORMED_LAT", lat_string))
-            valid_coords = False
+            valid_line = False
+
         if not valid_num_str(lng_string):
             if len(lng_string.encode('utf-8')) > DBFieldLength.dcErrValue:
                 slicepoint = DBFieldLength.dcErrValue-3
@@ -371,10 +406,12 @@ class Waypoint:
                         slicepoint -= 1
                 lng_string = lng_string[:slicepoint]+"..."
             datacheckerrors.append(DatacheckEntry(route, [self.label], "MALFORMED_LON", lng_string))
-            valid_coords = False
-        if valid_coords:
+            valid_line = False
+
+        if valid_line:
             self.lat = float(lat_string)
             self.lng = float(lng_string)
+            self.is_hidden = self.label.startswith('+')
         else:
             self.lat = 0
             self.lng = 0
@@ -771,24 +808,6 @@ class Waypoint:
             #datacheckerrors.append(DatacheckEntry(route, [self.label], "UNEXPECTED_DESIGNATION", self.label[len(no_abbrev)+len(r.abbrev)+1:]))
         return False
 
-    def label_too_long(self, datacheckerrors):
-        # check whether label is longer than the DB can store
-        if len(self.label.encode('utf-8')) > DBFieldLength.label:
-            slicepoint = DBFieldLength.label-3
-            while len(self.label[:slicepoint].encode('utf-8')) > DBFieldLength.label-3:
-                slicepoint -= 1
-            excess = "..."+self.label[slicepoint:]
-            self.label = self.label[:slicepoint]
-
-            if len(excess.encode('utf-8')) > DBFieldLength.dcErrValue:
-                slicepoint = DBFieldLength.dcErrValue-3
-                while len(excess[:slicepoint].encode('utf-8')) > DBFieldLength.dcErrValue-3:
-                        slicepoint -= 1
-                excess = excess[:slicepoint]+"..."
-            datacheckerrors.append(DatacheckEntry(self.route,[self.label+'...'],"LABEL_TOO_LONG", excess))
-            return True
-        return False
-
 class HighwaySegment:
     """This class represents one highway segment: the connection between two
     Waypoints connected by one or more routes"""
@@ -1016,9 +1035,7 @@ class Route:
                 if len(line) > 0:
                     previous_point = w
                     w = Waypoint(line,self,datacheckerrors)
-                    malformed_url = w.lat == 0.0 and w.lng == 0.0
-                    label_too_long = w.label_too_long(datacheckerrors)
-                    if malformed_url or label_too_long:
+                    if w.lat == 0.0 and w.lng == 0.0:
                         w = previous_point
                         continue
                     self.point_list.append(w)
@@ -1138,6 +1155,13 @@ class ConnectedRoute:
         if len(fields) != 5:
             el.add_error("Could not parse " + system.systemname + "_con.csv line: [" + line +
                          "], expected 5 fields, found " + str(len(fields)))
+            # fill in whatever fields we can to conform with C++ flavored highwaydatastats.log
+            if len(fields) > 1:
+                self.route = fields[1]
+                if len(fields) > 2:
+                    self.banner = fields[2]
+                    if len(fields) > 3:
+                        self.groupname = fields[3]
             return
         if system.systemname != fields[0]:
             el.add_error("System mismatch parsing " + system.systemname +
@@ -1169,7 +1193,7 @@ class ConnectedRoute:
                                  " already in " + route.con_route.system.systemname + "_con.csv")
                 if system != route.system:
                     el.add_error("System mismatch: chopped route " + route.root + " from " + route.system.systemname +
-                        ".csv in connected route in " + system.systemname + "_con.csv");
+                                 ".csv in connected route in " + system.systemname + "_con.csv");
                 route.con_route = self
                 # save order of route in connected route
                 route.rootOrder = rootOrder
@@ -1656,7 +1680,7 @@ class DatacheckEntry:
     LABEL_PARENS           |
     LABEL_SELFREF          |
     LABEL_SLASHES          |
-    LABEL_TOO_LONG         |
+    LABEL_TOO_LONG         | excess label that can't fit in DB
     LABEL_UNDERSCORES      |
     LACKS_GENERIC          |
     LONG_SEGMENT           | distance in miles
@@ -1667,6 +1691,7 @@ class DatacheckEntry:
     NONTERMINAL_UNDERSCORE |
     OUT_OF_BOUNDS          | coordinate pair
     SHARP_ANGLE            | angle in degrees
+    SINGLE_FIELD_LINE      |
     US_LETTER              |
     VISIBLE_DISTANCE       | distance in miles
     VISIBLE_HIDDEN_COLOC   | hidden point at same coordinates
@@ -3659,6 +3684,7 @@ datacheck_always_error = [ \
     'MALFORMED_LON',
     'MALFORMED_URL',
     'NONTERMINAL_UNDERSCORE',
+    'SINGLE_FIELD_LINE',
     'US_LETTER' ]
 for line in lines:
     line=line.strip()
@@ -4624,7 +4650,7 @@ print(et.et() + "WaypointQuadtree contains " + str(all_waypoints.total_nodes()) 
 
 if not args.errorcheck:
     # compute colocation of waypoints stats
-    print(et.et() + "Computing waypoint colocation stats, reporting all with 8 or more colocations:", flush=True)
+    print(et.et() + "Computing waypoint colocation stats, reporting all with 9 or more colocations:", flush=True)
     colocate_counts = [0,0]
     all_waypoints.final_report(colocate_counts)
     print("Waypoint colocation counts:", flush=True)

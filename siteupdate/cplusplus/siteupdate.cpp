@@ -691,7 +691,7 @@ int main(int argc, char *argv[])
 
 	if (!Args::errorcheck)
 	{	// compute colocation of waypoints stats
-		cout << et.et() << "Computing waypoint colocation stats, reporting all with 8 or more colocations:" << endl;
+		cout << et.et() << "Computing waypoint colocation stats, reporting all with 9 or more colocations:" << endl;
 		vector<unsigned int> colocate_counts(2,0);
 		all_waypoints.final_report(colocate_counts);
 		cout << "Waypoint colocation counts:" << endl;

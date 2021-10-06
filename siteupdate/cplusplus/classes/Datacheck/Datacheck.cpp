@@ -156,5 +156,6 @@ std::unordered_set<std::string> Datacheck::always_error
 	"MALFORMED_LON",
 	"MALFORMED_URL",
 	"NONTERMINAL_UNDERSCORE",
+	"SINGLE_FIELD_LINE",
 	"US_LETTER"
 };

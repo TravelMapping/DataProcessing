@@ -1,7 +1,6 @@
 class HGVertex;
 class HighwayGraph;
 class Route;
-#include <deque>
 #include <forward_list>
 #include <fstream>
 #include <list>
@@ -24,7 +23,7 @@ class Waypoint
 	HGVertex *vertex;
 	double lat, lng;
 	std::string label;
-	std::deque<std::string> alt_labels;
+	std::vector<std::string> alt_labels;
 	std::vector<Waypoint*> ap_coloc;
 	std::forward_list<Waypoint*> near_miss_points;
 	unsigned int point_num;
@@ -50,7 +49,6 @@ class Waypoint
 	void distance_update(char *, double &, Waypoint *);
 	void duplicate_coords(std::unordered_set<Waypoint*> &, char *);
 	void label_invalid_char();
-	bool label_too_long();
 	void out_of_bounds(char *);
 	// checks for visible points
 	void bus_with_i();
