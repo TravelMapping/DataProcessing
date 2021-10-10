@@ -151,7 +151,7 @@ class WaypointQuadtree:
         if self.points is not None:
             #print("DEBUG: terminal quadrant (self.points is not None) comparing with " + str(len(self.points)) + " points.")
             for p in self.points:
-                if p != w and not p.same_coords(w) and p.nearby(w, tolerance):
+                if p.nearby(w, tolerance) and not p.same_coords(w):
                     #print("DEBUG: found nmp " + str(p))
                     near_miss_points.append(p)
 
