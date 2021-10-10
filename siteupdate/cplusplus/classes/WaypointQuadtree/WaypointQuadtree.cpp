@@ -59,6 +59,13 @@ void WaypointQuadtree::insert(Waypoint *w, bool init)
 							     // deleted by final_report
 					other_w->colocated->push_back(other_w);
 				}
+				// DUPLICATE_COORDS datacheck
+				for (Waypoint* p : *other_w->colocated)
+				  if (p->route == w->route)
+				  {	char fstr[44];
+					sprintf(fstr, "(%.15g,%.15g)", w->lat, w->lng);
+					Datacheck::add(w->route, p->label, w->label, "", "DUPLICATE_COORDS", fstr);
+				  }
 				other_w->colocated->push_back(w);
 				w->colocated = other_w->colocated;
 			}
@@ -255,7 +262,7 @@ void WaypointQuadtree::final_report(std::vector<unsigned int>& colocate_counts)
 		else if (w == w->colocated->front())
 		{   while (w->colocated->size() >= colocate_counts.size()) colocate_counts.push_back(0);
 		    colocate_counts[w->colocated->size()] += 1;
-		    if (w->colocated->size() >= 8)
+		    if (w->colocated->size() >= 9)
 		    {	printf("(%.15g, %.15g) is occupied by %i waypoints: ['", w->lat, w->lng, (unsigned int)w->colocated->size());
 			std::list<Waypoint*>::iterator p = w->colocated->begin();
 			std::cout << (*p)->route->root << ' ' << (*p)->label << '\'';

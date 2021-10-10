@@ -37,7 +37,7 @@ class Datacheck
     LABEL_PARENS           |
     LABEL_SELFREF          |
     LABEL_SLASHES          |
-    LABEL_TOO_LONG         |
+    LABEL_TOO_LONG         | excess label that can't fit in DB
     LABEL_UNDERSCORES      |
     LACKS_GENERIC          |
     LONG_SEGMENT           | distance in miles
@@ -48,6 +48,7 @@ class Datacheck
     NONTERMINAL_UNDERSCORE |
     OUT_OF_BOUNDS          | coordinate pair
     SHARP_ANGLE            | angle in degrees
+    SINGLE_FIELD_LINE      |
     US_LETTER              |
     VISIBLE_DISTANCE       | distance in miles
     VISIBLE_HIDDEN_COLOC   | hidden point at same coordinates

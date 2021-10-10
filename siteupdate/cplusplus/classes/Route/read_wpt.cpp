@@ -8,12 +8,10 @@
 #include "../WaypointQuadtree/WaypointQuadtree.h"
 #include <cstring>
 #include <fstream>
-#include <unordered_set>
 
 void Route::read_wpt(WaypointQuadtree *all_waypoints, ErrorList *el, bool usa_flag)
 {	/* read data into the Route's waypoint list from a .wpt file */
 	std::string filename = Args::highwaydatapath + "/hwy_data" + "/" + rg_str + "/" + system->systemname + "/" + root + ".wpt";
-	std::unordered_set<Waypoint*> coords_used; // for finding duplicates
 	Waypoint *last_visible = 0;
 	double vis_dist = 0;
 	char fstr[112];
@@ -51,22 +49,23 @@ void Route::read_wpt(WaypointQuadtree *all_waypoints, ErrorList *el, bool usa_fl
 		el->add_error(filename + " is empty or begins with null zero");
 		return;
 	}
-	lines.push_back(wptdata+wptdatasize+1); // add a dummy "past-the-end" element to make lines[l+1]-2 work
+	lines.push_back(wptdata+wptdatasize+1);		// add a dummy "past-the-end" element to make lines[l+1]-2 work
 
 	// process lines
 	for (unsigned int l = lines[1] < wptdata+2; l < lines.size()-1; l++)
 	{	// strip whitespace from end...
 		char* endchar = lines[l+1]-2;		// -2 skips over the 0 inserted while splitting wptdata into lines
 		while (*endchar == 0) endchar--;	// skip back more for CRLF cases, and lines followed by blank lines
-		if (endchar <= lines[l]) continue;	// line is blank; skip
+		if (endchar < lines[l]) continue;	// line is blank; skip (avoid seeking before BOF)
 		while (*endchar == ' ' || *endchar == '\t')
 		{	*endchar = 0;
 			endchar--;
 		} // ...and from beginning
 		while (lines[l][0] == ' ' || lines[l][0] == '\t') lines[l]++;
+		if (!*lines[l]) continue;		// whitespace-only line; skip
 		Waypoint *w = new Waypoint(lines[l], this);
 			      // deleted by WaypointQuadtree::final_report, or immediately below if invalid
-		if (w->label_too_long() || (w->lat == 0 && w->lng == 0))
+		if (!w->lat && !w->lng)
 		{	delete w;
 			continue;
 		}
@@ -75,7 +74,6 @@ void Route::read_wpt(WaypointQuadtree *all_waypoints, ErrorList *el, bool usa_fl
 
 		// single-point Datachecks, and HighwaySegment
 		w->out_of_bounds(fstr);
-		w->duplicate_coords(coords_used, fstr);
 		w->label_invalid_char();
 		if (point_list.size() > 1)
 		{	w->distance_update(fstr, vis_dist, point_list[point_list.size()-2]);

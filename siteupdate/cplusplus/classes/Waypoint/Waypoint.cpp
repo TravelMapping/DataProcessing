@@ -16,32 +16,54 @@ Waypoint::Waypoint(char *line, Route *rte)
 {	/* initialize object from a .wpt file line */
 	route = rte;
 
-	// parse WPT line
-	size_t spn = 0;
-	for (char* c = line; *c; c += spn)
-	{	for (spn = strcspn(c, " "); c[spn] == ' '; spn++) c[spn] = 0;
-		alt_labels.emplace_back(c);
+	// split line into fields
+	char* c = strchr(line, ' ');
+	if (c){	do *c = 0; while (*++c == ' ');
+		// alt labels & URL
+		for (size_t spn = 0; *c; c += spn)
+		{	for (spn = strcspn(c, " "); c[spn] == ' '; spn++) c[spn] = 0;
+			alt_labels.emplace_back(c);
+		}
+	      }
+	label = line;
+
+	// datachecks
+	bool valid_line = 1;
+	if (label.size() > DBFieldLength::label)
+	{	// SINGLE_FIELD_LINE, looks like a URL
+		if (alt_labels.empty() && !strncmp(label.data(), "http", 4))		// If the "label" is a URL, and the only field...
+		{	label = "..."+label.substr(label.size()-DBFieldLength::label+3);// the end is more useful than "http://www.openstreetma..."
+			while (label.front() < 0)	label.erase(label.begin());	// Strip any partial multi-byte characters off the beginning
+			Datacheck::add(route, label, "", "", "SINGLE_FIELD_LINE", "");
+			lat = 0;	lng = 0;	return;
+		}
+		// LABEL_TOO_LONG
+		size_t slicepoint = DBFieldLength::label-3;				// Prepare a truncated label that will fit in the DB
+		while (label[slicepoint-1] < 0) slicepoint--;				// Avoid slicing within a multi-byte character
+		std::string excess = label.data()+slicepoint;				// Save excess beyond what fits in DB, to put in info field
+		if (excess.size() > DBFieldLength::dcErrValue-3)			// If it's too long for the info field,
+		{	excess = excess.substr(0, DBFieldLength::dcErrValue-6);		// cut it down to what will fit,
+			while (excess.back() < 0)	excess.erase(excess.end()-1);	// strip any partial multi-byte characters off the end,
+			excess += "...";						// and append "..."
+		}
+		label = label.assign(label, 0, slicepoint);				// Now truncate the label itself
+		Datacheck::add(route, label+"...", "", "", "LABEL_TOO_LONG", "..."+excess);
+		valid_line = 0;
+	}
+	// SINGLE_FIELD_LINE, looks like a label
+	if (alt_labels.empty())
+	{	Datacheck::add(route, label, "", "", "SINGLE_FIELD_LINE", "");
+		lat = 0;	lng = 0;	return;
 	}
 
-	// We know alt_labels will have at least one element, because if the WPT line is
-	// blank or contains only spaces, Route::read_wpt will not call this constructor.
-	std::string URL = alt_labels.back();	// last token is actually the URL...
-	alt_labels.pop_back();			// ...and not a label.
-	if (alt_labels.empty()) label = "NULL";
-	else {	label = alt_labels.front();	// first token is the primary label...
-		alt_labels.pop_front();		// ...and not an alternate.
-	     }
-	is_hidden = label[0] == '+';
-	colocated = 0;
-
 	// parse URL
+	std::string& URL = alt_labels.back();	// last field is actually the URL, not a label.
 	size_t latBeg = URL.find("lat=")+4;
 	size_t lonBeg = URL.find("lon=")+4;
 	if (latBeg == 3 || lonBeg == 3)
 	{	Datacheck::add(route, label, "", "", "MALFORMED_URL", "MISSING_ARG(S)");
 		lat = 0;	lng = 0;	return;
 	}
-	bool valid_coords = 1;
 	if (!valid_num_str(URL.data()+latBeg, '&'))
 	{	size_t ampersand = URL.find('&', latBeg);
 		std::string lat_string = (ampersand == -1) ? URL.data()+latBeg : URL.substr(latBeg, ampersand-latBeg);
@@ -51,7 +73,7 @@ Waypoint::Waypoint(char *line, Route *rte)
 			lat_string += "...";
 		}
 		Datacheck::add(route, label, "", "", "MALFORMED_LAT", lat_string);
-		valid_coords = 0;
+		valid_line = 0;
 	}
 	if (!valid_num_str(URL.data()+lonBeg, '&'))
 	{	size_t ampersand = URL.find('&', lonBeg);
@@ -62,11 +84,14 @@ Waypoint::Waypoint(char *line, Route *rte)
 			lng_string += "...";
 		}
 		Datacheck::add(route, label, "", "", "MALFORMED_LON", lng_string);
-		valid_coords = 0;
+		valid_line = 0;
 	}
-	if (valid_coords)
+	if (valid_line)
 	     {	lat = strtod(&URL[latBeg], 0);
 		lng = strtod(&URL[lonBeg], 0);
+		alt_labels.pop_back(); // remove URL
+		is_hidden = label[0] == '+';
+		colocated = 0;
 	     }
 	else {	lat = 0;
 		lng = 0;
@@ -300,21 +325,6 @@ void Waypoint::distance_update(char *fstr, double &vis_dist, Waypoint *prev_w)
 	}
 }
 
-void Waypoint::duplicate_coords(std::unordered_set<Waypoint*> &coords_used, char *fstr)
-{	// duplicate coordinates
-	Waypoint *w;
-	if (!colocated) w = this;
-	else w = colocated->front();
-	if (!coords_used.insert(w).second)
-	  for (Waypoint *other_w : route->point_list)
-	  {	if (this == other_w) break;
-		if (lat == other_w->lat && lng == other_w->lng)
-		{	sprintf(fstr, "(%.15g,%.15g)", lat, lng);
-			Datacheck::add(route, other_w->label, label, "", "DUPLICATE_COORDS", fstr);
-		}
-	  }
-}
-
 void Waypoint::label_invalid_char()
 {	// look for labels with invalid characters
 	if (label == "*")
@@ -338,32 +348,6 @@ void Waypoint::label_invalid_char()
 		{	Datacheck::add(route, lbl, "", "", "LABEL_INVALID_CHAR", "");
 			break;
 		}
-}
-
-bool Waypoint::label_too_long()
-{	// label longer than the DB can store
-	if (label.size() > DBFieldLength::label)
-	{	// save the excess beyond what can fit in a DB field, to put in the info/value column
-		std::string excess = label.data()+DBFieldLength::label-3;
-		// strip any partial multi-byte characters off the beginning
-		while (excess.front() < 0)	excess.erase(excess.begin());
-		// if it's too long for the info/value column,
-		if (excess.size() > DBFieldLength::dcErrValue-3)
-		{	// cut it down to what will fit,
-			excess = excess.substr(0, DBFieldLength::dcErrValue-6);
-			// strip any partial multi-byte characters off the end,
-			while (excess.back() < 0)	excess.erase(excess.end()-1);
-			// and append "..."
-			excess += "...";
-		}
-		// now truncate the label itself
-		label = label.substr(0, DBFieldLength::label-3);
-		// and strip any partial multi-byte characters off the end
-		while (label.back() < 0)	label.erase(label.end()-1);
-		Datacheck::add(route, label+"...", "", "", "LABEL_TOO_LONG", "..."+excess);
-		return 1;
-	}
-	return 0;
 }
 
 void Waypoint::out_of_bounds(char *fstr)
