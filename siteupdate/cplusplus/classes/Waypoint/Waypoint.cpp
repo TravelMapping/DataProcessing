@@ -228,8 +228,6 @@ void Waypoint::nmplogs(std::unordered_set<std::string> &nmpfps, std::ofstream &n
 		for (Waypoint *other_w : near_miss_points) nmpline += " " + other_w->str();
 		// check for string in fp list
 		std::unordered_set<std::string>::iterator fpit = nmpfps.find(nmpline);
-		if (fpit == nmpfps.end())		  fpit = nmpfps.find(nmpline+" [LOOKS INTENTIONAL]");
-		if (fpit == nmpfps.end())		  fpit = nmpfps.find(nmpline+" [SOME LOOK INTENTIONAL]");
 		bool fp = fpit != nmpfps.end();
 		// write lines to tm-master.nmp
 		size_t li_count = 0;
