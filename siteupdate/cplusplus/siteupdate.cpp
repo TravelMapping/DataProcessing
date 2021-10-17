@@ -265,9 +265,16 @@ int main(int argc, char *argv[])
 	unordered_set<string> nmpfps;
 	file.open(Args::highwaydatapath+"/nmpfps.log");
 	while (getline(file, line))
-	{	while (line.size() && (line.back() == 0x0D || line.back() == ' '))
+	{	while (line.size() && (line.back() == ' ' || line.back() == '\r'))
 			line.pop_back(); // trim DOS newlines & whitespace
-		if (line.size()) nmpfps.insert(line);
+		if (line.size())
+		    if (line.size() >= 51)
+			if (!strcmp(line.data()+line.size()-20, " [LOOKS INTENTIONAL]"))
+				nmpfps.emplace(line, 0, line.size()-20);
+			else if (line.size() >= 55 && !strcmp(line.data()+line.size()-24, " [SOME LOOK INTENTIONAL]"))
+				nmpfps.emplace(line, 0, line.size()-24);
+			else	nmpfps.emplace(std::move(line));
+		    else	nmpfps.emplace(std::move(line));
 	}
 	file.close();
 

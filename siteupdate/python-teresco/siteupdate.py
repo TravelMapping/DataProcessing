@@ -2839,10 +2839,15 @@ print(et.et() + "Near-miss point log and tm-master.nmp file.", flush=True)
 # read in fp file
 nmpfps = set()
 nmpfpfile = open(args.highwaydatapath+'/nmpfps.log','r')
-nmpfpfilelines = nmpfpfile.readlines()
-for line in nmpfpfilelines:
-    if len(line.rstrip('\n ')) > 0:
-        nmpfps.add(line.rstrip('\n '))
+for line in nmpfpfile.readlines():
+    line = line.rstrip('\n ')
+    if len(line) > 0:
+        if line.endswith(" [LOOKS INTENTIONAL]"):
+            nmpfps.add(line[:-20])
+        elif line.endswith(" [SOME LOOK INTENTIONAL]"):
+            nmpfps.add(line[:-24])
+        else:
+            nmpfps.add(line)
 nmpfpfile.close()
 
 nmploglines = []
@@ -2860,15 +2865,6 @@ for w in all_waypoints.point_list():
             nmpline += " " + str(other_w)
         # check for string in fp list
         fp = nmpline in nmpfps
-        lifp_tag = 0
-        if not fp:
-            if nmpline+" [LOOKS INTENTIONAL]" in nmpfps:
-                fp = True
-                lifp_tag = 1
-        if not fp:
-            if nmpline+" [SOME LOOK INTENTIONAL]" in nmpfps:
-                fp = True
-                lifp_tag = 2
         #  write lines to tm-master.nmp
         li_count = 0
         for other_w in w.near_miss_points:
@@ -2908,12 +2904,7 @@ for w in all_waypoints.point_list():
                 logline += " [SOME LOOK INTENTIONAL]"
             w.near_miss_points = None
         if fp:
-            if lifp_tag == 0:
-                nmpfps.remove(nmpline)
-            elif lifp_tag == 1:
-                nmpfps.remove(nmpline+" [LOOKS INTENTIONAL]")
-            else:
-                nmpfps.remove(nmpline+" [SOME LOOK INTENTIONAL]")
+            nmpfps.remove(nmpline)
             logline += " [MARKED FP]"
             w.near_miss_points = None
         nmploglines.append(logline)
