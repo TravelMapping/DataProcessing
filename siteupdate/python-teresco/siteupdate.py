@@ -831,8 +831,9 @@ class Waypoint:
         rte_ban = r.route+r.banner
         if self.label.startswith(rte_ban):
             c = len(rte_ban)
-            if c == len(self.label) or self.label[c] == '_' and (self.label[c+1] != 'U' or len(self.label) > c+2 and not self.label[c+2].isdigit()) or self.label[c] == '/':
-                datacheckerrors.append(DatacheckEntry(r,[self.label],'LABEL_SELFREF'))
+            l = self.label
+            if len(l) == c or l[c] == '_' and (len(l) == c+1 or l[c+1] != 'U' or len(l) > c+2 and not l[c+2:].isdigit()) or l[c] == '/':
+                datacheckerrors.append(DatacheckEntry(r,[l],'LABEL_SELFREF'))
 
 class HighwaySegment:
     """This class represents one highway segment: the connection between two
