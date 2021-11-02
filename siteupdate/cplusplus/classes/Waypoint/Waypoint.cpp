@@ -430,34 +430,31 @@ void Waypoint::label_selfref(const char *slash)
 {	// looking for the route within the label
 	// partially complete "references own route" -- too many FP
 	// first check for number match after a slash, if there is one
-	if (slash && route->route.back() >= '0' && route->route.back() <= '9')
-	{	int digit_starts = route->route.size()-1;
-		while (digit_starts >= 0 && route->route[digit_starts] >= '0' && route->route[digit_starts] <= '9')
-			digit_starts--;
-		if (!strcmp(slash+1, route->route.data()+digit_starts+1) || !strcmp(slash+1, route->route.data()))
-		     {	Datacheck::add(route, label, "", "", "LABEL_SELFREF", "");
-			return;
-		     }
-		else {	const char *underscore = strchr(slash+1, '_');
-			if (underscore
-			&& (label.substr(slash-label.data()+1, underscore-slash-1) == route->route.data()+digit_starts+1
-			||  label.substr(slash-label.data()+1, underscore-slash-1) == route->route.data()))
+	if (slash)
+	{	char* digit_starts = isdigit(route->route.back())
+		? &route->route.back()
+		: isdigit(route->route[route->route.size()-2]) && isalpha(route->route.back()) ? &route->route.back()-1 : 0;
+		if (digit_starts)
+		{	while (digit_starts > route->route.data() && isdigit(digit_starts[-1])) digit_starts--;
+			if (!strcmp(slash+1, digit_starts) || !strcmp(slash+1, route->route.data()))
 			{	Datacheck::add(route, label, "", "", "LABEL_SELFREF", "");
 				return;
 			}
-		     }
+			const char *underscore = strchr(slash+1, '_');
+			if (underscore)
+			{	std::string postslash(slash+1, underscore-slash-1);
+				if (postslash == digit_starts || postslash == route->route)
+				{	Datacheck::add(route, label, "", "", "LABEL_SELFREF", "");
+					return;
+				}
+			}
+		}
 	}
 	// now the remaining checks
 	std::string rte_ban = route->route + route->banner;
-	const char *l = label.data();
-	const char *rb = rte_ban.data();
-	const char *end = rb+rte_ban.size();
-	while (rb < end)
-	{	if (*l != *rb) return;
-		l++;
-		rb++;
-	}
-	if (*l == 0 || *l == '_' || *l == '/')
+	if ( strncmp(label.data(), rte_ban.data(), rte_ban.size()) ) return;
+	const char *c = label.data()+rte_ban.size();
+	if (*c == 0 || *c == '_' && (c[1] != 'U' || c[2] && !isdigit(c[2])) || *c == '/')
 		Datacheck::add(route, label, "", "", "LABEL_SELFREF", "");
 }
 
