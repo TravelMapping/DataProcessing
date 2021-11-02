@@ -808,6 +808,32 @@ class Waypoint:
             #datacheckerrors.append(DatacheckEntry(route, [self.label], "UNEXPECTED_DESIGNATION", self.label[len(no_abbrev)+len(r.abbrev)+1:]))
         return False
 
+    def label_selfref(self):
+        # partially complete "references own route" -- too many FP
+        # first check for number match after a slash, if there is one
+        if '/' in self.label:
+            digit_starts = len(r.route)-1 if r.route[-1].isdigit() else \
+                           len(r.route)-2 if r.route[-2].isdigit() and r.route[-1].isalpha() else 0
+            if digit_starts:
+                while digit_starts >= 0 and r.route[digit_starts].isdigit():
+                    digit_starts-=1
+                digits = r.route[digit_starts+1:]
+                postslash = self.label[self.label.index('/')+1:]
+                if postslash == digits or postslash == r.route:
+                    datacheckerrors.append(DatacheckEntry(r,[self.label],'LABEL_SELFREF'))
+                    return
+                if '_' in postslash:
+                    postslash = postslash[:postslash.index('_')]
+                    if postslash == digits or postslash == r.route:
+                        datacheckerrors.append(DatacheckEntry(r,[self.label],'LABEL_SELFREF'))
+                        return
+        # now the remaining checks
+        rte_ban = r.route+r.banner
+        if self.label.startswith(rte_ban):
+            c = len(rte_ban)
+            if c == len(self.label) or self.label[c] == '_' and (self.label[c+1] != 'U' or len(self.label) > c+2 and not self.label[c+2].isdigit()) or self.label[c] == '/':
+                datacheckerrors.append(DatacheckEntry(r,[self.label],'LABEL_SELFREF'))
+
 class HighwaySegment:
     """This class represents one highway segment: the connection between two
     Waypoints connected by one or more routes"""
@@ -4017,24 +4043,7 @@ for h in highway_systems:
                 visible_distance = 0.0
 
                 # looking for the route within the label
-                # partially complete "references own route" -- too many FP
-                # first check for number match after a slash, if there is one
-                selfref_found = False
-                if '/' in w.label and r.route[-1].isdigit():
-                    digit_starts = len(r.route)-1
-                    while digit_starts >= 0 and r.route[digit_starts].isdigit():
-                        digit_starts-=1
-                    if w.label[w.label.index('/')+1:] == r.route[digit_starts+1:]:
-                        selfref_found = True
-                    if w.label[w.label.index('/')+1:] == r.route:
-                        selfref_found = True
-                    if '_' in w.label[w.label.index('/')+1:] and w.label[w.label.index('/')+1:w.label.rindex('_')] == r.route[digit_starts+1:]:
-                        selfref_found = True
-                    if '_' in w.label[w.label.index('/')+1:] and w.label[w.label.index('/')+1:w.label.rindex('_')] == r.route:
-                        selfref_found = True
-                # now the remaining checks
-                if selfref_found or r.route+r.banner == w.label or re.fullmatch(r.route+r.banner+'[_/].*',w.label):
-                    datacheckerrors.append(DatacheckEntry(r,[w.label],'LABEL_SELFREF'))
+                w.label_selfref()
 
                 # look for too many underscores in label
                 if w.label.count('_') > 1:
