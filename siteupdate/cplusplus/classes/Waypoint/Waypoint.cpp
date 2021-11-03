@@ -454,8 +454,14 @@ void Waypoint::label_selfref(const char *slash)
 	std::string rte_ban = route->route + route->banner;
 	if ( strncmp(label.data(), rte_ban.data(), rte_ban.size()) ) return;
 	const char *c = label.data()+rte_ban.size();
-	if (*c == 0 || *c == '_' && (c[1] != 'U' || c[2] && !isdigit(c[2])) || *c == '/')
+	if (*c == 0 || *c == '/')
 		Datacheck::add(route, label, "", "", "LABEL_SELFREF", "");
+	else if (*c == '_')
+		if (*++c != 'U')
+			Datacheck::add(route, label, "", "", "LABEL_SELFREF", "");
+		else {	while (isdigit(*++c));
+			if (*c) Datacheck::add(route, label, "", "", "LABEL_SELFREF", "");
+		     }
 }
 
 void Waypoint::label_slashes(const char *slash)
