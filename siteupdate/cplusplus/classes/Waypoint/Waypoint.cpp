@@ -487,9 +487,10 @@ void Waypoint::underscore_datachecks(const char *slash)
 		if (strchr(underscore+1, '_'))
 			Datacheck::add(route, label, "", "", "LABEL_UNDERSCORES", "");
 		// look for too many characters after underscore in label
-		if (label.data()+label.size() > underscore+4)
-		    if (label.back() > 'Z' || label.back() < 'A' || label.data()+label.size() > underscore+5)
-			Datacheck::add(route, label, "", "", "LONG_UNDERSCORE", "");
+		if (	label.data()+label.size() > underscore+4
+		     && (label.back() > 'Z' || label.back() < 'A' || label.data()+label.size() > underscore+5)	// allow "CitA" city+letter
+		     && (underscore[1] != 'U' || !isdigit(underscore[2]))					// allow "_U100" U-turns
+		   )	Datacheck::add(route, label, "", "", "LONG_UNDERSCORE", "");
 		// look for labels with a slash after an underscore
 		if (slash > underscore)
 			Datacheck::add(route, label, "", "", "NONTERMINAL_UNDERSCORE", "");

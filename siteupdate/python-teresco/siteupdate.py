@@ -4052,9 +4052,11 @@ for h in highway_systems:
 
                 # look for too many characters after underscore in label
                 if '_' in w.label:
-                    if w.label.index('_') < len(w.label) - 4:
-                        if w.label[-1] not in string.ascii_uppercase or w.label.index('_') < len(w.label) - 5:
-                            datacheckerrors.append(DatacheckEntry(r,[w.label],'LONG_UNDERSCORE'))
+                    u = w.label.index('_')
+                    if u < len(w.label) - 4 \
+                    and (w.label[-1] not in string.ascii_uppercase or u < len(w.label) - 5) \
+                    and (w.label[u+1] != 'U' or not w.label[u+2].isdigit()):
+                        datacheckerrors.append(DatacheckEntry(r,[w.label],'LONG_UNDERSCORE'))
 
                 # look for too many slashes in label
                 if w.label.count('/') > 1:
