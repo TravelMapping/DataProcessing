@@ -12,7 +12,7 @@ class Args
 	/* g */ static std::string graphfilepath;
 	/* k */ static bool skipgraphs;
 	/* n */ static std::string nmpmergepath;
-	/* p */ static std::string splitregion, splitregionpath;
+	/* p */ static std::string splitregion, splitregionpath, splitregionapp;
 	/* U */ static std::list<std::string> userlist;
 	/* t */ static int numthreads;
 	/* e */ static bool errorcheck;
