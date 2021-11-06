@@ -16,7 +16,7 @@
 /* g */ std::string Args::graphfilepath = ".";
 /* n */ std::string Args::nmpmergepath = "";
 /* p */ std::string Args::splitregionpath = "";
-/* p */ std::string Args::splitregion;
+/* p */ std::string Args::splitregion, Args::splitregionapp;
 /* U */ std::list<std::string> Args::userlist;
 const char* Args::exec;
 
@@ -32,34 +32,32 @@ bool Args::init(int argc, char *argv[])
 		else if ARG(0, "-v", "--mt-vertices")		 mtvertices = 1;
 		else if ARG(0, "-C", "--mt-csvs")		 mtcsvfiles = 1;
 		else if ARG(0, "-h", "--help")			{show_help(); return 1;}
-		else if ARG(1, "-w", "--highwaydatapath")	{highwaydatapath  = argv[n+1]; n++;}
-		else if ARG(1, "-s", "--systemsfile")		{systemsfile      = argv[n+1]; n++;}
-		else if ARG(1, "-u", "--userlistfilepath")	{userlistfilepath = argv[n+1]; n++;}
-		else if ARG(1, "-d", "--databasename")		{databasename     = argv[n+1]; n++;}
-		else if ARG(1, "-l", "--logfilepath")		{logfilepath      = argv[n+1]; n++;}
-		else if ARG(1, "-c", "--csvstatfilepath")	{csvstatfilepath  = argv[n+1]; n++;}
-		else if ARG(1, "-g", "--graphfilepath")		{graphfilepath    = argv[n+1]; n++;}
-		else if ARG(1, "-n", "--nmpmergepath")		{nmpmergepath     = argv[n+1]; n++;}
+		else if ARG(1, "-w", "--highwaydatapath")	{highwaydatapath  = argv[++n];}
+		else if ARG(1, "-s", "--systemsfile")		{systemsfile      = argv[++n];}
+		else if ARG(1, "-u", "--userlistfilepath")	{userlistfilepath = argv[++n];}
+		else if ARG(1, "-d", "--databasename")		{databasename     = argv[++n];}
+		else if ARG(1, "-l", "--logfilepath")		{logfilepath      = argv[++n];}
+		else if ARG(1, "-c", "--csvstatfilepath")	{csvstatfilepath  = argv[++n];}
+		else if ARG(1, "-g", "--graphfilepath")		{graphfilepath    = argv[++n];}
+		else if ARG(1, "-n", "--nmpmergepath")		{nmpmergepath     = argv[++n];}
 		else if ARG(1, "-t", "--numthreads")
-		{	numthreads = strtol(argv[n+1], 0, 10);
+		{	numthreads = strtol(argv[++n], 0, 10);
 			if (numthreads<1) numthreads=1;
-			n++;
 		}
 		else if ARG(1, "-T", "--timeprecision")
-		{	timeprecision = strtol(argv[n+1], 0, 10);
+		{	timeprecision = strtol(argv[++n], 0, 10);
 			if (timeprecision<1) timeprecision=1;
 			if (timeprecision>9) timeprecision=9;
-			n++;
 		}
 		else if ARG(1, "-U", "--userlist")
 			while (n+1 < argc && argv[n+1][0] != '-')
 			{	userlist.push_back(argv[n+1]);
 				n++;
 			}
-		else if ARG(2, "-p", "--splitregion")
-		{	splitregionpath = argv[n+1];
-			splitregion = argv[n+2];
-			n += 2;
+		else if ARG(3, "-p", "--splitregion")
+		{	splitregionpath = argv[++n];
+			splitregionapp = argv[++n];
+			splitregion = argv[++n];
 		}
 	}
 	#undef ARG
@@ -100,9 +98,10 @@ void Args::show_help()
 	std::cout  <<  "  -n NMPMERGEPATH, --nmpmergepath NMPMERGEPATH\n";
 	std::cout  <<  "		        Path to write data with NMPs merged (generated only if\n";
 	std::cout  <<  "		        specified)\n";
-	std::cout  <<  "  -p SPLITREGIONPATH SPLITREGION, --splitregion SPLITREGIONPATH SPLITREGION\n";
-	std::cout  <<  "		        Path to logs & .lists for a specific...\n";
-	std::cout  <<  "		        Region being split into subregions.\n";
+	std::cout  <<  "  -p PATH SUFFIX REGION, --splitregion PATH SUFFIX REGION\n";
+	std::cout  <<  "		        Path to logs & .lists for a specific\n";
+	std::cout  <<  "		        region being split into subregions,\n";
+	std::cout  <<  "		        and suffix to append to its systems.\n";
 	std::cout  <<  "		        For Development.\n";
 	std::cout  <<  "  -U USERLIST [USERLIST ...], --userlist USERLIST [USERLIST ...]\n";
 	std::cout  <<  "		        For Development: list of users to use in dataset\n";

@@ -35,11 +35,10 @@ for (HighwaySystem *h : HighwaySystem::syslist)
 cout << "!\n";
 
 // When splitting a region, perform a sanity check on concurrencies in its systems
-if (Args::splitregion != "")
+if (Args::splitregionpath != "")
 {	for (HighwaySystem *h : HighwaySystem::syslist)
 	{	if (splitsystems.find(h->systemname) == splitsystems.end()) continue;
-		ofstream fralog;
-		if (Args::splitregionpath != "") fralog.open(Args::splitregionpath + "/logs/" + h->systemname + "-concurrencies.log");
+		ofstream fralog(Args::splitregionpath + "/logs/" + h->systemname + "-concurrencies.log");
 		for (Route *r : h->route_list)
 		{	if (r->region->code.substr(0, Args::splitregion.size()) != Args::splitregion) continue;
 			for (HighwaySegment *s : r->segment_list)
@@ -56,7 +55,7 @@ if (Args::splitregion != "")
 					  if (cs->route->name_no_abbrev() == s->route->name_no_abbrev() && cs->route->region != s->route->region)
 					    matches++;
 					if (matches != 1)
-					  fralog << s->str() << " has " << matches << " concurrent segments with same name+banner in different region(s) (1 expected)" << '\n';
+					  fralog << s->str() << " has " << matches << " concurrent segments with same name+banner in different region(s) (1 expected)\n";
 				     }
 		}
 		fralog.close();
