@@ -390,17 +390,6 @@ int main(int argc, char *argv[])
 		travnum++;
 	}
 
-	cout << et.et() << "Clearing route & label hash tables." << endl;
-	Route::root_hash.clear();
-	Route::pri_list_hash.clear();
-	Route::alt_list_hash.clear();
-	for (HighwaySystem* h : HighwaySystem::syslist)
-	  for (Route* r : h->route_list)
-	  {	r->pri_label_hash.clear();
-		r->alt_label_hash.clear();
-		r->duplicate_labels.clear();
-	  }
-
 	cout << et.et() << "Writing pointsinuse.log, unusedaltlabels.log, listnamesinuse.log and unusedaltroutenames.log" << endl;
 	unsigned int total_unused_alt_labels = 0;
 	unsigned int total_unusedaltroutenames = 0;
@@ -441,7 +430,7 @@ int main(int argc, char *argv[])
 			lniu_list.sort();
 			for (string& list_name : lniu_list) lniufile << " \"" << list_name << '"';
 			lniufile << '\n';
-			h->listnamesinuse.clear();
+			// h->listnamesinuse is needed for a datacheck, and cleared while computing stats.
 		}
 		// unusedaltroutenames.log line
 		if (h->unusedaltroutenames.size())
@@ -523,9 +512,21 @@ int main(int argc, char *argv[])
 			  for (TravelerList *t : s->clinched_by)
 			    s->compute_stats_t(t);
 		}
+		h->listnamesinuse.clear();
 	}
 	cout << '!' << endl;
       #endif
+
+	cout << et.et() << "Clearing route & label hash tables." << endl;
+	Route::root_hash.clear();
+	Route::pri_list_hash.clear();
+	Route::alt_list_hash.clear();
+	for (HighwaySystem* h : HighwaySystem::syslist)
+	  for (Route* r : h->route_list)
+	  {	r->pri_label_hash.clear();
+		r->alt_label_hash.clear();
+		r->duplicate_labels.clear();
+	  }
 
 	cout << et.et() << "Writing highway data stats log file (highwaydatastats.log)." << endl;
 	char fstr[112];

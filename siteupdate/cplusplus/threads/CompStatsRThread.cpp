@@ -14,5 +14,6 @@ void CompStatsRThread(unsigned int id, std::mutex* mtx)
 		std::cout << '.' << std::flush;
 		for (Route *r : h->route_list)
 		  r->compute_stats_r();
+		h->listnamesinuse.clear();
 	}
 }

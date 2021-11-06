@@ -142,6 +142,7 @@ std::unordered_set<std::string> Datacheck::always_error
 	"CON_ROUTE_MISMATCH",
 	"DISCONNECTED_ROUTE",
 	"DUPLICATE_LABEL",
+	"EXTRANEOUS_ABBREV",
 	"HIDDEN_TERMINUS",
 	"INTERSTATE_NO_HYPHEN",
 	"INVALID_FINAL_CHAR",
@@ -155,6 +156,7 @@ std::unordered_set<std::string> Datacheck::always_error
 	"MALFORMED_LAT",
 	"MALFORMED_LON",
 	"MALFORMED_URL",
+	"MISSING_CITY",
 	"NONTERMINAL_UNDERSCORE",
 	"SINGLE_FIELD_LINE",
 	"US_LETTER"

@@ -1698,6 +1698,7 @@ class DatacheckEntry:
     DISCONNECTED_ROUTE     | adjacent root's expected connection point
     DUPLICATE_COORDS       | coordinate pair
     DUPLICATE_LABEL        |
+    EXTRANEOUS_ABBREV      |
     HIDDEN_JUNCTION        | number of incident edges in TM master graph
     HIDDEN_TERMINUS        |
     INTERSTATE_NO_HYPHEN   |
@@ -1716,6 +1717,7 @@ class DatacheckEntry:
     MALFORMED_LAT          | malformed "lat=" parameter from OSM url
     MALFORMED_LON          | malformed "lon=" parameter from OSM url
     MALFORMED_URL          | always "MISSING_ARG(S)"
+    MISSING_CITY           |
     NONTERMINAL_UNDERSCORE |
     OUT_OF_BOUNDS          | coordinate pair
     SHARP_ANGLE            | angle in degrees
@@ -3171,16 +3173,6 @@ for t in traveler_lists:
     t.traveler_num = travnum
     travnum += 1
 
-print(et.et() + "Clearing route & label hash tables.",flush=True)
-del Route.root_hash
-del Route.pri_list_hash
-del Route.alt_list_hash
-for h in highway_systems:
-    for r in h.route_list:
-        del r.pri_label_hash
-        del r.alt_label_hash
-        del r.duplicate_labels
-
 print(et.et() + "Writing pointsinuse.log, unusedaltlabels.log, listnamesinuse.log and unusedaltroutenames.log",flush=True)
 total_unused_alt_labels = 0
 total_unusedaltroutenames = 0
@@ -3214,7 +3206,7 @@ for h in highway_systems:
         for list_name in sorted(h.listnamesinuse):
             lniufile.write(" \"" + list_name + '"')
         lniufile.write('\n')
-    del h.listnamesinuse
+    # h.listnamesinuse is needed for a datacheck, and deleted while computing stats.
     # unusedaltroutenames.log line
     if len(h.unusedaltroutenames) > 0:
         total_unusedaltroutenames += len(h.unusedaltroutenames)
@@ -3391,7 +3383,26 @@ for h in highway_systems:
             if len(r.banner) and r.city.startswith(r.banner):
                 datacheckerrors.append(DatacheckEntry(r, [], "ABBREV_AS_CHOP_BANNER",
                                        h.systemname + ".csv#L" + str(r.system.route_index(r)+2)))
+        elif r.city == "":
+            list_name = (r.region+' '+r.route+r.banner).upper()
+            if list_name in Route.pri_list_hash:
+                datacheckerrors.append(DatacheckEntry(r, [], "MISSING_CITY",
+                                       h.systemname + ".csv#L" + str(r.system.route_index(r)+2)))
+            elif list_name not in h.listnamesinuse:
+                datacheckerrors.append(DatacheckEntry(r, [], "EXTRANEOUS_ABBREV",
+                                       h.systemname + ".csv#L" + str(r.system.route_index(r)+2)))
+    del h.listnamesinuse
 print("!", flush=True)
+
+print(et.et() + "Clearing route & label hash tables.",flush=True)
+del Route.root_hash
+del Route.pri_list_hash
+del Route.alt_list_hash
+for h in highway_systems:
+    for r in h.route_list:
+        del r.pri_label_hash
+        del r.alt_label_hash
+        del r.duplicate_labels
 
 print(et.et() + "Writing highway data stats log file (highwaydatastats.log).",flush=True)
 hdstatsfile = open(args.logfilepath+"/highwaydatastats.log","wt",encoding='UTF-8')
@@ -3689,6 +3700,7 @@ datacheck_always_error = [ \
     'CON_ROUTE_MISMATCH',
     'DISCONNECTED_ROUTE',
     'DUPLICATE_LABEL',
+    'EXTRANEOUS_ABBREV',
     'HIDDEN_TERMINUS',
     'INTERSTATE_NO_HYPHEN',
     'INVALID_FINAL_CHAR',
@@ -3702,6 +3714,7 @@ datacheck_always_error = [ \
     'MALFORMED_LAT',
     'MALFORMED_LON',
     'MALFORMED_URL',
+    'MISSING_CITY',
     'NONTERMINAL_UNDERSCORE',
     'SINGLE_FIELD_LINE',
     'US_LETTER' ]

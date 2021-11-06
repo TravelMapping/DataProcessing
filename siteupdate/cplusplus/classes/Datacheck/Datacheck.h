@@ -27,6 +27,7 @@ class Datacheck
     DISCONNECTED_ROUTE     | adjacent root's expected connection point
     DUPLICATE_COORDS       | coordinate pair
     DUPLICATE_LABEL        |
+    EXTRANEOUS_ABBREV      |
     HIDDEN_JUNCTION        | number of incident edges in TM master graph
     HIDDEN_TERMINUS        |
     INTERSTATE_NO_HYPHEN   |
@@ -45,6 +46,7 @@ class Datacheck
     MALFORMED_LAT          | malformed "lat=" parameter from OSM url
     MALFORMED_LON          | malformed "lon=" parameter from OSM url
     MALFORMED_URL          | always "MISSING_ARG(S)"
+    MISSING_CITY           |
     NONTERMINAL_UNDERSCORE |
     OUT_OF_BOUNDS          | coordinate pair
     SHARP_ANGLE            | angle in degrees
