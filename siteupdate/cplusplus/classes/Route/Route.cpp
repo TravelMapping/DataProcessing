@@ -256,7 +256,8 @@ void Route::con_mismatch()
 			       route+" <-> "+con_route->route);
 	if (banner != con_route->banner)
 	  if (abbrev.size() && abbrev == con_route->banner)
-		Datacheck::add(this, "", "", "", "ABBREV_AS_CON_BANNER", system->systemname + "_con.csv#L" +
+		Datacheck::add(this, "", "", "", "ABBREV_AS_CON_BANNER", system->systemname + "," +
+			       std::to_string(system->route_index(this)+2) + ',' + 
 			       std::to_string(system->con_route_index(con_route)+2));
 	  else	Datacheck::add(this, "", "", "", "CON_BANNER_MISMATCH",
 			       (banner.size() ? banner : "(blank)") + " <-> " +

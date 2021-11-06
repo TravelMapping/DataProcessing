@@ -1158,7 +1158,8 @@ class Route:
         if self.banner != self.con_route.banner:
             if len(self.abbrev) and self.abbrev == self.con_route.banner:
                 datacheckerrors.append(DatacheckEntry(self, [], "ABBREV_AS_CON_BANNER",
-                                       self.system.systemname + "_con.csv#L" +
+                                       self.system.systemname + "," +
+                                       str(self.system.route_index(self)+2) + "," +
                                        str(self.system.con_route_index(self.con_route)+2)))
             else:
                 datacheckerrors.append(DatacheckEntry(self, [], "CON_BANNER_MISMATCH",
