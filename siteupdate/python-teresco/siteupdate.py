@@ -1690,7 +1690,8 @@ class DatacheckEntry:
     string, one of:        | information, if used:
     -----------------------+--------------------------------------------
     ABBREV_AS_CHOP_BANNER  | offending line # in chopped route CSV
-    ABBREV_AS_CON_BANNER   | offending line # in connected route CSV
+    ABBREV_AS_CON_BANNER   | systemname, .csv line #, _con.csv line #
+    ABBREV_MISSING_CITY    | offending line # in chopped route CSV
     BAD_ANGLE              |
     BUS_WITH_I             |
     CON_BANNER_MISMATCH    | Banner field in chopped & connected CSVs
@@ -1698,7 +1699,7 @@ class DatacheckEntry:
     DISCONNECTED_ROUTE     | adjacent root's expected connection point
     DUPLICATE_COORDS       | coordinate pair
     DUPLICATE_LABEL        |
-    EXTRANEOUS_ABBREV      |
+    EXTRANEOUS_ABBREV      | offending line # in chopped route CSV
     HIDDEN_JUNCTION        | number of incident edges in TM master graph
     HIDDEN_TERMINUS        |
     INTERSTATE_NO_HYPHEN   |
@@ -1717,7 +1718,6 @@ class DatacheckEntry:
     MALFORMED_LAT          | malformed "lat=" parameter from OSM url
     MALFORMED_LON          | malformed "lon=" parameter from OSM url
     MALFORMED_URL          | always "MISSING_ARG(S)"
-    MISSING_CITY           |
     NONTERMINAL_UNDERSCORE |
     OUT_OF_BOUNDS          | coordinate pair
     SHARP_ANGLE            | angle in degrees
@@ -3385,10 +3385,10 @@ for h in highway_systems:
                                        h.systemname + ".csv#L" + str(r.system.route_index(r)+2)))
         elif r.city == "":
             list_name = (r.region+' '+r.route+r.banner).upper()
-            if list_name in Route.pri_list_hash:
-                datacheckerrors.append(DatacheckEntry(r, [], "MISSING_CITY",
+            if list_name in Route.pri_list_hash or list_name in h.listnamesinuse:
+                datacheckerrors.append(DatacheckEntry(r, [], "ABBREV_MISSING_CITY",
                                        h.systemname + ".csv#L" + str(r.system.route_index(r)+2)))
-            elif list_name not in h.listnamesinuse:
+            else:
                 datacheckerrors.append(DatacheckEntry(r, [], "EXTRANEOUS_ABBREV",
                                        h.systemname + ".csv#L" + str(r.system.route_index(r)+2)))
     del h.listnamesinuse
@@ -3695,6 +3695,7 @@ datacheckfps = []
 datacheck_always_error = [ \
     'ABBREV_AS_CHOP_BANNER',
     'ABBREV_AS_CON_BANNER',
+    'ABBREV_MISSING_CITY',
     'BAD_ANGLE',
     'CON_BANNER_MISMATCH',
     'CON_ROUTE_MISMATCH',
@@ -3714,7 +3715,6 @@ datacheck_always_error = [ \
     'MALFORMED_LAT',
     'MALFORMED_LON',
     'MALFORMED_URL',
-    'MISSING_CITY',
     'NONTERMINAL_UNDERSCORE',
     'SINGLE_FIELD_LINE',
     'US_LETTER' ]

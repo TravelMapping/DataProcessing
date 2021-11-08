@@ -60,15 +60,14 @@ void Route::compute_stats_r()
 	#define CSV_LINE system->systemname + ".csv#L" + std::to_string(system->route_index(this)+2)
 	if (abbrev.empty())
 	     {	if ( banner.size() && !strncmp(banner.data(), city.data(), banner.size()) )
-		  Datacheck::add(this, "", "", "", "ABBREV_AS_CHOP_BANNER", CSV_LINE);
+			Datacheck::add(this, "", "", "", "ABBREV_AS_CHOP_BANNER", CSV_LINE);
 	     }
 	else if (city.empty())
 	     {	std::string list_name(rg_str + ' ' + route + banner);
 		upper(list_name.data());
-		if (Route::pri_list_hash.find(list_name) != Route::pri_list_hash.end())
-		  Datacheck::add(this, "", "", "", "MISSING_CITY", CSV_LINE);
-		else if (system->listnamesinuse.find(list_name) == system->listnamesinuse.end())
-		  Datacheck::add(this, "", "", "", "EXTRANEOUS_ABBREV", CSV_LINE);
+		if (Route::pri_list_hash.count(list_name) || system->listnamesinuse.count(list_name))
+			Datacheck::add(this, "", "", "", "ABBREV_MISSING_CITY", CSV_LINE);
+		else	Datacheck::add(this, "", "", "", "EXTRANEOUS_ABBREV", CSV_LINE);
 	     }
 	#undef CSV_LINE
 }
