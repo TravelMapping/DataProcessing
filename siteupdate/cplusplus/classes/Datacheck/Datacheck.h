@@ -19,7 +19,8 @@ class Datacheck
     string, one of:        | information, if used:
     -----------------------+--------------------------------------------
     ABBREV_AS_CHOP_BANNER  | offending line # in chopped route CSV
-    ABBREV_AS_CON_BANNER   | offending line # in connected route CSV
+    ABBREV_AS_CON_BANNER   | systemname, .csv line #, _con.csv line #
+    ABBREV_NO_CITY         | offending line # in chopped route CSV
     BAD_ANGLE              |
     BUS_WITH_I             |
     CON_BANNER_MISMATCH    | Banner field in chopped & connected CSVs

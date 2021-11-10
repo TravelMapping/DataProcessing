@@ -1690,7 +1690,8 @@ class DatacheckEntry:
     string, one of:        | information, if used:
     -----------------------+--------------------------------------------
     ABBREV_AS_CHOP_BANNER  | offending line # in chopped route CSV
-    ABBREV_AS_CON_BANNER   | offending line # in connected route CSV
+    ABBREV_AS_CON_BANNER   | systemname, .csv line #, _con.csv line #
+    ABBREV_NO_CITY         | offending line # in chopped route CSV
     BAD_ANGLE              |
     BUS_WITH_I             |
     CON_BANNER_MISMATCH    | Banner field in chopped & connected CSVs
@@ -3391,6 +3392,9 @@ for h in highway_systems:
             if len(r.banner) and r.city.startswith(r.banner):
                 datacheckerrors.append(DatacheckEntry(r, [], "ABBREV_AS_CHOP_BANNER",
                                        h.systemname + ".csv#L" + str(r.system.route_index(r)+2)))
+        elif r.city == "":
+                datacheckerrors.append(DatacheckEntry(r, [], "ABBREV_NO_CITY",
+                                       h.systemname + ".csv#L" + str(r.system.route_index(r)+2)))
 print("!", flush=True)
 
 print(et.et() + "Writing highway data stats log file (highwaydatastats.log).",flush=True)
@@ -3684,6 +3688,7 @@ datacheckfps = []
 datacheck_always_error = [ \
     'ABBREV_AS_CHOP_BANNER',
     'ABBREV_AS_CON_BANNER',
+    'ABBREV_NO_CITY',
     'BAD_ANGLE',
     'CON_BANNER_MISMATCH',
     'CON_ROUTE_MISMATCH',

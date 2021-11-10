@@ -137,6 +137,7 @@ std::list<std::string*> Datacheck::fps;
 std::unordered_set<std::string> Datacheck::always_error
 {	"ABBREV_AS_CHOP_BANNER",
 	"ABBREV_AS_CON_BANNER",
+	"ABBREV_NO_CITY",
 	"BAD_ANGLE",
 	"CON_BANNER_MISMATCH",
 	"CON_ROUTE_MISMATCH",
