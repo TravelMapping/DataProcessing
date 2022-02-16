@@ -262,7 +262,7 @@ void sqlfile1
 	std::cout << et->et() << "...overallMileageByRegion" << std::endl;
       #endif
 	sqlfile << "CREATE TABLE overallMileageByRegion (region VARCHAR(" << DBFieldLength::regionCode
-		<< "), activeMileage FLOAT, activePreviewMileage FLOAT);\n";
+		<< "), activeMileage DOUBLE, activePreviewMileage DOUBLE);\n";
 	sqlfile << "INSERT INTO overallMileageByRegion VALUES\n";
 	first = 1;
 	for (Region* region : Region::allregions)
@@ -282,7 +282,7 @@ void sqlfile1
       #endif
 	sqlfile << "CREATE TABLE systemMileageByRegion (systemName VARCHAR(" << DBFieldLength::systemName
 		<< "), region VARCHAR(" << DBFieldLength::regionCode
-		<< "), mileage FLOAT, FOREIGN KEY (systemName) REFERENCES systems(systemName));\n";
+		<< "), mileage DOUBLE, FOREIGN KEY (systemName) REFERENCES systems(systemName));\n";
 	sqlfile << "INSERT INTO systemMileageByRegion VALUES\n";
 	first = 1;
 	for (HighwaySystem *h : HighwaySystem::syslist)
@@ -303,7 +303,7 @@ void sqlfile1
       #endif
 	sqlfile << "CREATE TABLE clinchedOverallMileageByRegion (region VARCHAR(" << DBFieldLength::regionCode
 		<< "), traveler VARCHAR(" << DBFieldLength::traveler
-		<< "), activeMileage FLOAT, activePreviewMileage FLOAT);\n";
+		<< "), activeMileage DOUBLE, activePreviewMileage DOUBLE);\n";
 	sqlfile << "INSERT INTO clinchedOverallMileageByRegion VALUES\n";
 	first = 1;
 	for (TravelerList *t : TravelerList::allusers)
@@ -327,7 +327,7 @@ void sqlfile1
 	sqlfile << "CREATE TABLE clinchedSystemMileageByRegion (systemName VARCHAR(" << DBFieldLength::systemName
 		<< "), region VARCHAR(" << DBFieldLength::regionCode
 		<< "), traveler VARCHAR(" << DBFieldLength::traveler
-		<< "), mileage FLOAT, FOREIGN KEY (systemName) REFERENCES systems(systemName));\n";
+		<< "), mileage DOUBLE, FOREIGN KEY (systemName) REFERENCES systems(systemName));\n";
 	sqlfile << "INSERT INTO clinchedSystemMileageByRegion VALUES\n";
 	first = 1;
 	for (std::string &line : clin_db_val->csmbr_values)

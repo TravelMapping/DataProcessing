@@ -3182,13 +3182,14 @@ for h in highway_systems:
         del r.alt_label_hash
         del r.duplicate_labels
 
-print(et.et() + "Writing pointsinuse.log, unusedaltlabels.log, listnamesinuse.log and unusedaltroutenames.log",flush=True)
+print(et.et() + "Writing route and label logs.",flush=True)
 total_unused_alt_labels = 0
 total_unusedaltroutenames = 0
 unused_alt_labels = []
 piufile = open(args.logfilepath+'/pointsinuse.log','w',encoding='UTF-8')
 lniufile = open(args.logfilepath+'/listnamesinuse.log','w',encoding='UTF-8')
 uarnfile = open(args.logfilepath+'/unusedaltroutenames.log','w',encoding='UTF-8')
+flipfile = open(args.logfilepath+'/flippedroutes.log','w',encoding='UTF-8')
 piufile.write("Log file created at: " + str(datetime.datetime.now()) + "\n")
 lniufile.write("Log file created at: " + str(datetime.datetime.now()) + "\n")
 uarnfile.write("Log file created at: " + str(datetime.datetime.now()) + "\n")
@@ -3209,6 +3210,9 @@ for h in highway_systems:
                 ual_entry += " " + label
             unused_alt_labels.append(ual_entry)
         del r.unused_alt_labels
+        # flippedroutes.log line
+        if r.is_reversed:
+            flipfile.write(r.root+'\n')
     #listnamesinuse.log line
     if len(h.listnamesinuse) > 0:
         lniufile.write(h.systemname + '(' + str(len(h.route_list)) + "):")
@@ -3226,6 +3230,7 @@ for h in highway_systems:
     del h.unusedaltroutenames
 piufile.close()
 lniufile.close()
+flipfile.close()
 uarnfile.write("Total: " + str(total_unusedaltroutenames) + '\n')
 uarnfile.close()
 # sort lines and write unusedaltlabels.log
@@ -4434,7 +4439,7 @@ else:
     # active systems only then active+preview)
     print(et.et() + "...overallMileageByRegion", flush=True)
     sqlfile.write('CREATE TABLE overallMileageByRegion (region VARCHAR(' + str(DBFieldLength.regionCode) +
-                  '), activeMileage FLOAT, activePreviewMileage FLOAT);\n')
+                  '), activeMileage DOUBLE, activePreviewMileage DOUBLE);\n')
     sqlfile.write('INSERT INTO overallMileageByRegion VALUES\n')
     first = True
     for region in list(active_preview_mileage_by_region.keys()):
@@ -4457,7 +4462,7 @@ else:
     print(et.et() + "...systemMileageByRegion", flush=True)
     sqlfile.write('CREATE TABLE systemMileageByRegion (systemName VARCHAR(' + str(DBFieldLength.systemName) +
                   '), region VARCHAR(' + str(DBFieldLength.regionCode) +
-                  '), mileage FLOAT, FOREIGN KEY (systemName) REFERENCES systems(systemName));\n')
+                  '), mileage DOUBLE, FOREIGN KEY (systemName) REFERENCES systems(systemName));\n')
     sqlfile.write('INSERT INTO systemMileageByRegion VALUES\n')
     first = True
     for h in highway_systems:
@@ -4474,7 +4479,7 @@ else:
     print(et.et() + "...clinchedOverallMileageByRegion", flush=True)
     sqlfile.write('CREATE TABLE clinchedOverallMileageByRegion (region VARCHAR(' + str(DBFieldLength.regionCode) +
                   '), traveler VARCHAR(' + str(DBFieldLength.traveler) +
-                  '), activeMileage FLOAT, activePreviewMileage FLOAT);\n')
+                  '), activeMileage DOUBLE, activePreviewMileage DOUBLE);\n')
     sqlfile.write('INSERT INTO clinchedOverallMileageByRegion VALUES\n')
     first = True
     for t in traveler_lists:
@@ -4496,7 +4501,7 @@ else:
     sqlfile.write('CREATE TABLE clinchedSystemMileageByRegion (systemName VARCHAR(' + str(DBFieldLength.systemName) +
                   '), region VARCHAR(' + str(DBFieldLength.regionCode) +
                   '), traveler VARCHAR(' + str(DBFieldLength.traveler) +
-                  '), mileage FLOAT, FOREIGN KEY (systemName) REFERENCES systems(systemName));\n')
+                  '), mileage DOUBLE, FOREIGN KEY (systemName) REFERENCES systems(systemName));\n')
     sqlfile.write('INSERT INTO clinchedSystemMileageByRegion VALUES\n')
     first = True
     for line in csmbr_values:
