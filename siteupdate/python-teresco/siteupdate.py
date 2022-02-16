@@ -4434,7 +4434,7 @@ else:
     # active systems only then active+preview)
     print(et.et() + "...overallMileageByRegion", flush=True)
     sqlfile.write('CREATE TABLE overallMileageByRegion (region VARCHAR(' + str(DBFieldLength.regionCode) +
-                  '), activeMileage FLOAT, activePreviewMileage FLOAT);\n')
+                  '), activeMileage DOUBLE, activePreviewMileage DOUBLE);\n')
     sqlfile.write('INSERT INTO overallMileageByRegion VALUES\n')
     first = True
     for region in list(active_preview_mileage_by_region.keys()):
@@ -4457,7 +4457,7 @@ else:
     print(et.et() + "...systemMileageByRegion", flush=True)
     sqlfile.write('CREATE TABLE systemMileageByRegion (systemName VARCHAR(' + str(DBFieldLength.systemName) +
                   '), region VARCHAR(' + str(DBFieldLength.regionCode) +
-                  '), mileage FLOAT, FOREIGN KEY (systemName) REFERENCES systems(systemName));\n')
+                  '), mileage DOUBLE, FOREIGN KEY (systemName) REFERENCES systems(systemName));\n')
     sqlfile.write('INSERT INTO systemMileageByRegion VALUES\n')
     first = True
     for h in highway_systems:
@@ -4474,7 +4474,7 @@ else:
     print(et.et() + "...clinchedOverallMileageByRegion", flush=True)
     sqlfile.write('CREATE TABLE clinchedOverallMileageByRegion (region VARCHAR(' + str(DBFieldLength.regionCode) +
                   '), traveler VARCHAR(' + str(DBFieldLength.traveler) +
-                  '), activeMileage FLOAT, activePreviewMileage FLOAT);\n')
+                  '), activeMileage DOUBLE, activePreviewMileage DOUBLE);\n')
     sqlfile.write('INSERT INTO clinchedOverallMileageByRegion VALUES\n')
     first = True
     for t in traveler_lists:
@@ -4496,7 +4496,7 @@ else:
     sqlfile.write('CREATE TABLE clinchedSystemMileageByRegion (systemName VARCHAR(' + str(DBFieldLength.systemName) +
                   '), region VARCHAR(' + str(DBFieldLength.regionCode) +
                   '), traveler VARCHAR(' + str(DBFieldLength.traveler) +
-                  '), mileage FLOAT, FOREIGN KEY (systemName) REFERENCES systems(systemName));\n')
+                  '), mileage DOUBLE, FOREIGN KEY (systemName) REFERENCES systems(systemName));\n')
     sqlfile.write('INSERT INTO clinchedSystemMileageByRegion VALUES\n')
     first = True
     for line in csmbr_values:
