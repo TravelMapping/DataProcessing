@@ -3182,13 +3182,14 @@ for h in highway_systems:
         del r.alt_label_hash
         del r.duplicate_labels
 
-print(et.et() + "Writing pointsinuse.log, unusedaltlabels.log, listnamesinuse.log and unusedaltroutenames.log",flush=True)
+print(et.et() + "Writing route and label logs.",flush=True)
 total_unused_alt_labels = 0
 total_unusedaltroutenames = 0
 unused_alt_labels = []
 piufile = open(args.logfilepath+'/pointsinuse.log','w',encoding='UTF-8')
 lniufile = open(args.logfilepath+'/listnamesinuse.log','w',encoding='UTF-8')
 uarnfile = open(args.logfilepath+'/unusedaltroutenames.log','w',encoding='UTF-8')
+flipfile = open(args.logfilepath+'/flippedroutes.log','w',encoding='UTF-8')
 piufile.write("Log file created at: " + str(datetime.datetime.now()) + "\n")
 lniufile.write("Log file created at: " + str(datetime.datetime.now()) + "\n")
 uarnfile.write("Log file created at: " + str(datetime.datetime.now()) + "\n")
@@ -3209,6 +3210,9 @@ for h in highway_systems:
                 ual_entry += " " + label
             unused_alt_labels.append(ual_entry)
         del r.unused_alt_labels
+        # flippedroutes.log line
+        if r.is_reversed:
+            flipfile.write(r.root+'\n')
     #listnamesinuse.log line
     if len(h.listnamesinuse) > 0:
         lniufile.write(h.systemname + '(' + str(len(h.route_list)) + "):")
@@ -3226,6 +3230,7 @@ for h in highway_systems:
     del h.unusedaltroutenames
 piufile.close()
 lniufile.close()
+flipfile.close()
 uarnfile.write("Total: " + str(total_unusedaltroutenames) + '\n')
 uarnfile.close()
 # sort lines and write unusedaltlabels.log

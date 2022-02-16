@@ -401,13 +401,14 @@ int main(int argc, char *argv[])
 		r->duplicate_labels.clear();
 	  }
 
-	cout << et.et() << "Writing pointsinuse.log, unusedaltlabels.log, listnamesinuse.log and unusedaltroutenames.log" << endl;
+	cout << et.et() << "Writing route and label logs." << endl;
 	unsigned int total_unused_alt_labels = 0;
 	unsigned int total_unusedaltroutenames = 0;
 	list<string> unused_alt_labels;
 	ofstream piufile(Args::logfilepath+"/pointsinuse.log");
 	ofstream lniufile(Args::logfilepath+"/listnamesinuse.log");
 	ofstream uarnfile(Args::logfilepath+"/unusedaltroutenames.log");
+	ofstream flipfile(Args::logfilepath+"/flippedroutes.log");
 	timestamp = time(0);
 	piufile << "Log file created at: " << ctime(&timestamp);
 	lniufile << "Log file created at: " << ctime(&timestamp);
@@ -433,6 +434,8 @@ int main(int argc, char *argv[])
 				unused_alt_labels.push_back(ual_entry);
 				r->unused_alt_labels.clear();
 			}
+			// flippedroutes.log line
+			if (r->is_reversed) flipfile << r->root << '\n';
 		}
 		// listnamesinuse.log line
 		if (h->listnamesinuse.size())
@@ -456,6 +459,7 @@ int main(int argc, char *argv[])
 	}
 	piufile.close();
 	lniufile.close();
+	flipfile.close();
 	uarnfile << "Total: " << total_unusedaltroutenames << '\n';
 	uarnfile.close();
 	// sort lines and write unusedaltlabels.log
