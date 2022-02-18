@@ -59,18 +59,21 @@ void HighwaySystem::route_integrity(ErrorList& el)
 			r->con_mismatch();
 			if ( q->point_list.size() > 1 && r->point_list.size() > 1 && !r->con_beg()->same_coords(q->con_end()) )
 			{	if	( q->con_beg()->same_coords(r->con_beg()) )
-					q->is_reversed = 1;
+					q->set_reversed();
 				else if ( q->con_end()->same_coords(r->con_end()) )
-					r->is_reversed = 1;
+					r->set_reversed();
 				else if ( q->con_beg()->same_coords(r->con_end()) )
-				{	q->is_reversed = 1;
-					r->is_reversed = 1;
+				{	q->set_reversed();
+					r->set_reversed();
 				}
 				else
 				{	Datacheck::add(r, r->con_beg()->label, "", "",
 						       "DISCONNECTED_ROUTE", q->con_end()->root_at_label());
 					Datacheck::add(q, q->con_end()->label, "", "",
 						       "DISCONNECTED_ROUTE", r->con_beg()->root_at_label());
+					cr->disconnected = 1;
+					q->set_disconnected();
+					r->set_disconnected();
 				}
 			}
 			#undef q
