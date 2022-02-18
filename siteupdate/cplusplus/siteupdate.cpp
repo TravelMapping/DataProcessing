@@ -435,7 +435,7 @@ int main(int argc, char *argv[])
 				r->unused_alt_labels.clear();
 			}
 			// flippedroutes.log line
-			if (r->is_reversed) flipfile << r->root << '\n';
+			if (r->is_reversed()) flipfile << r->root << '\n';
 		}
 		// listnamesinuse.log line
 		if (h->listnamesinuse.size())

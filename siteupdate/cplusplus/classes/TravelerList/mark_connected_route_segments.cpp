@@ -108,13 +108,13 @@ if (lit1 == r1->alt_label_hash.end() || lit2 == r2->alt_label_hash.end())
 char duplicate = 0;
 if (r1->duplicate_labels.find(fields[2]) != r1->duplicate_labels.end())
 {	log << r1->region->code << ": duplicate label " << fields[2] << " in " << r1->root
-	    << ". Please report this error in the TravelMapping forum"
+	    << ". Please report this error in the Travel Mapping forum"
 	    << ". Unable to parse line: " << trim_line << '\n';
 	duplicate = 1;
 }
 if (r2->duplicate_labels.find(fields[5]) != r2->duplicate_labels.end())
 {	log << r2->region->code << ": duplicate label " << fields[5] << " in " << r2->root
-	    << ". Please report this error in the TravelMapping forum"
+	    << ". Please report this error in the Travel Mapping forum"
 	    << ". Unable to parse line: " << trim_line << '\n';
 	duplicate = 1;
 }
@@ -139,18 +139,34 @@ if (r1 == r2)
 		r1->store_traveled_segments(this, log, index1, index2);
 	else	r1->store_traveled_segments(this, log, index2, index1);
      }
-else {	if (r1->rootOrder > r2->rootOrder)
+else {	// user log warning for DISCONNECTED_ROUTE errors
+	if (r1->con_route->disconnected)
+	{	std::unordered_set<Region*> region_set;
+		for (Route* r : r1->con_route->roots)
+		  if (r->is_disconnected())
+		    region_set.insert(r->region);
+		std::list<Region*> region_list(region_set.begin(), region_set.end());
+		region_list.sort(sort_regions_by_code);
+		for (Region* r : region_list)
+		  log << r->code << (r == region_list.back() ? ':' : '/');
+		log << " DISCONNECTED_ROUTE error in " << r1->con_route->readable_name()
+		    << ".\n  Please report this error in the Travel Mapping forum.\n"
+		    << "  Travels may potentially be shown incorrectly for line: " << trim_line
+		    << "\n  Until this is fixed, using traditional 4-field .list entries for each region should work as a failsafe.\n";
+	}
+	// Is .list entry forward or backward?
+	if (r1->rootOrder > r2->rootOrder)
 	{	std::swap(r1, r2);
 		index1 = lit2->second;
 		index2 = lit1->second;
 		reverse = 1;
 	}
 	// mark the beginning chopped route from index1 to its end
-	if (r1->is_reversed)
+	if (r1->is_reversed())
 		r1->store_traveled_segments(this, log, 0, index1);
 	else	r1->store_traveled_segments(this, log, index1, r1->segment_list.size());
 	// mark the ending chopped route from its beginning to index2
-	if (r2->is_reversed)
+	if (r2->is_reversed())
 		r2->store_traveled_segments(this, log, index2, r2->segment_list.size());
 	else	r2->store_traveled_segments(this, log, 0, index2);
 	// mark any intermediate chopped routes in their entirety.

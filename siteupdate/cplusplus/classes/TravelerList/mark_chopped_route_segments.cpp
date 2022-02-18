@@ -69,13 +69,13 @@ if (lit1 == r->alt_label_hash.end() || lit2 == r->alt_label_hash.end())
 char duplicate = 0;
 if (r->duplicate_labels.find(fields[2]) != r->duplicate_labels.end())
 {	log << r->region->code << ": duplicate label " << fields[2] << " in " << r->root
-	    << ". Please report this error in the TravelMapping forum"
+	    << ". Please report this error in the Travel Mapping forum"
 	    << ". Unable to parse line: " << trim_line << '\n';
 	duplicate = 1;
 }
 if (r->duplicate_labels.find(fields[3]) != r->duplicate_labels.end())
 {	log << r->region->code << ": duplicate label " << fields[3] << " in " << r->root
-	    << ". Please report this error in the TravelMapping forum"
+	    << ". Please report this error in the Travel Mapping forum"
 	    << ". Unable to parse line: " << trim_line << '\n';
 	duplicate = 1;
 }

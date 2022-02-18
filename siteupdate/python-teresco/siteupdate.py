@@ -1038,8 +1038,8 @@ class Route:
         self.con_route = None
         self.last_update = None
         self.mileage = 0.0
-        self.rootOrder = -1  # order within connected route
-        self.is_reversed = False
+        self.rootOrder = -1	# order within connected route
+        self.bools = 0		# bitmask
 
     def __str__(self):
         """printable version of the object"""
@@ -1145,10 +1145,22 @@ class Route:
                 t.log_entries.append("Route updated " + self.last_update[0] + ": " + self.readable_name())
 
     def con_beg(self):
-        return self.point_list[-1] if self.is_reversed else self.point_list[0]
+        return self.point_list[-1] if self.is_reversed() else self.point_list[0]
 
     def con_end(self):
-        return self.point_list[0] if self.is_reversed else self.point_list[-1]
+        return self.point_list[0] if self.is_reversed() else self.point_list[-1]
+
+    def set_reversed(self):
+        self.bools |= 1
+
+    def is_reversed(self):
+        return self.bools & 1
+
+    def set_disconnected(self):
+        self.bools |= 2
+
+    def is_disconnected(self):
+        return self.bools & 2
 
     # datacheck
     def con_mismatch(self):
@@ -1178,7 +1190,8 @@ class ConnectedRoute:
         self.banner = ""
         self.groupname = ""
         self.roots = []
-        self.mileage = 0.0
+        self.mileage = 0.0        # will be computed for routes in active & preview systems later
+        self.disconnected = False # whether any DISCONNECTED_ROUTE errors are flagged for this ConnectedRoute
         fields = line.split(";")
         if len(fields) != 5:
             el.add_error("Could not parse " + system.systemname + "_con.csv line: [" + line +
@@ -1231,7 +1244,6 @@ class ConnectedRoute:
                              " in system " + system.systemname + '.')
         if len(self.roots) < 1:
             el.add_error("No valid roots in " + system.systemname + "_con.csv line: " + line)
-        # will be computed for routes in active & preview systems later
 
     def csv_line(self):
         """return csv line to insert into a table"""
@@ -1453,13 +1465,13 @@ class TravelerList:
                 duplicate = False
                 if list_label_1 in r.duplicate_labels:
                     log_entry = r.region + ": duplicate label " + list_label_1 + " in " + r.root \
-                              + ". Please report this error in the TravelMapping forum" \
+                              + ". Please report this error in the Travel Mapping forum" \
                               + ". Unable to parse line: " + line
                     self.log_entries.append(log_entry)
                     duplicate = True
                 if list_label_2 in r.duplicate_labels:
                     log_entry = r.region + ": duplicate label " + list_label_2 + " in " + r.root \
-                              + ". Please report this error in the TravelMapping forum" \
+                              + ". Please report this error in the Travel Mapping forum" \
                               + ". Unable to parse line: " + line
                     self.log_entries.append(log_entry)
                     duplicate = True
@@ -1601,11 +1613,11 @@ class TravelerList:
                 duplicate = False
                 if list_label_1 in r1.duplicate_labels:
                     self.log_entries.append(r1.region + ": duplicate label " + list_label_1 + " in " + r1.root \
-                                          + ". Please report this error in the TravelMapping forum. Unable to parse line: " + line)
+                                          + ". Please report this error in the Travel Mapping forum. Unable to parse line: " + line)
                     duplicate = True
                 if list_label_2 in r2.duplicate_labels:
                     self.log_entries.append(r2.region + ": duplicate label " + list_label_2 + " in " + r2.root \
-                                          + ". Please report this error in the TravelMapping forum. Unable to parse line: " + line)
+                                          + ". Please report this error in the Travel Mapping forum. Unable to parse line: " + line)
                     duplicate = True
                 if duplicate:
                     continue
@@ -1624,16 +1636,32 @@ class TravelerList:
                     else:
                         r1.store_traveled_segments(self, index2, index1)
                 else:
+                    # user log warning for DISCONNECTED_ROUTE errors
+                    if r1.con_route.disconnected:
+                        region_set = set()
+                        for r in r1.con_route.roots:
+                          if r.is_disconnected():
+                            region_set.add(r.region)
+                        region_list = sorted(region_set)
+                        log_entry = ''
+                        for r in region_list:
+                          log_entry += r + (':' if r == region_list[-1] else '/')
+                        log_entry += " DISCONNECTED_ROUTE error in " + r1.con_route.readable_name() \
+                                  +  ".\n  Please report this error in the Travel Mapping forum.\n" \
+                                  +  "  Travels may potentially be shown incorrectly for line: " + line \
+                                  +  "\n  Until this is fixed, using traditional 4-field .list entries for each region should work as a failsafe."
+                        self.log_entries.append(log_entry)
+                    # Is .list entry forward or backward?
                     if r1.rootOrder > r2.rootOrder:
                         (r1, r2) = (r2, r1)
                         (index1, index2) = (index2, index1)
                     # mark the beginning chopped route from index1 to its end
-                    if r1.is_reversed:
+                    if r1.is_reversed():
                         r1.store_traveled_segments(self, 0, index1)
                     else:
                         r1.store_traveled_segments(self, index1, len(r1.segment_list))
                     # mark the ending chopped route from its beginning to index2
-                    if r2.is_reversed:
+                    if r2.is_reversed():
                         r2.store_traveled_segments(self, index2, len(r2.segment_list))
                     else:
                         r2.store_traveled_segments(self, 0, index2)
@@ -3032,17 +3060,20 @@ for h in highway_systems:
             r.con_mismatch()
             if r.rootOrder > 0 and len(q.point_list) > 1 and len(r.point_list) > 1 and not r.con_beg().same_coords(q.con_end()):
                 if q.con_beg().same_coords(r.con_beg()):
-                    q.is_reversed = True
+                    q.set_reversed()
                 elif q.con_end().same_coords(r.con_end()):
-                    r.is_reversed = True
+                    r.set_reversed()
                 elif q.con_beg().same_coords(r.con_end()):
-                    q.is_reversed = True
-                    r.is_reversed = True
+                    q.set_reversed()
+                    r.set_reversed()
                 else:
                     datacheckerrors.append(DatacheckEntry(r, [r.con_beg().label],
                                            "DISCONNECTED_ROUTE", q.root + '@' + q.con_end().label))
                     datacheckerrors.append(DatacheckEntry(q, [q.con_end().label],
                                            "DISCONNECTED_ROUTE", r.root + '@' + r.con_beg().label))
+                    cr.disconnected = True
+                    q.set_disconnected()
+                    r.set_disconnected()
 
 # Read updates.csv file, just keep in the fields array for now since we're
 # just going to drop this into the DB later anyway
@@ -3211,7 +3242,7 @@ for h in highway_systems:
             unused_alt_labels.append(ual_entry)
         del r.unused_alt_labels
         # flippedroutes.log line
-        if r.is_reversed:
+        if r.is_reversed():
             flipfile.write(r.root+'\n')
     #listnamesinuse.log line
     if len(h.listnamesinuse) > 0:
