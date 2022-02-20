@@ -27,7 +27,7 @@ Route::Route(std::string &line, HighwaySystem *sys, ErrorList &el)
 	mileage = 0;
 	rootOrder = -1; // order within connected route
 	region = 0;	// if this stays 0, setup has failed due to bad .csv data
-	is_reversed = 0;
+	bools = 0;
 	last_update = 0;
 
 	// parse chopped routes csv line
@@ -242,11 +242,27 @@ void Route::store_traveled_segments(TravelerList* t, std::ofstream& log, unsigne
 }
 
 Waypoint* Route::con_beg()
-{	return is_reversed ? point_list.back() : point_list.front();
+{	return is_reversed() ? point_list.back() : point_list.front();
 }
 
 Waypoint* Route::con_end()
-{	return is_reversed ? point_list.front() : point_list.back();
+{	return is_reversed() ? point_list.front() : point_list.back();
+}
+
+void Route::set_reversed()
+{	bools |= 1;
+}
+
+bool Route::is_reversed()
+{	return bools & 1;
+}
+
+void Route::set_disconnected()
+{	bools |= 2;
+}
+
+bool Route::is_disconnected()
+{	return bools & 2;
 }
 
 // datacheck

@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-# Travel Mapping Project, Jim Teresco, 2015-2021
+# Travel Mapping Project, Jim Teresco, 2015-2022
 """Python code to read .csv and .wpt files and prepare for
 adding to the Travel Mapping Project database.
 
-(c) 2015-2021, Jim Teresco, Eric Bryant, and Travel Mapping Project contributors
+(c) 2015-2022, Jim Teresco, Eric Bryant, and Travel Mapping Project contributors
 
 This module defines classes to represent the contents of a
 .csv file that lists the highways within a system, and a
@@ -1038,8 +1038,8 @@ class Route:
         self.con_route = None
         self.last_update = None
         self.mileage = 0.0
-        self.rootOrder = -1  # order within connected route
-        self.is_reversed = False
+        self.rootOrder = -1	# order within connected route
+        self.bools = 0		# bitmask
 
     def __str__(self):
         """printable version of the object"""
@@ -1145,10 +1145,22 @@ class Route:
                 t.log_entries.append("Route updated " + self.last_update[0] + ": " + self.readable_name())
 
     def con_beg(self):
-        return self.point_list[-1] if self.is_reversed else self.point_list[0]
+        return self.point_list[-1] if self.is_reversed() else self.point_list[0]
 
     def con_end(self):
-        return self.point_list[0] if self.is_reversed else self.point_list[-1]
+        return self.point_list[0] if self.is_reversed() else self.point_list[-1]
+
+    def set_reversed(self):
+        self.bools |= 1
+
+    def is_reversed(self):
+        return self.bools & 1
+
+    def set_disconnected(self):
+        self.bools |= 2
+
+    def is_disconnected(self):
+        return self.bools & 2
 
     # datacheck
     def con_mismatch(self):
@@ -1178,7 +1190,8 @@ class ConnectedRoute:
         self.banner = ""
         self.groupname = ""
         self.roots = []
-        self.mileage = 0.0
+        self.mileage = 0.0        # will be computed for routes in active & preview systems later
+        self.disconnected = False # whether any DISCONNECTED_ROUTE errors are flagged for this ConnectedRoute
         fields = line.split(";")
         if len(fields) != 5:
             el.add_error("Could not parse " + system.systemname + "_con.csv line: [" + line +
@@ -1231,7 +1244,6 @@ class ConnectedRoute:
                              " in system " + system.systemname + '.')
         if len(self.roots) < 1:
             el.add_error("No valid roots in " + system.systemname + "_con.csv line: " + line)
-        # will be computed for routes in active & preview systems later
 
     def csv_line(self):
         """return csv line to insert into a table"""
@@ -1386,6 +1398,11 @@ class TravelerList:
                 if fields[i][0] == '#':
                     fields = fields[:i]
                     break
+
+            ###################
+            # 4-field entries #
+            ###################
+
             if len(fields) == 4:
                 # find the route that matches and when we do, match labels
                 lookup = fields[0].upper() + ' ' + fields[1].upper()
@@ -1446,36 +1463,27 @@ class TravelerList:
                         self.log_entries[-1] += " [contains invalid character(s)]"
                     if r not in self.routes:
                         self.routes.add(r)
-                        if r.last_update and self.update and r.last_update[0] >= self.update:
-                            self.log_entries.append("Route updated " + r.last_update[0] + ": " + r.readable_name())
+                        if r.last_update:
+                            self.log_entries.append("  Route updated " + r.last_update[0] + ": " + r.readable_name())
                     continue
                 # are either of the labels used duplicates?
                 duplicate = False
                 if list_label_1 in r.duplicate_labels:
-                    log_entry = r.region + ": duplicate label " + list_label_1 + " in " + r.root \
-                              + ". Please report this error in the TravelMapping forum" \
-                              + ". Unable to parse line: " + line
-                    self.log_entries.append(log_entry)
+                    self.log_entries.append(r.region + ": duplicate label " + list_label_1 + " in " + r.root)
                     duplicate = True
                 if list_label_2 in r.duplicate_labels:
-                    log_entry = r.region + ": duplicate label " + list_label_2 + " in " + r.root \
-                              + ". Please report this error in the TravelMapping forum" \
-                              + ". Unable to parse line: " + line
-                    self.log_entries.append(log_entry)
+                    self.log_entries.append(r.region + ": duplicate label " + list_label_2 + " in " + r.root)
                     duplicate = True
                 if duplicate:
-                    if r not in self.routes:
-                        self.routes.add(r)
-                        if r.last_update and self.update and r.last_update[0] >= self.update:
-                            self.log_entries.append("Route updated " + r.last_update[0] + ": " + r.readable_name())
+                    self.log_entries.append("  Please report this error in the Travel Mapping forum.\n  Unable to parse line: " + line)
                     continue
                 # if both labels reference the same waypoint...
                 if index1 == index2:
                     self.log_entries.append("Equivalent waypoint labels mark zero distance traveled in line: " + line)
                     if r not in self.routes:
                         self.routes.add(r)
-                        if r.last_update and self.update and r.last_update[0] >= self.update:
-                            self.log_entries.append("Route updated " + r.last_update[0] + ": " + r.readable_name())
+                        if r.last_update:
+                            self.log_entries.append("  Route updated " + r.last_update[0] + ": " + r.readable_name())
                 # otherwise both labels are valid; mark in use & proceed
                 else:
                     r.system.listnamesinuse.add(lookup)
@@ -1488,6 +1496,11 @@ class TravelerList:
                     if index1 > index2:
                         (index1, index2) = (index2, index1)
                     r.store_traveled_segments(self, index1, index2)
+
+            ###################
+            # 6-field entries #
+            ###################
+
             elif len(fields) == 6:
                 lookup1 = fields[0].upper() + ' ' + fields[1].upper()
                 lookup2 = fields[3].upper() + ' ' + fields[4].upper()
@@ -1534,26 +1547,26 @@ class TravelerList:
                     cr = r1.con_route.roots[0]
                     if cr not in self.routes:
                         self.routes.add(cr)
-                        if cr.last_update and self.update and cr.last_update[0] >= self.update:
-                            self.log_entries.append("Route updated " + cr.last_update[0] + ": " + cr.readable_name())
+                        if cr.last_update:
+                            self.log_entries.append("  Route updated " + cr.last_update[0] + ": " + cr.readable_name())
                         if len(r1.con_route.roots) > 1:
                             cr = r1.con_route.roots[-1]
                             if cr not in self.routes:
                                 self.routes.add(cr)
-                                if cr.last_update and self.update and cr.last_update[0] >= self.update:
-                                    self.log_entries.append("Route updated " + cr.last_update[0] + ": " + cr.readable_name())
+                                if cr.last_update:
+                                    self.log_entries.append("  Route updated " + cr.last_update[0] + ": " + cr.readable_name())
                     # log updates for routes beginning/ending r2's ConnectedRoute
                     cr = r2.con_route.roots[0]
                     if cr not in self.routes:
                         self.routes.add(cr)
-                        if cr.last_update and self.update and cr.last_update[0] >= self.update:
-                            self.log_entries.append("Route updated " + cr.last_update[0] + ": " + cr.readable_name())
+                        if cr.last_update:
+                            self.log_entries.append("  Route updated " + cr.last_update[0] + ": " + cr.readable_name())
                         if len(r2.con_route.roots) > 1:
                             cr = r2.con_route.roots[-1]
                             if cr not in self.routes:
                                 self.routes.add(cr)
-                                if cr.last_update and self.update and cr.last_update[0] >= self.update:
-                                    self.log_entries.append("Route updated " + cr.last_update[0] + ": " + cr.readable_name())
+                                if cr.last_update:
+                                    self.log_entries.append("  Route updated " + cr.last_update[0] + ": " + cr.readable_name())
                     continue
                 if r1.system.devel():
                     self.log_entries.append("Ignoring line matching highway in system in development: " + line)
@@ -1596,18 +1609,23 @@ class TravelerList:
                         self.log_entries.append(log_entry)
                     if invchar:
                         self.log_entries[-1] += " [contains invalid character(s)]"
+                    if index1 is None and r1 not in self.routes and r1.last_update:
+                        self.log_entries.append("  Route updated " + r1.last_update[0] + ": " + r1.readable_name())
+                        self.routes.add(r1)
+                    if index2 is None and r2 not in self.routes and r2.last_update:
+                        self.log_entries.append("  Route updated " + r2.last_update[0] + ": " + r2.readable_name())
+                        self.routes.add(r2)
                     continue
                 # are either of the labels used duplicates?
                 duplicate = False
                 if list_label_1 in r1.duplicate_labels:
-                    self.log_entries.append(r1.region + ": duplicate label " + list_label_1 + " in " + r1.root \
-                                          + ". Please report this error in the TravelMapping forum. Unable to parse line: " + line)
+                    self.log_entries.append(r1.region + ": duplicate label " + list_label_1 + " in " + r1.root)
                     duplicate = True
                 if list_label_2 in r2.duplicate_labels:
-                    self.log_entries.append(r2.region + ": duplicate label " + list_label_2 + " in " + r2.root \
-                                          + ". Please report this error in the TravelMapping forum. Unable to parse line: " + line)
+                    self.log_entries.append(r2.region + ": duplicate label " + list_label_2 + " in " + r2.root)
                     duplicate = True
                 if duplicate:
+                    self.log_entries.append("  Please report this error in the Travel Mapping forum.\n  Unable to parse line: " + line)
                     continue
                 # if both region/route combos point to the same chopped route...
                 if r1 == r2:
@@ -1616,24 +1634,39 @@ class TravelerList:
                         self.log_entries.append("Equivalent waypoint labels mark zero distance traveled in line: " + line)
                         if r1 not in self.routes:
                             self.routes.add(r1)
-                            if r1.last_update and self.update and r1.last_update[0] >= self.update:
-                                self.log_entries.append("Route updated " + r1.last_update[0] + ": " + r1.readable_name())
+                            if r1.last_update:
+                                self.log_entries.append("  Route updated " + r1.last_update[0] + ": " + r1.readable_name())
                         continue
                     if index1 <= index2:
                         r1.store_traveled_segments(self, index1, index2)
                     else:
                         r1.store_traveled_segments(self, index2, index1)
                 else:
+                    # user log warning for DISCONNECTED_ROUTE errors
+                    if r1.con_route.disconnected:
+                        region_set = set()
+                        for r in r1.con_route.roots:
+                          if r.is_disconnected():
+                            region_set.add(r.region)
+                        region_list = sorted(region_set)
+                        log_entry = ''
+                        for r in region_list:
+                          log_entry += r + (':' if r == region_list[-1] else '/')
+                        log_entry += " DISCONNECTED_ROUTE error in " + r1.con_route.readable_name() \
+                                  +  ".\n  Please report this error in the Travel Mapping forum" \
+                                  +  ".\n  Travels may potentially be shown incorrectly for line: " + line
+                        self.log_entries.append(log_entry)
+                    # Is .list entry forward or backward?
                     if r1.rootOrder > r2.rootOrder:
                         (r1, r2) = (r2, r1)
                         (index1, index2) = (index2, index1)
                     # mark the beginning chopped route from index1 to its end
-                    if r1.is_reversed:
+                    if r1.is_reversed():
                         r1.store_traveled_segments(self, 0, index1)
                     else:
                         r1.store_traveled_segments(self, index1, len(r1.segment_list))
                     # mark the ending chopped route from its beginning to index2
-                    if r2.is_reversed:
+                    if r2.is_reversed():
                         r2.store_traveled_segments(self, index2, len(r2.segment_list))
                     else:
                         r2.store_traveled_segments(self, 0, index2)
@@ -3032,17 +3065,20 @@ for h in highway_systems:
             r.con_mismatch()
             if r.rootOrder > 0 and len(q.point_list) > 1 and len(r.point_list) > 1 and not r.con_beg().same_coords(q.con_end()):
                 if q.con_beg().same_coords(r.con_beg()):
-                    q.is_reversed = True
+                    q.set_reversed()
                 elif q.con_end().same_coords(r.con_end()):
-                    r.is_reversed = True
+                    r.set_reversed()
                 elif q.con_beg().same_coords(r.con_end()):
-                    q.is_reversed = True
-                    r.is_reversed = True
+                    q.set_reversed()
+                    r.set_reversed()
                 else:
                     datacheckerrors.append(DatacheckEntry(r, [r.con_beg().label],
                                            "DISCONNECTED_ROUTE", q.root + '@' + q.con_end().label))
                     datacheckerrors.append(DatacheckEntry(q, [q.con_end().label],
                                            "DISCONNECTED_ROUTE", r.root + '@' + r.con_beg().label))
+                    cr.disconnected = True
+                    q.set_disconnected()
+                    r.set_disconnected()
 
 # Read updates.csv file, just keep in the fields array for now since we're
 # just going to drop this into the DB later anyway
@@ -3211,7 +3247,7 @@ for h in highway_systems:
             unused_alt_labels.append(ual_entry)
         del r.unused_alt_labels
         # flippedroutes.log line
-        if r.is_reversed:
+        if r.is_reversed():
             flipfile.write(r.root+'\n')
     #listnamesinuse.log line
     if len(h.listnamesinuse) > 0:
