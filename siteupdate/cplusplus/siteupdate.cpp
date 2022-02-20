@@ -1,10 +1,10 @@
 // Tab Width = 8
 
-// Travel Mapping Project, Jim Teresco and Eric Bryant, 2015-2021
+// Travel Mapping Project, Jim Teresco and Eric Bryant, 2015-2022
 /* Code to read .csv and .wpt files and prepare for
 adding to the Travel Mapping Project database.
 
-(c) 2015-2021, Jim Teresco and Eric Bryant
+(c) 2015-2022, Jim Teresco and Eric Bryant
 Original Python version by Jim Teresco, with contributions from Eric Bryant and the TravelMapping team
 C++ translation by Eric Bryant
 
@@ -435,7 +435,7 @@ int main(int argc, char *argv[])
 				r->unused_alt_labels.clear();
 			}
 			// flippedroutes.log line
-			if (r->is_reversed) flipfile << r->root << '\n';
+			if (r->is_reversed()) flipfile << r->root << '\n';
 		}
 		// listnamesinuse.log line
 		if (h->listnamesinuse.size())

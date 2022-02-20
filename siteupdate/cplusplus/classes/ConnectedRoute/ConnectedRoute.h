@@ -15,8 +15,8 @@ class ConnectedRoute
 	std::string banner;
 	std::string groupname;
 	std::vector<Route*> roots;
-
-	double mileage; // will be computed for routes in active & preview systems
+	double mileage;		// will be computed for routes in active & preview systems
+	bool disconnected;	// whether any DISCONNECTED_ROUTE errors are flagged for this ConnectedRoute
 
 	ConnectedRoute(std::string &, HighwaySystem *, ErrorList &);
 

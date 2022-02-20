@@ -73,7 +73,9 @@ class Route
 	std::string* last_update;
 	double mileage;
 	int rootOrder;
-	bool is_reversed;
+	char bools; // bitmask
+	  // &1 is_reversed
+	  // &2 disconnected
 
 	static std::unordered_map<std::string, Route*> root_hash, pri_list_hash, alt_list_hash;
 	static std::unordered_set<std::string>	all_wpt_files;
@@ -98,5 +100,9 @@ class Route
 	void con_mismatch();
 	Waypoint* con_beg();
 	Waypoint* con_end();
+	void set_reversed();
+	bool is_reversed();
+	void set_disconnected();
+	bool is_disconnected();
 };
 bool sort_route_updates_oldest(const Route*, const Route*);

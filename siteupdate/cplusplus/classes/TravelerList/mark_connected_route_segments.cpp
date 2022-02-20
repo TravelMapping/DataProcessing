@@ -45,21 +45,21 @@ if (r1->con_route != r2->con_route)
 	splist << orig_line << endlines[l];
 	// log updates for routes beginning/ending r1's ConnectedRoute
 	Route* cr = r1->con_route->roots.front();
-	if (routes.insert(cr).second && cr->last_update && update && cr->last_update[0] >= *update)
-		  log << "Route updated " << (*cr->last_update)[0] << ": " << cr->readable_name() << '\n';
+	if (routes.insert(cr).second && cr->last_update)
+		  log << "  Route updated " << cr->last_update[0] << ": " << cr->readable_name() << '\n';
 	if (r1->con_route->roots.size() > 1)
 	{	Route* cr = r1->con_route->roots.back();
-		if (routes.insert(cr).second && cr->last_update && update && cr->last_update[0] >= *update)
-		  log << "Route updated " << (*cr->last_update)[0] << ": " << cr->readable_name() << '\n';
+		if (routes.insert(cr).second && cr->last_update)
+		  log << "  Route updated " << cr->last_update[0] << ": " << cr->readable_name() << '\n';
 	}
 	// log updates for routes beginning/ending r2's ConnectedRoute
 	cr = r2->con_route->roots.front();
-	if (routes.insert(cr).second && cr->last_update && update && cr->last_update[0] >= *update)
-		  log << "Route updated " << (*cr->last_update)[0] << ": " << cr->readable_name() << '\n';
+	if (routes.insert(cr).second && cr->last_update)
+		  log << "  Route updated " << cr->last_update[0] << ": " << cr->readable_name() << '\n';
 	if (r2->con_route->roots.size() > 1)
 	{	Route* cr = r2->con_route->roots.back();
-		if (routes.insert(cr).second && cr->last_update && update && cr->last_update[0] >= *update)
-		  log << "Route updated " << (*cr->last_update)[0] << ": " << cr->readable_name() << '\n';
+		if (routes.insert(cr).second && cr->last_update)
+		  log << "  Route updated " << cr->last_update[0] << ": " << cr->readable_name() << '\n';
 	}
 	continue;
 }
@@ -102,24 +102,26 @@ if (lit1 == r1->alt_label_hash.end() || lit2 == r2->alt_label_hash.end())
 	if (invalid_char) log << " [contains invalid character(s)]";
 	log << '\n';
 	splist << orig_line << endlines[l];
+	if (lit1 == r1->alt_label_hash.end() && routes.insert(r1).second && r1->last_update)
+		log << "  Route updated " << r1->last_update[0] << ": " << r1->readable_name() << '\n';
+	if (lit2 == r2->alt_label_hash.end() && routes.insert(r2).second && r2->last_update)
+		log << "  Route updated " << r2->last_update[0] << ": " << r2->readable_name() << '\n';
 	continue;
 }
 // are either of the labels used duplicates?
 char duplicate = 0;
 if (r1->duplicate_labels.find(fields[2]) != r1->duplicate_labels.end())
-{	log << r1->region->code << ": duplicate label " << fields[2] << " in " << r1->root
-	    << ". Please report this error in the TravelMapping forum"
-	    << ". Unable to parse line: " << trim_line << '\n';
+{	log << r1->region->code << ": duplicate label " << fields[2] << " in " << r1->root << ".\n";
 	duplicate = 1;
 }
 if (r2->duplicate_labels.find(fields[5]) != r2->duplicate_labels.end())
-{	log << r2->region->code << ": duplicate label " << fields[5] << " in " << r2->root
-	    << ". Please report this error in the TravelMapping forum"
-	    << ". Unable to parse line: " << trim_line << '\n';
+{	log << r2->region->code << ": duplicate label " << fields[5] << " in " << r2->root << ".\n";
 	duplicate = 1;
 }
 if (duplicate)
 {	splist << orig_line << endlines[l];
+	log << "  Please report this error in the Travel Mapping forum.\n"
+	    << "  Unable to parse line: " << trim_line << '\n';
 	continue;
 }
 bool reverse = 0;
@@ -131,26 +133,41 @@ if (r1 == r2)
 	if (index1 == index2)
 	{	log << "Equivalent waypoint labels mark zero distance traveled in line: " << trim_line << '\n';
 		splist << orig_line << endlines[l];
-		if (routes.insert(r1).second && r1->last_update && update && r1->last_update[0] >= *update)
-			log << "Route updated " << (*r1->last_update)[0] << ": " << r1->readable_name() << '\n';
+		if (routes.insert(r1).second && r1->last_update)
+			log << "  Route updated " << r1->last_update[0] << ": " << r1->readable_name() << '\n';
 		continue;
 	}
 	if (index1 <= index2)
 		r1->store_traveled_segments(this, log, index1, index2);
 	else	r1->store_traveled_segments(this, log, index2, index1);
      }
-else {	if (r1->rootOrder > r2->rootOrder)
+else {	// user log warning for DISCONNECTED_ROUTE errors
+	if (r1->con_route->disconnected)
+	{	std::unordered_set<Region*> region_set;
+		for (Route* r : r1->con_route->roots)
+		  if (r->is_disconnected())
+		    region_set.insert(r->region);
+		std::list<Region*> region_list(region_set.begin(), region_set.end());
+		region_list.sort(sort_regions_by_code);
+		for (Region* r : region_list)
+		  log << r->code << (r == region_list.back() ? ':' : '/');
+		log << " DISCONNECTED_ROUTE error in " << r1->con_route->readable_name()
+		    << ".\n  Please report this error in the Travel Mapping forum"
+		    << ".\n  Travels may potentially be shown incorrectly for line: " << trim_line << '\n';
+	}
+	// Is .list entry forward or backward?
+	if (r1->rootOrder > r2->rootOrder)
 	{	std::swap(r1, r2);
 		index1 = lit2->second;
 		index2 = lit1->second;
 		reverse = 1;
 	}
 	// mark the beginning chopped route from index1 to its end
-	if (r1->is_reversed)
+	if (r1->is_reversed())
 		r1->store_traveled_segments(this, log, 0, index1);
 	else	r1->store_traveled_segments(this, log, index1, r1->segment_list.size());
 	// mark the ending chopped route from its beginning to index2
-	if (r2->is_reversed)
+	if (r2->is_reversed())
 		r2->store_traveled_segments(this, log, index2, r2->segment_list.size());
 	else	r2->store_traveled_segments(this, log, 0, index2);
 	// mark any intermediate chopped routes in their entirety.
