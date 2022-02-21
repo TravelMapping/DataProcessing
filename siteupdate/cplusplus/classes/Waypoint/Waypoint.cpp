@@ -3,6 +3,7 @@
 #include "../DBFieldLength/DBFieldLength.h"
 #include "../HighwaySystem/HighwaySystem.h"
 #include "../Route/Route.h"
+#include "../../functions/strd.h"
 #include "../../functions/valid_num_str.h"
 #include <cmath>
 #include <cstring>
@@ -311,6 +312,55 @@ bool Waypoint::label_references_route(Route *r)
 	return 0;
 }
 
+Route* Waypoint::coloc_same_number(const char* digits)
+{	if (colocated)
+	  for (Waypoint* w : *colocated)
+	  {	if (w == this) continue;
+		const char* d = w->route->route.data();
+		while (!isdigit(*d) && *d) ++d;
+		std::string other(d);
+		if (w->route->banner[0] == '-') other += w->route->banner;
+		if (digits == other) return w->route;
+	  }
+	return 0;
+}
+
+Route* Waypoint::coloc_same_designation(const std::string& rte)
+{	if (colocated)
+	  for (Waypoint* w : *colocated)
+	    if ( w != this && rte == (w->route->banner[0] == '-' ? w->route->route : w->route->name_no_abbrev()) )
+	      return w->route;
+	return 0;
+}
+
+Route* Waypoint::self_intersection()
+{	if (colocated)
+	  for (Waypoint* w : *colocated)
+	    if (w != this && w->route == route)
+	      return w->route;
+	return 0;
+}
+
+bool Waypoint::banner_after_slash(const char* slash)
+{	// return whether colocated with a bannered route of same designation whose banner
+	// is contained in this waypoint's label after a slash, before underscore if exists
+	if (colocated)
+	  for (Waypoint* w : *colocated)
+	    if (w != this && w->route->banner.size() && w->route->route == route->route && strdstr(slash+1, w->route->banner.data(), '_'))
+	      return 1;
+	return 0;
+}
+
+Route* Waypoint::coloc_banner_matches_abbrev()
+{	// return whether colocated with a bannered route of same designation whose banner
+	// matches this route's abbrev
+	if (colocated)
+	  for (Waypoint* w : *colocated)
+	    if (w != this && w->route->route == route->route && w->route->banner == route->abbrev)
+	      return w->route;
+	return 0;
+}
+
 /* Datacheck */
 
 void Waypoint::distance_update(char *fstr, double &vis_dist, Waypoint *prev_w)
@@ -426,42 +476,48 @@ void Waypoint::label_parens()
 		Datacheck::add(route, label, "", "", "LABEL_PARENS", "");
 }
 
-void Waypoint::label_selfref(const char *slash)
-{	// looking for the route within the label
-	// partially complete "references own route" -- too many FP
+void Waypoint::label_selfref()
+{	// "label references own route"
+	#define FLAG(SUBTYPE) Datacheck::add(route, label, "", "", "LABEL_SELFREF", SUBTYPE)
+	const char* l = label.data() + (label[0] == '*');
+	std::string rte = route->banner[0] == '-' ? route->route : route->name_no_abbrev();
 	// first check for number match after a slash, if there is one
-	if (slash)
-	{	char* digit_starts = isdigit(route->route.back())
-		? &route->route.back()
-		: isdigit(route->route[route->route.size()-2]) && isalpha(route->route.back()) ? &route->route.back()-1 : 0;
-		if (digit_starts)
-		{	while (digit_starts > route->route.data() && isdigit(digit_starts[-1])) digit_starts--;
-			if (!strcmp(slash+1, digit_starts) || !strcmp(slash+1, route->route.data()))
-			{	Datacheck::add(route, label, "", "", "LABEL_SELFREF", "");
-				return;
-			}
-			const char *underscore = strchr(slash+1, '_');
-			if (underscore)
-			{	std::string postslash(slash+1, underscore-slash-1);
-				if (postslash == digit_starts || postslash == route->route)
-				{	Datacheck::add(route, label, "", "", "LABEL_SELFREF", "");
-					return;
-				}
-			}
-		}
+	const char* slash = strchr(l, '/');
+	if (slash++ && strncmp(l, "Old", 3))
+	{	const char* digits = rte.data();
+		while (!isdigit(*digits) && *digits) ++digits;
+		if (	digits != rte.data()+rte.size()
+		     &&	!strdcmp(slash, digits, '_') && !coloc_same_number(digits)
+		     ||	!strdcmp(slash, rte.data(), '_') && !coloc_same_designation(rte)
+		   )				return	FLAG("NO_COLOC");
 	}
 	// now the remaining checks
-	std::string rte_ban = route->route + route->banner;
-	if ( strncmp(label.data(), rte_ban.data(), rte_ban.size()) ) return;
-	const char *c = label.data()+rte_ban.size();
-	if (*c == 0 || *c == '/')
-		Datacheck::add(route, label, "", "", "LABEL_SELFREF", "");
-	else if (*c == '_')
-		if (*++c != 'U')
-			Datacheck::add(route, label, "", "", "LABEL_SELFREF", "");
-		else {	while (isdigit(*++c));
-			if (*c) Datacheck::add(route, label, "", "", "LABEL_SELFREF", "");
-		     }
+	if ( strncmp(l, rte.data(), rte.size()) ) return;
+	const char *c = l+rte.size();
+	switch(*c)
+	{   case 0:   {	Route* r = coloc_same_designation(rte);
+			if (!r)				FLAG("NO_COLOC");
+			else if (r == route)		FLAG("NO_SUFFIX");
+			else if (r->abbrev.size())	FLAG("NO_ABBREV");
+		      }	return;
+	    case '_': {	if (*++c == 'U')
+			{	while (isdigit(*++c));
+				if (!*c) return;
+			}
+			Route* r = coloc_same_designation(rte);
+			if (!r)				FLAG("NO_COLOC");
+			else if (r->abbrev.size())	FLAG("NO_ABBREV");
+		      }	return;
+	    case '/':	if ((route->banner.size() && route->banner[0] != '-' || !banner_after_slash(slash)) && !coloc_same_designation(rte))
+							FLAG("NO_COLOC");
+			return;
+	    default:	if (	route->abbrev.size()
+			     &&	!strncmp(c, route->abbrev.data(), route->abbrev.size())
+			     &&	(!self_intersection() || !c[route->abbrev.size()])
+			     && !coloc_banner_matches_abbrev()
+			   )				FLAG(strchr("_/", c[route->abbrev.size()]) ? "TRUE_ERROR" : "FULL_MATCH");
+	}
+	#undef FLAG
 }
 
 void Waypoint::label_slashes(const char *slash)

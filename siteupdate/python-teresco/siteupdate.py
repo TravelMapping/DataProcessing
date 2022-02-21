@@ -785,7 +785,7 @@ class Waypoint:
         return False
 
     def hashpoint(self):
-        # return a canonical waypoint for graph vertex hashtable lookup
+        """return a canonical waypoint for graph vertex hashtable lookup"""
         if self.colocated is None:
             return self
         return self.colocated[0]
@@ -808,32 +808,82 @@ class Waypoint:
             #datacheckerrors.append(DatacheckEntry(route, [self.label], "UNEXPECTED_DESIGNATION", self.label[len(no_abbrev)+len(r.abbrev)+1:]))
         return False
 
+    def coloc_same_number(self, digits):
+        if self.colocated:
+            for w in self.colocated:
+                if w == self:
+                    continue;
+                d = 0
+                while d < len(w.route.route) and not w.route.route[d].isdigit():
+                    d += 1
+                other = w.route.route[d:]
+                if w.route.banner.startswith('-'):
+                    other += w.route.banner
+                if digits == other:
+                    return True
+        return False
+
+    def coloc_same_designation(self, rte):
+        if self.colocated:
+            for w in self.colocated:
+                if w != self and rte == (w.route.route if w.route.banner.startswith('-') else w.route.name_no_abbrev()):
+                  return w.route;
+        return None;
+
+    def banner_after_slash(self, postslash):
+        """return whether colocated with a bannered route of same designation whose banner
+        is contained in this waypoint's label after a slash, before underscore if exists"""
+        if self.colocated is not None:
+            for w in self.colocated:
+                if w != self and len(w.route.banner) and w.route.route == self.route.route and w.route.banner in postslash:
+                    return True
+        return False
+
     def label_selfref(self):
-        # partially complete "references own route" -- too many FP
+        """label references own route"""
+        l = self.label[(self.label[0] == '*'):]
+        rte = r.route if r.banner.startswith('-') else r.name_no_abbrev()
         # first check for number match after a slash, if there is one
-        if '/' in self.label:
-            digit_starts = len(r.route)-1 if r.route[-1].isdigit() else \
-                           len(r.route)-2 if r.route[-2].isdigit() and r.route[-1].isalpha() else 0
-            if digit_starts:
-                while digit_starts >= 0 and r.route[digit_starts].isdigit():
-                    digit_starts-=1
-                digits = r.route[digit_starts+1:]
-                postslash = self.label[self.label.index('/')+1:]
-                if postslash == digits or postslash == r.route:
-                    datacheckerrors.append(DatacheckEntry(r,[self.label],'LABEL_SELFREF'))
-                    return
-                if '_' in postslash:
-                    postslash = postslash[:postslash.index('_')]
-                    if postslash == digits or postslash == r.route:
-                        datacheckerrors.append(DatacheckEntry(r,[self.label],'LABEL_SELFREF'))
-                        return
+        if '/' in l and not l.startswith("Old"):
+            digit_starts = 0
+            while digit_starts < len(rte) and not rte[digit_starts].isdigit():
+                digit_starts+=1
+            digits = rte[digit_starts:]
+            postslash = l[l.index('/')+1:]
+            if '_' in postslash:
+                postslash = postslash[:postslash.index('_')]
+            if len(digits) \
+            and postslash == digits and not self.coloc_same_number(digits) \
+            or postslash == rte and not self.coloc_same_designation(rte):
+                return datacheckerrors.append(DatacheckEntry(r,[self.label],'LABEL_SELFREF','NO_COLOC'))
         # now the remaining checks
-        rte_ban = r.route+r.banner
-        if self.label.startswith(rte_ban):
-            c = len(rte_ban)
-            l = self.label
-            if len(l) == c or l[c] == '_' and (len(l) == c+1 or l[c+1] != 'U' or len(l) > c+2 and not l[c+2:].isdigit()) or l[c] == '/':
-                datacheckerrors.append(DatacheckEntry(r,[l],'LABEL_SELFREF'))
+        if l.startswith(rte):
+            c = len(rte)
+            if c == len(l):
+                route = self.coloc_same_designation(rte)
+                if route is None:
+                    datacheckerrors.append(DatacheckEntry(r,[self.label],'LABEL_SELFREF','NO_COLOC'))
+                elif route == r:
+                    datacheckerrors.append(DatacheckEntry(r,[self.label],'LABEL_SELFREF','NO_SUFFIX'))
+                elif len(route.abbrev):
+                    datacheckerrors.append(DatacheckEntry(r,[self.label],'LABEL_SELFREF','NO_ABBREV'))
+            elif l[c] == '_':
+                if len(l) == c+1 or l[c+1] != 'U' or len(l) > c+2 and not l[c+2:].isdigit():
+                    route = self.coloc_same_designation(rte)
+                    if route is None:
+                        datacheckerrors.append(DatacheckEntry(r,[self.label],'LABEL_SELFREF','NO_COLOC'))
+                    elif len(route.abbrev):
+                        datacheckerrors.append(DatacheckEntry(r,[self.label],'LABEL_SELFREF','NO_ABBREV'))
+            elif l[c] == '/':
+                if (len(r.banner) and r.banner[0] != '-' or not self.banner_after_slash(postslash)) and not self.coloc_same_designation(rte):
+                    datacheckerrors.append(DatacheckEntry(r,[self.label],'LABEL_SELFREF','NO_COLOC'))
+            elif len(r.abbrev) \
+                 and l[c:].startswith(r.abbrev) \
+                 and (self.colocated is None \
+                      or (r not in [p.route for p in self.colocated if p != self] or len(l) == c+len(r.abbrev)) \
+                         and r.abbrev not in [p.route.banner for p in self.colocated if p != self]):
+                datacheckerrors.append(DatacheckEntry(r,[self.label],'LABEL_SELFREF', \
+                                       "TRUE_ERROR" if len(l) == c+len(r.abbrev) or l[c+len(r.abbrev)] in "_/" else "FULL_MATCH"))
 
 class HighwaySegment:
     """This class represents one highway segment: the connection between two
