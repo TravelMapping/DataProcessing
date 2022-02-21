@@ -40,6 +40,7 @@ CommonObjects = \
   functions/format_clinched_mi.o \
   functions/lower.o \
   functions/split.o \
+  functions/strd.o \
   functions/upper.o \
   functions/valid_num_str.o
 

@@ -64,4 +64,5 @@ void Route::compute_stats_r()
 	} else	if (city.empty())
 		  Datacheck::add(this, "", "", "", "ABBREV_NO_CITY", CSV_LINE);
 	#undef CSV_LINE
+	for (Waypoint* w : point_list) w->label_selfref();
 }

@@ -44,6 +44,11 @@ class Waypoint
 	void nmplogs(std::unordered_set<std::string> &, std::ofstream &, std::list<std::string> &);
 	Waypoint* hashpoint();
 	bool label_references_route(Route *);
+	Route* coloc_same_number(const char*);
+	Route* coloc_same_designation(const std::string&);
+	Route* self_intersection();
+	bool banner_after_slash(const char*);
+	Route* coloc_banner_matches_abbrev();
 
 	// Datacheck
 	void distance_update(char *, double &, Waypoint *);
@@ -55,7 +60,7 @@ class Waypoint
 	void label_invalid_ends();
 	void label_looks_hidden();
 	void label_parens();
-	void label_selfref(const char *);
+	void label_selfref();
 	void label_slashes(const char *);
 	void lacks_generic();
 	void underscore_datachecks(const char *);
