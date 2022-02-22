@@ -3746,6 +3746,8 @@ allfile.close()
 
 # now, a file for each system, again per traveler by region
 for h in highway_systems:
+    if not h.active_or_preview():
+        continue
     sysfile = open(args.csvstatfilepath + "/" + h.systemname + '-all.csv',"w",encoding='UTF-8')
     sysfile.write('Traveler,Total')
     regions = sorted(h.mileage_by_region.keys())
