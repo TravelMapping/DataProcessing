@@ -148,7 +148,8 @@ void HighwaySystem::insert_vertex(HGVertex* v)
 }
 
 void HighwaySystem::stats_csv()
-{	std::ofstream sysfile(Args::csvstatfilepath + "/" + systemname + "-all.csv");
+{	if (!active_or_preview()) return;
+	std::ofstream sysfile(Args::csvstatfilepath + "/" + systemname + "-all.csv");
 	sysfile << "Traveler,Total";
 	std::list<Region*> regions;
 	double total_mi = 0;
