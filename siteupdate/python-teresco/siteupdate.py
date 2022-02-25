@@ -926,7 +926,7 @@ class HighwaySegment:
                     segment_name += cs.route.list_entry_name()
         return segment_name
 
-    def concurrent_travelers_sanity_check(self):
+    '''def concurrent_travelers_sanity_check(self):
         if self.route.system.devel():
             return ""
         if self.concurrent is not None:
@@ -940,7 +940,7 @@ class HighwaySegment:
                     for t in self.clinched_by:
                         if t not in conc.clinched_by:
                             return t.traveler_name + " has clinched [" + str(self) + "], but not [" + str(conc) + "]\n"
-        return ""
+        return ""'''
 
     def clinchedby_code(self, traveler_lists):
         # Return a hexadecimal string encoding which travelers have clinched this segment, for use in "traveled" graph files
@@ -1014,7 +1014,6 @@ class Route:
             el.add_error("System mismatch parsing " + system.systemname +
                          ".csv line [" + line + "], expected " + system.systemname)
         self.region = fields[1]
-        region_found = False
         if self.region not in all_regions:
             el.add_error("Unrecognized region in " + system.systemname +
                          ".csv line: " + line)
@@ -3415,37 +3414,33 @@ for h in highway_systems:
             #
             # first, overall mileage for this region, add to overall
             # if an entry already exists, create entry if not
-            if r.region in overall_mileage_by_region:
-                overall_mileage_by_region[r.region] = overall_mileage_by_region[r.region] + \
-                    s.length/overall_concurrency_count
-            else:
+            try:
+                overall_mileage_by_region[r.region] += s.length/overall_concurrency_count
+            except KeyError:
                 overall_mileage_by_region[r.region] = s.length/overall_concurrency_count
 
             # next, same thing for active_preview mileage for the region,
             # if active or preview
             if r.system.active_or_preview():
-                if r.region in active_preview_mileage_by_region:
-                    active_preview_mileage_by_region[r.region] = active_preview_mileage_by_region[r.region] + \
-                    s.length/active_preview_concurrency_count
-                else:
+                try:
+                    active_preview_mileage_by_region[r.region] += s.length/active_preview_concurrency_count
+                except KeyError:
                     active_preview_mileage_by_region[r.region] = s.length/active_preview_concurrency_count
 
-            # now same thing for active_only mileage for the region,
-            # if active
-            if r.system.active():
-                if r.region in active_only_mileage_by_region:
-                    active_only_mileage_by_region[r.region] = active_only_mileage_by_region[r.region] + \
-                    s.length/active_only_concurrency_count
-                else:
-                    active_only_mileage_by_region[r.region] = s.length/active_only_concurrency_count
+                # now same thing for active_only mileage for the region,
+                # if active
+                if r.system.active():
+                    try:
+                        active_only_mileage_by_region[r.region] += s.length/active_only_concurrency_count
+                    except KeyError:
+                        active_only_mileage_by_region[r.region] = s.length/active_only_concurrency_count
 
-            # now we move on to totals by region, only the
+            # now we move on to the system's totals by region, only the
             # overall since an entire highway system must be
             # at the same level
-            if r.region in h.mileage_by_region:
-                h.mileage_by_region[r.region] = h.mileage_by_region[r.region] + \
-                        s.length/system_concurrency_count
-            else:
+            try:
+                h.mileage_by_region[r.region] += s.length/system_concurrency_count
+            except KeyError:
                 h.mileage_by_region[r.region] = s.length/system_concurrency_count
 
             # that's it for overall stats, now credit all travelers
@@ -3453,29 +3448,28 @@ for h in highway_systems:
             for t in s.clinched_by:
                 # credit active+preview for this region, which it must be
                 # if this segment is clinched by anyone
-                if r.region in t.active_preview_mileage_by_region:
-                    t.active_preview_mileage_by_region[r.region] = t.active_preview_mileage_by_region[r.region] + \
-                        s.length/active_preview_concurrency_count
-                else:
+                try:
+                    t.active_preview_mileage_by_region[r.region] += s.length/active_preview_concurrency_count
+                except KeyError:
                     t.active_preview_mileage_by_region[r.region] = s.length/active_preview_concurrency_count
 
                 # credit active only for this region
                 if r.system.active():
-                    if r.region in t.active_only_mileage_by_region:
-                        t.active_only_mileage_by_region[r.region] = t.active_only_mileage_by_region[r.region] + \
-                            s.length/active_only_concurrency_count
-                    else:
+                    try:
+                        t.active_only_mileage_by_region[r.region] += s.length/active_only_concurrency_count
+                    except KeyError:
                         t.active_only_mileage_by_region[r.region] = s.length/active_only_concurrency_count
 
 
                 # credit this system in this region in the messy dictionary of dictionaries
-                if h.systemname not in t.system_region_mileages:
+                try:
+                    t_system_dict = t.system_region_mileages[h.systemname]
+                except KeyError:
                     t.system_region_mileages[h.systemname] = dict()
-                t_system_dict = t.system_region_mileages[h.systemname]
-                if r.region in t_system_dict:
-                    t_system_dict[r.region] = t_system_dict[r.region] + \
-                    s.length/system_concurrency_count
-                else:
+                    t_system_dict = t.system_region_mileages[h.systemname]
+                try:
+                    t_system_dict[r.region] += s.length/system_concurrency_count
+                except KeyError:
                     t_system_dict[r.region] = s.length/system_concurrency_count
 
         # datachecks
