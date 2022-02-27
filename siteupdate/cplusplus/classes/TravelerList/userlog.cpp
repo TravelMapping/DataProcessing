@@ -139,8 +139,8 @@ void TravelerList::userlog(ClinchedDBValues *clin_db_val, const double total_act
 	// updated routes, sorted by date
 	log << "\nMost recent updates for listed routes:\n";
 	std::list<Route*> route_list;
-	for (Route* r : routes) if (r->last_update) route_list.push_back(r);
-	routes.clear();
+	for (Route* r : updated_routes) if (r->last_update) route_list.push_back(r);
+	updated_routes.clear();
 	route_list.sort(sort_route_updates_oldest);
 	for (Route* r : route_list)
 	    log	<< r->last_update[0] << " | " << r->last_update[1] << " | " << r->last_update[2] << " | "

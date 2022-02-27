@@ -1188,9 +1188,9 @@ class Route:
             hs = self.segment_list[pos]
             hs.add_clinched_by(t)
             t.clinched_segments.add(hs)
-        if self not in t.routes:
-            t.routes.add(self)
-            if self.last_update and t.update and self.last_update[0] >= t.update:
+        if self.last_update and self not in t.updated_routes:
+            t.updated_routes.add(self)
+            if t.update and self.last_update[0] >= t.update:
                 t.log_entries.append("Route updated " + self.last_update[0] + ": " + self.readable_name())
 
     def con_beg(self):
@@ -1434,7 +1434,7 @@ class TravelerList:
         except TypeError:
             self.log_entries = []
             self.update = None
-        self.routes = set()
+        self.updated_routes = set()
 
         for line in lines:
             line = line.strip(" \t\r\n\x00")
@@ -1510,10 +1510,9 @@ class TravelerList:
                         self.log_entries.append(log_entry)
                     if invchar:
                         self.log_entries[-1] += " [contains invalid character(s)]"
-                    if r not in self.routes:
-                        self.routes.add(r)
-                        if r.last_update:
-                            self.log_entries.append("  Route updated " + r.last_update[0] + ": " + r.readable_name())
+                    if r.last_update:
+                        self.updated_routes.add(r)
+                        self.log_entries.append("  Route updated " + r.last_update[0] + ": " + r.readable_name())
                     continue
                 # are either of the labels used duplicates?
                 duplicate = False
@@ -1529,10 +1528,9 @@ class TravelerList:
                 # if both labels reference the same waypoint...
                 if index1 == index2:
                     self.log_entries.append("Equivalent waypoint labels mark zero distance traveled in line: " + line)
-                    if r not in self.routes:
-                        self.routes.add(r)
-                        if r.last_update:
-                            self.log_entries.append("  Route updated " + r.last_update[0] + ": " + r.readable_name())
+                    if r.last_update:
+                        self.updated_routes.add(r)
+                        self.log_entries.append("  Route updated " + r.last_update[0] + ": " + r.readable_name())
                 # otherwise both labels are valid; mark in use & proceed
                 else:
                     r.system.listnamesinuse.add(lookup)
@@ -1594,28 +1592,24 @@ class TravelerList:
                     self.log_entries.append(lookup1 + " and " + lookup2 + " not in same connected route in line: " + line)
                     # log updates for routes beginning/ending r1's ConnectedRoute
                     cr = r1.con_route.roots[0]
-                    if cr not in self.routes:
-                        self.routes.add(cr)
+                    if cr.last_update:
+                        self.updated_routes.add(cr)
+                        self.log_entries.append("  Route updated " + cr.last_update[0] + ": " + cr.readable_name())
+                    if len(r1.con_route.roots) > 1:
+                        cr = r1.con_route.roots[-1]
                         if cr.last_update:
+                            self.updated_routes.add(cr)
                             self.log_entries.append("  Route updated " + cr.last_update[0] + ": " + cr.readable_name())
-                        if len(r1.con_route.roots) > 1:
-                            cr = r1.con_route.roots[-1]
-                            if cr not in self.routes:
-                                self.routes.add(cr)
-                                if cr.last_update:
-                                    self.log_entries.append("  Route updated " + cr.last_update[0] + ": " + cr.readable_name())
                     # log updates for routes beginning/ending r2's ConnectedRoute
                     cr = r2.con_route.roots[0]
-                    if cr not in self.routes:
-                        self.routes.add(cr)
+                    if cr.last_update:
+                        self.updated_routes.add(cr)
+                        self.log_entries.append("  Route updated " + cr.last_update[0] + ": " + cr.readable_name())
+                    if len(r2.con_route.roots) > 1:
+                        cr = r2.con_route.roots[-1]
                         if cr.last_update:
+                            self.updated_routes.add(cr)
                             self.log_entries.append("  Route updated " + cr.last_update[0] + ": " + cr.readable_name())
-                        if len(r2.con_route.roots) > 1:
-                            cr = r2.con_route.roots[-1]
-                            if cr not in self.routes:
-                                self.routes.add(cr)
-                                if cr.last_update:
-                                    self.log_entries.append("  Route updated " + cr.last_update[0] + ": " + cr.readable_name())
                     continue
                 if r1.system.devel():
                     self.log_entries.append("Ignoring line matching highway in system in development: " + line)
@@ -1658,12 +1652,13 @@ class TravelerList:
                         self.log_entries.append(log_entry)
                     if invchar:
                         self.log_entries[-1] += " [contains invalid character(s)]"
-                    if index1 is None and r1 not in self.routes and r1.last_update:
+                    if index1 is None and r1.last_update:
                         self.log_entries.append("  Route updated " + r1.last_update[0] + ": " + r1.readable_name())
-                        self.routes.add(r1)
-                    if index2 is None and r2 not in self.routes and r2.last_update:
+                        self.updated_routes.add(r1)
+                    if index2 is None and r2.last_update \
+                    and (index1 is not None or r1 != r2):
                         self.log_entries.append("  Route updated " + r2.last_update[0] + ": " + r2.readable_name())
-                        self.routes.add(r2)
+                        self.updated_routes.add(r2)
                     continue
                 # are either of the labels used duplicates?
                 duplicate = False
@@ -1681,10 +1676,9 @@ class TravelerList:
                     # if both labels reference the same waypoint...
                     if index1 == index2:
                         self.log_entries.append("Equivalent waypoint labels mark zero distance traveled in line: " + line)
-                        if r1 not in self.routes:
-                            self.routes.add(r1)
-                            if r1.last_update:
-                                self.log_entries.append("  Route updated " + r1.last_update[0] + ": " + r1.readable_name())
+                        if r1.last_update:
+                            self.updated_routes.add(r1)
+                            self.log_entries.append("  Route updated " + r1.last_update[0] + ": " + r1.readable_name())
                         continue
                     if index1 <= index2:
                         r1.store_traveled_segments(self, index1, index2)
@@ -3677,10 +3671,10 @@ for t in traveler_lists:
     # updated routes, sorted by date
     t.log_entries.append("\nMost recent updates for listed routes:")
     route_list = []
-    for r in t.routes:
+    for r in t.updated_routes:
         if r.last_update:
             route_list.append(r)
-    del t.routes
+    del t.updated_routes
     route_list.sort(key=lambda r: r.last_update[0]+r.last_update[3])
     for r in route_list:
         t.log_entries.append(r.last_update[0] + " | " + r.last_update[1] + " | " + \
