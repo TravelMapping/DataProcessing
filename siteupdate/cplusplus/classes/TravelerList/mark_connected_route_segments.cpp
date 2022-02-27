@@ -43,24 +43,8 @@ Route* r2 = rit2->second;
 if (r1->con_route != r2->con_route)
 {	log << lookup1 << " and " << lookup2 << " not in same connected route in line: " << trim_line << '\n';
 	splist << orig_line << endlines[l];
-	// log updates for routes beginning/ending r1's ConnectedRoute
-	Route* cr = r1->con_route->roots.front();
-	if (routes.insert(cr).second && cr->last_update)
-		  log << "  Route updated " << cr->last_update[0] << ": " << cr->readable_name() << '\n';
-	if (r1->con_route->roots.size() > 1)
-	{	Route* cr = r1->con_route->roots.back();
-		if (routes.insert(cr).second && cr->last_update)
-		  log << "  Route updated " << cr->last_update[0] << ": " << cr->readable_name() << '\n';
-	}
-	// log updates for routes beginning/ending r2's ConnectedRoute
-	cr = r2->con_route->roots.front();
-	if (routes.insert(cr).second && cr->last_update)
-		  log << "  Route updated " << cr->last_update[0] << ": " << cr->readable_name() << '\n';
-	if (r2->con_route->roots.size() > 1)
-	{	Route* cr = r2->con_route->roots.back();
-		if (routes.insert(cr).second && cr->last_update)
-		  log << "  Route updated " << cr->last_update[0] << ": " << cr->readable_name() << '\n';
-	}
+	UPDATE_NOTE(r1->con_route->roots.front()) if (r1->con_route->roots.size() > 1) UPDATE_NOTE(r1->con_route->roots.back())
+	UPDATE_NOTE(r2->con_route->roots.front()) if (r2->con_route->roots.size() > 1) UPDATE_NOTE(r2->con_route->roots.back())
 	continue;
 }
 if (r1->system->devel())
@@ -102,10 +86,8 @@ if (lit1 == r1->alt_label_hash.end() || lit2 == r2->alt_label_hash.end())
 	if (invalid_char) log << " [contains invalid character(s)]";
 	log << '\n';
 	splist << orig_line << endlines[l];
-	if (lit1 == r1->alt_label_hash.end() && routes.insert(r1).second && r1->last_update)
-		log << "  Route updated " << r1->last_update[0] << ": " << r1->readable_name() << '\n';
-	if (lit2 == r2->alt_label_hash.end() && routes.insert(r2).second && r2->last_update)
-		log << "  Route updated " << r2->last_update[0] << ": " << r2->readable_name() << '\n';
+	if (lit1 == r1->alt_label_hash.end() && lit1 != lit2)	UPDATE_NOTE(r1)
+	if (lit2 == r2->alt_label_hash.end()) /*^diff rtes^*/	UPDATE_NOTE(r2)
 	continue;
 }
 // are either of the labels used duplicates?
@@ -133,8 +115,7 @@ if (r1 == r2)
 	if (index1 == index2)
 	{	log << "Equivalent waypoint labels mark zero distance traveled in line: " << trim_line << '\n';
 		splist << orig_line << endlines[l];
-		if (routes.insert(r1).second && r1->last_update)
-			log << "  Route updated " << r1->last_update[0] << ": " << r1->readable_name() << '\n';
+		UPDATE_NOTE(r1)
 		continue;
 	}
 	if (index1 <= index2)

@@ -117,6 +117,10 @@ TravelerList::TravelerList(std::string travname, std::string* updarr[], ErrorLis
 			if (*c == '#') break;
 			else fields.push_back(c);
 		}
+		#define UPDATE_NOTE(R) if (R->last_update) \
+		{	updated_routes.insert(R); \
+			log << "  Route updated " << R->last_update[0] << ": " << R->readable_name() << '\n'; \
+		}
 		if (fields.size() == 4)
 		     {
 			#include "mark_chopped_route_segments.cpp"
@@ -129,6 +133,7 @@ TravelerList::TravelerList(std::string travname, std::string* updarr[], ErrorLis
 			    << fields.size() << "): " << trim_line << '\n';
 			splist << orig_line << endlines[l];
 		     }
+		#undef UPDATE_NOTE
 	}
 	delete[] listdata;
 	log << "Processed " << list_entries << " good lines marking " << clinched_segments.size() << " segments traveled.\n";

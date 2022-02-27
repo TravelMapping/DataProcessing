@@ -61,8 +61,7 @@ if (lit1 == r->alt_label_hash.end() || lit2 == r->alt_label_hash.end())
 	if (invalid_char) log << " [contains invalid character(s)]";
 	log << '\n';
 	splist << orig_line << endlines[l];
-	if (routes.insert(r).second && r->last_update)
-		log << "  Route updated " << r->last_update[0] << ": " << r->readable_name() << '\n';
+	UPDATE_NOTE(r)
 	continue;
 }
 // are either of the labels used duplicates?
@@ -85,8 +84,7 @@ if (duplicate)
 if (lit1->second == lit2->second)
 {	log << "Equivalent waypoint labels mark zero distance traveled in line: " << trim_line << '\n';
 	splist << orig_line << endlines[l];
-	if (routes.insert(r).second && r->last_update)
-		log << "  Route updated " << r->last_update[0] << ": " << r->readable_name() << '\n';
+	UPDATE_NOTE(r)
 }
 // otherwise both labels are valid; mark in use & proceed
 else {	r->system->lniu_mtx.lock();
