@@ -24,12 +24,9 @@ void TravelerList::userlog(ClinchedDBValues *clin_db_val, const double total_act
 	travregions.sort(sort_regions_by_code);
 	for (Region *region : travregions)
 	{	double t_active_miles = 0;
-		double total_active_miles = 0;
-		if (active_only_mileage_by_region.find(region) != active_only_mileage_by_region.end())
-		{	t_active_miles = active_only_mileage_by_region.at(region);
-			total_active_miles = region->active_only_mileage;
-		}
-		log << region->code << ": " << format_clinched_mi(t_active_miles, total_active_miles) << ", "
+		if (active_only_mileage_by_region.count(region))
+			t_active_miles = active_only_mileage_by_region.at(region);
+		log << region->code << ": " << format_clinched_mi(t_active_miles, region->active_only_mileage) << ", "
 		    << format_clinched_mi(active_preview_mileage_by_region.at(region), region->active_preview_mileage) << '\n';
 	}
 
@@ -44,7 +41,7 @@ void TravelerList::userlog(ClinchedDBValues *clin_db_val, const double total_act
 	  {	if (h->active()) active_systems++;
 		else	preview_systems++;
 		double t_system_overall = 0;
-		if (system_region_mileages.find(h) != system_region_mileages.end())
+		if (system_region_mileages.count(h))
 			t_system_overall = system_region_miles(h);
 		if (t_system_overall)
 		{	if (h->active())
@@ -68,8 +65,7 @@ void TravelerList::userlog(ClinchedDBValues *clin_db_val, const double total_act
 			sysregions.sort(sort_regions_by_code);
 			for (Region *region : sysregions)
 			{	double system_region_mileage = 0;
-				if (system_region_mileages.find(h) != system_region_mileages.end()
-				 && system_region_mileages.at(h).find(region) != system_region_mileages.at(h).end())
+				if (system_region_mileages.count(h) && system_region_mileages.at(h).count(region))
 				{	system_region_mileage = system_region_mileages.at(h).at(region);
 					sprintf(fstr, "%.15g", system_region_mileage);
 					if (!strchr(fstr, '.')) strcat(fstr, ".0");

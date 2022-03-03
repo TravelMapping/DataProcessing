@@ -1864,9 +1864,7 @@ class HGVertex:
             wpt.route.system.vertices.add(self)
             if wpt.route.region not in rg_vset_hash:
                 rg_vset_hash[wpt.route.region] = set()
-                rg_vset_hash[wpt.route.region].add(self)
-            else:
-                rg_vset_hash[wpt.route.region].add(self)
+            rg_vset_hash[wpt.route.region].add(self)
             return
         for w in wpt.colocated:
             # will consider hidden iff all colocated waypoints are hidden
@@ -1874,9 +1872,7 @@ class HGVertex:
                 self.visibility = 2
             if w.route.region not in rg_vset_hash:
                 rg_vset_hash[w.route.region] = set()
-                rg_vset_hash[w.route.region].add(self)
-            else:
-                rg_vset_hash[w.route.region].add(self)
+            rg_vset_hash[w.route.region].add(self)
             w.route.system.vertices.add(self)
 
     # printable string
@@ -3551,11 +3547,14 @@ for t in traveler_lists:
 
     t.log_entries.append("Overall by region: (each line reports active only then active+preview)")
     for region in sorted(t.active_preview_mileage_by_region.keys()):
-        t_active_miles = 0.0
-        total_active_miles = 0.0
-        if region in list(t.active_only_mileage_by_region.keys()):
-            t_active_miles = t.active_only_mileage_by_region[region]
+        try:
             total_active_miles = active_only_mileage_by_region[region]
+        except KeyError:
+            total_active_miles = 0.0
+        try:
+            t_active_miles = t.active_only_mileage_by_region[region]
+        except KeyError:
+            t_active_miles = 0.0
         t.log_entries.append(region + ": " +
                              format_clinched_mi(t_active_miles, total_active_miles) +
                              ", " +
