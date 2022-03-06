@@ -59,7 +59,7 @@ std::string HighwaySegment::segment_name()
 			     + other->str() + "] clinched by " + std::to_string(other->clinched_by.size()) + '\n';
 		}
 		else	for (TravelerList *t : clinched_by)
-			  if (other->clinched_by.find(t) == other->clinched_by.end())
+			  if (other->clinched_by.count(t))
 			    return t->traveler_name + " has clinched [" + str() + "], but not [" + other->str() + "]\n";
 	  }
 	return "";

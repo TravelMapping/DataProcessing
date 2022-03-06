@@ -91,8 +91,7 @@ HighwayGraph::HighwayGraph(WaypointQuadtree &all_waypoints, ElapsedTime &et)
 				w->vertex->visibility = 1;
 			// next, compare clinched_by sets; look for any element in the 1st not in the 2nd
 			else for (TravelerList *t : w->vertex->incident_t_edges.front()->segment->clinched_by)
-				if (w->vertex->incident_t_edges.back()->segment->clinched_by.find(t)
-				 == w->vertex->incident_t_edges.back()->segment->clinched_by.end())
+				if (!w->vertex->incident_t_edges.back()->segment->clinched_by.count(t))
 				{	w->vertex->visibility = 1;
 					break;
 				}
@@ -228,7 +227,7 @@ inline void HighwayGraph::matching_vertices_and_edges
 	// Compute sets of edges for subgraphs, optionally
 	// restricted by region or system or placeradius.
 	// Keep a count of collapsed & traveled vertices as we go.
-	#define AREA (!g.placeradius || mvset.find(e->vertex1) != mvset.end() && mvset.find(e->vertex2) != mvset.end())
+	#define AREA (!g.placeradius || mvset.count(e->vertex1) && mvset.count(e->vertex2))
 	#define REGION (!g.regions || contains(*g.regions, e->segment->route->region))
 	for (HGVertex *v : mvset)
 	{	for (HGEdge *e : v->incident_s_edges)

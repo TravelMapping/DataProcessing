@@ -311,7 +311,7 @@ void sqlfile1
 	  {	if (!first) sqlfile << ',';
 		first = 0;
 		double active_miles = 0;
-		if (t->active_only_mileage_by_region.find(rm.first) != t->active_only_mileage_by_region.end())
+		if (t->active_only_mileage_by_region.count(rm.first))
 		  active_miles = t->active_only_mileage_by_region.at(rm.first);
 		char fstr[65];
 		sprintf(fstr, "','%.15g','%.15g')\n", active_miles, rm.second);
