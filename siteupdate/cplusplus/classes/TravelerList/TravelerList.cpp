@@ -28,6 +28,7 @@ TravelerList::TravelerList(std::string travname, std::string* updarr[], ErrorLis
 	// variables used in construction
 	unsigned int list_entries = 0;
 	std::ofstream splist;
+	std::string* update;
 	if (Args::splitregionpath != "") splist.open(Args::splitregionpath+"/list_files/"+travname);
 
 	// init user log
@@ -136,6 +137,7 @@ TravelerList::TravelerList(std::string travname, std::string* updarr[], ErrorLis
 		#undef UPDATE_NOTE
 	}
 	delete[] listdata;
+	if (update) delete update;
 	log << "Processed " << list_entries << " good lines marking " << clinched_segments.size() << " segments traveled.\n";
 	log.close();
 	splist.close();
