@@ -24,7 +24,6 @@ class TravelerList
 	public:
 	std::unordered_set<HighwaySegment*> clinched_segments;
 	std::string traveler_name;
-	std::string *update;
 	std::unordered_map<Region*, double> active_preview_mileage_by_region;				// total mileage per region, active+preview only
 	std::unordered_map<Region*, double> active_only_mileage_by_region;				// total mileage per region, active only
 	std::unordered_map<HighwaySystem*, std::unordered_map<Region*, double>> system_region_mileages;	// mileage per region per system

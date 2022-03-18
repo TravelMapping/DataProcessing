@@ -342,7 +342,7 @@ int main(int argc, char *argv[])
 	{	size_t NumFields = 4;
 		string** fields = new string*[4];
 		fields[0] = new string;	// deleted upon construction of unordered_map element
-		fields[1] = new string;	// stays in TravelerList object
+		fields[1] = new string;	// deleted @ end of TravelerList ctor
 		fields[2] = new string;	// deleted once written to user log
 		fields[3] = new string;	// deleted once written to user log
 		split(line, fields, NumFields, ' ');
