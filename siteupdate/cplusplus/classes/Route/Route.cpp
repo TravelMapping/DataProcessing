@@ -140,20 +140,6 @@ std::string Route::chopped_rtes_line()
 	return line;
 }
 
-std::string Route::csv_line()
-{	/* return csv line to insert into a table */
-	// note: alt_route_names does not need to be in the db since
-	// list preprocessing uses alt or canonical and no longer cares
-	std::string line = "'" + system->systemname + "','" + region->code + "','" + route + "','" + banner
-			 + "','" + abbrev + "','" + double_quotes(city) + "','" + root + "','";
-	char mstr[51];
-	sprintf(mstr, "%.17g", mileage);
-	if (!strchr(mstr, '.')) strcat(mstr, ".0"); // add single trailing zero to ints for compatibility with Python
-	line += mstr;
-	line += "','" + std::to_string(rootOrder) + "'";
-	return line;
-}
-
 std::string Route::readable_name()
 {	/* return a string for a human-readable route name */
 	return rg_str + " " + route + banner + abbrev;
