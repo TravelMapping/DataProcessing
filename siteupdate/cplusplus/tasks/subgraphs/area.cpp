@@ -12,6 +12,7 @@ while (getline(file, line))
 {	if (line.empty()) continue;
 	vector<char*> fields;
 	char *cline = new char[line.size()+1];
+		      // deleted @ end of this while loop after tokens are processed
 	strcpy(cline, line.data());
 	for (char *token = strtok(cline, ";"); token; token = strtok(0, ";")) fields.push_back(token);
 	if (fields.size() != 5)

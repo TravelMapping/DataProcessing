@@ -477,6 +477,7 @@ int main(int argc, char *argv[])
 	cout << et.et() << "Augmenting travelers for detected concurrent segments." << flush;
       #ifdef threading_enabled
 	list<string>* augment_lists = new list<string>[Args::numthreads];
+				      // deleted once written to concurrencies.log
 	TravelerList::tl_it = TravelerList::allusers.begin();
 	THREADLOOP thr[t] = thread(ConcAugThread, t, &list_mtx, augment_lists+t);
 	THREADLOOP thr[t].join();
