@@ -294,6 +294,7 @@ void WaypointQuadtree::terminal_nodes(std::forward_list<WaypointQuadtree*>* node
 
 void WaypointQuadtree::sort()
 {	std::forward_list<WaypointQuadtree*>* nodes = new std::forward_list<WaypointQuadtree*>[Args::numthreads];
+						      // deleted @ end of this function
 	size_t slot = 0;
 	terminal_nodes(nodes, slot);
 
