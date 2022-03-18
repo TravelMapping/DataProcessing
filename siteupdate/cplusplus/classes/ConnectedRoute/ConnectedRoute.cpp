@@ -76,14 +76,6 @@ std::string ConnectedRoute::connected_rtes_line()
 	return line;
 }
 
-std::string ConnectedRoute::csv_line()
-{	/* return csv line to insert into a table */
-	char fstr[32];
-	sprintf(fstr, "','%.15g'", mileage);
-	return "'" + system->systemname + "','" + route + "','" + banner + "','" + double_quotes(groupname)
-		   + "','" + (roots.size() ? roots[0]->root.data() : "ERROR_NO_ROOTS") + fstr;
-}
-
 std::string ConnectedRoute::readable_name()
 {	/* return a string for a human-readable connected route name */
 	std::string ans = route + banner;

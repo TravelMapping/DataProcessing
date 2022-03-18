@@ -88,7 +88,6 @@ class Route
 	void print_route();
 	HighwaySegment* find_segment_by_waypoints(Waypoint*, Waypoint*);
 	std::string chopped_rtes_line();
-	std::string csv_line();
 	std::string readable_name();
 	std::string list_entry_name();
 	std::string name_no_abbrev();

@@ -100,16 +100,10 @@ Waypoint::Waypoint(char *line, Route *rte)
 }
 
 std::string Waypoint::str()
-{	std::string ans = route->root + " " + label;
-	char coordstr[51];
-	sprintf(coordstr, "%.15g", lat);
-	if (!strchr(coordstr, '.')) strcat(coordstr, ".0"); // add single trailing zero to ints for compatibility with Python
-	ans += " (";
-	ans += coordstr;
-	ans += ',';
-	sprintf(coordstr, "%.15g", lng);
-	if (!strchr(coordstr, '.')) strcat(coordstr, ".0"); // add single trailing zero to ints for compatibility with Python
-	ans += coordstr;
+{	std::string ans = route->root + " " + label + " (";
+	char s[51]; int
+	e=sprintf(s,"%.15g",lat); if (lat==int(lat)) strcpy(s+e,".0"); ans+=s; ans+=',';
+	e=sprintf(s,"%.15g",lng); if (lng==int(lng)) strcpy(s+e,".0"); ans+=s;
 	return ans + ')';
 }
 
@@ -238,15 +232,11 @@ void Waypoint::nmplogs(std::unordered_set<std::string> &nmpfps, std::ofstream &n
 			// make sure we only plot once, since the NMP should be listed
 			// both ways (other_w in w's list, w in other_w's list)
 			if (sort_root_at_label(this, other_w))
-			{	char coordstr[51];
-
-				nmpnmp << root_at_label();
-				sprintf(coordstr, " %.15g", lat);
-				if (!strchr(coordstr, '.')) strcat(coordstr, ".0"); // add single trailing zero to ints for compatibility with Python
-				nmpnmp << coordstr;
-				sprintf(coordstr, " %.15g", lng);
-				if (!strchr(coordstr, '.')) strcat(coordstr, ".0"); // add single trailing zero to ints for compatibility with Python
-				nmpnmp << coordstr;
+			{	char s[51];
+				#define PYTHON_STYLE_FLOAT(F) e=sprintf(s," %.15g",F); if (F==int(F)) strcpy(s+e,".0"); nmpnmp<<s;
+				nmpnmp << root_at_label(); int
+				PYTHON_STYLE_FLOAT(lat)
+				PYTHON_STYLE_FLOAT(lng)
 				if (fp || li)
 				{	nmpnmp << ' ';
 					if (fp) nmpnmp << "FP";
@@ -255,18 +245,15 @@ void Waypoint::nmplogs(std::unordered_set<std::string> &nmpfps, std::ofstream &n
 				nmpnmp << '\n';
 
 				nmpnmp << other_w->root_at_label();
-				sprintf(coordstr, " %.15g", other_w->lat);
-				if (!strchr(coordstr, '.')) strcat(coordstr, ".0"); // add single trailing zero to ints for compatibility with Python
-				nmpnmp << coordstr;
-				sprintf(coordstr, " %.15g", other_w->lng);
-				if (!strchr(coordstr, '.')) strcat(coordstr, ".0"); // add single trailing zero to ints for compatibility with Python
-				nmpnmp << coordstr;
+				PYTHON_STYLE_FLOAT(other_w->lat)
+				PYTHON_STYLE_FLOAT(other_w->lng)
 				if (fp || li)
 				{	nmpnmp << ' ';
 					if (fp) nmpnmp << "FP";
 					if (li) nmpnmp << "LI";
 				}
 				nmpnmp << '\n';
+				#undef PYTHON_STYLE_FLOAT
 			}
 		}
 		// indicate if this was in the FP list or if it's off by exact amt

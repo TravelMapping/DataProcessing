@@ -21,7 +21,6 @@ class ConnectedRoute
 	ConnectedRoute(std::string &, HighwaySystem *, ErrorList &);
 
 	std::string connected_rtes_line();
-	std::string csv_line();
 	std::string readable_name();
 	//std::string list_lines(int, int, std::string, size_t);
 };
