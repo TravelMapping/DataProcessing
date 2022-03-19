@@ -43,7 +43,7 @@ class TravelerList
 	static std::list<TravelerList*>::iterator tl_it;
 	static std::unordered_map<std::string, std::string**> listupdates;
 
-	TravelerList(std::string, std::string*[], ErrorList*);
+	TravelerList(std::string, ErrorList*);
 	double active_only_miles();
 	double active_preview_miles();
 	double system_region_miles(HighwaySystem *);
