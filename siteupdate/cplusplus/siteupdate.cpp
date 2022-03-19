@@ -370,13 +370,7 @@ int main(int argc, char *argv[])
       #else
 	for (string &t : TravelerList::ids)
 	{	cout << t << ' ' << std::flush;
-		std::string** update;
-		try {	update = TravelerList::listupdates.at(t);
-		    }
-		catch (const std::out_of_range& oor)
-		    {	update = 0;
-		    }
-		TravelerList::allusers.push_back(new TravelerList(t, update, &el));
+		TravelerList::allusers.push_back(new TravelerList(t, &el));
 	}
       #endif
 	TravelerList::ids.clear();
