@@ -92,11 +92,11 @@ if (lit1 == r1->alt_label_hash.end() || lit2 == r2->alt_label_hash.end())
 }
 // are either of the labels used duplicates?
 char duplicate = 0;
-if (r1->duplicate_labels.find(fields[2]) != r1->duplicate_labels.end())
+if (r1->duplicate_labels.count(fields[2]))
 {	log << r1->region->code << ": duplicate label " << fields[2] << " in " << r1->root << ".\n";
 	duplicate = 1;
 }
-if (r2->duplicate_labels.find(fields[5]) != r2->duplicate_labels.end())
+if (r2->duplicate_labels.count(fields[5]))
 {	log << r2->region->code << ": duplicate label " << fields[5] << " in " << r2->root << ".\n";
 	duplicate = 1;
 }

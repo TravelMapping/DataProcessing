@@ -37,7 +37,7 @@ cout << "!\n";
 // When splitting a region, perform a sanity check on concurrencies in its systems
 if (Args::splitregionpath != "")
 {	for (HighwaySystem *h : HighwaySystem::syslist)
-	{	if (splitsystems.find(h->systemname) == splitsystems.end()) continue;
+	{	if (!splitsystems.count(h->systemname)) continue;
 		ofstream fralog(Args::splitregionpath + "/logs/" + h->systemname + "-concurrencies.log");
 		for (Route *r : h->route_list)
 		{	if (r->region->code.substr(0, Args::splitregion.size()) != Args::splitregion) continue;

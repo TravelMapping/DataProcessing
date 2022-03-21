@@ -20,7 +20,7 @@ void HighwaySystem::route_integrity(ErrorList& el)
 			std::string upper_label(lbegin);
 			upper(upper_label.data());
 			// if primary label not duplicated, add to pri_label_hash
-			if (r->alt_label_hash.find(upper_label) != r->alt_label_hash.end())
+			if (r->alt_label_hash.count(upper_label))
 			{	Datacheck::add(r, r->point_list[index]->label, "", "", "DUPLICATE_LABEL", "");
 				r->duplicate_labels.insert(upper_label);
 			}

@@ -64,7 +64,7 @@ void Datacheck::read_fps(std::string& path, ErrorList &el)
 				   + "], expected 6 fields, found " + std::to_string(NumFields));
 			continue;
 		}
-		if (always_error.find(fields[4]) != always_error.end())
+		if (always_error.count(fields[4]))
 			std::cout << "datacheckfps.csv line not allowed (always error): " << line << std::endl;
 		else	fps.push_back(fields);
 	}

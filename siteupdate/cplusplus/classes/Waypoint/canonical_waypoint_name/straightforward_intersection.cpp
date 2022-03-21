@@ -14,7 +14,7 @@ if (ap_coloc.size() == 2)
 		// if this is taken or if name_no_abbrev()s match, attempt to add in abbrevs if there's point in doing so
 		if (ap_coloc[0]->route->abbrev.size() || ap_coloc[1]->route->abbrev.size())
 		{    g->set_mtx[newname.back()].lock();
-		     bool taken = g->vertex_names[newname.back()].find(newname) != g->vertex_names[newname.back()].end();
+		     bool taken = g->vertex_names[newname.back()].count(newname);
 		     g->set_mtx[newname.back()].unlock();
 		     if (taken || ap_coloc[0]->route->name_no_abbrev() == ap_coloc[1]->route->name_no_abbrev())
 		     {	const char *u0 = strchr(ap_coloc[0]->label.data(), '_');
