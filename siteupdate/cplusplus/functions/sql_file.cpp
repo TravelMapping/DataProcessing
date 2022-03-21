@@ -313,8 +313,9 @@ void sqlfile1
 	  {	if (!first) sqlfile << ',';
 		first = 0;
 		double active_miles = 0;
-		if (t->active_only_mileage_by_region.find(rm.first) != t->active_only_mileage_by_region.end())
-		  active_miles = t->active_only_mileage_by_region.at(rm.first);
+		auto it = t->active_only_mileage_by_region.find(rm.first);
+		if (it != t->active_only_mileage_by_region.end())
+		  active_miles = it->second;
 		sprintf(fstr, "','%.15g','%.15g')\n", active_miles, rm.second);
 		sqlfile << "('" << rm.first->code << "','" << t->traveler_name << fstr;
 	  }

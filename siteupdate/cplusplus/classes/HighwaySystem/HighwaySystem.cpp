@@ -163,19 +163,21 @@ void HighwaySystem::stats_csv()
 		sysfile << ',' << region->code;
 	sysfile << '\n';
 	for (TravelerList *t : TravelerList::allusers)
-	  // only include entries for travelers who have any mileage in system
-	  if (t->system_region_mileages.find(this) != t->system_region_mileages.end())
-	  {	sprintf(fstr, ",%.2f", t->system_region_miles(this));
-		sysfile << t->traveler_name << fstr;
-		for (Region *region : regions)
-		  try {	sprintf(fstr, ",%.2f", t->system_region_mileages.at(this).at(region));
-			sysfile << fstr;
-		      }
-		  catch (const std::out_of_range& oor)
-		      {	sysfile << ",0";
-		      }
-		sysfile << '\n';
-	  }
+	{	// only include entries for travelers who have any mileage in system
+		auto it = t->system_region_mileages.find(this);
+		if (it != t->system_region_mileages.end())
+		{	sprintf(fstr, ",%.2f", t->system_region_miles(this));
+			sysfile << t->traveler_name << fstr;
+			for (Region *region : regions)
+			  try {	sprintf(fstr, ",%.2f", it->second.at(region));
+				sysfile << fstr;
+			      }
+			  catch (const std::out_of_range& oor)
+			      {	sysfile << ",0";
+			      }
+			sysfile << '\n';
+		}
+	}
 	sprintf(fstr, "TOTAL,%.2f", total_mileage());
 	sysfile << fstr;
 	for (Region *region : regions)

@@ -90,9 +90,10 @@ Route::Route(std::string &line, HighwaySystem *sys, ErrorList &el)
 	// insert list name into pri_list_hash, checking for duplicate .list names
 	std::string list_name(readable_name());
 	upper(list_name.data());
-	if (alt_list_hash.find(list_name) != alt_list_hash.end())
+	auto it = alt_list_hash.find(list_name);
+	if (it != alt_list_hash.end())
 		el.add_error("Duplicate main list name in " + root + ": '" + readable_name() +
-			     "' already points to " + alt_list_hash.at(list_name)->root);
+			     "' already points to " + it->second->root);
 	else if (!pri_list_hash.insert(std::pair<std::string,Route*>(list_name, this)).second)
 		el.add_error("Duplicate main list name in " + root + ": '" + readable_name() +
 			     "' already points to " + pri_list_hash.at(list_name)->root);
@@ -100,7 +101,7 @@ Route::Route(std::string &line, HighwaySystem *sys, ErrorList &el)
 	for (std::string& a : alt_route_names)
 	{   list_name = rg_str + ' ' + a;
 	    upper(list_name.data());
-	    if (pri_list_hash.find(list_name) != pri_list_hash.end())
+	    if (pri_list_hash.count(list_name))
 		el.add_error("Duplicate alt route name in " + root + ": '" + region->code + ' ' + a +
 			     "' already points to " + pri_list_hash.at(list_name)->root);
 	    else if (!alt_list_hash.insert(std::pair<std::string, Route*>(list_name, this)).second)
@@ -161,9 +162,7 @@ std::string Route::name_no_abbrev()
 double Route::clinched_by_traveler(TravelerList *t)
 {	double miles = 0;
 	for (HighwaySegment *s : segment_list)
-	{	std::unordered_set<TravelerList*>::iterator t_found = s->clinched_by.find(t);
-		if (t_found != s->clinched_by.end()) miles += s->length;
-	}
+		if (s->clinched_by.count(t)) miles += s->length;
 	return miles;
 }
 

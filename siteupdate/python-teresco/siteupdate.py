@@ -3600,7 +3600,7 @@ for t in traveler_lists:
                     t.log_entries.append("System " + h.systemname + " by region:")
                 for region in sorted(h.mileage_by_region):
                     system_region_mileage = 0.0
-                    if h.systemname in t.system_region_mileages and region in t.system_region_mileages[h.systemname]:
+                    if region in t.system_region_mileages[h.systemname]:
                         system_region_mileage = t.system_region_mileages[h.systemname][region]
                         csmbr_values.append("('" + h.systemname + "','" + region + "','"
                                             + t.traveler_name + "','" +
