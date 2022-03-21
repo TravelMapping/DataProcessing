@@ -13,36 +13,24 @@ void Route::compute_stats_r()
 		if (s->concurrent)
 		  for (HighwaySegment *other : *s->concurrent)
 		    if (other != s)
-		    {	overall_concurrency_count++;
-			if (other->route->system->active_or_preview())
-			{	s->active_preview_concurrency_count++;
-				if (other->route->system->active()) s->active_only_concurrency_count++;
-			}
-			if (other->route->system == system) s->system_concurrency_count++;
-		    }
+		      switch (other->route->system->level) // fall-thru is a Good Thing!
+		      {	case 'a': s->active_only_concurrency_count++;
+			case 'p': s->active_preview_concurrency_count++;
+			default : overall_concurrency_count++;
+				  if (other->route->system == system)
+				    s->system_concurrency_count++;
+		      }
 		// we know how many times this segment will be encountered
 		// in both the system and overall/active+preview/active-only
 		// routes, so let's add in the appropriate (possibly fractional)
 		// mileage to the overall totals and to the system categorized
 		// by its region
-
-		// first, add to overall mileage for this region
-		overall_mileage += s->length/overall_concurrency_count;
-
-		// next, same thing for active_preview mileage for the region,
-		// if active or preview
-		if (system->active_or_preview())
-		  active_preview_mileage += s->length/s->active_preview_concurrency_count;
-
-		// now same thing for active_only mileage for the region,
-		// if active
-		if (system->active())
-		  active_only_mileage += s->length/s->active_only_concurrency_count;
-
-		// now we move on to totals by region, only the
-		// overall since an entire highway system must be
-		// at the same level
-		system_mileage += s->length/s->system_concurrency_count;
+		switch (system->level) // fall-thru is a Good Thing!
+		{   case 'a':	 active_only_mileage += s->length/s->active_only_concurrency_count;
+		    case 'p': active_preview_mileage += s->length/s->active_preview_concurrency_count;
+		    default :	      system_mileage += s->length/s->system_concurrency_count;
+				     overall_mileage += s->length/overall_concurrency_count;
+		}
 	}
 	// now that we have the subtotal for this route, add it to the regional totals
 	region->mtx.lock();
