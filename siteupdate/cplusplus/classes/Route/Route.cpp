@@ -90,9 +90,10 @@ Route::Route(std::string &line, HighwaySystem *sys, ErrorList &el)
 	// insert list name into pri_list_hash, checking for duplicate .list names
 	std::string list_name(readable_name());
 	upper(list_name.data());
-	if (alt_list_hash.find(list_name) != alt_list_hash.end())
+	auto it = alt_list_hash.find(list_name);
+	if (it != alt_list_hash.end())
 		el.add_error("Duplicate main list name in " + root + ": '" + readable_name() +
-			     "' already points to " + alt_list_hash.at(list_name)->root);
+			     "' already points to " + it->second->root);
 	else if (!pri_list_hash.insert(std::pair<std::string,Route*>(list_name, this)).second)
 		el.add_error("Duplicate main list name in " + root + ": '" + readable_name() +
 			     "' already points to " + pri_list_hash.at(list_name)->root);
@@ -100,7 +101,7 @@ Route::Route(std::string &line, HighwaySystem *sys, ErrorList &el)
 	for (std::string& a : alt_route_names)
 	{   list_name = rg_str + ' ' + a;
 	    upper(list_name.data());
-	    if (pri_list_hash.find(list_name) != pri_list_hash.end())
+	    if (pri_list_hash.count(list_name))
 		el.add_error("Duplicate alt route name in " + root + ": '" + region->code + ' ' + a +
 			     "' already points to " + pri_list_hash.at(list_name)->root);
 	    else if (!alt_list_hash.insert(std::pair<std::string, Route*>(list_name, this)).second)
@@ -140,20 +141,6 @@ std::string Route::chopped_rtes_line()
 	return line;
 }
 
-std::string Route::csv_line()
-{	/* return csv line to insert into a table */
-	// note: alt_route_names does not need to be in the db since
-	// list preprocessing uses alt or canonical and no longer cares
-	std::string line = "'" + system->systemname + "','" + region->code + "','" + route + "','" + banner
-			 + "','" + abbrev + "','" + double_quotes(city) + "','" + root + "','";
-	char mstr[51];
-	sprintf(mstr, "%.17g", mileage);
-	if (!strchr(mstr, '.')) strcat(mstr, ".0"); // add single trailing zero to ints for compatibility with Python
-	line += mstr;
-	line += "','" + std::to_string(rootOrder) + "'";
-	return line;
-}
-
 std::string Route::readable_name()
 {	/* return a string for a human-readable route name */
 	return rg_str + " " + route + banner + abbrev;
@@ -175,9 +162,7 @@ std::string Route::name_no_abbrev()
 double Route::clinched_by_traveler(TravelerList *t)
 {	double miles = 0;
 	for (HighwaySegment *s : segment_list)
-	{	std::unordered_set<TravelerList*>::iterator t_found = s->clinched_by.find(t);
-		if (t_found != s->clinched_by.end()) miles += s->length;
-	}
+		if (s->clinched_by.count(t)) miles += s->length;
 	return miles;
 }
 
@@ -230,14 +215,14 @@ void Route::write_nmp_merged()
 	wptfile.close();
 }
 
-void Route::store_traveled_segments(TravelerList* t, std::ofstream& log, unsigned int beg, unsigned int end)
+void Route::store_traveled_segments(TravelerList* t, std::ofstream& log, std::string* update, unsigned int beg, unsigned int end)
 {	// store clinched segments with traveler and traveler with segments
 	for (unsigned int pos = beg; pos < end; pos++)
 	{	HighwaySegment *hs = segment_list[pos];
 		hs->add_clinched_by(t);
 		t->clinched_segments.insert(hs);
 	}
-	if (last_update && t->updated_routes.insert(this).second && t->update && last_update[0] >= *t->update)
+	if (last_update && t->updated_routes.insert(this).second && update && last_update[0] >= *update)
 		log << "Route updated " << last_update[0] << ": " << readable_name() << '\n';
 }
 

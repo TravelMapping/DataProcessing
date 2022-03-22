@@ -23,7 +23,7 @@ void sqlfile1
 	std::list<std::string*> *updates,
 	std::list<std::string*> *systemupdates,
 	std::mutex* term_mtx
-    ){
+    ){	char fstr[65];
 	// Once all data is read in and processed, create a .sql file that will
 	// create all of the DB tables to be used by other parts of the project
 	std::ofstream sqlfile(Args::databasename+".sql");
@@ -142,7 +142,9 @@ void sqlfile1
 	  for (Route *r : h->route_list)
 	  {	if (!first) sqlfile << ',';
 		first = 0;
-		sqlfile << "(" << r->csv_line() << ",'" << csvOrder << "')\n";
+		sprintf(fstr, "%.17g", r->mileage);
+		sqlfile << "('" << r->system->systemname << "','" << r->region->code << "','" << r->route << "','" << r->banner << "','" << r->abbrev
+			<< "','" << double_quotes(r->city) << "','" << r->root << "','" << fstr << "','" << r->rootOrder << "','" << csvOrder << "')\n";
 		csvOrder += 1;
 	  }
 	sqlfile << ";\n";
@@ -164,7 +166,9 @@ void sqlfile1
 	  for (ConnectedRoute *cr : h->con_route_list)
 	  {	if (!first) sqlfile << ',';
 		first = 0;
-		sqlfile << "(" << cr->csv_line() << ",'" << csvOrder << "')\n";
+		sprintf(fstr, "','%.15g'", cr->mileage);
+		sqlfile << "('" << cr->system->systemname << "','" << cr->route << "','" << cr->banner << "','" << double_quotes(cr->groupname)
+			<< "','" << (cr->roots.size() ? cr->roots[0]->root.data() : "ERROR_NO_ROOTS") << fstr << ",'" << csvOrder << "')\n";
 		csvOrder += 1;
 	  }
 	sqlfile << ";\n";
@@ -269,7 +273,6 @@ void sqlfile1
 	{	if (region->active_only_mileage+region->active_preview_mileage == 0) continue;
 		if (!first) sqlfile << ',';
 		first = 0;
-		char fstr[65];
 		sprintf(fstr, "','%.15g','%.15g')\n", region->active_only_mileage, region->active_preview_mileage);
 		sqlfile << "('" << region->code << fstr;
 	}
@@ -290,7 +293,6 @@ void sqlfile1
 	    for (std::pair<Region* const,double>& rm : h->mileage_by_region)
 	    {	if (!first) sqlfile << ',';
 		first = 0;
-		char fstr[35];
 		sprintf(fstr, "','%.15f')\n", rm.second);
 		sqlfile << "('" << h->systemname << "','" << rm.first->code << fstr;
 	    }
@@ -311,9 +313,9 @@ void sqlfile1
 	  {	if (!first) sqlfile << ',';
 		first = 0;
 		double active_miles = 0;
-		if (t->active_only_mileage_by_region.find(rm.first) != t->active_only_mileage_by_region.end())
-		  active_miles = t->active_only_mileage_by_region.at(rm.first);
-		char fstr[65];
+		auto it = t->active_only_mileage_by_region.find(rm.first);
+		if (it != t->active_only_mileage_by_region.end())
+		  active_miles = it->second;
 		sprintf(fstr, "','%.15g','%.15g')\n", active_miles, rm.second);
 		sqlfile << "('" << rm.first->code << "','" << t->traveler_name << fstr;
 	  }

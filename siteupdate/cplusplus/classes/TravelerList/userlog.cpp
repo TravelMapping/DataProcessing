@@ -65,8 +65,9 @@ void TravelerList::userlog(ClinchedDBValues *clin_db_val, const double total_act
 			sysregions.sort(sort_regions_by_code);
 			for (Region *region : sysregions)
 			{	double system_region_mileage = 0;
-				if (system_region_mileages.count(h) && system_region_mileages.at(h).count(region))
-				{	system_region_mileage = system_region_mileages.at(h).at(region);
+				auto it = system_region_mileages.at(h).find(region);
+				if (it != system_region_mileages.at(h).end())
+				{	system_region_mileage = it->second;
 					sprintf(fstr, "%.15g", system_region_mileage);
 					if (!strchr(fstr, '.')) strcat(fstr, ".0");
 					clin_db_val->add_csmbr("('" + h->systemname + "','" + region->code + "','" +

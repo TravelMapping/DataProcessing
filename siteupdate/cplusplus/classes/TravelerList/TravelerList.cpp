@@ -11,7 +11,7 @@
 #include "../../functions/upper.h"
 #include <cstring>
 
-TravelerList::TravelerList(std::string travname, std::string* updarr[], ErrorList* el)
+TravelerList::TravelerList(std::string travname, ErrorList* el)
 {	// initialize object variables
 	active_systems_traveled = 0;
 	active_systems_clinched = 0;
@@ -28,6 +28,7 @@ TravelerList::TravelerList(std::string travname, std::string* updarr[], ErrorLis
 	// variables used in construction
 	unsigned int list_entries = 0;
 	std::ofstream splist;
+	std::string* update;
 	if (Args::splitregionpath != "") splist.open(Args::splitregionpath+"/list_files/"+travname);
 
 	// init user log
@@ -38,13 +39,15 @@ TravelerList::TravelerList(std::string travname, std::string* updarr[], ErrorLis
 	log << ctime(&StartTime);
 	mtx.unlock();
 	// write last update date & time if known
-	if (updarr)
-	{	log << travname << " last updated: " << *updarr[1] << ' ' << *updarr[2] << ' ' << *updarr[3] << '\n';
+	try {	std::string** updarr = TravelerList::listupdates.at(travname);
+		log << travname << " last updated: " << *updarr[1] << ' ' << *updarr[2] << ' ' << *updarr[3] << '\n';
 		update = updarr[1];
 		delete updarr[2];
 		delete updarr[3];
 		delete[] updarr;
-	} else	update = 0;
+	    }	catch (const std::out_of_range& oor)
+	    {	update = 0;
+	    }
 
 	// read .list file into memory
 	  // we can't getline here because it only allows one delimiter, and we need two; '\r' and '\n'.
@@ -136,6 +139,7 @@ TravelerList::TravelerList(std::string travname, std::string* updarr[], ErrorLis
 		#undef UPDATE_NOTE
 	}
 	delete[] listdata;
+	if (update) delete update;
 	log << "Processed " << list_entries << " good lines marking " << clinched_segments.size() << " segments traveled.\n";
 	log.close();
 	splist.close();

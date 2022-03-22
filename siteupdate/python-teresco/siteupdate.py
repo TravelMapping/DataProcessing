@@ -3475,11 +3475,11 @@ print("!", flush=True)
 print(et.et() + "Writing highway data stats log file (highwaydatastats.log).",flush=True)
 hdstatsfile = open(args.logfilepath+"/highwaydatastats.log","wt",encoding='UTF-8')
 hdstatsfile.write("Travel Mapping highway mileage as of " + str(datetime.datetime.now()) + '\n')
-active_only_miles = math.fsum(list(active_only_mileage_by_region.values()))
+active_only_miles = math.fsum(active_only_mileage_by_region.values())
 hdstatsfile.write("Active routes (active): " + "{0:.2f}".format(active_only_miles) + " mi\n")
-active_preview_miles = math.fsum(list(active_preview_mileage_by_region.values()))
+active_preview_miles = math.fsum(active_preview_mileage_by_region.values())
 hdstatsfile.write("Clinchable routes (active, preview): " + "{0:.2f}".format(active_preview_miles) + " mi\n")
-overall_miles = math.fsum(list(overall_mileage_by_region.values()))
+overall_miles = math.fsum(overall_mileage_by_region.values())
 hdstatsfile.write("All routes (active, preview, devel): " + "{0:.2f}".format(overall_miles) + " mi\n")
 hdstatsfile.write("Breakdown by region:\n")
 # let's sort alphabetically by region instead of using whatever order
@@ -3487,13 +3487,13 @@ hdstatsfile.write("Breakdown by region:\n")
 # a nice enhancement later here might break down by continent, then country,
 # then region
 region_entries = []
-for region in list(overall_mileage_by_region.keys()):
+for region in overall_mileage_by_region:
     # look up active+preview and active-only mileages if they exist
-    if region in list(active_preview_mileage_by_region.keys()):
+    if region in active_preview_mileage_by_region:
         region_active_preview_miles = active_preview_mileage_by_region[region]
     else:
         region_active_preview_miles = 0.0
-    if region in list(active_only_mileage_by_region.keys()):
+    if region in active_only_mileage_by_region:
         region_active_only_miles = active_only_mileage_by_region[region]
     else:
         region_active_only_miles = 0.0
@@ -3508,11 +3508,11 @@ for e in region_entries:
 
 for h in highway_systems:
     hdstatsfile.write("System " + h.systemname + " (" + h.level + ") total: "
-                      + "{0:.2f}".format(math.fsum(list(h.mileage_by_region.values()))) \
+                      + "{0:.2f}".format(math.fsum(h.mileage_by_region.values())) \
                              + ' mi\n')
     if len(h.mileage_by_region) > 1:
         hdstatsfile.write("System " + h.systemname + " by region:\n")
-        for region in sorted(h.mileage_by_region.keys()):
+        for region in sorted(h.mileage_by_region):
             hdstatsfile.write(region + ": " + "{0:.2f}".format(h.mileage_by_region[region]) + " mi\n")
     hdstatsfile.write("System " + h.systemname + " by route:\n")
     for cr in h.con_route_list:
@@ -3540,13 +3540,13 @@ print(et.et() + "Creating per-traveler stats log entries and augmenting data str
 for t in traveler_lists:
     print(".",end="",flush=True)
     t.log_entries.append("Clinched Highway Statistics")
-    t_active_only_miles = math.fsum(list(t.active_only_mileage_by_region.values()))
+    t_active_only_miles = math.fsum(t.active_only_mileage_by_region.values())
     t.log_entries.append("Overall in active systems: " + format_clinched_mi(t_active_only_miles,active_only_miles))
-    t_active_preview_miles = math.fsum(list(t.active_preview_mileage_by_region.values()))
+    t_active_preview_miles = math.fsum(t.active_preview_mileage_by_region.values())
     t.log_entries.append("Overall in active+preview systems: " + format_clinched_mi(t_active_preview_miles,active_preview_miles))
 
     t.log_entries.append("Overall by region: (each line reports active only then active+preview)")
-    for region in sorted(t.active_preview_mileage_by_region.keys()):
+    for region in sorted(t.active_preview_mileage_by_region):
         try:
             total_active_miles = active_only_mileage_by_region[region]
         except KeyError:
@@ -3579,13 +3579,13 @@ for t in traveler_lists:
                 preview_systems += 1
             t_system_overall = 0.0
             if h.systemname in t.system_region_mileages:
-                t_system_overall = math.fsum(list(t.system_region_mileages[h.systemname].values()))
+                t_system_overall = math.fsum(t.system_region_mileages[h.systemname].values())
             if t_system_overall > 0.0:
                 if h.active():
                     t.active_systems_traveled += 1
                 else:
                     t.preview_systems_traveled += 1
-                if t_system_overall == math.fsum(list(h.mileage_by_region.values())):
+                if t_system_overall == math.fsum(h.mileage_by_region.values()):
                     if h.active():
                         t.active_systems_clinched += 1
                     else:
@@ -3595,12 +3595,12 @@ for t in traveler_lists:
                 # the DB, but add to logs only if it's been traveled at
                 # all and it covers multiple regions
                 t.log_entries.append("System " + h.systemname + " (" + h.level + ") overall: " +
-                                     format_clinched_mi(t_system_overall, math.fsum(list(h.mileage_by_region.values()))))
+                                     format_clinched_mi(t_system_overall, math.fsum(h.mileage_by_region.values())))
                 if len(h.mileage_by_region) > 1:
                     t.log_entries.append("System " + h.systemname + " by region:")
-                for region in sorted(h.mileage_by_region.keys()):
+                for region in sorted(h.mileage_by_region):
                     system_region_mileage = 0.0
-                    if h.systemname in t.system_region_mileages and region in t.system_region_mileages[h.systemname]:
+                    if region in t.system_region_mileages[h.systemname]:
                         system_region_mileage = t.system_region_mileages[h.systemname][region]
                         csmbr_values.append("('" + h.systemname + "','" + region + "','"
                                             + t.traveler_name + "','" +
@@ -3692,19 +3692,19 @@ print(et.et() + "Writing stats csv files.",flush=True)
 # first, overall per traveler by region, both active only and active+preview
 allfile = open(args.csvstatfilepath + "/allbyregionactiveonly.csv","w",encoding='UTF-8')
 allfile.write("Traveler,Total")
-regions = sorted(active_only_mileage_by_region.keys())
+regions = sorted(active_only_mileage_by_region)
 for region in regions:
     allfile.write(',' + region)
 allfile.write('\n')
 for t in traveler_lists:
-    allfile.write(t.traveler_name + ",{0:.2f}".format(math.fsum(list(t.active_only_mileage_by_region.values()))))
+    allfile.write(t.traveler_name + ",{0:.2f}".format(math.fsum(t.active_only_mileage_by_region.values())))
     for region in regions:
-        if region in t.active_only_mileage_by_region.keys():
+        if region in t.active_only_mileage_by_region:
             allfile.write(',{0:.2f}'.format(t.active_only_mileage_by_region[region]))
         else:
             allfile.write(',0')
     allfile.write('\n')
-allfile.write('TOTAL,{0:.2f}'.format(math.fsum(list(active_only_mileage_by_region.values()))))
+allfile.write('TOTAL,{0:.2f}'.format(math.fsum(active_only_mileage_by_region.values())))
 for region in regions:
     allfile.write(',{0:.2f}'.format(active_only_mileage_by_region[region]))
 allfile.write('\n')
@@ -3713,19 +3713,19 @@ allfile.close()
 # active+preview
 allfile = open(args.csvstatfilepath + "/allbyregionactivepreview.csv","w",encoding='UTF-8')
 allfile.write("Traveler,Total")
-regions = sorted(active_preview_mileage_by_region.keys())
+regions = sorted(active_preview_mileage_by_region)
 for region in regions:
     allfile.write(',' + region)
 allfile.write('\n')
 for t in traveler_lists:
-    allfile.write(t.traveler_name + ",{0:.2f}".format(math.fsum(list(t.active_preview_mileage_by_region.values()))))
+    allfile.write(t.traveler_name + ",{0:.2f}".format(math.fsum(t.active_preview_mileage_by_region.values())))
     for region in regions:
-        if region in t.active_preview_mileage_by_region.keys():
+        if region in t.active_preview_mileage_by_region:
             allfile.write(',{0:.2f}'.format(t.active_preview_mileage_by_region[region]))
         else:
             allfile.write(',0')
     allfile.write('\n')
-allfile.write('TOTAL,{0:.2f}'.format(math.fsum(list(active_preview_mileage_by_region.values()))))
+allfile.write('TOTAL,{0:.2f}'.format(math.fsum(active_preview_mileage_by_region.values())))
 for region in regions:
     allfile.write(',{0:.2f}'.format(active_preview_mileage_by_region[region]))
 allfile.write('\n')
@@ -3737,21 +3737,21 @@ for h in highway_systems:
         continue
     sysfile = open(args.csvstatfilepath + "/" + h.systemname + '-all.csv',"w",encoding='UTF-8')
     sysfile.write('Traveler,Total')
-    regions = sorted(h.mileage_by_region.keys())
+    regions = sorted(h.mileage_by_region)
     for region in regions:
         sysfile.write(',' + region)
     sysfile.write('\n')
     for t in traveler_lists:
         # only include entries for travelers who have any mileage in system
         if h.systemname in t.system_region_mileages:
-            sysfile.write(t.traveler_name + ",{0:.2f}".format(math.fsum(list(t.system_region_mileages[h.systemname].values()))))
+            sysfile.write(t.traveler_name + ",{0:.2f}".format(math.fsum(t.system_region_mileages[h.systemname].values())))
             for region in regions:
                 if region in t.system_region_mileages[h.systemname]:
                     sysfile.write(',{0:.2f}'.format(t.system_region_mileages[h.systemname][region]))
                 else:
                     sysfile.write(',0')
             sysfile.write('\n')
-    sysfile.write('TOTAL,{0:.2f}'.format(math.fsum(list(h.mileage_by_region.values()))))
+    sysfile.write('TOTAL,{0:.2f}'.format(math.fsum(h.mileage_by_region.values())))
     for region in regions:
         sysfile.write(',{0:.2f}'.format(h.mileage_by_region[region]))
     sysfile.write('\n')
@@ -4000,7 +4000,7 @@ else:
         print(fields[1] + ' ', end="", flush=True)
         region_list = []
         selected_regions = fields[2].split(",")
-        for r in all_regions.keys():
+        for r in all_regions:
             if r in selected_regions and r in active_preview_mileage_by_region:
                 region_list.append(r)
         graph_data.write_subgraphs_tmg(graph_list, args.graphfilepath + "/", fields[1],
@@ -4517,15 +4517,15 @@ else:
                   '), activeMileage DOUBLE, activePreviewMileage DOUBLE);\n')
     sqlfile.write('INSERT INTO overallMileageByRegion VALUES\n')
     first = True
-    for region in list(active_preview_mileage_by_region.keys()):
+    for region in active_preview_mileage_by_region:
         if not first:
             sqlfile.write(",")
         first = False
         active_only_mileage = 0.0
         active_preview_mileage = 0.0
-        if region in list(active_only_mileage_by_region.keys()):
+        if region in active_only_mileage_by_region:
             active_only_mileage = active_only_mileage_by_region[region]
-        if region in list(active_preview_mileage_by_region.keys()):
+        if region in active_preview_mileage_by_region:
             active_preview_mileage = active_preview_mileage_by_region[region]
         sqlfile.write("('" + region + "','" +
                       str(active_only_mileage) + "','" +
@@ -4542,7 +4542,7 @@ else:
     first = True
     for h in highway_systems:
         if h.active_or_preview():
-            for region in list(h.mileage_by_region.keys()):
+            for region in h.mileage_by_region:
                 if not first:
                     sqlfile.write(",")
                 first = False
@@ -4558,12 +4558,12 @@ else:
     sqlfile.write('INSERT INTO clinchedOverallMileageByRegion VALUES\n')
     first = True
     for t in traveler_lists:
-        for region in list(t.active_preview_mileage_by_region.keys()):
+        for region in t.active_preview_mileage_by_region:
             if not first:
                 sqlfile.write(",")
             first = False
             active_miles = 0.0
-            if region in list(t.active_only_mileage_by_region.keys()):
+            if region in t.active_only_mileage_by_region:
                 active_miles = t.active_only_mileage_by_region[region]
             sqlfile.write("('" + region + "','" + t.traveler_name + "','" +
                           str(active_miles) + "','" +

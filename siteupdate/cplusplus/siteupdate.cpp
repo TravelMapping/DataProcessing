@@ -342,7 +342,7 @@ int main(int argc, char *argv[])
 	{	size_t NumFields = 4;
 		string** fields = new string*[4];
 		fields[0] = new string;	// deleted upon construction of unordered_map element
-		fields[1] = new string;	// stays in TravelerList object
+		fields[1] = new string;	// deleted @ end of TravelerList ctor
 		fields[2] = new string;	// deleted once written to user log
 		fields[3] = new string;	// deleted once written to user log
 		split(line, fields, NumFields, ' ');
@@ -370,13 +370,7 @@ int main(int argc, char *argv[])
       #else
 	for (string &t : TravelerList::ids)
 	{	cout << t << ' ' << std::flush;
-		std::string** update;
-		try {	update = TravelerList::listupdates.at(t);
-		    }
-		catch (const std::out_of_range& oor)
-		    {	update = 0;
-		    }
-		TravelerList::allusers.push_back(new TravelerList(t, update, &el));
+		TravelerList::allusers.push_back(new TravelerList(t, &el));
 	}
       #endif
 	TravelerList::ids.clear();
@@ -477,6 +471,7 @@ int main(int argc, char *argv[])
 	cout << et.et() << "Augmenting travelers for detected concurrent segments." << flush;
       #ifdef threading_enabled
 	list<string>* augment_lists = new list<string>[Args::numthreads];
+				      // deleted once written to concurrencies.log
 	TravelerList::tl_it = TravelerList::allusers.begin();
 	THREADLOOP thr[t] = thread(ConcAugThread, t, &list_mtx, augment_lists+t);
 	THREADLOOP thr[t].join();

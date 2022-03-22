@@ -66,11 +66,11 @@ if (lit1 == r->alt_label_hash.end() || lit2 == r->alt_label_hash.end())
 }
 // are either of the labels used duplicates?
 char duplicate = 0;
-if (r->duplicate_labels.find(fields[2]) != r->duplicate_labels.end())
+if (r->duplicate_labels.count(fields[2]))
 {	log << r->region->code << ": duplicate label " << fields[2] << " in " << r->root << '\n';
 	duplicate = 1;
 }
-if (r->duplicate_labels.find(fields[3]) != r->duplicate_labels.end())
+if (r->duplicate_labels.count(fields[3]))
 {	log << r->region->code << ": duplicate label " << fields[3] << " in " << r->root << '\n';
 	duplicate = 1;
 }
@@ -112,7 +112,7 @@ else {	r->system->lniu_mtx.lock();
 		index2 = lit1->second;
 		reverse = 1;
 	     }
-	r->store_traveled_segments(this, log, index1, index2);
+	r->store_traveled_segments(this, log, update, index1, index2);
 	// new .list lines for region split-ups
 	if (Args::splitregion == r->region->code)
 	{

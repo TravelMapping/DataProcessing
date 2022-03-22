@@ -62,7 +62,7 @@ void WaypointQuadtree::insert(Waypoint *w, bool init)
 				// DUPLICATE_COORDS datacheck
 				for (Waypoint* p : *other_w->colocated)
 				  if (p->route == w->route)
-				  {	char fstr[44];
+				  {	char fstr[48];
 					sprintf(fstr, "(%.15g,%.15g)", w->lat, w->lng);
 					Datacheck::add(w->route, p->label, w->label, "", "DUPLICATE_COORDS", fstr);
 				  }
@@ -294,6 +294,7 @@ void WaypointQuadtree::terminal_nodes(std::forward_list<WaypointQuadtree*>* node
 
 void WaypointQuadtree::sort()
 {	std::forward_list<WaypointQuadtree*>* nodes = new std::forward_list<WaypointQuadtree*>[Args::numthreads];
+						      // deleted @ end of this function
 	size_t slot = 0;
 	terminal_nodes(nodes, slot);
 

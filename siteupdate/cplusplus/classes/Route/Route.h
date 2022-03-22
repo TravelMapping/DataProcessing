@@ -88,14 +88,13 @@ class Route
 	void print_route();
 	HighwaySegment* find_segment_by_waypoints(Waypoint*, Waypoint*);
 	std::string chopped_rtes_line();
-	std::string csv_line();
 	std::string readable_name();
 	std::string list_entry_name();
 	std::string name_no_abbrev();
 	double clinched_by_traveler(TravelerList *);
 	//std::string list_line(int, int);
 	void write_nmp_merged();
-	void store_traveled_segments(TravelerList*, std::ofstream &, unsigned int, unsigned int);
+	void store_traveled_segments(TravelerList*, std::ofstream&, std::string*, unsigned int, unsigned int);
 	void compute_stats_r();
 	void con_mismatch();
 	Waypoint* con_beg();

@@ -13,12 +13,7 @@ void ReadListThread(unsigned int id, std::mutex* tl_mtx, ErrorList* el)
 		std::cout << tl << ' ' << std::flush;
 		tl_mtx->unlock();
 		std::string** update;
-		try {	update = TravelerList::listupdates.at(tl);
-		    }
-		catch (const std::out_of_range& oor)
-		    {	update = 0;
-		    }
-		TravelerList *t = new TravelerList(tl, update, el);
+		TravelerList *t = new TravelerList(tl, el);
 				  // deleted on termination of program
 		TravelerList::mtx.lock();
 		TravelerList::allusers.push_back(t);
