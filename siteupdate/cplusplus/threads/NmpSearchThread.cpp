@@ -13,6 +13,6 @@ void NmpSearchThread(unsigned int id, std::mutex* hs_mtx, WaypointQuadtree* all_
 		hs_mtx->unlock();
 		for (Route *r : h->route_list)
 		  for (Waypoint *w : r->point_list)
-		    w->near_miss_points = all_waypoints->near_miss_waypoints(w, 0.0005);
+		    all_waypoints->near_miss_waypoints(w, 0.0005);
 	}
 }

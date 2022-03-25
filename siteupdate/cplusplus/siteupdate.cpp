@@ -254,8 +254,6 @@ int main(int argc, char *argv[])
 	HighwaySystem::it = HighwaySystem::syslist.begin();
 	THREADLOOP thr[t] = thread(NmpSearchThread, t, &list_mtx, &all_waypoints);
 	THREADLOOP thr[t].join();
-      #else
-	for (Waypoint *w : all_waypoints.point_list()) w->near_miss_points = all_waypoints.near_miss_waypoints(w, 0.0005);
       #endif
 
 	// Near-miss point log

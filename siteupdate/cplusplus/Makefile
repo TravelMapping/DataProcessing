@@ -3,12 +3,14 @@ CXXFLAGS = -std=c++11 -Wno-comment -Wno-dangling-else -Wno-logical-op-parenthese
 
 MTObjects = siteupdateMT.o functions/sql_fileMT.o threads/threads.o \
   classes/GraphGeneration/HighwayGraphMT.o \
+  classes/Route/read_wptMT.o \
   classes/WaypointQuadtree/WaypointQuadtreeMT.o \
   functions/allbyregionactiveonlyMT.o \
   functions/allbyregionactivepreviewMT.o
 
 STObjects = siteupdateST.o functions/sql_fileST.o \
   classes/GraphGeneration/HighwayGraphST.o \
+  classes/Route/read_wptST.o \
   classes/WaypointQuadtree/WaypointQuadtreeST.o \
   functions/allbyregionactiveonlyST.o \
   functions/allbyregionactivepreviewST.o
@@ -30,7 +32,6 @@ CommonObjects = \
   classes/HighwaySystem/route_integrity.o \
   classes/Region/Region.o \
   classes/Route/Route.o \
-  classes/Route/read_wpt.o \
   classes/TravelerList/TravelerList.o \
   classes/TravelerList/userlog.o \
   classes/Waypoint/Waypoint.o \
