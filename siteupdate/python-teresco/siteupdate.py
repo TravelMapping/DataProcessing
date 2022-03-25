@@ -141,9 +141,8 @@ class WaypointQuadtree:
                     self.ne_child.insert(w, init)
 
     def near_miss_waypoints(self, w, tolerance):
-        """compute and return a list of existing waypoints which are
-        within the near-miss tolerance (in degrees lat, lng) of w"""
-        near_miss_points = []
+        """compute a list of existing waypoints within the
+        near-miss tolerance (in degrees lat, lng) of w"""
 
         #print("DEBUG: computing nmps for " + str(w) + " within " + str(tolerance) + " in " + str(self))
         # first check if this is a terminal quadrant, and if it is,
@@ -153,7 +152,7 @@ class WaypointQuadtree:
             for p in self.points:
                 if p.nearby(w, tolerance) and not p.same_coords(w):
                     #print("DEBUG: found nmp " + str(p))
-                    near_miss_points.append(p)
+                    w.near_miss_points.append(p)
 
         # if we're not a terminal quadrant, we need to determine which
         # of our child quadrants we need to search and recurse into
@@ -167,15 +166,13 @@ class WaypointQuadtree:
             #print("DEBUG: recursive case, " + str(look_north) + " " + str(look_south) + " " + str(look_east) + " " + str(look_west))
             # now look in the appropriate child quadrants
             if look_north and look_west:
-                near_miss_points.extend(self.nw_child.near_miss_waypoints(w, tolerance))
+                self.nw_child.near_miss_waypoints(w, tolerance)
             if look_north and look_east:
-                near_miss_points.extend(self.ne_child.near_miss_waypoints(w, tolerance))
+                self.ne_child.near_miss_waypoints(w, tolerance)
             if look_south and look_west:
-                near_miss_points.extend(self.sw_child.near_miss_waypoints(w, tolerance))
+                self.sw_child.near_miss_waypoints(w, tolerance)
             if look_south and look_east:
-                near_miss_points.extend(self.se_child.near_miss_waypoints(w, tolerance))
-
-        return near_miss_points
+                self.se_child.near_miss_waypoints(w, tolerance)
 
     def __str__(self):
         s = "WaypointQuadtree at (" + str(self.min_lat) + "," + \
@@ -384,8 +381,6 @@ class Waypoint:
             datacheckerrors.append(DatacheckEntry(route,[self.label],'MALFORMED_URL', 'MISSING_ARG(S)'))
             self.lat = 0.0
             self.lng = 0.0
-            self.colocated = None
-            self.near_miss_points = None
             return
         lat_string = url_parts[1].split("&")[0] # chop off "&lon"
         lng_string = url_parts[2].split("&")[0] # chop off possible "&zoom"
@@ -418,7 +413,7 @@ class Waypoint:
         # also keep track of a list of colocated waypoints, if any
         self.colocated = None
         # and keep a list of "near-miss points", if any
-        self.near_miss_points = None
+        self.near_miss_points = []
 
     def __str__(self):
         return self.route.root + " " + self.label + " (" + str(self.lat) + "," + str(self.lng) + ")"
@@ -1121,18 +1116,9 @@ class Route:
                     #print("DEBUG: START search for nmps for waypoint " + str(w) + " in quadtree of size " + str(all_waypoints.size()))
                     #if not all_waypoints.is_valid():
                     #    sys.exit()
-                    nmps = all_waypoints.near_miss_waypoints(w, 0.0005)
-                    #print("DEBUG: for waypoint " + str(w) + " got " + str(len(nmps)) + " nmps: ", end="")
-                    #for dbg_w in nmps:
-                    #    print(str(dbg_w) + " ", end="")
-                    #print()
-                    if len(nmps) > 0:
-                        w.near_miss_points = nmps
-                        for other_w in nmps:
-                            if other_w.near_miss_points is None:
-                                other_w.near_miss_points = [ w ]
-                            else:
-                                other_w.near_miss_points.append(w)
+                    all_waypoints.near_miss_waypoints(w, 0.0005)
+                    for other_w in w.near_miss_points:
+                        other_w.near_miss_points.append(w)
     
                     all_waypoints.insert(w, True)
                     all_waypoints_lock.release()
@@ -2955,7 +2941,7 @@ nmploglines = []
 nmplog = open(args.logfilepath+'/nearmisspoints.log','w')
 nmpnmp = open(args.logfilepath+'/tm-master.nmp','w')
 for w in all_waypoints.point_list():
-    if w.near_miss_points is not None:
+    if len(w.near_miss_points):
         # sort the near miss points for consistent ordering to facilitate
         # NMP FP marking
         w.near_miss_points.sort(key=lambda waypoint:
@@ -3003,11 +2989,11 @@ for w in all_waypoints.point_list():
                 logline += " [LOOKS INTENTIONAL]"
             else:
                 logline += " [SOME LOOK INTENTIONAL]"
-            w.near_miss_points = None
+            w.near_miss_points = []
         if fp:
             nmpfps.remove(nmpline)
             logline += " [MARKED FP]"
-            w.near_miss_points = None
+            w.near_miss_points = []
         nmploglines.append(logline)
 nmpnmp.close()
 
@@ -3038,7 +3024,7 @@ if args.nmpmergepath != "" and not args.errorcheck:
                 wptfile.write(w.label + ' ')
                 for a in w.alt_labels:
                     wptfile.write(a + ' ')
-                if w.near_miss_points is None:
+                if len(w.near_miss_points) == 0:
                     wptfile.write("http://www.openstreetmap.org/?lat={0:.6f}".format(w.lat) + "&lon={0:.6f}".format(w.lng) + "\n")
                 else:
                     # for now, arbitrarily choose the northernmost

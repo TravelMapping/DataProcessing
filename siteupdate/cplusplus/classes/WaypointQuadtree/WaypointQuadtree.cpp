@@ -90,21 +90,20 @@ void WaypointQuadtree::insert(Waypoint *w, bool init)
 	     }
 }
 
-std::forward_list<Waypoint*> WaypointQuadtree::near_miss_waypoints(Waypoint *w, double tolerance)
-{	// compute and return a list of existing waypoints which are
-	// within the near-miss tolerance (in degrees lat, lng) of w
-	std::forward_list<Waypoint*> near_miss_points;
+void WaypointQuadtree::near_miss_waypoints(Waypoint *w, double tolerance)
+{	// compute a list of existing waypoints within the
+	// near-miss tolerance (in degrees lat, lng) of w
 
-	//std::cout << "DEBUG: computing nmps for " << w->str() << " within " << std::to_string(tolerance) << " in " << str() << std::endl;
 	// first check if this is a terminal quadrant, and if it is,
 	// we search for NMPs within this quadrant
 	if (!refined())
-	{	//std::cout << "DEBUG: terminal quadrant comparing with " << points.size() << " points." << std::endl;
-		for (Waypoint *p : points)
-		  if (p != w && !p->same_coords(w) && p->nearby(w, tolerance))
-		  {	//std::cout << "DEBUG: found nmp " << p->str() << std::endl;
-			near_miss_points.push_front(p);
-		  }
+	{	for (Waypoint *p : points)
+		  if (// iff threading_enabled, w is already in quadtree
+		      #ifdef threading_enabled
+			p != w &&
+		      #endif
+			p->nearby(w, tolerance) && !p->same_coords(w)
+		     )	w->near_miss_points.push_front(p);
 	}
 	// if we're not a terminal quadrant, we need to determine which
 	// of our child quadrants we need to search and recurse into
@@ -116,12 +115,11 @@ std::forward_list<Waypoint*> WaypointQuadtree::near_miss_waypoints(Waypoint *w, 
 		bool look_west = (w->lng - tolerance) <= mid_lng;
 		//std::cout << "DEBUG: recursive case, " << look_north << " " << look_south << " " << look_east << " " << look_west << std::endl;
 		// now look in the appropriate child quadrants
-		if (look_north && look_west) near_miss_points.splice_after(near_miss_points.before_begin(), nw_child->near_miss_waypoints(w, tolerance));
-		if (look_north && look_east) near_miss_points.splice_after(near_miss_points.before_begin(), ne_child->near_miss_waypoints(w, tolerance));
-		if (look_south && look_west) near_miss_points.splice_after(near_miss_points.before_begin(), sw_child->near_miss_waypoints(w, tolerance));
-		if (look_south && look_east) near_miss_points.splice_after(near_miss_points.before_begin(), se_child->near_miss_waypoints(w, tolerance));
+		if (look_north && look_west) nw_child->near_miss_waypoints(w, tolerance);
+		if (look_north && look_east) ne_child->near_miss_waypoints(w, tolerance);
+		if (look_south && look_west) sw_child->near_miss_waypoints(w, tolerance);
+		if (look_south && look_east) se_child->near_miss_waypoints(w, tolerance);
 	     }
-	return near_miss_points;
 }
 
 std::string WaypointQuadtree::str()

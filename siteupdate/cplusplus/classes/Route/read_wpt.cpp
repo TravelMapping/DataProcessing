@@ -65,11 +65,19 @@ void Route::read_wpt(WaypointQuadtree *all_waypoints, ErrorList *el, bool usa_fl
 		if (!*lines[l]) continue;		// whitespace-only line; skip
 		Waypoint *w = new Waypoint(lines[l], this);
 			      // deleted by WaypointQuadtree::final_report, or immediately below if invalid
+		// lat & lng both equal to 0 marks a point as invalid
 		if (!w->lat && !w->lng)
 		{	delete w;
 			continue;
 		}
 		point_list.push_back(w);
+
+	      #ifndef threading_enabled
+		// look for near-miss points (before we add this one in)
+		all_waypoints->near_miss_waypoints(w, 0.0005);
+		for (Waypoint *other_w : w->near_miss_points) other_w->near_miss_points.push_front(w);
+	      #endif
+
 		all_waypoints->insert(w, 1);
 
 		// single-point Datachecks, and HighwaySegment
