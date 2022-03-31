@@ -17,7 +17,6 @@ STObjects = siteupdateST.o functions/sql_fileST.o \
 
 CommonObjects = \
   classes/Args/Args.o \
-  classes/ClinchedDBValues/ClinchedDBValues.o \
   classes/ConnectedRoute/ConnectedRoute.o \
   classes/Datacheck/Datacheck.o \
   classes/DBFieldLength/DBFieldLength.o \

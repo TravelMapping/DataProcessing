@@ -1,4 +1,4 @@
-class ClinchedDBValues;
+class ConnectedRoute;
 class ErrorList;
 class HighwaySegment;
 class HighwaySystem;
@@ -9,6 +9,7 @@ class Route;
 #include <mutex>
 #include <unordered_map>
 #include <unordered_set>
+#include <vector>
 
 class TravelerList
 {   /* This class encapsulates the contents of one .list file
@@ -28,6 +29,8 @@ class TravelerList
 	std::unordered_map<Region*, double> active_only_mileage_by_region;				// total mileage per region, active only
 	std::unordered_map<HighwaySystem*, std::unordered_map<Region*, double>> system_region_mileages;	// mileage per region per system
 	std::unordered_set<Route*> updated_routes;
+	std::vector<std::pair<Route*,double>> cr_values;		// for the clinchedRoutes DB table
+	std::vector<std::pair<ConnectedRoute*,double>> ccr_values;	// for the clinchedConnectedRoutes DB table
 	bool* in_subgraph;
 	unsigned int *traveler_num;
 	unsigned int active_systems_traveled;
@@ -47,7 +50,7 @@ class TravelerList
 	double active_only_miles();
 	double active_preview_miles();
 	double system_region_miles(HighwaySystem *);
-	void userlog(ClinchedDBValues *, const double, const double);
+	void userlog(const double, const double);
 };
 
 bool sort_travelers_by_name(const TravelerList*, const TravelerList*);
