@@ -1,4 +1,3 @@
-class ClinchedDBValues;
 class ElapsedTime;
 class ErrorList;
 class HighwayGraph;
@@ -17,4 +16,4 @@ void ReadWptThread   (unsigned int, std::mutex*, ErrorList*, WaypointQuadtree*);
 void RteIntThread    (unsigned int, std::mutex*, ErrorList*);
 void StatsCsvThread  (unsigned int, std::mutex*);
 void SubgraphThread  (unsigned int, std::mutex*, std::mutex*, HighwayGraph*, WaypointQuadtree*, ElapsedTime*);
-void UserLogThread   (unsigned int, std::mutex*, ClinchedDBValues*, const double, const double);
+void UserLogThread   (unsigned int, std::mutex*, const double, const double);

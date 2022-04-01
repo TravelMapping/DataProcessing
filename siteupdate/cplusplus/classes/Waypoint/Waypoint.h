@@ -32,7 +32,6 @@ class Waypoint
 	Waypoint(char *, Route *);
 
 	std::string str();
-	std::string csv_line(unsigned int);
 	bool same_coords(Waypoint *);
 	bool nearby(Waypoint *, double);
 	double distance_to(Waypoint *);

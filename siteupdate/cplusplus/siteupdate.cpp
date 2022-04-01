@@ -17,7 +17,6 @@ This module defines classes to represent the contents of a
 #include <dirent.h>
 #include "classes/Args/Args.h"
 #include "classes/DBFieldLength/DBFieldLength.h"
-#include "classes/ClinchedDBValues/ClinchedDBValues.h"
 #include "classes/ConnectedRoute/ConnectedRoute.h"
 #include "classes/Datacheck/Datacheck.h"
 #include "classes/ElapsedTime/ElapsedTime.h"
@@ -588,19 +587,16 @@ int main(int argc, char *argv[])
 		}
 	}
 	hdstatsfile.close();
-	// this will be used to store DB entry lines as needed values are computed here,
-	// to be added into the DB later in the program
-	ClinchedDBValues clin_db_val;
 
 	// now add user clinched stats to their log entries
 	cout << et.et() << "Creating per-traveler stats logs and augmenting data structure." << flush;
       #ifdef threading_enabled
 	TravelerList::tl_it = TravelerList::allusers.begin();
-	THREADLOOP thr[t] = thread(UserLogThread, t, &list_mtx, &clin_db_val, active_only_miles, active_preview_miles);
+	THREADLOOP thr[t] = thread(UserLogThread, t, &list_mtx, active_only_miles, active_preview_miles);
 	THREADLOOP thr[t].join();
       #else
 	for (TravelerList *t : TravelerList::allusers)
-		t->userlog(&clin_db_val, active_only_miles, active_preview_miles);
+		t->userlog(active_only_miles, active_preview_miles);
       #endif
 	cout << "!" << endl;
 
@@ -642,7 +638,7 @@ int main(int argc, char *argv[])
 	thread sqlthread;
 	if   (!Args::errorcheck)
 	{	std::cout << et.et() << "Start writing database file " << Args::databasename << ".sql.\n" << std::flush;
-		sqlthread=thread(sqlfile1, &et, &continents, &countries, &clin_db_val, &updates, &systemupdates, &term_mtx);
+		sqlthread=thread(sqlfile1, &et, &continents, &countries, &updates, &systemupdates, &term_mtx);
 	}
       #endif
 
@@ -663,7 +659,7 @@ int main(int argc, char *argv[])
 		std::cout << et.et() << "Resume writing database file " << Args::databasename << ".sql.\n" << std::flush;
 	      #else
 		std::cout << et.et() << "Writing database file " << Args::databasename << ".sql.\n" << std::flush;
-		sqlfile1(&et, &continents, &countries, &clin_db_val, &updates, &systemupdates, &term_mtx);
+		sqlfile1(&et, &continents, &countries, &updates, &systemupdates, &term_mtx);
 	      #endif
 		sqlfile2(&et, &graph_types);
 	     }
