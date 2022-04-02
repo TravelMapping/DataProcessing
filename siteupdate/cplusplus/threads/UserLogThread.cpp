@@ -1,5 +1,5 @@
 void UserLogThread
-(	unsigned int id, std::mutex* mtx, ClinchedDBValues* clin_db_val,
+(	unsigned int id, std::mutex* mtx,
 	const double total_active_only_miles,
 	const double total_active_preview_miles
 )
@@ -15,6 +15,6 @@ void UserLogThread
 		TravelerList::tl_it++;
 		//printf("UserLogThread %02i TravelerList::tl_it++\n", id); fflush(stdout);
 		mtx->unlock();
-		t->userlog(clin_db_val, total_active_only_miles, total_active_preview_miles);
+		t->userlog(total_active_only_miles, total_active_preview_miles);
 	}
 }

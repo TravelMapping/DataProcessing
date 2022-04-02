@@ -107,13 +107,6 @@ std::string Waypoint::str()
 	return ans + ')';
 }
 
-std::string Waypoint::csv_line(unsigned int id)
-{	/* return csv line to insert into a table */
-	char fstr[64];
-	sprintf(fstr, "','%.15g','%.15g','", lat, lng);
-	return "'" + std::to_string(id) + "','" + label + fstr + route->root + "'";
-}
-
 bool Waypoint::same_coords(Waypoint *other)
 {	/* return if this waypoint is colocated with the other,
 	using exact lat,lng match */
@@ -385,11 +378,13 @@ void Waypoint::label_invalid_char()
 		}
 }
 
-void Waypoint::out_of_bounds(char *fstr)
+void Waypoint::out_of_bounds(char *s)
 {	// out-of-bounds coords
 	if (lat > 90 || lat < -90 || lng > 180 || lng < -180)
-	{	sprintf(fstr, "(%.15g,%.15g)", lat, lng);
-		Datacheck::add(route, label, "", "", "OUT_OF_BOUNDS", fstr);
+	{	int
+		e=sprintf(s,"(%.15g",lat); if (int(lat)==lat) strcpy(s+e, ".0"); std::string info(s);
+		e=sprintf(s,",%.15g",lng); if (int(lng)==lng) strcpy(s+e, ".0"); info += s;
+		Datacheck::add(route, label, "", "", "OUT_OF_BOUNDS", info+')');
 	}
 }
 

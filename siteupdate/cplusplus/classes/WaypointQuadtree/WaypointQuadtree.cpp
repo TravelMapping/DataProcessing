@@ -5,6 +5,7 @@
 #include "../HighwaySystem/HighwaySystem.h"
 #include "../Route/Route.h"
 #include "../Waypoint/Waypoint.h"
+#include <cstring>
 #ifdef threading_enabled
 #include <thread>
 #endif
@@ -62,9 +63,10 @@ void WaypointQuadtree::insert(Waypoint *w, bool init)
 				// DUPLICATE_COORDS datacheck
 				for (Waypoint* p : *other_w->colocated)
 				  if (p->route == w->route)
-				  {	char fstr[48];
-					sprintf(fstr, "(%.15g,%.15g)", w->lat, w->lng);
-					Datacheck::add(w->route, p->label, w->label, "", "DUPLICATE_COORDS", fstr);
+				  {	char s[48]; int
+					e=sprintf(s,"(%.15g",w->lat); if (int(w->lat)==w->lat) strcpy(s+e, ".0"); std::string info(s);
+					e=sprintf(s,",%.15g",w->lng); if (int(w->lng)==w->lng) strcpy(s+e, ".0"); info += s;
+					Datacheck::add(w->route, p->label, w->label, "", "DUPLICATE_COORDS", info+')');
 				  }
 				other_w->colocated->push_back(w);
 				w->colocated = other_w->colocated;

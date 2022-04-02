@@ -1,7 +1,6 @@
 #include "sql_file.h"
 #include "double_quotes.h"
 #include "../classes/Args/Args.h"
-#include "../classes/ClinchedDBValues/ClinchedDBValues.h"
 #include "../classes/ConnectedRoute/ConnectedRoute.h"
 #include "../classes/Datacheck/Datacheck.h"
 #include "../classes/DBFieldLength/DBFieldLength.h"
@@ -13,13 +12,13 @@
 #include "../classes/Route/Route.h"
 #include "../classes/TravelerList/TravelerList.h"
 #include "../classes/Waypoint/Waypoint.h"
+#include <cstring>
 #include <fstream>
 
 void sqlfile1
     (	ElapsedTime *et,
 	std::vector<std::pair<std::string,std::string>> *continents,
 	std::vector<std::pair<std::string,std::string>> *countries,
-	ClinchedDBValues *clin_db_val,
 	std::list<std::string*> *updates,
 	std::list<std::string*> *systemupdates,
 	std::mutex* term_mtx
@@ -166,7 +165,7 @@ void sqlfile1
 	  for (ConnectedRoute *cr : h->con_route_list)
 	  {	if (!first) sqlfile << ',';
 		first = 0;
-		sprintf(fstr, "','%.15g'", cr->mileage);
+		sprintf(fstr, "','%.17g'", cr->mileage);
 		sqlfile << "('" << cr->system->systemname << "','" << cr->route << "','" << cr->banner << "','" << double_quotes(cr->groupname)
 			<< "','" << (cr->roots.size() ? cr->roots[0]->root.data() : "ERROR_NO_ROOTS") << fstr << ",'" << csvOrder << "')\n";
 		csvOrder += 1;
@@ -208,7 +207,10 @@ void sqlfile1
 		{	if (!first) sqlfile << ',';
 			first = 0;
 			w->point_num = point_num;
-			sqlfile << "(" << w->csv_line(point_num) << ")\n";
+			sqlfile << "('" << point_num << "','" << w->label; int
+			e=sprintf(fstr,"','%.15g",w->lat); if (w->lat==int(w->lat)) strcpy(fstr+e,".0"); sqlfile << fstr;
+			e=sprintf(fstr,"','%.15g",w->lng); if (w->lng==int(w->lng)) strcpy(fstr+e,".0"); sqlfile << fstr;
+			sqlfile << "','" << r->root + "')\n";
 			point_num+=1;
 		}
 		sqlfile << ";\n";
@@ -273,7 +275,7 @@ void sqlfile1
 	{	if (region->active_only_mileage+region->active_preview_mileage == 0) continue;
 		if (!first) sqlfile << ',';
 		first = 0;
-		sprintf(fstr, "','%.15g','%.15g')\n", region->active_only_mileage, region->active_preview_mileage);
+		sprintf(fstr, "','%.17g','%.17g')\n", region->active_only_mileage, region->active_preview_mileage);
 		sqlfile << "('" << region->code << fstr;
 	}
 	sqlfile << ";\n";
@@ -293,7 +295,7 @@ void sqlfile1
 	    for (std::pair<Region* const,double>& rm : h->mileage_by_region)
 	    {	if (!first) sqlfile << ',';
 		first = 0;
-		sprintf(fstr, "','%.15f')\n", rm.second);
+		sprintf(fstr, "','%.17g')\n", rm.second);
 		sqlfile << "('" << h->systemname << "','" << rm.first->code << fstr;
 	    }
 	sqlfile << ";\n";
@@ -316,7 +318,7 @@ void sqlfile1
 		auto it = t->active_only_mileage_by_region.find(rm.first);
 		if (it != t->active_only_mileage_by_region.end())
 		  active_miles = it->second;
-		sprintf(fstr, "','%.15g','%.15g')\n", active_miles, rm.second);
+		sprintf(fstr, "','%.17g','%.17g')\n", active_miles, rm.second);
 		sqlfile << "('" << rm.first->code << "','" << t->traveler_name << fstr;
 	  }
 	sqlfile << ";\n";
@@ -332,10 +334,17 @@ void sqlfile1
 		<< "), mileage DOUBLE, FOREIGN KEY (systemName) REFERENCES systems(systemName));\n";
 	sqlfile << "INSERT INTO clinchedSystemMileageByRegion VALUES\n";
 	first = 1;
-	for (std::string &line : clin_db_val->csmbr_values)
-	{	if (!first) sqlfile << ',';
-		first = 0;
-		sqlfile << line << '\n';
+	for (TravelerList* t : TravelerList::allusers)
+	{	auto& traveler_name = t->traveler_name;
+		for (auto& csmbr : t->system_region_mileages)
+		{	auto& systemname = csmbr.first->systemname;
+			for (auto& rm : csmbr.second)
+			{	if (!first) sqlfile << ',';
+				first = 0;
+				sprintf(fstr, "%.17g", rm.second);
+				sqlfile << "('" << systemname << "','" << rm.first->code << "','" << traveler_name << "','" << fstr << "')\n";
+			}
+		}
 	}
 	sqlfile << ";\n";
 
@@ -347,13 +356,17 @@ void sqlfile1
 	sqlfile << "CREATE TABLE clinchedConnectedRoutes (route VARCHAR(" << DBFieldLength::root
 		<< "), traveler VARCHAR(" << DBFieldLength::traveler
 		<< "), mileage FLOAT, clinched BOOLEAN, FOREIGN KEY (route) REFERENCES connectedRoutes(firstRoot));\n";
-	for (size_t start = 0; start < clin_db_val->ccr_values.size(); start += 10000)
-	{	sqlfile << "INSERT INTO clinchedConnectedRoutes VALUES\n";
+	for (TravelerList *t : TravelerList::allusers)
+	{	if (t->ccr_values.empty()) continue;
+		sqlfile << "INSERT INTO clinchedConnectedRoutes VALUES\n";
+		auto& traveler_name = t->traveler_name;
 		first = 1;
-		for (size_t line = start; line < start+10000 && line < clin_db_val->ccr_values.size(); line++)
+		for (auto& rm : t->ccr_values)
 		{	if (!first) sqlfile << ',';
 			first = 0;
-			sqlfile << clin_db_val->ccr_values[line] << '\n';
+			sprintf(fstr, "%.17g", rm.second);
+			sqlfile << "('" << rm.first->roots[0]->root << "','" << traveler_name << "','"
+				<< fstr << "','" << (rm.second == rm.first->mileage) << "')\n";
 		}
 		sqlfile << ";\n";
 	}
@@ -365,13 +378,17 @@ void sqlfile1
 	sqlfile << "CREATE TABLE clinchedRoutes (route VARCHAR(" << DBFieldLength::root
 		<< "), traveler VARCHAR(" << DBFieldLength::traveler
 		<< "), mileage FLOAT, clinched BOOLEAN, FOREIGN KEY (route) REFERENCES routes(root));\n";
-	for (size_t start = 0; start < clin_db_val->cr_values.size(); start += 10000)
-	{	sqlfile << "INSERT INTO clinchedRoutes VALUES\n";
+	for (TravelerList *t : TravelerList::allusers)
+	{	if (t->cr_values.empty()) continue;
+		sqlfile << "INSERT INTO clinchedRoutes VALUES\n";
+		auto& traveler_name = t->traveler_name;
 		first = 1;
-		for (size_t line = start; line < start+10000 && line < clin_db_val->cr_values.size(); line++)
+		for (std::pair<Route*,double>& rm : t->cr_values)
 		{	if (!first) sqlfile << ',';
 			first = 0;
-			sqlfile << clin_db_val->cr_values[line] << '\n';
+			sprintf(fstr, "%.17g", rm.second);
+			sqlfile << "('" << rm.first->root << "','" << traveler_name << "','"
+				<< fstr << "','" << (rm.second >= rm.first->mileage) << "')\n";
 		}
 		sqlfile << ";\n";
 	}
