@@ -2108,15 +2108,15 @@ class PlaceRadius:
 
         return ans <= self.r
 
-    def vertices(self, qt, g):
-        # Compute and return a set of graph vertices within r miles of (lat, lng).
+    def vertices(self, vertex_set, qt, g):
+        # Compute a set of graph vertices within r miles of (lat, lng).
         # This function handles setup & sanity checks, passing control over
         # to the recursive v_search function to do the actual searching.
 
         # N/S sanity check: If lat is <= r/2 miles to the N or S pole, lngdelta calculation will fail.
         # In these cases, our place radius will span the entire "width" of the world, from -180 to +180 degrees.
         if math.radians(90-abs(self.lat)) <= self.r/7926.2:
-            return self.v_search(qt, g, -180, +180)
+            return self.v_search(vertex_set, qt, g, -180, +180)
 
         # width, in degrees longitude, of our bounding box for quadtree search
         rlat = math.radians(self.lat)
@@ -2125,28 +2125,25 @@ class PlaceRadius:
         e_bound = self.lng+lngdelta
 
         # normal operation; search quadtree within calculated bounds
-        vertex_set = self.v_search(qt, g, w_bound, e_bound);
+        self.v_search(vertex_set, qt, g, w_bound, e_bound);
 
         # If bounding box spans international date line to west of -180 degrees,
         # search quadtree within the corresponding range of positive longitudes
         if w_bound <= -180:
             while w_bound <= -180:
                 w_bound += 360
-            vertex_set = vertex_set | self.v_search(qt, g, w_bound, 180)
+            self.v_search(vertex_set, qt, g, w_bound, 180)
 
         # If bounding box spans international date line to east of +180 degrees,
         # search quadtree within the corresponding range of negative longitudes
         if e_bound >= 180:
             while e_bound >= 180:
                 e_bound -= 360
-            vertex_set = vertex_set | self.v_search(qt, g, -180, e_bound)
+            self.v_search(vertex_set, qt, g, -180, e_bound)
 
-        return vertex_set
-
-    def v_search(self, qt, g, w_bound, e_bound):
-        # recursively search quadtree for waypoints within this PlaceRadius area, and return a set
-        # of their corresponding graph vertices to return to the PlaceRadius.vertices function
-        vertex_set = set()
+    def v_search(self, vertex_set, qt, g, w_bound, e_bound):
+        # recursively search quadtree for waypoints within this PlaceRadius
+        # area, and populate a set of their corresponding graph vertices
 
         # first check if this is a terminal quadrant, and if it is,
         # we search for vertices within this quadrant
@@ -2165,14 +2162,13 @@ class PlaceRadius:
             #print("DEBUG: recursive case, " + str(look_n) + " " + str(look_s) + " " + str(look_e) + " " + str(look_w))
             # now look in the appropriate child quadrants
             if look_n and look_w:
-                vertex_set = vertex_set | self.v_search(qt.nw_child, g, w_bound, e_bound)
+                self.v_search(vertex_set, qt.nw_child, g, w_bound, e_bound)
             if look_n and look_e:
-                vertex_set = vertex_set | self.v_search(qt.ne_child, g, w_bound, e_bound)
+                self.v_search(vertex_set, qt.ne_child, g, w_bound, e_bound)
             if look_s and look_w:
-                vertex_set = vertex_set | self.v_search(qt.sw_child, g, w_bound, e_bound)
+                self.v_search(vertex_set, qt.sw_child, g, w_bound, e_bound)
             if look_s and look_e:
-                vertex_set = vertex_set | self.v_search(qt.se_child, g, w_bound, e_bound)
-        return vertex_set;
+                self.v_search(vertex_set, qt.se_child, g, w_bound, e_bound)
 
 class HighwayGraph:
     """This class implements the capability to create graph
@@ -2318,7 +2314,8 @@ class HighwayGraph:
             for h in systems:
                 svset = svset | h.vertices
         if placeradius is not None:
-            pvset = placeradius.vertices(qt, self)
+            pvset = set()
+            placeradius.vertices(pvset, qt, self)
 
         # determine which vertices are within our PlaceRadius, region(s) and/or system(s)
         if regions is not None:

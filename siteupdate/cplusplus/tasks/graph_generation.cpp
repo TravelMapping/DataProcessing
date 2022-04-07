@@ -64,8 +64,8 @@ else {	list<Region*> *regions;
 	#include "subgraphs/system.cpp"
 	#include "subgraphs/country.cpp"
 	#include "subgraphs/multiregion.cpp"
-	#include "subgraphs/area.cpp"
 	#include "subgraphs/region.cpp"
+	#include "subgraphs/area.cpp"
       #ifdef threading_enabled
 	// write graph vector entries to disk
 	thr[0] = thread(MasterTmgThread, &graph_data, &list_mtx, &term_mtx, &all_waypoints, &et);
