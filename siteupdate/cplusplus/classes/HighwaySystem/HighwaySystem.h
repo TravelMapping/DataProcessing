@@ -36,8 +36,8 @@ class HighwaySystem
 
 	std::vector<Route*> route_list;
 	std::vector<ConnectedRoute*> con_route_list;
+	std::vector<HGVertex*> vertices;
 	std::unordered_map<Region*, double> mileage_by_region;
-	std::unordered_set<HGVertex*> vertices;
 	std::unordered_set<std::string>listnamesinuse, unusedaltroutenames;
 	std::mutex lniu_mtx, uarn_mtx;
 	bool is_valid;
@@ -56,6 +56,6 @@ class HighwaySystem
 	size_t route_index(Route*);	// Return index of a specified Route* within route_list
 	size_t con_route_index(ConnectedRoute*); // same thing for ConnectedRoutes
 	void route_integrity(ErrorList& el);
-	void insert_vertex(HGVertex*);
+	void add_vertex(HGVertex*);
 	void stats_csv();
 };

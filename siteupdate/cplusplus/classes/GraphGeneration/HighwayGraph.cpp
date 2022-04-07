@@ -204,16 +204,16 @@ inline void HighwayGraph::matching_vertices_and_edges
 
 	// determine which vertices are within our PlaceRadius, region(s) and/or system(s)
 	if (g.regions)
-	{	mvset = rvset;
+	{	mvset = std::move(rvset);
 		if (g.placeradius)	mvset = mvset & pvset;
 		if (g.systems)		mvset = mvset & svset;
 	}
 	else if (g.systems)
-	{	mvset = svset;
+	{	mvset = std::move(svset);
 		if (g.placeradius)	mvset = mvset & pvset;
 	}
 	else if (g.placeradius)
-		mvset = pvset;
+		mvset = std::move(pvset);
 	else	// no restrictions via region, system, or placeradius, so include everything
 		mvset.insert(vertices.begin(), vertices.end());
 

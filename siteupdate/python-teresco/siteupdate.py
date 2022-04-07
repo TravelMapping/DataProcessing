@@ -1318,7 +1318,7 @@ class HighwaySystem:
         self.tier = tier
         self.level = level
         self.mileage_by_region = dict()
-        self.vertices = set()
+        self.vertices = []
         self.listnamesinuse = set()
         self.unusedaltroutenames = set()
 
@@ -1836,7 +1836,7 @@ class HGVertex:
     vertex.
     """
 
-    def __init__(self,wpt,unique_name,datacheckerrors,rg_vset_hash):
+    def __init__(self,wpt,unique_name,datacheckerrors,rg_vlist_hash):
         self.lat = wpt.lat
         self.lng = wpt.lng
         self.unique_name = unique_name
@@ -1851,19 +1851,19 @@ class HGVertex:
         if wpt.colocated is None:
             if not wpt.is_hidden:
                 self.visibility = 2
-            wpt.route.system.vertices.add(self)
-            if wpt.route.region not in rg_vset_hash:
-                rg_vset_hash[wpt.route.region] = set()
-            rg_vset_hash[wpt.route.region].add(self)
+            if wpt.route.region not in rg_vlist_hash:
+                rg_vlist_hash[wpt.route.region] = []
+            rg_vlist_hash[wpt.route.region].append(self)
+            wpt.route.system.vertices.append(self)
             return
         for w in wpt.colocated:
             # will consider hidden iff all colocated waypoints are hidden
             if not w.is_hidden:
                 self.visibility = 2
-            if w.route.region not in rg_vset_hash:
-                rg_vset_hash[w.route.region] = set()
-            rg_vset_hash[w.route.region].add(self)
-            w.route.system.vertices.add(self)
+            if w.route.region not in rg_vlist_hash:
+                rg_vlist_hash[w.route.region] = []	# Yes, a region/system can get the same vertex multiple times
+            rg_vlist_hash[w.route.region].append(self)	# from different routes. But HighwayGraph.matching_vertices_and_edges
+            w.route.system.vertices.append(self)	# gets rid of any redundancy when making the final set.
 
     # printable string
     def __str__(self):
@@ -2187,7 +2187,7 @@ class HighwayGraph:
         vertex_names = set()
         self.vertices = {}
         # hash table containing a set of vertices for each region
-        self.rg_vset_hash = {}
+        self.rg_vlist_hash = {}
 	# create lists of graph points in or colocated with active/preview
 	# systems, either singleton at at the front of their colocation lists
         hi_priority_points = []
@@ -2230,7 +2230,7 @@ class HighwayGraph:
 
             # we're good; now add point_name to the set and construct a vertex
             vertex_names.add(point_name)
-            self.vertices[w] = HGVertex(w, point_name, datacheckerrors, self.rg_vset_hash)
+            self.vertices[w] = HGVertex(w, point_name, datacheckerrors, self.rg_vlist_hash)
 
             # active/preview colocation lists are no longer needed; clear them
             del w.ap_coloc
@@ -2294,7 +2294,7 @@ class HighwayGraph:
                         HGEdge(vertex=v, fmt_mask=2)
         print("!")
 
-    def matching_vertices_and_edges(self, qt, regions, systems, placeradius, rg_vset_hash):
+    def matching_vertices_and_edges(self, qt, regions, systems, placeradius, rg_vlist_hash):
         # return seven items:
         # mvset		 # a set of vertices, optionally restricted by region or system or placeradius area
         cv_count = 0	 # the number of collapsed vertices in this set
@@ -2309,10 +2309,12 @@ class HighwayGraph:
         svset = set()	# union of all sets in systems
         if regions is not None:
             for r in regions:
-                rvset = rvset | rg_vset_hash[r]
+                for v in rg_vlist_hash[r]:
+                  rvset.add(v)
         if systems is not None:
             for h in systems:
-                svset = svset | h.vertices
+                for v in h.vertices:
+                    svset.add(v)
         if placeradius is not None:
             pvset = set()
             placeradius.vertices(pvset, qt, self)
@@ -2502,7 +2504,7 @@ class HighwayGraph:
         simplefile = open(path+root+"-simple.tmg","w",encoding='utf-8')
         collapfile = open(path+root+".tmg","w",encoding='utf-8')
         travelfile = open(path+root+"-traveled.tmg","w",encoding='utf-8')
-        (mv, cv_count, tv_count, mse, mce, mte, traveler_lists) = self.matching_vertices_and_edges(qt, regions, systems, placeradius, self.rg_vset_hash)
+        (mv, cv_count, tv_count, mse, mce, mte, traveler_lists) = self.matching_vertices_and_edges(qt, regions, systems, placeradius, self.rg_vlist_hash)
         """if len(traveler_lists) == 0:
             print("\n\nNo travelers in " + root + "\n", flush=True)#"""
         # assign traveler numbers

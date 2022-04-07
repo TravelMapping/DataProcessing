@@ -141,9 +141,9 @@ size_t HighwaySystem::con_route_index(ConnectedRoute* cr)
 	return -1; // error, ConnectedRoute not found
 }
 
-void HighwaySystem::insert_vertex(HGVertex* v)
+void HighwaySystem::add_vertex(HGVertex* v)
 {	lniu_mtx.lock();	// re-use an existing mutex...
-	vertices.insert(v);
+	vertices.push_back(v);
 	lniu_mtx.unlock();	// ...rather than make a new one
 }
 

@@ -3,7 +3,6 @@ class HGVertex;
 #include <mutex>
 #include <string>
 #include <unordered_map>
-#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -45,7 +44,7 @@ class Region
 	double active_preview_mileage;
 	double overall_mileage;
 	std::mutex mtx;
-	std::unordered_set<HGVertex*> vertices;
+	std::vector<HGVertex*> vertices;
 	bool is_valid;
 
 	static std::vector<Region*> allregions;
@@ -58,7 +57,7 @@ class Region
 
 	std::string &country_code();
 	std::string &continent_code();
-	void insert_vertex(HGVertex*);
+	void add_vertex(HGVertex*);
 };
 
 bool sort_regions_by_code(const Region*, const Region*);

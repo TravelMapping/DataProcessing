@@ -23,16 +23,16 @@ HGVertex::HGVertex(Waypoint *wpt, const std::string *n)
 	    // 2: visible in both traveled & collapsed graphs
 	if (!wpt->colocated)
 	{	if (!wpt->is_hidden) visibility = 2;
-		wpt->route->region->insert_vertex(this);
-		wpt->route->system->insert_vertex(this);
+		wpt->route->region->add_vertex(this);
+		wpt->route->system->add_vertex(this);
 		return;
 	}
 	for (Waypoint *w : *(wpt->colocated))
 	{	// will consider hidden iff all colocated waypoints are hidden
 		if (!w->is_hidden) visibility = 2;
-		w->route->region->insert_vertex(this);
-		w->route->system->insert_vertex(this);
-	}
+		w->route->region->add_vertex(this);	// Yes, a region/system can get the same vertex multiple times
+		w->route->system->add_vertex(this);	// from different routes. But HighwayGraph::matching_vertices_and_edges
+	}						// gets rid of any redundancy when making the final set.
 }
 
 HGVertex::~HGVertex()
