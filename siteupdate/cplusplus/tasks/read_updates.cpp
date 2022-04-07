@@ -105,3 +105,32 @@ while (getline(file, line))
 	systemupdates.push_back(fields);
 }
 file.close();
+
+// Read most recent update dates/times for .list files
+// one line for each traveler, containing 4 space-separated fields:
+// 0: username with .list extension
+// 1-3: date, time, and time zone as written by "git log -n 1 --pretty=%ci"
+file.open("listupdates.txt");
+if (file.is_open()) cout << et.et() << "Reading .list updates file." << endl;
+while(getline(file, line))
+{	size_t NumFields = 4;
+	string** fields = new string*[4];
+	fields[0] = new string;	// deleted upon construction of unordered_map element
+	fields[1] = new string;	// deleted @ end of TravelerList ctor
+	fields[2] = new string;	// deleted once written to user log
+	fields[3] = new string;	// deleted once written to user log
+	split(line, fields, NumFields, ' ');
+	if (NumFields != 4)
+	{	cout << "WARNING: Could not parse listupdates.txt line: [" << line
+		     << "], expected 4 fields, found " << std::to_string(NumFields) << endl;
+		delete fields[0];
+		delete fields[1];
+		delete fields[2];
+		delete fields[3];
+		delete[] fields;
+		continue;
+	}
+	TravelerList::listupdates[*fields[0]] = fields;
+	delete fields[0];
+}
+file.close();
