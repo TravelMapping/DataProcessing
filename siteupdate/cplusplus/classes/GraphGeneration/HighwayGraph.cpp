@@ -397,25 +397,13 @@ void HighwayGraph::write_subgraphs_tmg
 	unsigned int sv = 0;
 	unsigned int cv = 0;
 	unsigned int tv = 0;
+	char fstr[57];
 	for (HGVertex *v : mv)
-	{	char fstr[57];
-		sprintf(fstr, " %.15g %.15g", v->lat, v->lng);
-		// all vertices for simple graph
-		simplefile << *(v->unique_name) << fstr << '\n';
-		v->s_vertex_num[threadnum] = sv;
-		sv++;
-		// visible vertices...
-		if (v->visibility >= 1)
-		{	// for traveled graph,
-			travelfile << *(v->unique_name) << fstr << '\n';
-			v->t_vertex_num[threadnum] = tv;
-			tv++;
-			if (v->visibility == 2)
-			{	// and for collapsed graph
-				collapfile << *(v->unique_name) << fstr << '\n';
-				v->c_vertex_num[threadnum] = cv;
-				cv++;
-			}
+	{	sprintf(fstr, " %.15g %.15g", v->lat, v->lng);
+		switch(v->visibility) // fall-thru is a Good Thing!
+		{ case 2:  collapfile << *(v->unique_name) << fstr << '\n'; v->c_vertex_num[threadnum] = cv++;
+		  case 1:  travelfile << *(v->unique_name) << fstr << '\n'; v->t_vertex_num[threadnum] = tv++;
+		  default: simplefile << *(v->unique_name) << fstr << '\n'; v->s_vertex_num[threadnum] = sv++;
 		}
 	}
 	// write edges
@@ -425,7 +413,6 @@ void HighwayGraph::write_subgraphs_tmg
 		e->segment->write_label(simplefile, GRAPH(0).systems);
 		simplefile << '\n';
 	}
-	char fstr[57];
 	for (HGEdge *e : mce)
 		e->collapsed_tmg_line(collapfile, fstr, threadnum, GRAPH(0).systems);
 	for (HGEdge *e : mte)
