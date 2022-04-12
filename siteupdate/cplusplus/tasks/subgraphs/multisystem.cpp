@@ -1,4 +1,3 @@
-#define ADDGRAPH(F) GraphListEntry::entries.emplace_back(fields[1], fields[0], F, 'S', (list<Region*>*)0, systems, (PlaceRadius*)0)
 // Some additional interesting graphs, the "multisystem" graphs
 #ifndef threading_enabled
 cout << et.et() << "Creating multisystem graphs." << endl;
@@ -34,10 +33,7 @@ while (getline(file, line))
 	    {	systems->push_back(h);
 		break;
 	    }
-	ADDGRAPH('s');
-	ADDGRAPH('c');
-	ADDGRAPH('t');
-	#undef ADDGRAPH
+	GraphListEntry::add_group(fields[1], fields[0], 'S', nullptr, systems, nullptr);
 	delete[] cline;
 }
 file.close();

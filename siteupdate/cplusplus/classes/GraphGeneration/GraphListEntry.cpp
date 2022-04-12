@@ -6,15 +6,21 @@
 std::vector<GraphListEntry> GraphListEntry::entries;
 size_t GraphListEntry::num; // iterator for entries
 
-GraphListEntry::GraphListEntry(std::string r, std::string d, char f, char c, std::list<Region*> *rg, std::list<HighwaySystem*> *sys, PlaceRadius *pr)
-{	root = r;
-	descr = d;
-	form = f;
-	cat = c;
+// master graph constructor
+GraphListEntry::GraphListEntry(char f, unsigned int v, unsigned int e, unsigned int t):
+	root("tm-master"), descr("All Travel Mapping Data"),
+	vertices(v), edges(e), travelers(t),
+	form(f), cat('M') {}
 
-	regions = rg;
-	systems = sys;
-	placeradius = pr;
+// subgraph constructor
+GraphListEntry::GraphListEntry(std::string r, std::string d, char f, char c, std::list<Region*> *rg, std::list<HighwaySystem*> *sys, PlaceRadius *pr):
+	regions(rg), systems(sys), placeradius(pr),
+	root(r), descr(d), form(f), cat(c) {}
+
+void GraphListEntry::add_group(std::string&& r, std::string&& d, char c, std::list<Region*> *rg, std::list<HighwaySystem*> *sys, PlaceRadius *pr)
+{	GraphListEntry::entries.emplace_back(r, d, 's', c, rg, sys, pr);
+	GraphListEntry::entries.emplace_back(r, d, 'c', c, rg, sys, pr);
+	GraphListEntry::entries.emplace_back(r, d, 't', c, rg, sys, pr);
 }
 
 std::string GraphListEntry::filename()

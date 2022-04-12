@@ -65,29 +65,18 @@ std::string HighwaySegment::segment_name()
 	return "";
 }//*/
 
-std::string HighwaySegment::clinchedby_code(std::list<TravelerList*> *traveler_lists, unsigned int threadnum)
-{	// Return a hexadecimal string encoding which travelers have clinched this segment, for use in "traveled" graph files
-	// Each character stores info for traveler #n thru traveler #n+3
+const char* HighwaySegment::clinchedby_code(std::list<TravelerList*> *traveler_lists, char* code, unsigned int threadnum)
+{	// Compute a hexadecimal string encoding which travelers
+	// have clinched this segment, for use in "traveled" graph files.
+	// Each character stores info for traveler #n thru traveler #n+3.
 	// The first character stores traveler 0 thru traveler 3,
 	// The second character stores traveler 4 thru traveler 7, etc.
 	// For each character, the low-order bit stores traveler n, and the high bit traveler n+3.
 
 	if (traveler_lists->empty()) return "0";
-	std::string code(ceil(double(traveler_lists->size())/4), '0');
-	//std::cout << str() << " code string initialized (" << clinched_by.size() << '/' << traveler_lists->size() << ')' << std::endl;
-	//unsigned int num = 0;
 	for (TravelerList* t : clinched_by)
-	{	//std::cout << "\t" << num << ": TravNum = " << t->traveler_num[threadnum] << ": " << t->traveler_name << std::endl;
-		//std::cout << "\t" << num << ": TravNum/4 = " << t->traveler_num[threadnum]/4 << std::endl;
-		//std::cout << "\t" << num << ": TravNum%4 = " << TravNum%4 << std::endl;
-		//std::cout << "\t" << num << ": 2 ^ TravNum%4 = " << pow(2, TravNum%4) << std::endl;
-		//std::cout << "\t" << num << ": code[" << TravNum/4 << "] += int(" << pow(2, TravNum%4) << ")" << std::endl;
 		code[t->traveler_num[threadnum]/4] += 1 << t->traveler_num[threadnum]%4;
-		//num++;
-	}
-	//std::cout << "travelers written to array" << std::endl;
-	for (char &nibble : code) if (nibble > '9') nibble += 7;
-	//std::cout << "nibbles >9 -> letters" << std::endl;
+	for (char* nibble = code; *nibble; ++nibble) if (*nibble > '9') *nibble += 7;
 	return code;
 }
 

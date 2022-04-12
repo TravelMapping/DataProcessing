@@ -21,6 +21,6 @@ class HGVertex
 	int *t_vertex_num;
 	char visibility;
 
-	HGVertex(Waypoint*, const std::string*);
+	void setup(Waypoint*, const std::string*);
 	~HGVertex();
 };

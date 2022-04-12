@@ -21,6 +21,6 @@ class PlaceRadius
 
 	bool contains_vertex(HGVertex *);
 	bool contains_vertex(double, double);
-	std::unordered_set<HGVertex*> vertices(WaypointQuadtree *, HighwayGraph *);
-	std::unordered_set<HGVertex*> v_search(WaypointQuadtree *, HighwayGraph *, double, double);
+	void vertices(std::unordered_set<HGVertex*>&, WaypointQuadtree *);
+	void v_search(std::unordered_set<HGVertex*>&, WaypointQuadtree *, double, double);
 };

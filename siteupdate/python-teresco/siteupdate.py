@@ -1318,7 +1318,7 @@ class HighwaySystem:
         self.tier = tier
         self.level = level
         self.mileage_by_region = dict()
-        self.vertices = set()
+        self.vertices = []
         self.listnamesinuse = set()
         self.unusedaltroutenames = set()
 
@@ -1836,7 +1836,7 @@ class HGVertex:
     vertex.
     """
 
-    def __init__(self,wpt,unique_name,datacheckerrors,rg_vset_hash):
+    def __init__(self,wpt,unique_name,datacheckerrors,rg_vlist_hash):
         self.lat = wpt.lat
         self.lng = wpt.lng
         self.unique_name = unique_name
@@ -1851,19 +1851,19 @@ class HGVertex:
         if wpt.colocated is None:
             if not wpt.is_hidden:
                 self.visibility = 2
-            wpt.route.system.vertices.add(self)
-            if wpt.route.region not in rg_vset_hash:
-                rg_vset_hash[wpt.route.region] = set()
-            rg_vset_hash[wpt.route.region].add(self)
+            if wpt.route.region not in rg_vlist_hash:
+                rg_vlist_hash[wpt.route.region] = []
+            rg_vlist_hash[wpt.route.region].append(self)
+            wpt.route.system.vertices.append(self)
             return
         for w in wpt.colocated:
             # will consider hidden iff all colocated waypoints are hidden
             if not w.is_hidden:
                 self.visibility = 2
-            if w.route.region not in rg_vset_hash:
-                rg_vset_hash[w.route.region] = set()
-            rg_vset_hash[w.route.region].add(self)
-            w.route.system.vertices.add(self)
+            if w.route.region not in rg_vlist_hash:
+                rg_vlist_hash[w.route.region] = []	# Yes, a region/system can get the same vertex multiple times
+            rg_vlist_hash[w.route.region].append(self)	# from different routes. But HighwayGraph.matching_vertices_and_edges
+            w.route.system.vertices.append(self)	# gets rid of any redundancy when making the final set.
 
     # printable string
     def __str__(self):
@@ -2108,15 +2108,15 @@ class PlaceRadius:
 
         return ans <= self.r
 
-    def vertices(self, qt, g):
-        # Compute and return a set of graph vertices within r miles of (lat, lng).
+    def vertices(self, vertex_set, qt, g):
+        # Compute a set of graph vertices within r miles of (lat, lng).
         # This function handles setup & sanity checks, passing control over
         # to the recursive v_search function to do the actual searching.
 
         # N/S sanity check: If lat is <= r/2 miles to the N or S pole, lngdelta calculation will fail.
         # In these cases, our place radius will span the entire "width" of the world, from -180 to +180 degrees.
         if math.radians(90-abs(self.lat)) <= self.r/7926.2:
-            return self.v_search(qt, g, -180, +180)
+            return self.v_search(vertex_set, qt, g, -180, +180)
 
         # width, in degrees longitude, of our bounding box for quadtree search
         rlat = math.radians(self.lat)
@@ -2125,28 +2125,25 @@ class PlaceRadius:
         e_bound = self.lng+lngdelta
 
         # normal operation; search quadtree within calculated bounds
-        vertex_set = self.v_search(qt, g, w_bound, e_bound);
+        self.v_search(vertex_set, qt, g, w_bound, e_bound);
 
         # If bounding box spans international date line to west of -180 degrees,
         # search quadtree within the corresponding range of positive longitudes
         if w_bound <= -180:
             while w_bound <= -180:
                 w_bound += 360
-            vertex_set = vertex_set | self.v_search(qt, g, w_bound, 180)
+            self.v_search(vertex_set, qt, g, w_bound, 180)
 
         # If bounding box spans international date line to east of +180 degrees,
         # search quadtree within the corresponding range of negative longitudes
         if e_bound >= 180:
             while e_bound >= 180:
                 e_bound -= 360
-            vertex_set = vertex_set | self.v_search(qt, g, -180, e_bound)
+            self.v_search(vertex_set, qt, g, -180, e_bound)
 
-        return vertex_set
-
-    def v_search(self, qt, g, w_bound, e_bound):
-        # recursively search quadtree for waypoints within this PlaceRadius area, and return a set
-        # of their corresponding graph vertices to return to the PlaceRadius.vertices function
-        vertex_set = set()
+    def v_search(self, vertex_set, qt, g, w_bound, e_bound):
+        # recursively search quadtree for waypoints within this PlaceRadius
+        # area, and populate a set of their corresponding graph vertices
 
         # first check if this is a terminal quadrant, and if it is,
         # we search for vertices within this quadrant
@@ -2165,14 +2162,13 @@ class PlaceRadius:
             #print("DEBUG: recursive case, " + str(look_n) + " " + str(look_s) + " " + str(look_e) + " " + str(look_w))
             # now look in the appropriate child quadrants
             if look_n and look_w:
-                vertex_set = vertex_set | self.v_search(qt.nw_child, g, w_bound, e_bound)
+                self.v_search(vertex_set, qt.nw_child, g, w_bound, e_bound)
             if look_n and look_e:
-                vertex_set = vertex_set | self.v_search(qt.ne_child, g, w_bound, e_bound)
+                self.v_search(vertex_set, qt.ne_child, g, w_bound, e_bound)
             if look_s and look_w:
-                vertex_set = vertex_set | self.v_search(qt.sw_child, g, w_bound, e_bound)
+                self.v_search(vertex_set, qt.sw_child, g, w_bound, e_bound)
             if look_s and look_e:
-                vertex_set = vertex_set | self.v_search(qt.se_child, g, w_bound, e_bound)
-        return vertex_set;
+                self.v_search(vertex_set, qt.se_child, g, w_bound, e_bound)
 
 class HighwayGraph:
     """This class implements the capability to create graph
@@ -2191,7 +2187,7 @@ class HighwayGraph:
         vertex_names = set()
         self.vertices = {}
         # hash table containing a set of vertices for each region
-        self.rg_vset_hash = {}
+        self.rg_vlist_hash = {}
 	# create lists of graph points in or colocated with active/preview
 	# systems, either singleton at at the front of their colocation lists
         hi_priority_points = []
@@ -2203,6 +2199,7 @@ class HighwayGraph:
         self.waypoint_naming_log = []
 
         counter = 0
+        self.se = 0
         print(et.et() + "Creating unique names and vertices", end="", flush=True)
         for w in hi_priority_points + lo_priority_points:
             if counter % 10000 == 0:
@@ -2234,13 +2231,17 @@ class HighwayGraph:
 
             # we're good; now add point_name to the set and construct a vertex
             vertex_names.add(point_name)
-            self.vertices[w] = HGVertex(w, point_name, datacheckerrors, self.rg_vset_hash)
+            self.vertices[w] = HGVertex(w, point_name, datacheckerrors, self.rg_vlist_hash)
 
             # active/preview colocation lists are no longer needed; clear them
             del w.ap_coloc
 
-        # now that vertices are in place with names, set of unique names is no longer needed
+        self.cv = len(self.vertices)
+        self.tv = len(self.vertices)
+        # now that vertices are in place, we don't need a few variables
         del vertex_names
+        del lo_priority_points
+        del hi_priority_points
 
         # create edges
         counter = 0
@@ -2254,7 +2255,10 @@ class HighwayGraph:
             for r in h.route_list:
                 for s in r.segment_list:
                     if s.concurrent is None or s == s.concurrent[0]:
+                        self.se += 1
                         HGEdge(s, self)
+        self.ce = self.se
+        self.te = self.se
 
         # compress edges adjacent to hidden vertices
         counter = 0
@@ -2287,9 +2291,13 @@ class HighwayGraph:
                             v.visibility = 1
                             break
                 # construct from vertex this time
+                self.ce -= 1
+                self.cv -= 1
                 if v.visibility == 1:
                     HGEdge(vertex=v, fmt_mask=1)
                 else:
+                    self.te -= 1
+                    self.tv -= 1
                     if (v.incident_c_edges[0] == v.incident_t_edges[0] and v.incident_c_edges[1] == v.incident_t_edges[1]) \
                     or (v.incident_c_edges[0] == v.incident_t_edges[1] and v.incident_c_edges[1] == v.incident_t_edges[0]):
                         HGEdge(vertex=v, fmt_mask=3)
@@ -2298,7 +2306,7 @@ class HighwayGraph:
                         HGEdge(vertex=v, fmt_mask=2)
         print("!")
 
-    def matching_vertices_and_edges(self, qt, regions, systems, placeradius, rg_vset_hash):
+    def matching_vertices_and_edges(self, qt, regions, systems, placeradius, rg_vlist_hash):
         # return seven items:
         # mvset		 # a set of vertices, optionally restricted by region or system or placeradius area
         cv_count = 0	 # the number of collapsed vertices in this set
@@ -2313,12 +2321,15 @@ class HighwayGraph:
         svset = set()	# union of all sets in systems
         if regions is not None:
             for r in regions:
-                rvset = rvset | rg_vset_hash[r]
+                for v in rg_vlist_hash[r]:
+                  rvset.add(v)
         if systems is not None:
             for h in systems:
-                svset = svset | h.vertices
+                for v in h.vertices:
+                    svset.add(v)
         if placeradius is not None:
-            pvset = placeradius.vertices(qt, self)
+            pvset = set()
+            placeradius.vertices(pvset, qt, self)
 
         # determine which vertices are within our PlaceRadius, region(s) and/or system(s)
         if regions is not None:
@@ -2411,32 +2422,14 @@ class HighwayGraph:
         simplefile = open(path+"tm-master-simple.tmg","w",encoding='utf-8')
         collapfile = open(path+"tm-master.tmg","w",encoding='utf-8')
         travelfile = open(path+"tm-master-traveled.tmg","w",encoding='utf-8')
-        cv = 0
-        tv = 0
-        se = 0
-        ce = 0
-        te = 0
-
-        # count vertices & edges
-        for v in self.vertices.values():
-            se += len(v.incident_s_edges)
-            if v.visibility >= 1:
-                tv += 1
-                te += len(v.incident_t_edges)
-                if v.visibility == 2:
-                    cv += 1
-                    ce += len(v.incident_c_edges)
-        se //= 2;
-        ce //= 2;
-        te //= 2;
 
         # write graph headers
         simplefile.write("TMG 1.0 simple\n")
         collapfile.write("TMG 1.0 collapsed\n")
         travelfile.write("TMG 2.0 traveled\n")
-        simplefile.write(str(len(self.vertices)) + ' ' + str(se) + '\n')
-        collapfile.write(str(cv) + ' ' + str(ce) + '\n')
-        travelfile.write(str(tv) + ' ' + str(te) + ' ' + str(len(traveler_lists)) + '\n')
+        simplefile.write(str(len(self.vertices)) + ' ' + str(self.se) + '\n')
+        collapfile.write(str(self.cv) + ' ' + str(self.ce) + '\n')
+        travelfile.write(str(self.tv) + ' ' + str(self.te) + ' ' + str(len(traveler_lists)) + '\n')
 
         # write vertices
         sv = 0
@@ -2485,16 +2478,16 @@ class HighwayGraph:
         simplefile.close()
         collapfile.close()
         travelfile.close()
-        graph_list.append(GraphListEntry('tm-master-simple.tmg', 'All Travel Mapping Data', sv, se, 0, 'simple', 'master'))
-        graph_list.append(GraphListEntry('tm-master.tmg', 'All Travel Mapping Data', cv, ce, 0, 'collapsed', 'master'))
-        graph_list.append(GraphListEntry('tm-master-traveled.tmg', 'All Travel Mapping Data', tv, te, len(traveler_lists), 'traveled', 'master'))
+        graph_list.append(GraphListEntry('tm-master-simple.tmg', 'All Travel Mapping Data', sv, self.se, 0, 'simple', 'master'))
+        graph_list.append(GraphListEntry('tm-master.tmg', 'All Travel Mapping Data', cv, self.ce, 0, 'collapsed', 'master'))
+        graph_list.append(GraphListEntry('tm-master-traveled.tmg', 'All Travel Mapping Data', tv, self.te, len(traveler_lists), 'traveled', 'master'))
         # print summary info
         print("   Simple graph has " + str(len(self.vertices)) +
-              " vertices, " + str(se) + " edges.")
+              " vertices, " + str(self.se) + " edges.")
         print("Collapsed graph has " + str(cv) +
-              " vertices, " + str(ce) + " edges.")
+              " vertices, " + str(self.ce) + " edges.")
         print(" Traveled graph has " + str(tv) +
-              " vertices, " + str(te) + " edges.")
+              " vertices, " + str(self.te) + " edges.")
 
     # write a subset of the data,
     # in simple, collapsed and traveled formats,
@@ -2505,7 +2498,7 @@ class HighwayGraph:
         simplefile = open(path+root+"-simple.tmg","w",encoding='utf-8')
         collapfile = open(path+root+".tmg","w",encoding='utf-8')
         travelfile = open(path+root+"-traveled.tmg","w",encoding='utf-8')
-        (mv, cv_count, tv_count, mse, mce, mte, traveler_lists) = self.matching_vertices_and_edges(qt, regions, systems, placeradius, self.rg_vset_hash)
+        (mv, cv_count, tv_count, mse, mce, mte, traveler_lists) = self.matching_vertices_and_edges(qt, regions, systems, placeradius, self.rg_vlist_hash)
         """if len(traveler_lists) == 0:
             print("\n\nNo travelers in " + root + "\n", flush=True)#"""
         # assign traveler numbers
@@ -3809,7 +3802,6 @@ else:
         lines = file.readlines()
     file.close()
     lines.pop(0);  # ignore header line
-    area_list = []
     for line in lines:
         line=line.strip()
         if len(line) == 0:
@@ -3847,9 +3839,7 @@ else:
             if fields[4] <= 0:
                 el.add_error("invalid radius in areagraphs.csv line: " + line)
                 fields[4] = 1
-        area_list.append(PlaceRadius(*fields))
-
-    for a in area_list:
+        a = PlaceRadius(*fields)
         print(a.title + '(' + str(a.r) + ') ', end="", flush=True)
         graph_data.write_subgraphs_tmg(graph_list, args.graphfilepath + "/", a.title + str(a.r) + "-area",
                                        a.descr + " (" + str(a.r) + " mi radius)", "area",

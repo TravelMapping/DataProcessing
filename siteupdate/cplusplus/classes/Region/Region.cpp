@@ -66,9 +66,9 @@ std::string& Region::continent_code()
 {	return continent->first;
 }
 
-void Region::insert_vertex(HGVertex* v)
+void Region::add_vertex(HGVertex* v)
 {	mtx.lock();
-	vertices.insert(v);
+	vertices.push_back(v);
 	mtx.unlock();
 }
 

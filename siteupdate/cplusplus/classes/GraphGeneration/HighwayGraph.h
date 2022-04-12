@@ -28,14 +28,15 @@ class HighwayGraph
 	public:
 	std::unordered_set<std::string> vertex_names[256];	// unique vertex labels
 	std::list<std::string> waypoint_naming_log;		// to track waypoint name compressions
-	std::vector<HGVertex*> vertices;
 	std::mutex set_mtx[256], log_mtx;
+	std::vector<HGVertex> vertices;
+	unsigned int cv, tv, se, ce, te;			// vertex & edge counts
 
 	HighwayGraph(WaypointQuadtree&, ElapsedTime&);
 
 	void clear();
 	void namelog(std::string&&);
-	void simplify(int, std::vector<Waypoint*>*, unsigned int*, std::vector<HGVertex*>*);
+	void simplify(int, std::vector<Waypoint*>*, unsigned int*, const size_t);
 	inline std::pair<std::unordered_set<std::string>::iterator,bool> vertex_name(std::string&);
 
 	inline void matching_vertices_and_edges
