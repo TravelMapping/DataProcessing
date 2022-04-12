@@ -2199,6 +2199,7 @@ class HighwayGraph:
         self.waypoint_naming_log = []
 
         counter = 0
+        self.se = 0
         print(et.et() + "Creating unique names and vertices", end="", flush=True)
         for w in hi_priority_points + lo_priority_points:
             if counter % 10000 == 0:
@@ -2235,8 +2236,12 @@ class HighwayGraph:
             # active/preview colocation lists are no longer needed; clear them
             del w.ap_coloc
 
-        # now that vertices are in place with names, set of unique names is no longer needed
+        self.cv = len(self.vertices)
+        self.tv = len(self.vertices)
+        # now that vertices are in place, we don't need a few variables
         del vertex_names
+        del lo_priority_points
+        del hi_priority_points
 
         # create edges
         counter = 0
@@ -2250,7 +2255,10 @@ class HighwayGraph:
             for r in h.route_list:
                 for s in r.segment_list:
                     if s.concurrent is None or s == s.concurrent[0]:
+                        self.se += 1
                         HGEdge(s, self)
+        self.ce = self.se
+        self.te = self.se
 
         # compress edges adjacent to hidden vertices
         counter = 0
@@ -2283,9 +2291,13 @@ class HighwayGraph:
                             v.visibility = 1
                             break
                 # construct from vertex this time
+                self.ce -= 1
+                self.cv -= 1
                 if v.visibility == 1:
                     HGEdge(vertex=v, fmt_mask=1)
                 else:
+                    self.te -= 1
+                    self.tv -= 1
                     if (v.incident_c_edges[0] == v.incident_t_edges[0] and v.incident_c_edges[1] == v.incident_t_edges[1]) \
                     or (v.incident_c_edges[0] == v.incident_t_edges[1] and v.incident_c_edges[1] == v.incident_t_edges[0]):
                         HGEdge(vertex=v, fmt_mask=3)
@@ -2410,32 +2422,14 @@ class HighwayGraph:
         simplefile = open(path+"tm-master-simple.tmg","w",encoding='utf-8')
         collapfile = open(path+"tm-master.tmg","w",encoding='utf-8')
         travelfile = open(path+"tm-master-traveled.tmg","w",encoding='utf-8')
-        cv = 0
-        tv = 0
-        se = 0
-        ce = 0
-        te = 0
-
-        # count vertices & edges
-        for v in self.vertices.values():
-            se += len(v.incident_s_edges)
-            if v.visibility >= 1:
-                tv += 1
-                te += len(v.incident_t_edges)
-                if v.visibility == 2:
-                    cv += 1
-                    ce += len(v.incident_c_edges)
-        se //= 2;
-        ce //= 2;
-        te //= 2;
 
         # write graph headers
         simplefile.write("TMG 1.0 simple\n")
         collapfile.write("TMG 1.0 collapsed\n")
         travelfile.write("TMG 2.0 traveled\n")
-        simplefile.write(str(len(self.vertices)) + ' ' + str(se) + '\n')
-        collapfile.write(str(cv) + ' ' + str(ce) + '\n')
-        travelfile.write(str(tv) + ' ' + str(te) + ' ' + str(len(traveler_lists)) + '\n')
+        simplefile.write(str(len(self.vertices)) + ' ' + str(self.se) + '\n')
+        collapfile.write(str(self.cv) + ' ' + str(self.ce) + '\n')
+        travelfile.write(str(self.tv) + ' ' + str(self.te) + ' ' + str(len(traveler_lists)) + '\n')
 
         # write vertices
         sv = 0
@@ -2484,16 +2478,16 @@ class HighwayGraph:
         simplefile.close()
         collapfile.close()
         travelfile.close()
-        graph_list.append(GraphListEntry('tm-master-simple.tmg', 'All Travel Mapping Data', sv, se, 0, 'simple', 'master'))
-        graph_list.append(GraphListEntry('tm-master.tmg', 'All Travel Mapping Data', cv, ce, 0, 'collapsed', 'master'))
-        graph_list.append(GraphListEntry('tm-master-traveled.tmg', 'All Travel Mapping Data', tv, te, len(traveler_lists), 'traveled', 'master'))
+        graph_list.append(GraphListEntry('tm-master-simple.tmg', 'All Travel Mapping Data', sv, self.se, 0, 'simple', 'master'))
+        graph_list.append(GraphListEntry('tm-master.tmg', 'All Travel Mapping Data', cv, self.ce, 0, 'collapsed', 'master'))
+        graph_list.append(GraphListEntry('tm-master-traveled.tmg', 'All Travel Mapping Data', tv, self.te, len(traveler_lists), 'traveled', 'master'))
         # print summary info
         print("   Simple graph has " + str(len(self.vertices)) +
-              " vertices, " + str(se) + " edges.")
+              " vertices, " + str(self.se) + " edges.")
         print("Collapsed graph has " + str(cv) +
-              " vertices, " + str(ce) + " edges.")
+              " vertices, " + str(self.ce) + " edges.")
         print(" Traveled graph has " + str(tv) +
-              " vertices, " + str(te) + " edges.")
+              " vertices, " + str(self.te) + " edges.")
 
     # write a subset of the data,
     # in simple, collapsed and traveled formats,
@@ -3808,7 +3802,6 @@ else:
         lines = file.readlines()
     file.close()
     lines.pop(0);  # ignore header line
-    area_list = []
     for line in lines:
         line=line.strip()
         if len(line) == 0:
@@ -3846,9 +3839,7 @@ else:
             if fields[4] <= 0:
                 el.add_error("invalid radius in areagraphs.csv line: " + line)
                 fields[4] = 1
-        area_list.append(PlaceRadius(*fields))
-
-    for a in area_list:
+        a = PlaceRadius(*fields)
         print(a.title + '(' + str(a.r) + ') ', end="", flush=True)
         graph_data.write_subgraphs_tmg(graph_list, args.graphfilepath + "/", a.title + str(a.r) + "-area",
                                        a.descr + " (" + str(a.r) + " mi radius)", "area",

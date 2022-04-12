@@ -1,5 +1,3 @@
-#define ADDGRAPH(F) GraphListEntry::entries.emplace_back(\
-	countries[c].first + "-country", countries[c].second + " All Routes in Country", F, 'c', regions, (list<HighwaySystem*>*)0, (PlaceRadius*)0)
 // country graphs - we find countries that have regions
 // that have routes with active or preview mileage
 #ifndef threading_enabled
@@ -16,10 +14,10 @@ for (size_t c = 0; c < countries.size()-1; c++)
 	// does it have at least two?  if none, no data,
 	// if 1 we already generated a graph for that one region
 	if (regions->size() < 2) delete regions;
-	else {	ADDGRAPH('s');
-		ADDGRAPH('c');
-		ADDGRAPH('t');
-		#undef ADDGRAPH
+	else {	GraphListEntry::add_group(
+			countries[c].first + "-country",
+			countries[c].second + " All Routes in Country",
+			'c', regions, nullptr, nullptr);
 	     }
 }
 #ifndef threading_enabled

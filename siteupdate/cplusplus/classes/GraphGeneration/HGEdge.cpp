@@ -8,7 +8,7 @@
 #include "../Waypoint/Waypoint.h"
 #include "../../templates/contains.cpp"
 
-HGEdge::HGEdge(HighwaySegment *s, HighwayGraph *graph)
+HGEdge::HGEdge(HighwaySegment *s)
 {	// initial construction is based on a HighwaySegment
 	written = new char[Args::numthreads];
 		  // deleted by HGEdge::detach
@@ -158,10 +158,10 @@ void HGEdge::collapsed_tmg_line(std::ofstream& file, char* fstr, unsigned int th
 }
 
 // write line to tmg traveled edge file
-void HGEdge::traveled_tmg_line(std::ofstream& file, char* fstr, unsigned int threadnum, std::list<HighwaySystem*> *systems, std::list<TravelerList*> *traveler_lists)
+void HGEdge::traveled_tmg_line(std::ofstream& file, char* fstr, unsigned int threadnum, std::list<HighwaySystem*> *systems, std::list<TravelerList*> *traveler_lists, char* code)
 {	file << vertex1->t_vertex_num[threadnum] << ' ' << vertex2->t_vertex_num[threadnum] << ' ';
 	segment->write_label(file, systems);
-	file << ' ' << segment->clinchedby_code(traveler_lists, threadnum);
+	file << ' ' << segment->clinchedby_code(traveler_lists, code, threadnum);
 	for (HGVertex *intermediate : intermediate_points)
 	{	sprintf(fstr, " %.15g %.15g", intermediate->lat, intermediate->lng);
 		file << fstr;

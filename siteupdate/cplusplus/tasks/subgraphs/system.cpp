@@ -1,5 +1,3 @@
-#define ADDGRAPH(F) GraphListEntry::entries.emplace_back(\
-	h->systemname + "-system", h->systemname + " (" + h->fullname + ")", F, 's', (list<Region*>*)0, systems, (PlaceRadius*)0)
 // Graphs restricted by system - from systemgraphs.csv file
 #ifndef threading_enabled
 cout << et.et() << "Creating system data graphs." << endl;
@@ -21,10 +19,10 @@ while (getline(file, line))
 	if (h)
 	{	systems = new list<HighwaySystem*>(1, h);
 			  // deleted @ end of HighwayGraph::write_subgraphs_tmg
-		ADDGRAPH('s');
-		ADDGRAPH('c');
-		ADDGRAPH('t');
-		#undef ADDGRAPH
+		GraphListEntry::add_group(
+			h->systemname + "-system",
+			h->systemname + " (" + h->fullname + ")",
+			's', nullptr, systems, nullptr);
 	}
 }
 file.close();

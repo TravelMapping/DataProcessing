@@ -1,5 +1,3 @@
-#define ADDGRAPH(F) GraphListEntry::entries.emplace_back(\
-	region->code + "-region", region->name + " (" + region->type + ")", F, 'r', regions, (list<HighwaySystem*>*)0, (PlaceRadius*)0)
 // Graphs restricted by region
 #ifndef threading_enabled
 cout << et.et() << "Creating regional data graphs." << endl;
@@ -12,10 +10,10 @@ for (Region* region : Region::allregions)
 {	if (region->active_preview_mileage == 0) continue;
 	regions = new list<Region*>(1, region);
 		  // deleted @ end of HighwayGraph::write_subgraphs_tmg
-	ADDGRAPH('s');
-	ADDGRAPH('c');
-	ADDGRAPH('t');
-	#undef ADDGRAPH
+	GraphListEntry::add_group(
+		region->code + "-region",
+		region->name + " (" + region->type + ")",
+		'r', regions, nullptr, nullptr);
 }
 #ifndef threading_enabled
 // write new graph vector entries to disk

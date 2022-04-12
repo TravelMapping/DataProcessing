@@ -11,11 +11,14 @@ class GraphListEntry
 	(or function names if both are on the same line)
 	match column names in the "graphs" DB table. */
 	public:
+	// Info for use in threaded subgraph generation. Not used in DB.
+	std::list<Region*> *regions;
+	std::list<HighwaySystem*> *systems;
+	PlaceRadius *placeradius;
+
+	// Info for the "graphs" DB table
 	std::string root;	std::string filename();
 	std::string descr;
-	std::list<Region*> *regions;		// C++ only, not in DB or Python
-	std::list<HighwaySystem*> *systems;	// C++ only, not in DB or Python
-	PlaceRadius *placeradius;		// C++ only, not in DB or Python
 	unsigned int vertices;
 	unsigned int edges;
 	unsigned int travelers;
@@ -26,5 +29,7 @@ class GraphListEntry
 	static size_t num; // iterator for entries
 	std::string tag();
 
+	GraphListEntry(char, unsigned int, unsigned int, unsigned int); // < master graph ctor | v----- subgraph ctor -----v 
 	GraphListEntry(std::string, std::string, char, char, std::list<Region*>*, std::list<HighwaySystem*>*, PlaceRadius*);
+	static void add_group(std::string&&,  std::string&&,  char, std::list<Region*>*, std::list<HighwaySystem*>*, PlaceRadius*);
 };

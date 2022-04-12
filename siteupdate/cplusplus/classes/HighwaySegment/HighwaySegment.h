@@ -29,7 +29,7 @@ class HighwaySegment
 	std::string csv_line(unsigned int);
 	std::string segment_name();
 	//std::string concurrent_travelers_sanity_check();
-	std::string clinchedby_code(std::list<TravelerList*> *, unsigned int);
+	const char* clinchedby_code(std::list<TravelerList*>*, char*, unsigned int);
 	bool system_match(std::list<HighwaySystem*>*);
 	void write_label(std::ofstream&, std::list<HighwaySystem*> *);
 	void compute_stats_t(TravelerList*);

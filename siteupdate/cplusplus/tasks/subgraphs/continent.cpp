@@ -1,6 +1,3 @@
-#define ADDGRAPH(F) GraphListEntry::entries.emplace_back(\
-	continents[c].first + "-continent", continents[c].second + " All Routes on Continent", \
-	F, 'C', regions, (list<HighwaySystem*>*)0, (PlaceRadius*)0)
 // continent graphs -- any continent with data will be created
 #ifndef threading_enabled
 cout << et.et() << "Creating continent graphs." << endl;
@@ -15,10 +12,10 @@ for (size_t c = 0; c < continents.size()-1; c++)
 	    regions->push_back(r);
 	// generate for any continent with at least 1 region with mileage
 	if (regions->size() < 1) delete regions;
-	else {	ADDGRAPH('s');
-		ADDGRAPH('c');
-		ADDGRAPH('t');
-		#undef ADDGRAPH
+	else {	GraphListEntry::add_group(
+			continents[c].first + "-continent",
+			continents[c].second + " All Routes on Continent",
+			'C', regions, nullptr, nullptr);
 	     }
 }
 #ifndef threading_enabled

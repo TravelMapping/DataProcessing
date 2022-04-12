@@ -1,5 +1,3 @@
-#define ADDGRAPH(F) GraphListEntry::entries.emplace_back(\
-	fields[1], fields[0], F, 'R', regions, (list<HighwaySystem*>*)0, (PlaceRadius*)0)
 // Some additional interesting graphs, the "multiregion" graphs
 #ifndef threading_enabled
 cout << et.et() << "Creating multiregion graphs." << endl;
@@ -35,10 +33,7 @@ while (getline(file, line))
 	    {	regions->push_back(r);
 		break;
 	    }
-	ADDGRAPH('s');
-	ADDGRAPH('c');
-	ADDGRAPH('t');
-	#undef ADDGRAPH
+	GraphListEntry::add_group(fields[1], fields[0], 'R', regions, nullptr, nullptr);
 	delete[] cline;
 }
 file.close();

@@ -7,7 +7,7 @@
 #include "../Route/Route.h"
 #include "../Waypoint/Waypoint.h"
 
-HGVertex::HGVertex(Waypoint *wpt, const std::string *n)
+void HGVertex::setup(Waypoint *wpt, const std::string *n)
 {	lat = wpt->lat;
 	lng = wpt->lng;
 	wpt->vertex = this;
