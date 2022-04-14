@@ -420,6 +420,7 @@ void HighwayGraph::write_subgraphs_tmg
 	travelfile.close();
 	if (g->regions) delete g->regions;
 	if (g->systems) delete g->systems;
+	if (g->placeradius) delete g->placeradius;
 
 	g -> vertices = mv.size(); g -> edges = mse.size(); g -> travelers = 0;
 	g[1].vertices = cv_count;  g[1].edges = mce.size(); g[1].travelers = 0;
