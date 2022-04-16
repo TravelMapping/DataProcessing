@@ -660,10 +660,10 @@ int main(int argc, char *argv[])
 	  cout << "MISMATCH: all_waypoints contains " << all_waypoints.size() << " waypoints!" << endl;
 	cout << et.et() << "WaypointQuadtree contains " << all_waypoints.total_nodes() << " total nodes." << endl;
 
+	vector<unsigned int> colocate_counts(2,0);
 	if (!Args::errorcheck)
 	{	// compute colocation of waypoints stats
 		cout << et.et() << "Computing waypoint colocation stats, reporting all with 9 or more colocations:" << endl;
-		vector<unsigned int> colocate_counts(2,0);
 		all_waypoints.final_report(colocate_counts);
 		cout << "Waypoint colocation counts:" << endl;
 		unsigned int unique_locations = 0;
@@ -672,7 +672,7 @@ int main(int argc, char *argv[])
 			printf("%6i are each occupied by %2i waypoints.\n", colocate_counts[c], c);
 		}
 		cout << "Unique locations: " << unique_locations << endl;
-	}
+	} else	all_waypoints.final_report(colocate_counts);
 
 	/* EDB
 	cout << endl;

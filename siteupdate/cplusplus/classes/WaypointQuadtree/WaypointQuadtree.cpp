@@ -262,7 +262,7 @@ void WaypointQuadtree::final_report(std::vector<unsigned int>& colocate_counts)
 		else if (w == w->colocated->front())
 		{   while (w->colocated->size() >= colocate_counts.size()) colocate_counts.push_back(0);
 		    colocate_counts[w->colocated->size()] += 1;
-		    if (w->colocated->size() >= 9)
+		    if (w->colocated->size() >= 9 && !Args::errorcheck)
 		    {	printf("(%.15g, %.15g) is occupied by %i waypoints: ['", w->lat, w->lng, (unsigned int)w->colocated->size());
 			std::list<Waypoint*>::iterator p = w->colocated->begin();
 			std::cout << (*p)->route->root << ' ' << (*p)->label << '\'';
