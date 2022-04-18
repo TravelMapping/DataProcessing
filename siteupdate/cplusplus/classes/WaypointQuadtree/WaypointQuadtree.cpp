@@ -9,7 +9,7 @@
 #ifdef threading_enabled
 #include <thread>
 #endif
-inline bool WaypointQuadtree::WaypointQuadtree::refined()
+bool WaypointQuadtree::WaypointQuadtree::refined()
 {	return nw_child;
 }
 

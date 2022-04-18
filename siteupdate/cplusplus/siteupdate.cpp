@@ -247,9 +247,9 @@ int main(int argc, char *argv[])
 	}
 	else	cout << "All .wpt files in " << Args::highwaydatapath << "/hwy_data processed." << endl;
 
+      #ifdef threading_enabled
 	// create NMP lists
 	cout << et.et() << "Searching for near-miss points." << endl;
-      #ifdef threading_enabled
 	HighwaySystem::it = HighwaySystem::syslist.begin();
 	THREADLOOP thr[t] = thread(NmpSearchThread, t, &list_mtx, &all_waypoints);
 	THREADLOOP thr[t].join();
