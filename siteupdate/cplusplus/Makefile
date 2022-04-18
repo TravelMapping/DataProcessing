@@ -1,5 +1,5 @@
 CXX = clang++
-CXXFLAGS = -std=c++11 -Wno-comment -Wno-dangling-else -Wno-logical-op-parentheses
+CXXFLAGS = -O3 -std=c++11 -Wno-comment -Wno-dangling-else -Wno-logical-op-parentheses
 
 MTObjects = siteupdateMT.o functions/sql_fileMT.o threads/threads.o \
   classes/GraphGeneration/HighwayGraphMT.o \
