@@ -4013,6 +4013,92 @@ else:
                         'These graphs contain the routes on a continent.'])
     print("!")
 
+
+
+    # fully customizable graphs using any combination of PlaceRadius, region(s) & system(s)
+    try:
+        file = open(args.highwaydatapath+"/graphs/fullcustom.csv", "rt",encoding='utf-8')
+        print(et.et() + "Creating full custom graphs.", flush=True)
+        lines = file.readlines()
+        file.close()
+        lines.pop(0);  # ignore header line
+        for line in lines:
+            line = line.strip()
+            if len(line) == 0:
+                continue
+            fields = line.split(";")
+            if len(fields) != 7:
+                el.add_error("Could not parse fullcustom.csv line: [" + line +
+                             "], expected 7 fields, found " + str(len(fields)))
+                continue
+            if len(fields[0].encode('utf-8')) > DBFieldLength.graphDescr:
+                el.add_error("description > " + str(DBFieldLength.graphDescr) +
+                             " bytes in fullcustom.csv line: " + line)
+            if len(fields[1].encode('utf-8')) > DBFieldLength.graphFilename-14:
+                el.add_error("title > " + str(DBFieldLength.graphFilename-14) +
+                             " bytes in fullcustom.csv line: " + line)
+
+            # 3 columns of PlaceRadius data
+            placeradius = None
+            blanks = (fields[2] == "") + (fields[3] == "") + (fields[4] == "")
+            if blanks == 0:
+                # convert numeric fields
+                try:
+                    fields[2] = float(fields[2])
+                except ValueError:
+                    el.add_error("invalid lat in fullcustom.csv line: " + line)
+                    fields[2] = 0.0
+                try:
+                    fields[3] = float(fields[3])
+                except ValueError:
+                    el.add_error("invalid lng in fullcustom.csv line: " + line)
+                    fields[3] = 0.0
+                try:
+                    fields[4] = int(fields[4])
+                except ValueError:
+                    el.add_error("invalid radius in fullcustom.csv line: " + line)
+                    fields[4] = 1
+                else:
+                    if fields[4] <= 0:
+                        el.add_error("invalid radius in fullcustom.csv line: " + line)
+                        fields[4] = 1
+                placeradius = PlaceRadius(*fields[:5])
+            elif blanks != 3:
+                el.add_error("lat/lng/radius error in fullcustom.csv line: [" + \
+                             line + "], either all or none must be populated");
+                continue
+            elif fields[5] == "" and fields[6] == "":
+                el.add_error("Disallowed full custom graph in line: [" + \
+                             line + "], functionally identical to tm-master");
+                continue
+
+            # regionlist
+            if fields[5] == "":
+                region_list = None
+            else:
+                region_list = []
+                for r in all_regions:
+                    if r in fields[5].split(","):
+                        region_list.append(r)
+
+            # systemlist
+            if fields[6] == "":
+                systems = None
+            else:
+                systems = []
+                for h in highway_systems:
+                    if h.systemname in fields[6].split(","):
+                        systems.append(h)
+
+            graph_data.write_subgraphs_tmg(graph_list, args.graphfilepath + "/", fields[1],
+                                           fields[0], "fullcustom", region_list,
+                                           systems, placeradius, all_waypoints)
+        graph_types.append(['fullcustom', 'Full Custom Graphs',
+                        'These graphs can be restricted by any combination of one more more regions and one or more highway systems, and optionally within the given distance radius of a given place.'])
+        print("!")
+    except FileNotFoundError:
+        pass
+
 # data check: visit each system and route and check for various problems
 print(et.et() + "Performing data checks.",end="",flush=True)
 # perform most datachecks here (list initialized above)

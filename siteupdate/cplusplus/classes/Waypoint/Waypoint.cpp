@@ -5,6 +5,7 @@
 #include "../Route/Route.h"
 #include "../../functions/strd.h"
 #include "../../functions/valid_num_str.h"
+#include "../../templates/contains.cpp"
 #include <cmath>
 #include <cstring>
 #define pi 3.141592653589793238
@@ -274,6 +275,22 @@ Waypoint* Waypoint::hashpoint()
 	return colocated->front();
 }
 
+bool Waypoint::region_match(std::list<Region*>* regions)
+{	if (!regions) return 1;
+	if (!colocated) return contains(*regions, route->region);
+	for (Waypoint* w : *colocated)
+	  if (w->route->system->active_or_preview() && contains(*regions, w->route->region)) return 1;
+	return 0;
+}
+
+bool Waypoint::system_match(std::list<HighwaySystem*>* systems)
+{	if (!systems) return 1;
+	if (!colocated) return contains(*systems, route->system);
+	for (Waypoint* w : *colocated)
+	  if (contains(*systems, w->route->system)) return 1;
+	return 0;
+}
+
 bool Waypoint::label_references_route(Route *r)
 {	std::string no_abbrev = r->name_no_abbrev();
 	if ( strncmp(label.data(), no_abbrev.data(), no_abbrev.size()) )
@@ -291,6 +308,8 @@ bool Waypoint::label_references_route(Route *r)
 		Datacheck::add(route, label, "", "", "UNEXPECTED_DESIGNATION", label.data()+no_abbrev.size()+r->abbrev.size()+1);//*/
 	return 0;
 }
+
+/* Datacheck helper functions */
 
 Route* Waypoint::coloc_same_number(const char* digits)
 {	if (colocated)

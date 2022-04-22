@@ -10,7 +10,7 @@ void SubgraphThread
 			return;
 		}
 		//std::cout << "Thread " << id << " with graph_vector.size()=" << graph_vector->size() << " & index=" << GraphListEntry::num << std::endl;
-		//std::cout << "Thread " << id << " assigned " << graph_vector->at(GraphListEntry::num).tag() << std::endl;
+		//std::cout << "Thread " << id << " assigned " << GraphListEntry::entries.at(GraphListEntry::num).tag() << std::endl;
 		size_t i = GraphListEntry::num;
 		GraphListEntry::num += 3;
 		l->unlock();

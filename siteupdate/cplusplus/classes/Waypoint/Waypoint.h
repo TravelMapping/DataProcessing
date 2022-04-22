@@ -1,5 +1,7 @@
 class HGVertex;
 class HighwayGraph;
+class HighwaySystem;
+class Region;
 class Route;
 #include <forward_list>
 #include <fstream>
@@ -42,6 +44,8 @@ class Waypoint
 	std::string root_at_label();
 	void nmplogs(std::unordered_set<std::string> &, std::ofstream &, std::list<std::string> &);
 	Waypoint* hashpoint();
+	bool region_match(std::list<Region*>*);
+	bool system_match(std::list<HighwaySystem*>*);
 	bool label_references_route(Route *);
 	Route* coloc_same_number(const char*);
 	Route* coloc_same_designation(const std::string&);
