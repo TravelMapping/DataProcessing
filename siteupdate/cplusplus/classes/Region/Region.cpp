@@ -66,9 +66,9 @@ std::string& Region::continent_code()
 {	return continent->first;
 }
 
-void Region::add_vertex(HGVertex* v)
+void Region::add_vertex(HGVertex* v, Waypoint* w)
 {	mtx.lock();
-	vertices.push_back(v);
+	vertices.emplace_back(v,w);
 	mtx.unlock();
 }
 

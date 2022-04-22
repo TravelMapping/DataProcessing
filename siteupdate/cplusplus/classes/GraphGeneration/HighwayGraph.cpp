@@ -14,7 +14,6 @@
 #include "../Waypoint/Waypoint.h"
 #include "../WaypointQuadtree/WaypointQuadtree.h"
 #include "../../templates/contains.cpp"
-#include "../../templates/set_intersection.cpp"
 #include <cmath>
 #include <fstream>
 #include <thread>
@@ -26,7 +25,14 @@ HighwayGraph::HighwayGraph(WaypointQuadtree &all_waypoints, ElapsedTime &et)
 	// systems, either singleton at at the front of their colocation lists
 	std::vector<Waypoint*> hi_priority_points, lo_priority_points;
 	all_waypoints.graph_points(hi_priority_points, lo_priority_points);
+
+	// allocate vertices, and a bit field to track their inclusion in subgraphs
 	vertices.resize(hi_priority_points.size()+lo_priority_points.size());
+	vbytes = double(ceil(vertices.size())/8);
+	vbits = new unsigned char[vbytes*Args::numthreads];
+		// deleted by HighwayGraph::clear
+	for (size_t i = 0; i < vbytes*Args::numthreads; ++i) vbits[i] = 0;
+
 	std::cout << et.et() << "Creating unique names and vertices" << std::flush;
       #ifdef threading_enabled
 	if (Args::mtvertices)
@@ -121,7 +127,7 @@ HighwayGraph::HighwayGraph(WaypointQuadtree &all_waypoints, ElapsedTime &et)
 } // end ctor
 
 void HighwayGraph::clear()
-{	
+{	delete[] vbits;
 	for (int i=0;i<256;i++) vertex_names[i].clear();
 	waypoint_naming_log.clear();
 	vertices.clear();
@@ -183,45 +189,58 @@ void HighwayGraph::simplify(int t, std::vector<Waypoint*>* points, unsigned int 
 	}
 }
 
+// HGVertex subgraph membership
+bool HighwayGraph::subgraph_contains(HGVertex* v, const int threadnum)
+{	size_t index = v-vertices.data();
+	return vbits[threadnum*vbytes+index/8] & 1 << index%8;
+}
+void HighwayGraph::add_to_subgraph(HGVertex* v, const int threadnum)
+{	size_t index = v-vertices.data();
+	vbits[threadnum*vbytes+index/8] |= 1 << index%8;
+}
+void HighwayGraph::clear_vbit(HGVertex* v, const int threadnum)
+{	size_t index = v-vertices.data();
+	vbits[threadnum*vbytes+index/8] &= ~(1 << index%8);
+}
+
 inline void HighwayGraph::matching_vertices_and_edges
 (	GraphListEntry &g, WaypointQuadtree *qt,
 	std::list<TravelerList*> &traveler_lists,
-	std::unordered_set<HGVertex*> &mvset,	// final set of vertices matching all criteria
-	std::list<HGEdge*> &mse,		// matching    simple edges
-	std::list<HGEdge*> &mce,		// matching collapsed edges
-	std::list<HGEdge*> &mte,		// matching  traveled edges
+	std::vector<HGVertex*> &mvvec,	// final vector of vertices matching all criteria
+	std::vector<HGEdge*> &mse,	// matching    simple edges
+	std::vector<HGEdge*> &mce,	// matching collapsed edges
+	std::vector<HGEdge*> &mte,	// matching  traveled edges
 	int threadnum, unsigned int &cv_count, unsigned int &tv_count
 )
 {	// Find a set of vertices from the graph, optionally
 	// restricted by region or system or placeradius area.
-	std::unordered_set<HGVertex*> rvset;	// union of all sets in regions
-	std::unordered_set<HGVertex*> svset;	// union of all sets in systems
-	std::unordered_set<HGVertex*> pvset;	// set of vertices within placeradius
-
-	if (g.regions) for (Region *r : *g.regions)
-		rvset.insert(r->vertices.begin(), r->vertices.end());
-	if (g.systems) for (HighwaySystem *h : *g.systems)
-		svset.insert(h->vertices.begin(), h->vertices.end());
 	if (g.placeradius)
-		g.placeradius->vertices(pvset, qt);
-
-	// determine which vertices are within our PlaceRadius, region(s) and/or system(s)
-	if (g.regions)
-	{	mvset = std::move(rvset);
-		if (g.placeradius)	mvset = mvset & pvset;
-		if (g.systems)		mvset = mvset & svset;
-	}
-	else if (g.systems)
-	{	mvset = std::move(svset);
-		if (g.placeradius)	mvset = mvset & pvset;
-	}
-	else if (g.placeradius)
-		mvset = std::move(pvset);
-	else	// no restrictions via region, system, or placeradius, so include everything
-		for (HGVertex& v : vertices) mvset.insert(&v);
+		g.placeradius->vertices(mvvec, qt, this, g, threadnum);
+	else	if (g.regions)
+		{ if (g.systems)
+		  {	// iterate via region & check for a system_match
+			for (Region *r : *g.regions)
+			  for (auto& vw : r->vertices)
+			    if (!subgraph_contains(vw.first, threadnum) && vw.second->system_match(g.systems))
+			    {	mvvec.push_back(vw.first);
+				add_to_subgraph(vw.first, threadnum);
+			    }
+		  }
+		  else	for (Region *r : *g.regions)
+			  for (auto& vw : r->vertices)
+			    if (!subgraph_contains(vw.first, threadnum))
+			    {	mvvec.push_back(vw.first);
+				add_to_subgraph(vw.first, threadnum);
+			    }
+		} else	for (HighwaySystem *h : *g.systems)
+			  for (HGVertex* v : h->vertices)
+			    if (!subgraph_contains(v, threadnum))
+			    {	mvvec.push_back(v);
+				add_to_subgraph(v, threadnum);
+			    }
 
 	// initialize written booleans
-	for (HGVertex *v : mvset)
+	for (HGVertex *v : mvvec)
 	{	for (HGEdge* e : v->incident_s_edges) e->written[threadnum] = 0;
 		for (HGEdge* e : v->incident_c_edges) e->written[threadnum] = 0;
 		for (HGEdge* e : v->incident_t_edges) e->written[threadnum] = 0;
@@ -230,35 +249,37 @@ inline void HighwayGraph::matching_vertices_and_edges
 	// Compute sets of edges for subgraphs, optionally
 	// restricted by region or system or placeradius.
 	// Keep a count of collapsed & traveled vertices as we go.
-	#define AREA (!g.placeradius || mvset.count(e->vertex1) && mvset.count(e->vertex2))
+	#define AREA (!g.placeradius || subgraph_contains(e->vertex1, threadnum) && subgraph_contains(e->vertex2, threadnum))
 	#define REGION (!g.regions || contains(*g.regions, e->segment->route->region))
-	for (HGVertex *v : mvset)
-	{	for (HGEdge *e : v->incident_s_edges)
-		  if (!(e->written[threadnum] & HGEdge::simple) && AREA && REGION && e->segment->system_match(g.systems))
-		  {	mse.push_back(e);
-			e->written[threadnum] |= HGEdge::simple;
-		  }
-		if (v->visibility < 1) continue;
-
-		tv_count++;
-		for (HGEdge *e : v->incident_t_edges)
-		  if (!(e->written[threadnum] & HGEdge::traveled) && AREA && REGION && e->segment->system_match(g.systems))
-		  {	mte.push_back(e);
-			e->written[threadnum] |= HGEdge::traveled;
-			for (TravelerList *t : e->segment->clinched_by)
-			  if (!t->in_subgraph[threadnum])
-			  {	traveler_lists.push_back(t);
-				t->in_subgraph[threadnum] = 1;
+	for (HGVertex *v : mvvec)
+	{	switch (v->visibility) // fall-thru is a Good Thing!
+		{   case 2:
+			cv_count++;
+			for (HGEdge *e : v->incident_c_edges)
+			  if (!(e->written[threadnum] & HGEdge::collapsed) && AREA && REGION && e->segment->system_match(g.systems))
+			  {	mce.push_back(e);
+				e->written[threadnum] |= HGEdge::collapsed;
 			  }
-		  }
-		if (v->visibility < 2) continue;
+		    case 1:
+			tv_count++;
+			for (HGEdge *e : v->incident_t_edges)
+			  if (!(e->written[threadnum] & HGEdge::traveled) && AREA && REGION && e->segment->system_match(g.systems))
+			  {	mte.push_back(e);
+				e->written[threadnum] |= HGEdge::traveled;
 
-		cv_count++;
-		for (HGEdge *e : v->incident_c_edges)
-		  if (!(e->written[threadnum] & HGEdge::collapsed) && AREA && REGION && e->segment->system_match(g.systems))
-		  {	mce.push_back(e);
-			e->written[threadnum] |= HGEdge::collapsed;
-		  }
+				for (TravelerList *t : e->segment->clinched_by)
+				  if (!t->in_subgraph[threadnum])
+				  {	traveler_lists.push_back(t);
+					t->in_subgraph[threadnum] = 1;
+				  }
+			  }
+		    default:
+			for (HGEdge *e : v->incident_s_edges)
+			  if (!(e->written[threadnum] & HGEdge::simple) && AREA && REGION && e->segment->system_match(g.systems))
+			  {	mse.push_back(e);
+				e->written[threadnum] |= HGEdge::simple;
+			  }
+		}   clear_vbit(v, threadnum);
 	}
 	#undef AREA
 	#undef REGION
@@ -351,8 +372,8 @@ void HighwayGraph::write_subgraphs_tmg
 	std::ofstream simplefile(Args::graphfilepath+'/'+g -> filename());
 	std::ofstream collapfile(Args::graphfilepath+'/'+g[1].filename());
 	std::ofstream travelfile(Args::graphfilepath+'/'+g[2].filename());
-	std::unordered_set<HGVertex*> mv;
-	std::list<HGEdge*> mse, mce, mte;
+	std::vector<HGVertex*> mv;
+	std::vector<HGEdge*> mse, mce, mte;
 	std::list<TravelerList*> traveler_lists;
 	matching_vertices_and_edges(*g, qt, traveler_lists, mv, mse, mce, mte, threadnum, cv_count, tv_count);
 	// assign traveler numbers

@@ -41,6 +41,7 @@ else {	list<Region*> *regions;
 	#include "subgraphs/system.cpp"
 	#include "subgraphs/country.cpp"
 	#include "subgraphs/multiregion.cpp"
+	#include "subgraphs/fullcustom.cpp"
 	#include "subgraphs/region.cpp"
 	#include "subgraphs/area.cpp"
       #ifdef threading_enabled

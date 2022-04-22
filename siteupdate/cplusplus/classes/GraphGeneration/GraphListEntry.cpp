@@ -51,6 +51,7 @@ std::string GraphListEntry::category()
 		case 'R': return "multiregion";
 		case 'c': return "country";
 		case 'C': return "continent";
+		case 'f': return "fullcustom";
 		default : return std::string("ERROR: GraphListEntry::category() unexpected category token ('")+cat+"')";
 	}
 }
@@ -61,6 +62,7 @@ std::string GraphListEntry::tag()
 		case 'r': return regions->front()->code + ' ';			// must have valid pointer
 		case 's': return systems->front()->systemname + ' ';		// must have valid pointer
 		case 'S':
+		case 'f':
 		case 'R': return root + ' ';
 		case 'c': return regions->front()->country_code() + ' ';	// must have valid pointer
 		case 'C': return regions->front()->continent_code() + ' ';	// must have valid pointer

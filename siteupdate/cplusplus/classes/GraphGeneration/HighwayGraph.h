@@ -26,10 +26,12 @@ class HighwayGraph
     */
 
 	public:
+	size_t vbytes;		// number of bytes allocated to each thread in the vbits array
+	unsigned char* vbits;	// bit field to track whether each vertex is included in a given subgraph
 	std::unordered_set<std::string> vertex_names[256];	// unique vertex labels
 	std::list<std::string> waypoint_naming_log;		// to track waypoint name compressions
 	std::mutex set_mtx[256], log_mtx;
-	std::vector<HGVertex> vertices;
+	std::vector<HGVertex> vertices;				// MUST be stored sequentially!
 	unsigned int cv, tv, se, ce, te;			// vertex & edge counts
 
 	HighwayGraph(WaypointQuadtree&, ElapsedTime&);
@@ -38,14 +40,17 @@ class HighwayGraph
 	void namelog(std::string&&);
 	void simplify(int, std::vector<Waypoint*>*, unsigned int*, const size_t);
 	inline std::pair<std::unordered_set<std::string>::iterator,bool> vertex_name(std::string&);
+	bool subgraph_contains(HGVertex*, const int);
+	void add_to_subgraph(HGVertex*, const int);
+	void clear_vbit(HGVertex*, const int);
 
 	inline void matching_vertices_and_edges
 	(	GraphListEntry&, WaypointQuadtree*,
 		std::list<TravelerList*> &,
-		std::unordered_set<HGVertex*>&,	// final set of vertices matching all criteria
-		std::list<HGEdge*>&,		// matching    simple edges
-		std::list<HGEdge*>&,		// matching collapsed edges
-		std::list<HGEdge*>&,		// matching  traveled edges
+		std::vector<HGVertex*>&,	// final set of vertices matching all criteria
+		std::vector<HGEdge*>&,		// matching    simple edges
+		std::vector<HGEdge*>&,		// matching collapsed edges
+		std::vector<HGEdge*>&,		// matching  traveled edges
 		int, unsigned int&, unsigned int&
 	);
 

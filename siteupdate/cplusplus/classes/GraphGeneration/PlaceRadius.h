@@ -1,9 +1,10 @@
+class GraphListEntry;
 class HGEdge;
 class HGVertex;
 class HighwayGraph;
 class WaypointQuadtree;
 #include <iostream>
-#include <unordered_set>
+#include <vector>
 
 class PlaceRadius
 {	/* This class encapsulates a place name, file base name, latitude,
@@ -21,6 +22,6 @@ class PlaceRadius
 
 	bool contains_vertex(HGVertex *);
 	bool contains_vertex(double, double);
-	void vertices(std::unordered_set<HGVertex*>&, WaypointQuadtree *);
-	void v_search(std::unordered_set<HGVertex*>&, WaypointQuadtree *, double, double);
+	void vertices(std::vector<HGVertex*>&, WaypointQuadtree *, HighwayGraph *, GraphListEntry&, const int);
+	void v_search(std::vector<HGVertex*>&, WaypointQuadtree *, HighwayGraph *, GraphListEntry&, const int, double, double);
 };
