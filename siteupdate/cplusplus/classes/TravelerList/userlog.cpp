@@ -29,17 +29,9 @@ void TravelerList::userlog(const double total_active_only_miles, const double to
 		    << format_clinched_mi(active_preview_mileage_by_region.at(region), region->active_preview_mileage) << '\n';
 	}
 
-	unsigned int active_systems = 0;
-	unsigned int preview_systems = 0;
-
-	// present stats by system here, also generate entries for
-	// DB table clinchedSystemMileageByRegion as we compute and
-	// have the data handy
 	for (HighwaySystem *h : HighwaySystem::syslist)
 	  if (h->active_or_preview())
-	  {	if (h->active()) active_systems++;
-		else	preview_systems++;
-		double t_system_overall = 0;
+	  {	double t_system_overall = 0;
 		if (system_region_mileages.count(h))
 			t_system_overall = system_region_miles(h);
 		if (t_system_overall)
@@ -110,13 +102,13 @@ void TravelerList::userlog(const double total_active_only_miles, const double to
 
 	// grand summary, active only
 	sprintf(fstr,"\nTraveled %i of %i (%.1f%%), Clinched %i of %i (%.1f%%) active systems",
-			active_systems_traveled, active_systems, 100*(double)active_systems_traveled/active_systems,
-			active_systems_clinched, active_systems, 100*(double)active_systems_clinched/active_systems);
+		active_systems_traveled, HighwaySystem::num_active, 100*(double)active_systems_traveled/HighwaySystem::num_active,
+		active_systems_clinched, HighwaySystem::num_active, 100*(double)active_systems_clinched/HighwaySystem::num_active);
 	log << fstr << '\n';
 	// grand summary, active+preview
 	sprintf(fstr,"Traveled %i of %i (%.1f%%), Clinched %i of %i (%.1f%%) preview systems",
-			preview_systems_traveled, preview_systems, 100*(double)preview_systems_traveled/preview_systems,
-			preview_systems_clinched, preview_systems, 100*(double)preview_systems_clinched/preview_systems);
+		preview_systems_traveled, HighwaySystem::num_preview, 100*(double)preview_systems_traveled/HighwaySystem::num_preview,
+		preview_systems_clinched, HighwaySystem::num_preview, 100*(double)preview_systems_clinched/HighwaySystem::num_preview);
 	log << fstr << '\n';
 
 	// updated routes, sorted by date

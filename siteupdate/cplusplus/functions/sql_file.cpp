@@ -86,12 +86,12 @@ void sqlfile1
 	sqlfile << "PRIMARY KEY(code), FOREIGN KEY (country) REFERENCES countries(code), FOREIGN KEY (continent) REFERENCES continents(code));\n";
 	sqlfile << "INSERT INTO regions VALUES\n";
 	first = 1;
-	for (size_t r = 0; r < Region::allregions.size()-1; r++)
+	for (auto r = Region::allregions.begin(); &*r != &*Region::allregions.rbegin(); r++)
 	{	if (!first) sqlfile << ',';
 		first = 0;
-		sqlfile << "('" << Region::allregions[r]->code << "','" << double_quotes(Region::allregions[r]->name)
-			<< "','" << Region::allregions[r]->country_code() << "','" << Region::allregions[r]->continent_code()
-			<< "','" << Region::allregions[r]->type << "')\n";
+		sqlfile << "('" << r->code << "','" << double_quotes(r->name)
+			<< "','" << r->country_code() << "','" << r->continent_code()
+			<< "','" << r->type << "')\n";
 	}
 	sqlfile << ";\n";
 
@@ -271,12 +271,12 @@ void sqlfile1
 		<< "), activeMileage DOUBLE, activePreviewMileage DOUBLE);\n";
 	sqlfile << "INSERT INTO overallMileageByRegion VALUES\n";
 	first = 1;
-	for (Region* region : Region::allregions)
-	{	if (region->active_only_mileage+region->active_preview_mileage == 0) continue;
+	for (Region& region : Region::allregions)
+	{	if (region.active_only_mileage+region.active_preview_mileage == 0) continue;
 		if (!first) sqlfile << ',';
 		first = 0;
-		sprintf(fstr, "','%.17g','%.17g')\n", region->active_only_mileage, region->active_preview_mileage);
-		sqlfile << "('" << region->code << fstr;
+		sprintf(fstr, "','%.17g','%.17g')\n", region.active_only_mileage, region.active_preview_mileage);
+		sqlfile << "('" << region.code << fstr;
 	}
 	sqlfile << ";\n";
 

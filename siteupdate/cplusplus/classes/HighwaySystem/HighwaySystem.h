@@ -44,6 +44,8 @@ class HighwaySystem
 
 	static std::list<HighwaySystem*> syslist;
 	static std::list<HighwaySystem*>::iterator it;
+	static unsigned int num_active;
+	static unsigned int num_preview;
 
 	HighwaySystem(std::string &, ErrorList &, std::vector<std::pair<std::string,std::string>> &);
 

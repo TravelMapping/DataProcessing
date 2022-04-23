@@ -41,8 +41,8 @@ This module defines classes to represent the contents of a
 #include <thread>
 #include "threads/threads.h"
 #endif
-void allbyregionactiveonly(std::mutex*);
-void allbyregionactivepreview(std::mutex*);
+void allbyregionactiveonly(std::mutex*, double);
+void allbyregionactivepreview(std::mutex*, double);
 using namespace std;
 
 int main(int argc, char *argv[])
@@ -161,18 +161,15 @@ int main(int argc, char *argv[])
 		while(getline(file, line))
 		{	if (line.back() == 0x0D) line.erase(line.end()-1);	// trim DOS newlines
 			if (line.empty()) continue;
-			Region* r = new Region(line, countries, continents, el);
-				    // deleted on termination of program
-			if (r->is_valid)
-			{	Region::allregions.push_back(r);
-				Region::code_hash[r->code] = r;
-			} else	delete r;
+			try {	Region::allregions.emplace_back(line, countries, continents, el);
+				Region::code_hash[Region::allregions.back().code] = &Region::allregions.back();
+			    } catch (int&err) {}
 		}
 	     }
 	file.close();
 	// create a dummy region to catch unrecognized region codes in .csv files
-	Region::allregions.push_back(new Region("error;unrecognized region code;error;error;unrecognized region code", countries, continents, el));
-	Region::code_hash[Region::allregions.back()->code] = Region::allregions.back();
+	Region::allregions.emplace_back("error;unrecognized region code;error;error;unrecognized region code", countries, continents, el);
+	Region::code_hash[Region::allregions.back().code] = &Region::allregions.back();
 
 	// Create a list of HighwaySystem objects, one per system in systems.csv file
 	cout << et.et() << "Reading systems list in " << Args::highwaydatapath << "/" << Args::systemsfile << "." << endl;
@@ -503,10 +500,10 @@ int main(int argc, char *argv[])
 	double active_only_miles = 0;
 	double active_preview_miles = 0;
 	double overall_miles = 0;
-	for (Region* r : Region::allregions)
-	{	active_only_miles += r->active_only_mileage;
-		active_preview_miles += r->active_preview_mileage;
-		overall_miles += r->overall_mileage;
+	for (Region& r : Region::allregions)
+	{	active_only_miles += r.active_only_mileage;
+		active_preview_miles += r.active_preview_mileage;
+		overall_miles += r.overall_mileage;
 	}
 	sprintf(fstr, "Active routes (active): %.2f mi\n", active_only_miles);
 	hdstatsfile << fstr;
@@ -519,11 +516,11 @@ int main(int argc, char *argv[])
 	// a nice enhancement later here might break down by continent, then country,
 	// then region
 	list<string> region_entries;
-	for (Region* region : Region::allregions)
-	  if (region->overall_mileage)
+	for (Region& region : Region::allregions)
+	  if (region.overall_mileage)
 	  {	sprintf(fstr, ": %.2f (active), %.2f (active, preview) %.2f (active, preview, devel)\n",
-			region->active_only_mileage, region->active_preview_mileage, region->overall_mileage);
-		region_entries.push_back(region->code + fstr);
+			region.active_only_mileage, region.active_preview_mileage, region.overall_mileage);
+		region_entries.push_back(region.code + fstr);
 	  }
 	region_entries.sort();
 	for (string& e : region_entries) hdstatsfile << e;
@@ -579,22 +576,22 @@ int main(int argc, char *argv[])
 	{   case 1:
       #endif
 		cout << et.et() << "Writing allbyregionactiveonly.csv." << endl;
-		allbyregionactiveonly(0);
+		allbyregionactiveonly(0, active_only_miles);
 		cout << et.et() << "Writing allbyregionactivepreview.csv." << endl;
-		allbyregionactivepreview(0);
+		allbyregionactivepreview(0, active_preview_miles);
 		cout << et.et() << "Writing per-system stats csv files." << endl;
 		for (HighwaySystem* h : HighwaySystem::syslist) h->stats_csv();
       #ifdef threading_enabled
 		break;
 	   case 2:
-		thr[0] = thread(allbyregionactiveonly, &list_mtx);
-		thr[1] = thread(allbyregionactivepreview, &list_mtx);
+		thr[0] = thread(allbyregionactiveonly,    &list_mtx, active_only_miles);
+		thr[1] = thread(allbyregionactivepreview, &list_mtx, active_preview_miles);
 		thr[0].join();
 		thr[1].join();
 		break;
 	   default:
-		thr[0] = thread(allbyregionactiveonly, (std::mutex*)0);
-		thr[1] = thread(allbyregionactivepreview, (std::mutex*)0);
+		thr[0] = thread(allbyregionactiveonly,    nullptr, active_only_miles);
+		thr[1] = thread(allbyregionactivepreview, nullptr, active_preview_miles);
 		thr[2] = thread(StatsCsvThread, 2, &list_mtx);
 		thr[0].join();
 		thr[1].join();

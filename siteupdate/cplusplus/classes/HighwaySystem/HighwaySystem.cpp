@@ -12,6 +12,8 @@
 
 std::list<HighwaySystem*> HighwaySystem::syslist;
 std::list<HighwaySystem*>::iterator HighwaySystem::it;
+unsigned int HighwaySystem::num_active  = 0;
+unsigned int HighwaySystem::num_preview = 0;
 
 HighwaySystem::HighwaySystem(std::string &line, ErrorList &el, std::vector<std::pair<std::string,std::string>> &countries)
 {	std::ifstream file;
@@ -54,7 +56,10 @@ HighwaySystem::HighwaySystem(std::string &line, ErrorList &el, std::vector<std::
 	level = level_str[0];
 	if (level_str != "active" && level_str != "preview" && level_str != "devel")
 		el.add_error("Unrecognized level in " + Args::systemsfile + " line: " + line);
-
+	switch(level)
+	{	case 'p': num_preview++; break;
+		case 'a': num_active++;
+	}
 	std::cout << systemname << '.' << std::flush;
 
 	// read chopped routes CSV

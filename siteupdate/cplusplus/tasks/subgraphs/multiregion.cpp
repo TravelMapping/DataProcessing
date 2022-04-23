@@ -28,9 +28,9 @@ while (getline(file, line))
 	regions = new list<Region*>;
 		  // deleted @ end of HighwayGraph::write_subgraphs_tmg
 	for(char* rg = strtok(fields[2], ","); rg; rg = strtok(0, ","))
-	  for (Region* r : Region::allregions)
-	    if (rg == r->code)
-	    {	regions->push_back(r);
+	  for (Region& r : Region::allregions)
+	    if (rg == r.code)
+	    {	regions->push_back(&r);
 		break;
 	    }
 	GraphListEntry::add_group(fields[1], fields[0], 'R', regions, nullptr, nullptr);

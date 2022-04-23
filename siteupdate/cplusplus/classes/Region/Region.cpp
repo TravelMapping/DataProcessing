@@ -9,7 +9,7 @@ std::pair<std::string, std::string> *country_or_continent_by_code(std::string co
 	return 0;
 }
 
-std::vector<Region*> Region::allregions;
+std::list<Region> Region::allregions;
 std::unordered_map<std::string, Region*> Region::code_hash;
 
 Region::Region (const std::string &line,
@@ -26,12 +26,8 @@ Region::Region (const std::string &line,
 	split(line, fields, NumFields, ';');
 	if (NumFields != 5)
 	{	el.add_error("Could not parse regions.csv line: [" + line + "], expected 5 fields, found " + std::to_string(NumFields));
-		continent = country_or_continent_by_code("error", continents);
-		country   = country_or_continent_by_code("error", countries);
-		is_valid = 0;
-		return;
+		throw 1;
 	}
-	is_valid = 1;
 	// code
 	if (code.size() > DBFieldLength::regionCode)
 		el.add_error("Region code > " + std::to_string(DBFieldLength::regionCode)

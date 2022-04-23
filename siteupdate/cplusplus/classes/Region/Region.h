@@ -1,6 +1,7 @@
 class ErrorList;
 class HGVertex;
 class Waypoint;
+#include <list>
 #include <mutex>
 #include <string>
 #include <unordered_map>
@@ -46,9 +47,8 @@ class Region
 	double overall_mileage;
 	std::mutex mtx;
 	std::vector<std::pair<HGVertex*,Waypoint*>> vertices;
-	bool is_valid;
 
-	static std::vector<Region*> allregions;
+	static std::list<Region> allregions;
 	static std::unordered_map<std::string, Region*> code_hash;
 
 	Region (const std::string&,
