@@ -3668,7 +3668,7 @@ for t in traveler_lists:
         else:
             allfile.write(',0')
     allfile.write('\n')
-allfile.write('TOTAL,{0:.2f}'.format(math.fsum(active_only_mileage_by_region.values())))
+allfile.write('TOTAL,{0:.2f}'.format(active_only_miles))
 for region in regions:
     allfile.write(',{0:.2f}'.format(active_only_mileage_by_region[region]))
 allfile.write('\n')
@@ -3689,7 +3689,7 @@ for t in traveler_lists:
         else:
             allfile.write(',0')
     allfile.write('\n')
-allfile.write('TOTAL,{0:.2f}'.format(math.fsum(active_preview_mileage_by_region.values())))
+allfile.write('TOTAL,{0:.2f}'.format(active_preview_miles))
 for region in regions:
     allfile.write(',{0:.2f}'.format(active_preview_mileage_by_region[region]))
 allfile.write('\n')
