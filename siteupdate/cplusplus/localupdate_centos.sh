@@ -84,6 +84,13 @@ if [ -x ../../nmpfilter/nmpbyregion ]; then
     echo "$0: creating zip archive of all nmp files created by nmpbyregion"
     cd $datestr/$logdir/nmpbyregion
     zip -q nmpbyregion.zip *.nmp
+    echo "<h1>NMP by Region</h1>" > index.html
+    echo "<ul>" >> index.html
+    echo "<li>tm-master.nmp <a href='https://travelmapping.net/logs/tm-master.nmp'>file</a> <a href='https://courses.teresco.org/metal/hdx?load=tm-master.nmp'>HDX</a></li>" >> index.html
+    for file in *.nmp; do
+	echo "<li>${file} <a href='https://travelmapping.net/logs/nmpbyregion/${file}'>file</a> <a href='https://courses.teresco.org/metal/hdx?load=${file}'>HDX</a></li>" >> index.html
+    done
+    echo "</ul>" >> index.html
     cd -
 else
     echo "$0: SKIPPING nmpbyregion (../../nmpfilter/nmpbyregion not executable)"
