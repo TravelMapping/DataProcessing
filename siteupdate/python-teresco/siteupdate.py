@@ -1307,6 +1307,9 @@ class HighwaySystem:
     a designation within the same system crosses region boundaries,
     a connected route defines the entirety of the route.
     """
+    num_active = 0
+    num_preview = 0
+
     def __init__(self,systemname,country,fullname,color,tier,level,el,
                  path="../../../HighwayData/hwy_data/_systems"):
         self.route_list = []
@@ -2812,6 +2815,10 @@ else:
         # verify Level
         if fields[5] != "active" and fields[5] != "preview" and fields[5] != "devel":
             el.add_error("Unrecognized level in " + args.systemsfile + " line: " + line)
+        elif fields[5] == "preview":
+            HighwaySystem.num_preview += 1
+        elif fields[5] == "active":
+            HighwaySystem.num_active += 1
 
         print(fields[0] + ".",end="",flush=True)
         hs = HighwaySystem(fields[0], fields[1], fields[2],
@@ -3540,18 +3547,10 @@ for t in traveler_lists:
     t.active_systems_clinched = 0
     t.preview_systems_traveled = 0
     t.preview_systems_clinched = 0
-    active_systems = 0
-    preview_systems = 0
 
-    # present stats by system here, also generate entries for
-    # DB table clinchedSystemMileageByRegion as we compute and
-    # have the data handy
+    # stats by system
     for h in highway_systems:
         if h.active_or_preview():
-            if h.active():
-                active_systems += 1
-            else:
-                preview_systems += 1
             t_system_overall = 0.0
             if h.systemname in t.system_region_mileages:
                 t_system_overall = math.fsum(t.system_region_mileages[h.systemname].values())
@@ -3620,16 +3619,16 @@ for t in traveler_lists:
 
 
     # grand summary, active only
-    t.log_entries.append("\nTraveled " + str(t.active_systems_traveled) + " of " + str(active_systems) +
-                         " ({0:.1f}%)".format(100*t.active_systems_traveled/active_systems) +
-                         ", Clinched " + str(t.active_systems_clinched) + " of " + str(active_systems) +
-                         " ({0:.1f}%)".format(100*t.active_systems_clinched/active_systems) +
+    t.log_entries.append("\nTraveled " + str(t.active_systems_traveled) + " of " + str(HighwaySystem.num_active) +
+                         " ({0:.1f}%)".format(100*t.active_systems_traveled/HighwaySystem.num_active) +
+                         ", Clinched " + str(t.active_systems_clinched) + " of " + str(HighwaySystem.num_active) +
+                         " ({0:.1f}%)".format(100*t.active_systems_clinched/HighwaySystem.num_active) +
                          " active systems")
     # grand summary, active+preview
-    t.log_entries.append("Traveled " + str(t.preview_systems_traveled) + " of " + str(preview_systems) +
-                         " ({0:.1f}%)".format(100*t.preview_systems_traveled/preview_systems) +
-                         ", Clinched " + str(t.preview_systems_clinched) + " of " + str(preview_systems) +
-                         " ({0:.1f}%)".format(100*t.preview_systems_clinched/preview_systems) +
+    t.log_entries.append("Traveled " + str(t.preview_systems_traveled) + " of " + str(HighwaySystem.num_preview) +
+                         " ({0:.1f}%)".format(100*t.preview_systems_traveled/HighwaySystem.num_preview) +
+                         ", Clinched " + str(t.preview_systems_clinched) + " of " + str(HighwaySystem.num_preview) +
+                         " ({0:.1f}%)".format(100*t.preview_systems_clinched/HighwaySystem.num_preview) +
                          " preview systems")
     # updated routes, sorted by date
     t.log_entries.append("\nMost recent updates for listed routes:")
@@ -3668,7 +3667,7 @@ for t in traveler_lists:
         else:
             allfile.write(',0')
     allfile.write('\n')
-allfile.write('TOTAL,{0:.2f}'.format(math.fsum(active_only_mileage_by_region.values())))
+allfile.write('TOTAL,{0:.2f}'.format(active_only_miles))
 for region in regions:
     allfile.write(',{0:.2f}'.format(active_only_mileage_by_region[region]))
 allfile.write('\n')
@@ -3689,7 +3688,7 @@ for t in traveler_lists:
         else:
             allfile.write(',0')
     allfile.write('\n')
-allfile.write('TOTAL,{0:.2f}'.format(math.fsum(active_preview_mileage_by_region.values())))
+allfile.write('TOTAL,{0:.2f}'.format(active_preview_miles))
 for region in regions:
     allfile.write(',{0:.2f}'.format(active_preview_mileage_by_region[region]))
 allfile.write('\n')

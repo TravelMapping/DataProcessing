@@ -12,7 +12,6 @@ void ReadListThread(unsigned int id, std::mutex* tl_mtx, ErrorList* el)
 		//printf("ReadListThread %02i (*it)++\n", id); fflush(stdout);
 		std::cout << tl << ' ' << std::flush;
 		tl_mtx->unlock();
-		std::string** update;
 		TravelerList *t = new TravelerList(tl, el);
 				  // deleted on termination of program
 		TravelerList::mtx.lock();
