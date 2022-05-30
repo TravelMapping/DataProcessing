@@ -68,7 +68,7 @@ echo DataProcessing '@' `git show -s | head -n 1 | cut -f2 -d' '` | tee -a $date
 
 echo "$0: creating listupdates.txt"
 cd $tmbase/UserData/list_files
-for u in *; do echo $u `git log -n 1 --pretty=%ci $u`; done > $execdir/listupdates.txt
+for u in *; do echo $u `git log -n 1 --pretty=%ci $u`; done | tee $execdir/listupdates.txt
 cd -
 
 echo "$0: launching siteupdate.py"
@@ -80,18 +80,7 @@ rm $execdir/listupdates.txt
 
 if [ -x ../../nmpfilter/nmpbyregion ]; then
     echo "$0: running nmpbyregion"
-    ../../nmpfilter/nmpbyregion $tmbase/HighwayData/hwy_data  $datestr/$logdir/tm-master.nmp $datestr/$logdir/nmpbyregion/
-    echo "$0: creating zip archive of all nmp files created by nmpbyregion"
-    cd $datestr/$logdir/nmpbyregion
-    zip -q nmpbyregion.zip *.nmp
-    echo "<h1>NMP by Region</h1>" > index.html
-    echo "<ul>" >> index.html
-    echo "<li>tm-master.nmp <a href='https://travelmapping.net/logs/tm-master.nmp'>file</a> <a href='https://courses.teresco.org/metal/hdx?load=tm-master.nmp'>HDX</a></li>" >> index.html
-    for file in *.nmp; do
-	echo "<li>${file} <a href='https://travelmapping.net/logs/nmpbyregion/${file}'>file</a> <a href='https://courses.teresco.org/metal/hdx?load=${file}'>HDX</a></li>" >> index.html
-    done
-    echo "</ul>" >> index.html
-    cd -
+    ../../nmpfilter/nmpbyregion $datestr/$logdir/tm-master.nmp $datestr/$logdir/nmpbyregion/
 else
     echo "$0: SKIPPING nmpbyregion (../../nmpfilter/nmpbyregion not executable)"
 fi
