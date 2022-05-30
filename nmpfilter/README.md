@@ -22,6 +22,10 @@ The output directory should be empty before running *nmpbycountry*. Files for co
 **Purpose:**<br>
 Splits *tm-master.nmp* into smaller .nmp files filtered by region.
 
+**Compiling:**<br>
+C++11 support is required.<br>
+With GCC, I use the commandline `g++ nmpbyregion.cpp -std=c++11 -o nmpbyregion`
+
 **Usage:**<br>
 `nmpbyregion HwyDataDir MasterNMP OutputDir`, where
 * `HwyDataDir` is the path of the *hwy_data* directory in the HighwayData repository, or equivalent
