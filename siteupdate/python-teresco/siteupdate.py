@@ -3830,7 +3830,7 @@ else:
             el.add_error("invalid lng in areagraphs.csv line: " + line)
             fields[3] = 0.0
         try:
-            fields[4] = int(fields[4])
+            fields[4] = float(fields[4])
         except ValueError:
             el.add_error("invalid radius in areagraphs.csv line: " + line)
             fields[4] = 1
@@ -4053,7 +4053,7 @@ else:
                     el.add_error("invalid lng in fullcustom.csv line: " + line)
                     fields[3] = 0.0
                 try:
-                    fields[4] = int(fields[4])
+                    fields[4] = float(fields[4])
                 except ValueError:
                     el.add_error("invalid radius in fullcustom.csv line: " + line)
                     fields[4] = 1
