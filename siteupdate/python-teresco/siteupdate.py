@@ -3838,6 +3838,9 @@ else:
             if fields[4] <= 0:
                 el.add_error("invalid radius in areagraphs.csv line: " + line)
                 fields[4] = 1
+        # make fields[4] an int if it's a whole number
+        if fields[4] == float(int(fields[4])):
+            fields[4] = int(fields[4])
         a = PlaceRadius(*fields)
         print(a.title + '(' + str(a.r) + ') ', end="", flush=True)
         graph_data.write_subgraphs_tmg(graph_list, args.graphfilepath + "/", a.title + str(a.r) + "-area",
@@ -4061,6 +4064,9 @@ else:
                     if fields[4] <= 0:
                         el.add_error("invalid radius in fullcustom.csv line: " + line)
                         fields[4] = 1
+                # make fields[4] an int if it's a whole number
+                if fields[4] == float(int(fields[4])):
+                    fields[4] = int(fields[4])
                 placeradius = PlaceRadius(*fields[:5])
             elif blanks != 3:
                 el.add_error("lat/lng/radius error in fullcustom.csv line: [" + \
