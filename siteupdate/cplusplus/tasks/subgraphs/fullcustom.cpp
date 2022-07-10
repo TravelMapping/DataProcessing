@@ -35,7 +35,7 @@ if (file.is_open())
 			if (*endptr)		el.add_error("invalid lat in fullcustom.csv line: " + line);
 			double lng = strtod(lng_s.data(), &endptr);
 			if (*endptr)		el.add_error("invalid lng in fullcustom.csv line: " + line);
-			int r = strtol(radius.data(), &endptr, 10);
+			double r = strtod(radius.data(), &endptr);
 			if (*endptr || r <= 0) {el.add_error("invalid radius in fullcustom.csv line: " + line); r=1;}
 			a = new PlaceRadius(descr.data(), root.data(), lat, lng, r);
 		}	    // deleted @ end of HighwayGraph::write_subgraphs_tmg

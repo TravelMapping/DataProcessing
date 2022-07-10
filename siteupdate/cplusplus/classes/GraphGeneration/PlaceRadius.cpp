@@ -8,7 +8,7 @@
 #include <cmath>
 #define pi 3.141592653589793238
 
-PlaceRadius::PlaceRadius(const char *D, const char *T, double& Y, double& X, int& R)
+PlaceRadius::PlaceRadius(const char *D, const char *T, double& Y, double& X, double& R)
 {	descr = D;
 	title = T;
 	lat = Y;
