@@ -58,7 +58,9 @@ std::string GraphListEntry::category()
 
 std::string GraphListEntry::tag()
 {	switch (cat)
-	{	case 'a': return placeradius->title + '(' + std::to_string(placeradius->r) + ") ";
+	{	case 'a': char fstr[51];
+			  sprintf(fstr, "(%.15g) ", placeradius->r);
+			  return placeradius->title + fstr;
 		case 'r': return regions->front()->code + ' ';			// must have valid pointer
 		case 's': return systems->front()->systemname + ' ';		// must have valid pointer
 		case 'S':
