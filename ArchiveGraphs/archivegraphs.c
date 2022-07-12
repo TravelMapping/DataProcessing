@@ -29,7 +29,7 @@
 
 void usage(char *progname) {
 
-  fprintf(stderr, "Usage: %s archive_name datestr write_dir\n", progname);
+  fprintf(stderr, "Usage: %s archive_name description datestr hwy_vers user_vers dataproc_vers write_dir\n", progname);
   exit(1);
 }
 
@@ -37,20 +37,28 @@ int main(int argc, char *argv[]) {
 
   /* check for required command-line parameters:
 
-     args[1]: name of archive
-     args[2]: SQL-format date string YYYY-MM-DD
-     args[3]: location to write intersection-only graphs and .sql,
+     argv[1]: name of archive
+     argv[2]: longer description of the archive set
+     argv[3]: SQL-format date string YYYY-MM-DD
+     argv[4]: TravelMapping/HighwayData repository version
+     argv[5]: TravelMapping/UserData repository version
+     argv[6]: TravelMapping/DataProcessing repository version
+     argv[7]: location to write intersection-only graphs and .sql,
               which must be a writable directory
   */
-  if (argc != 4) {
+  if (argc != 8) {
     fprintf(stderr, "Error: incorrect number of command-line parameters.\n");
     usage(argv[0]);
   }
 
   char *archive_name = argv[1];
+  char *description = argv[2];
+  char *hwy_vers = argv[3];
+  char *user_vers = argv[4];
+  char *dataproc_vers = argv[5];
   /* should check here for a proper date format */
-  char *datestamp = argv[2];
-  char *outdir = argv[3];
+  char *datestamp = argv[6];
+  char *outdir = argv[7];
 
   /* try to open the directory */
   DIR *d = opendir(outdir);
