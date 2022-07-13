@@ -75,12 +75,24 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "The GRAPH_DIR environment variable must be set to the location of a current set of graph files.\n");
     exit(1);
   }
+  d = opendir(graph_dir);
+  if (d == NULL) {
+    fprintf(stderr, "Could not open graph file directory %s\n", graph_dir);
+    usage(argv[0]);
+  }
+  closedir(d);
 
   char *hwy_data = getenv("HIGHWAY_DATA");
   if (hwy_data == NULL) {
     fprintf(stderr, "The HIGHWAY_DATA environment variable must be set to the location of the TravelMapping/HighwayData repository.\n");
     exit(1);
   }
+  d = opendir(hwy_data);
+  if (d == NULL) {
+    fprintf(stderr, "Could not open highway data directory %s\n", hwy_data);
+    usage(argv[0]);
+  }
+  closedir(d);
 
   /* create the .sql file */
   char sqlfilename[4096];
@@ -91,7 +103,15 @@ int main(int argc, char *argv[]) {
     perror(NULL);
     exit(1);
   }
-  
+
+  printf("New graph archive set %s (%s) datestamp %s\n", archive_name,
+	 description, datestamp);
+  printf("Creating graph archive SQL file %s\n", sqlfilename);
+  printf("Graphs created by TM siteupdate are in %s\n", graph_dir);
+  printf("Graphs based on HighwayData rev %s in %s\n", hwy_vers, hwy_data);
+  printf("and UserData rev %s, DataProcessing rev %s\n", user_vers,
+	 dataproc_vers);
+
   fclose(sqlfp);
   
   return 0;
