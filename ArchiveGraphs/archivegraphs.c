@@ -22,11 +22,39 @@
 #include <dirent.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
 
 #include "tmggraph.h"
 #include "tmg_graph_intersections_only.h"
 
 #define MAX_PATH_LEN 4096
+#define MAX_REGION_CODE_LEN 8
+#define MAX_REGION_NAME_LEN 128
+#define MAX_COUNTRY_CODE_LEN 4
+#define MAX_REGION_TYPE_LEN 32
+#define MAX_BASE_GRAPH_NAME_LEN 64
+#define MAX_GRAPH_DESCR_LEN 128
+
+/* utility function to read up to the given character from the 
+   file into the string */
+void read_to_char(FILE *fp, char *s, char c) {
+
+  int index = 0;
+  char ch;
+  while ((ch = getc(fp)) != c) {
+    if (ch > 127) continue;
+    s[index++] = ch;
+  }
+  s[index] = '\0';
+}
+
+/* utility function to skip to the end of a line of input from a file */
+void skip_to_eol(FILE *fp) {
+
+  char ch;
+  while (!feof(fp) && (ch = getc(fp)) != '\n');
+}
 
 void usage(char *progname) {
 
@@ -64,8 +92,11 @@ int process_graph_set(char *filename, char *descr, char *category,
   sprintf(filepath, "%s/%s.tmg", outdir, filename);
   tmg_graph *g = tmg_load_graph(filepath);
   if (!g) {
+    /* this will occur, for example, when a region in regions.csv
+       does not have any TM-mapped highways */
     return -1;
   }
+
   int retval = process_one_graph(g, filename, descr, category, sqlfp);
 
   /* if there was a problem, we stop here */
@@ -153,18 +184,18 @@ int main(int argc, char *argv[]) {
   closedir(d);
 
   /* create the .sql file */
-  char sqlfilename[MAX_PATH_LEN];
-  sprintf(sqlfilename, "%s/%s.sql", outdir, archive_name);
-  FILE *sqlfp = fopen(sqlfilename, "wt");
+  char filenamebuf[MAX_PATH_LEN];
+  sprintf(filenamebuf, "%s/%s.sql", outdir, archive_name);
+  FILE *sqlfp = fopen(filenamebuf, "wt");
   if (sqlfp == NULL) {
-    fprintf(stderr, "Could not open file %s for writing.\n", sqlfilename);
+    fprintf(stderr, "Could not open file %s for writing.\n", filenamebuf);
     perror(NULL);
     exit(1);
   }
 
   printf("New graph archive set %s (%s) datestamp %s\n", archive_name,
 	 description, datestamp);
-  printf("Creating graph archive SQL file %s\n", sqlfilename);
+  printf("Creating graph archive SQL file %s\n", filenamebuf);
   printf("Graphs created by TM siteupdate are in and output will go to %s\n", outdir);
   printf("Graphs based on HighwayData rev %s in %s\n", hwy_vers, hwy_data);
   printf("and UserData rev %s, DataProcessing rev %s\n", user_vers,
@@ -177,13 +208,46 @@ int main(int argc, char *argv[]) {
 
   /* start processing graphs */
 
-  printf("Processing a subset of region graphs\n");
-  process_graph_set("RI-region", "Rhode Island", "region", outdir, sqlfp);
-  process_graph_set("DE-region", "Delaware", "region", outdir, sqlfp);
+  printf("Processing region graphs\n");
+  /* use regions.csv for the list of possibilities */
+  sprintf(filenamebuf, "%s/regions.csv", hwy_data);
+  FILE *rfp = fopen(filenamebuf, "rt");
+  if (!rfp) {
+    fprintf(stderr, "Could not open regions file %s\n", filenamebuf);
+    fclose(sqlfp);
+    exit(1);
+  }
 
-  printf("Processing tm-master graphs\n");
-  process_graph_set("tm-master", "All Travel Mapping Data", "master",
-  		    outdir, sqlfp);
+  /* buffers for csv fields */
+  char code[MAX_REGION_CODE_LEN];
+  char name[MAX_REGION_NAME_LEN];
+  char country[MAX_COUNTRY_CODE_LEN];
+  char continent[MAX_COUNTRY_CODE_LEN];
+  char region_type[MAX_REGION_TYPE_LEN];
+
+  /* buffers for additional fields */
+  char graph_basefilename[MAX_BASE_GRAPH_NAME_LEN];
+  char graph_descr[MAX_GRAPH_DESCR_LEN];
+  
+  /* read and skip the header line */
+  skip_to_eol(rfp);
+  /* read remaining lines, know we're done when we get an empty code field */
+  while (1) {
+    read_to_char(rfp, code, ';');
+    if (strlen(code) == 0) break;
+    read_to_char(rfp, name, ';');
+    read_to_char(rfp, country, ';');
+    read_to_char(rfp, continent, ';');
+    read_to_char(rfp, region_type, '\n');
+    skip_to_eol(rfp);
+    sprintf(graph_basefilename, "%s-region", code);
+    sprintf(graph_descr, "%s (%s)", name, region_type);
+    process_graph_set(graph_basefilename, graph_descr, "region", outdir, sqlfp);
+  }
+
+  //printf("Processing tm-master graphs\n");
+  //process_graph_set("tm-master", "All Travel Mapping Data", "master",
+  //  		    outdir, sqlfp);
   
   fclose(sqlfp);
   
