@@ -34,7 +34,7 @@
 #define MAX_COUNTRY_CODE_LEN 4
 #define MAX_REGION_TYPE_LEN 32
 #define MAX_BASE_GRAPH_NAME_LEN 64
-#define MAX_GRAPH_DESCR_LEN 128
+#define MAX_GRAPH_DESCR_LEN 192
 
 /* utility function to read up to the given character from the 
    file into the string */
@@ -42,7 +42,7 @@ void read_to_char(FILE *fp, char *s, char c) {
 
   int index = 0;
   char ch;
-  while ((ch = getc(fp)) != c) {
+  while (!feof(fp) && (ch = getc(fp)) != c) {
     if (ch > 127) continue;
     s[index++] = ch;
   }
