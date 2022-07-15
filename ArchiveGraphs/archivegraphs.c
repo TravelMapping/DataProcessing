@@ -244,10 +244,12 @@ int main(int argc, char *argv[]) {
     sprintf(graph_descr, "%s (%s)", name, region_type);
     process_graph_set(graph_basefilename, graph_descr, "region", outdir, sqlfp);
   }
+  fclose(rfp);
 
-  //printf("Processing tm-master graphs\n");
-  //process_graph_set("tm-master", "All Travel Mapping Data", "master",
-  //  		    outdir, sqlfp);
+  
+  printf("Processing tm-master graphs\n");
+  process_graph_set("tm-master", "All Travel Mapping Data", "master",
+    		    outdir, sqlfp);
   
   fclose(sqlfp);
   
