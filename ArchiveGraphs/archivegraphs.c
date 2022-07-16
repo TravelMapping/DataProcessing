@@ -27,6 +27,7 @@
 
 #include "tmggraph.h"
 #include "tmg_graph_intersections_only.h"
+#include "tmg_stats.h"
 
 #define MAX_PATH_LEN 4096
 #define MAX_REGION_CODE_LEN 8
@@ -67,11 +68,29 @@ void usage(char *progname) {
  *
  * Returns 0 on success, -1 on failure.
  */
-int process_one_graph(tmg_graph *g, char *filename, char *descr, char *category,
-		  FILE *sqlfp) {
+int process_one_graph(tmg_graph *g, char *filename, char *descr,
+		      char *category, char *archive_name, FILE *sqlfp) {
 
+  char tmg_filename[MAX_PATH_LEN];
   printf("Processing %s (%s) category %s, %d waypoints, %d connections\n",
 	 filename, descr, category, g->num_vertices, g->num_edges);
+
+  /* compute some vertex stats */
+  tmg_vertex_stats vs;
+  tmg_graph_vertex_stats(g, &vs);
+
+  /* an aspect ratio, width/height */
+  double aspect_ratio =
+    tmg_distance_latlng(&(g->vertices[vs.west]->w.coords),
+			&(g->vertices[vs.east]->w.coords)) /
+    tmg_distance_latlng(&(g->vertices[vs.north]->w.coords),
+			&(g->vertices[vs.south]->w.coords));
+  
+  sprintf(tmg_filename, "%s.tmg", filename);
+  fprintf(sqlfp, "('%s','%s','%d','%d','%d','%s','%s','%s','%d','%.4f','%4f')\n",
+	  tmg_filename, descr, g->num_vertices, g->num_edges, g->num_travelers,
+	  tmg_format_names[g->format], category, archive_name,
+	  vs.highest_degree, vs.average_degree, aspect_ratio);
   return 0;
 }
 
@@ -83,7 +102,7 @@ int process_one_graph(tmg_graph *g, char *filename, char *descr, char *category,
  * Returns 0 on success, -1 on failure.
  */
 int process_graph_set(char *filename, char *descr, char *category,
-		      char *outdir, FILE *sqlfp) {
+		      char *archive_name, char *outdir, FILE *sqlfp) {
 
   printf("Processing set: %s (%s) category %s\n", filename, descr, category);
 
@@ -97,7 +116,10 @@ int process_graph_set(char *filename, char *descr, char *category,
     return -1;
   }
 
-  int retval = process_one_graph(g, filename, descr, category, sqlfp);
+  fprintf(sqlfp, "INSERT INTO graphArchives VALUES\n");
+
+  int retval = process_one_graph(g, filename, descr, category, archive_name,
+				 sqlfp);
 
   /* if there was a problem, we stop here */
   if (retval == -1) {
@@ -121,14 +143,46 @@ int process_graph_set(char *filename, char *descr, char *category,
   fclose(ifp);
   
   sprintf(filepath, "%s-intonly", filename);
-  retval = process_one_graph(g, filepath, descr, category, sqlfp);
+  fprintf(sqlfp, ",");
+  retval = process_one_graph(g, filepath, descr, category, archive_name,
+			     sqlfp);
   
   tmg_graph_destroy(g);
   if (retval == -1) return -1;
 
   /* simple */
+  sprintf(filepath, "%s/%s-simple.tmg", outdir, filename);
+  g = tmg_load_graph(filepath);
+  if (!g) {
+    fprintf(stderr, "Simple format graph not found!\n");
+    fprintf(sqlfp, ";\n");
+    return -1;
+  }
+  fprintf(sqlfp, ",");
+  sprintf(filepath, "%s-simple", filename);
+  retval = process_one_graph(g, filepath, descr, category, archive_name,
+			     sqlfp);
+  
+  tmg_graph_destroy(g);
+  if (retval == -1) return -1;
 
   /* traveled */
+  sprintf(filepath, "%s/%s-traveled.tmg", outdir, filename);
+  g = tmg_load_graph(filepath);
+  if (!g) {
+    fprintf(stderr, "Traveled format graph not found!\n");
+    fprintf(sqlfp, ";\n");
+    return -1;
+  }
+  fprintf(sqlfp, ",");
+  sprintf(filepath, "%s-traveled", filename);
+  retval = process_one_graph(g, filepath, descr, category, archive_name,
+			     sqlfp);
+  
+  tmg_graph_destroy(g);
+  if (retval == -1) return -1;
+
+  fprintf(sqlfp, ";\n");
   
   return 0;
 }
@@ -242,14 +296,15 @@ int main(int argc, char *argv[]) {
     skip_to_eol(rfp);
     sprintf(graph_basefilename, "%s-region", code);
     sprintf(graph_descr, "%s (%s)", name, region_type);
-    process_graph_set(graph_basefilename, graph_descr, "region", outdir, sqlfp);
+    process_graph_set(graph_basefilename, graph_descr, "region", archive_name,
+		      outdir, sqlfp);
   }
   fclose(rfp);
 
   
   printf("Processing tm-master graphs\n");
   process_graph_set("tm-master", "All Travel Mapping Data", "master",
-    		    outdir, sqlfp);
+    		    archive_name, outdir, sqlfp);
   
   fclose(sqlfp);
   
