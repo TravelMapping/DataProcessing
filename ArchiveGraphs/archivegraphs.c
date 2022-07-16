@@ -80,11 +80,23 @@ int process_one_graph(tmg_graph *g, char *filename, char *descr,
   tmg_graph_vertex_stats(g, &vs);
 
   /* an aspect ratio, width/height */
+  tmg_latlng center_west, center_east, center_north, center_south;
+  center_west.lat = (g->vertices[vs.north]->w.coords.lat +
+		     g->vertices[vs.south]->w.coords.lat) / 2;
+  center_west.lng = g->vertices[vs.west]->w.coords.lng;
+  center_east.lat = (g->vertices[vs.north]->w.coords.lat +
+		     g->vertices[vs.south]->w.coords.lat) / 2;
+  center_east.lng = g->vertices[vs.east]->w.coords.lng;
+  center_north.lat = g->vertices[vs.north]->w.coords.lat;
+  center_north.lng = (g->vertices[vs.west]->w.coords.lng +
+		     g->vertices[vs.east]->w.coords.lng) / 2;
+  center_south.lat = g->vertices[vs.south]->w.coords.lat;
+  center_south.lng = (g->vertices[vs.west]->w.coords.lng +
+		     g->vertices[vs.east]->w.coords.lng) / 2;
+  
   double aspect_ratio =
-    tmg_distance_latlng(&(g->vertices[vs.west]->w.coords),
-			&(g->vertices[vs.east]->w.coords)) /
-    tmg_distance_latlng(&(g->vertices[vs.north]->w.coords),
-			&(g->vertices[vs.south]->w.coords));
+    tmg_distance_latlng(&center_west, &center_east) /
+    tmg_distance_latlng(&center_north, &center_south);
   
   sprintf(tmg_filename, "%s.tmg", filename);
   fprintf(sqlfp, "('%s','%s','%d','%d','%d','%s','%s','%s','%d','%.4f','%4f')\n",
