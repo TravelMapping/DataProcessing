@@ -26,6 +26,7 @@
 #include <unistd.h>
 
 #include "tmggraph.h"
+#include "tmg_conn.h"
 #include "tmg_graph_intersections_only.h"
 #include "tmg_stats.h"
 
@@ -97,12 +98,18 @@ int process_one_graph(tmg_graph *g, char *filename, char *descr,
   double aspect_ratio =
     tmg_distance_latlng(&center_west, &center_east) /
     tmg_distance_latlng(&center_north, &center_south);
+
+  // connectivity
+  int num_parts;
+  int *part_sizes;
+  tmg_conn(g, &num_parts, &part_sizes);
+  free(part_sizes);
   
   sprintf(tmg_filename, "%s.tmg", filename);
-  fprintf(sqlfp, "('%s','%s','%d','%d','%d','%s','%s','%s','%d','%.4f','%4f')\n",
+  fprintf(sqlfp, "('%s','%s','%d','%d','%d','%s','%s','%s','%d','%.4f','%4f','%d')\n",
 	  tmg_filename, descr, g->num_vertices, g->num_edges, g->num_travelers,
 	  tmg_format_names[g->format], category, archive_name,
-	  vs.highest_degree, vs.average_degree, aspect_ratio);
+	  vs.highest_degree, vs.average_degree, aspect_ratio, num_parts);
   return 0;
 }
 
