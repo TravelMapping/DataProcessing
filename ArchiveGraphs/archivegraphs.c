@@ -288,12 +288,11 @@ int main(int argc, char *argv[]) {
   /* read remaining lines, know we're done when we get an empty code field */
   while (1) {
     read_to_char(rfp, code, ';');
-    if (strlen(code) == 0) break;
+    if (strlen(code) < 2) break;
     read_to_char(rfp, name, ';');
     read_to_char(rfp, country, ';');
     read_to_char(rfp, continent, ';');
     read_to_char(rfp, region_type, '\n');
-    skip_to_eol(rfp);
     sprintf(graph_basefilename, "%s-region", code);
     sprintf(graph_descr, "%s (%s)", name, region_type);
     process_graph_set(graph_basefilename, graph_descr, "region", archive_name,
