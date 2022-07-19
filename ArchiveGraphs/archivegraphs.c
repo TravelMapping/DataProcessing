@@ -25,6 +25,7 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "stringfuncs.h"
 #include "tmggraph.h"
 #include "tmg_conn.h"
 #include "tmg_graph_intersections_only.h"
@@ -37,6 +38,7 @@
 #define MAX_REGION_TYPE_LEN 32
 #define MAX_BASE_GRAPH_NAME_LEN 64
 #define MAX_GRAPH_DESCR_LEN 192
+#define MAX_SYSTEM_CODE_LEN 12
 
 /* utility function to read up to the given character from the 
    file into the string */
@@ -287,7 +289,7 @@ int main(int argc, char *argv[]) {
   FILE *rfp = fopen(filenamebuf, "rt");
   if (!rfp) {
     fprintf(stderr, "Could not open regions file %s\n", filenamebuf);
-    fclose(sqlfp);
+    fclose(rfp);
     exit(1);
   }
 
@@ -319,6 +321,68 @@ int main(int argc, char *argv[]) {
   }
   fclose(rfp);
 
+  
+  printf("Processing system graphs\n");
+  /* use systemgraphs.csv for the list of possibilities */
+  sprintf(filenamebuf, "%s/graphs/systemgraphs.csv", hwy_data);
+  FILE *sfp = fopen(filenamebuf, "rt");
+  if (!sfp) {
+    fprintf(stderr, "Could not open systemgraphs file %s\n", filenamebuf);
+    fclose(sfp);
+    exit(1);
+  }
+
+  // read the list of system graphs
+  char syscode[MAX_SYSTEM_CODE_LEN];
+  struct stringlist *systems_to_process_list = new_stringlist();
+  while (fscanf(sfp,"%s", syscode) == 1) {
+    stringlist_append(systems_to_process_list, strdup(syscode));
+  }
+  fclose(sfp);
+
+  // now have a NULL-terminated array of system names
+  char **systems_to_process = stringlist_getarray(systems_to_process_list);
+
+  // go through systems.csv to find the info about matching systems
+  sprintf(filenamebuf, "%s/systems.csv", hwy_data);
+  sfp = fopen(filenamebuf, "rt");
+  if (!sfp) {
+    fprintf(stderr, "Could not open systems.csv file %s\n", filenamebuf);
+    fclose(sfp);
+    exit(1);
+  }
+
+  /* read and skip the header line */
+  skip_to_eol(sfp);
+  /* read remaining lines, know we're done when we get an empty code field */
+  while (1) {
+    read_to_char(sfp, syscode, ';');
+    if (strlen(syscode) < 2) break;
+    // see if this system is in our list
+    int i = 0;
+    while (systems_to_process[i] != NULL) {
+      if (strcmp(systems_to_process[i++], syscode) == 0) {
+	// we have a match, process this one
+	read_to_char(sfp, country, ';');
+	read_to_char(sfp, name, ';');
+	sprintf(graph_basefilename, "%s-system", syscode);
+	process_graph_set(graph_basefilename, name, "system", archive_name,
+			  outdir, sqlfp);
+	break;
+      }
+    }
+    skip_to_eol(sfp);
+  }
+  
+  fclose(sfp);
+  
+  // clean up system to process list
+  stringlist_free(systems_to_process_list);
+  int i = 0;
+  while (systems_to_process[i] != NULL) {
+    free(systems_to_process[i++]);
+  }
+  free(systems_to_process);
   
   printf("Processing tm-master graphs\n");
   process_graph_set("tm-master", "All Travel Mapping Data", "master",
