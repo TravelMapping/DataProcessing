@@ -39,6 +39,8 @@
 #define MAX_BASE_GRAPH_NAME_LEN 64
 #define MAX_GRAPH_DESCR_LEN 192
 #define MAX_SYSTEM_CODE_LEN 12
+#define MAX_LAT_LNG_LEN 10
+#define MAX_RADIUS_LEN 5
 
 /* utility function to read up to the given character from the 
    file into the string */
@@ -317,7 +319,7 @@ int main(int argc, char *argv[]) {
     sprintf(graph_basefilename, "%s-region", code);
     sprintf(graph_descr, "%s (%s)", name, region_type);
     process_graph_set(graph_basefilename, graph_descr, "region", archive_name,
-		      outdir, sqlfp);
+    		      outdir, sqlfp);
   }
   fclose(rfp);
 
@@ -383,6 +385,41 @@ int main(int argc, char *argv[]) {
     free(systems_to_process[i++]);
   }
   free(systems_to_process);
+
+  // area graphs
+  printf("Processing area graphs\n");
+  /* use areagraphs.csv for the list of graphs of this group */
+  sprintf(filenamebuf, "%s/graphs/areagraphs.csv", hwy_data);
+  FILE *afp = fopen(filenamebuf, "rt");
+  if (!afp) {
+    fprintf(stderr, "Could not open systemgraphs file %s\n", filenamebuf);
+    fclose(afp);
+    exit(1);
+  }
+
+  char latorlng[MAX_LAT_LNG_LEN];
+  char radius[MAX_RADIUS_LEN];
+  
+  /* read and skip the header line */
+  skip_to_eol(afp);
+  /* read remaining lines, know we're done when we get an empty description
+     field */
+  while (1) {
+    read_to_char(afp, name, ';');
+    if (strlen(name) < 2) break;
+    read_to_char(afp, code, ';');
+    // skip lat and lng
+    read_to_char(afp, latorlng, ';');
+    read_to_char(afp, latorlng, ';');
+    // radius, we need
+    read_to_char(afp, radius, '\n');
+    sprintf(graph_basefilename, "%s%s-area", code, radius);
+    sprintf(graph_descr, "%s (%s mi radius)", name, radius);
+    process_graph_set(graph_basefilename, graph_descr, "area", archive_name,
+		      outdir, sqlfp);
+  }
+
+  fclose(afp);
   
   printf("Processing tm-master graphs\n");
   process_graph_set("tm-master", "All Travel Mapping Data", "master",
