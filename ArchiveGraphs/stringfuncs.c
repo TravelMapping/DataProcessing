@@ -180,4 +180,5 @@ void double_up_single_quotes(char *s) {
     }
     *sp++ = *scpp++;
   }
+  *sp = '\0';
 }
