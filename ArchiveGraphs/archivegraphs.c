@@ -392,7 +392,7 @@ int main(int argc, char *argv[]) {
   sprintf(filenamebuf, "%s/graphs/areagraphs.csv", hwy_data);
   FILE *afp = fopen(filenamebuf, "rt");
   if (!afp) {
-    fprintf(stderr, "Could not open systemgraphs file %s\n", filenamebuf);
+    fprintf(stderr, "Could not open areagraphs.csv file %s\n", filenamebuf);
     fclose(afp);
     exit(1);
   }
@@ -420,7 +420,85 @@ int main(int argc, char *argv[]) {
   }
 
   fclose(afp);
+
+  // multi-region graphs
+  printf("Processing multiregion graphs\n");
+  /* use multiregion.csv for the list of graphs of this group */
+  sprintf(filenamebuf, "%s/graphs/multiregion.csv", hwy_data);
+  FILE *mfp = fopen(filenamebuf, "rt");
+  if (!mfp) {
+    fprintf(stderr, "Could not open multiregion.csv file %s\n", filenamebuf);
+    fclose(mfp);
+    exit(1);
+  }
   
+  /* read and skip the header line */
+  skip_to_eol(mfp);
+  /* read remaining lines, know we're done when we get an empty description
+     field */
+  while (1) {
+    read_to_char(mfp, graph_descr, ';');
+    if (strlen(graph_descr) < 2) break;
+    read_to_char(mfp, graph_basefilename, ';');
+    // don't need the list of regions
+    skip_to_eol(mfp);
+    process_graph_set(graph_basefilename, graph_descr, "multiregion", archive_name, outdir, sqlfp);
+  }
+
+  fclose(mfp);
+
+  // multi-system graphs
+  printf("Processing multisystem graphs\n");
+  /* use multisystem.csv for the list of graphs of this group */
+  sprintf(filenamebuf, "%s/graphs/multisystem.csv", hwy_data);
+  mfp = fopen(filenamebuf, "rt");
+  if (!mfp) {
+    fprintf(stderr, "Could not open multisystem.csv file %s\n", filenamebuf);
+    fclose(mfp);
+    exit(1);
+  }
+  
+  /* read and skip the header line */
+  skip_to_eol(mfp);
+  /* read remaining lines, know we're done when we get an empty description
+     field */
+  while (1) {
+    read_to_char(mfp, graph_descr, ';');
+    if (strlen(graph_descr) < 2) break;
+    read_to_char(mfp, graph_basefilename, ';');
+    // don't need the list of systems
+    skip_to_eol(mfp);
+    process_graph_set(graph_basefilename, graph_descr, "multisystem", archive_name, outdir, sqlfp);
+  }
+
+  fclose(mfp);
+
+  // full custom graphs
+  printf("Processing full custom graphs\n");
+  /* use fullcustom.csv for the list of graphs of this group */
+  sprintf(filenamebuf, "%s/graphs/fullcustom.csv", hwy_data);
+  mfp = fopen(filenamebuf, "rt");
+  if (!mfp) {
+    fprintf(stderr, "Could not open fullcustom.csv file %s\n", filenamebuf);
+    fclose(mfp);
+    exit(1);
+  }
+  
+  /* read and skip the header line */
+  skip_to_eol(mfp);
+  /* read remaining lines, know we're done when we get an empty description
+     field */
+  while (1) {
+    read_to_char(mfp, graph_descr, ';');
+    if (strlen(graph_descr) < 2) break;
+    read_to_char(mfp, graph_basefilename, ';');
+    // don't need the remaining fields
+    skip_to_eol(mfp);
+    process_graph_set(graph_basefilename, graph_descr, "fullcustom", archive_name, outdir, sqlfp);
+  }
+
+  fclose(mfp);
+    
   printf("Processing tm-master graphs\n");
   process_graph_set("tm-master", "All Travel Mapping Data", "master",
     		    archive_name, outdir, sqlfp);
