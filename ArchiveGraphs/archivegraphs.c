@@ -231,11 +231,11 @@ int main(int argc, char *argv[]) {
 
   char *archive_name = argv[1];
   char *description = argv[2];
-  char *hwy_vers = argv[3];
-  char *user_vers = argv[4];
-  char *dataproc_vers = argv[5];
   /* should check here for a proper date format */
-  char *datestamp = argv[6];
+  char *datestamp = argv[3];
+  char *hwy_vers = argv[4];
+  char *user_vers = argv[5];
+  char *dataproc_vers = argv[6];
   char *outdir = argv[7];
 
   /* try to open the directory */
