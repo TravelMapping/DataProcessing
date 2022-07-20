@@ -28,3 +28,4 @@ extern struct stringlist *new_stringlist();
 extern void stringlist_append(struct stringlist *, char *);
 extern char **stringlist_getarray(struct stringlist *);
 extern void stringlist_free(struct stringlist *);
+extern void double_up_single_quotes(char *);

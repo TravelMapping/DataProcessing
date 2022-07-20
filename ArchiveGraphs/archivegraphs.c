@@ -368,6 +368,8 @@ int main(int argc, char *argv[]) {
 	read_to_char(sfp, country, ';');
 	read_to_char(sfp, name, ';');
 	sprintf(graph_basefilename, "%s-system", syscode);
+	// in case we have any single quotes in the string
+	double_up_single_quotes(name);
 	process_graph_set(graph_basefilename, name, "system", archive_name,
 			  outdir, sqlfp);
 	break;

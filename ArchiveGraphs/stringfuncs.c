@@ -165,3 +165,19 @@ void stringlist_free(struct stringlist *sl) {
 
   free(sl);
 }
+
+/* replace all occurrences of a single quote with 2 single quotes to
+ * allow the string as a field in an SQL insert command */
+void double_up_single_quotes(char *s) {
+
+  char scp[strlen(s)+1];
+  strcpy(scp, s);
+  char *sp = s;
+  char *scpp = scp;
+  while (*scpp) {
+    if (*scpp == '\'') {
+      *sp++ = '\'';
+    }
+    *sp++ = *scpp++;
+  }
+}
