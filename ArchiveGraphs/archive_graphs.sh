@@ -15,17 +15,22 @@ execdir=`pwd`
 tmbase=$HOME/travelmapping
 tmwebbase=/fast/www/tm
 datestr=`date '+%Y-%m-%d'`
-graphdir=graphdata
 graphdir=$HOME/temp/graphdata
+graphdir=$tmwebbase/graphdata
 # check for required command line args:
 #
 if [ "$#" -ne 2 ]; then
     echo "Usage: $0 archivename description"
     exit 1
 fi
+export HIGHWAY_DATA=$tmbase/HighwayData
 echo "Creating graph archive set with date stamp $datestr"
 echo "Archive name $1, description: $2"
-archivedir=$graphdir/$1
+archivedir=$tmwebbase/grapharchives/$1
+if [ -d $archivedir ]; then
+    echo "Archive directory $archivedir exists, exiting"
+    exit 1
+fi
 echo "Creating archive directory $archivedir"
 mkdir $archivedir
 echo "Copying existing graphs from $graphdir to $archivedir"
