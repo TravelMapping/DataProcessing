@@ -35,6 +35,7 @@ class DBFieldLength:
     graphDescr = 100
     graphFilename = 32
     graphFormat = 10
+    gitCommit = 41
     label = 26
     level = 10
     regionCode = 8
@@ -43,6 +44,7 @@ class DBFieldLength:
     root = 32
     route = 16
     routeLongName = 80
+    setName = 16
     statusChange = 16
     systemFullName = 60
     systemName = 10
@@ -4744,6 +4746,8 @@ else:
     # update graph info in DB if graphs were generated
     if not args.skipgraphs:
         print(et.et() + "...graphs", flush=True)
+        sqlfile.write('DROP TABLE IF EXISTS graphArchives;\n')
+        sqlfile.write('DROP TABLE IF EXISTS graphArchiveSets;\n')
         sqlfile.write('DROP TABLE IF EXISTS graphs;\n')
         sqlfile.write('DROP TABLE IF EXISTS graphTypes;\n')
         sqlfile.write('CREATE TABLE graphTypes (category VARCHAR(' + str(DBFieldLength.graphCategory) +
@@ -4764,6 +4768,26 @@ else:
                   '), vertices INTEGER, edges INTEGER, travelers INTEGER, format VARCHAR(' + str(DBFieldLength.graphFormat) +
                   '), category VARCHAR(' + str(DBFieldLength.graphCategory) +
                   '), FOREIGN KEY (category) REFERENCES graphTypes(category));\n')
+        sqlfile.write('CREATE TABLE graphArchiveSets (setName VARCHAR(' +
+                      str(DBFieldLength.setName) + '), descr VARCHAR(' +
+                      str(DBFieldLength.graphDescr) +
+                      '), dateStamp DATE, hwyDataVers VARCHAR(' +
+                      str(DBFieldLength.gitCommit) +
+                      '), userDataVers VARCHAR(' +
+                      str(DBFieldLength.gitCommit) +
+                      '), dataProcVers VARCHAR(' +
+                      str(DBFieldLength.gitCommit) +
+                      '), PRIMARY KEY(setName));')
+        sqlfile.write('CREATE TABLE graphArchives (filename VARCHAR(' +
+                      str(DBFieldLength.graphFilename) + '), descr VARCHAR(' +
+                      str(DBFieldLength.graphDescr) +
+                      '), vertices INTEGER, edges INTEGER, travelers INTEGER, format VARCHAR(' +
+                      str(DBFieldLength.graphFormat) +
+                      '), category VARCHAR(' +
+                      str(DBFieldLength.graphCategory) +
+                      '), setName VARCHAR(' + str(DBFieldLength.setName) +
+                      '), descr VARCHAR(' + str(DBFieldLength.graphDescr) +
+                      '), maxDegree INTEGER, avgDegree FLOAT, aspectRatio FLOAT, components INTEGER, FOREIGN KEY (category) REFERENCES graphTypes(category), FOREIGN KEY (setName) REFERENCES graphArchiveSets(setName));'
         if len(graph_list) > 0:
             sqlfile.write('INSERT INTO graphs VALUES\n')
             first = True
@@ -4773,7 +4797,6 @@ else:
                 first = False
                 sqlfile.write("('" + g.filename + "','" + g.descr.replace("'","''") + "','" + str(g.vertices) + "','" + str(g.edges) + "','" + str(g.travelers) + "','" + g.format + "','" + g.category + "')\n")
             sqlfile.write(";\n")
-
 
     sqlfile.close()
 
