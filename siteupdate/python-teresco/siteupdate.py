@@ -1418,7 +1418,8 @@ class TravelerList:
             lines = file.readlines()
         file.close()
         # strip UTF-8 byte order mark if present
-        lines[0] = lines[0].encode('utf-8').decode("utf-8-sig")
+        if len(lines):
+            lines[0] = lines[0].encode('utf-8').decode("utf-8-sig")
         try:
             self.log_entries = [travelername+" last updated: "+update[0]+' '+update[1]+' '+update[2]]
             self.update = update[0]
