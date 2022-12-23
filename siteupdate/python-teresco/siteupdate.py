@@ -1400,12 +1400,20 @@ class TravelerList:
     """This class encapsulates the contents of one .list file
     that represents the travels of one individual user.
 
-    A list file consists of lines of 4 values:
-    region route_name start_waypoint end_waypoint
+    A list file consists of lines of 4 or 6 data fields,
+    separated by 1 or more space or tab characters,
+    indicating the user has traveled the specified highway
+    between the waypoints start_point and end_point.
 
-    which indicates that the user has traveled the highway names
-    route_name in the given region between the waypoints named
-    start_waypoint end_waypoint
+    Fields starting with a # character are considered comments.
+    These and all subsequent fields in a line are ignored,
+    and don't count toward the 4 or 6 data fields.
+
+    4 fields describe travel on a chopped route in a single region:
+    region route_name start_point end_point
+
+    6 fields describe travel on a connected route in 1 or more regions:
+    start_region start_route start_point end_region end_route end_point
     """
 
     def __init__(self,travelername,update,el,path="../../../UserData/list_files"):
