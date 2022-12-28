@@ -99,6 +99,7 @@ void Route::read_wpt(WaypointQuadtree *all_waypoints, ErrorList *el, bool usa_fl
 			}
 			w->label_invalid_ends();
 			w->label_looks_hidden();
+			w->label_lowercase();
 			w->label_parens();
 			w->label_slashes(slash);
 			w->lacks_generic();

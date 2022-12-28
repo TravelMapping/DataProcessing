@@ -35,6 +35,7 @@ class Datacheck
     INVALID_FIRST_CHAR     | first character in label other than *
     LABEL_INVALID_CHAR     |
     LABEL_LOOKS_HIDDEN     |
+    LABEL_LOWERCASE        |
     LABEL_PARENS           |
     LABEL_SELFREF          |
     LABEL_SLASHES          |
@@ -43,6 +44,7 @@ class Datacheck
     LACKS_GENERIC          |
     LONG_SEGMENT           | distance in miles
     LONG_UNDERSCORE        |
+    LOWERCASE_SUFFIX       |
     MALFORMED_LAT          | malformed "lat=" parameter from OSM url
     MALFORMED_LON          | malformed "lon=" parameter from OSM url
     MALFORMED_URL          | always "MISSING_ARG(S)"

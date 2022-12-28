@@ -16,7 +16,6 @@ import math
 import os
 import re
 import sys
-import string
 import time
 import threading
 
@@ -1786,6 +1785,7 @@ class DatacheckEntry:
     INVALID_FIRST_CHAR     | first character in label other than *
     LABEL_INVALID_CHAR     |
     LABEL_LOOKS_HIDDEN     |
+    LABEL_LOWERCASE        |
     LABEL_PARENS           |
     LABEL_SELFREF          |
     LABEL_SLASHES          |
@@ -1794,6 +1794,7 @@ class DatacheckEntry:
     LACKS_GENERIC          |
     LONG_SEGMENT           | distance in miles
     LONG_UNDERSCORE        |
+    LOWERCASE_SUFFIX       |
     MALFORMED_LAT          | malformed "lat=" parameter from OSM url
     MALFORMED_LON          | malformed "lon=" parameter from OSM url
     MALFORMED_URL          | always "MISSING_ARG(S)"
@@ -3753,11 +3754,13 @@ datacheck_always_error = [ \
     'INVALID_FINAL_CHAR',
     'INVALID_FIRST_CHAR',
     'LABEL_INVALID_CHAR',
+    'LABEL_LOWERCASE',
     'LABEL_PARENS',
     'LABEL_SLASHES',
     'LABEL_TOO_LONG',
     'LABEL_UNDERSCORES',
     'LONG_UNDERSCORE',
+    'LOWERCASE_SUFFIX',
     'MALFORMED_LAT',
     'MALFORMED_LON',
     'MALFORMED_URL',
@@ -4195,15 +4198,23 @@ for h in highway_systems:
                 # looking for the route within the label
                 w.label_selfref()
 
-                # look for too many underscores in label
-                if w.label.count('_') > 1:
-                    datacheckerrors.append(DatacheckEntry(r,[w.label],'LABEL_UNDERSCORES'))
-
-                # look for too many characters after underscore in label
-                if '_' in w.label:
-                    if w.label.index('_') < len(w.label) - 4:
-                        if w.label[-1] not in string.ascii_uppercase or w.label.index('_') < len(w.label) - 5:
+                # datachecks for labels with underscored suffixes
+                u = w.label.find('_')
+                if u >= 0:
+                    # look for too many underscores in label
+                    if '_' in w.label[u+1:]:
+                        datacheckerrors.append(DatacheckEntry(r,[w.label],'LABEL_UNDERSCORES'))
+                    # look for too many characters after underscore in label
+                    if u < len(w.label) - 4:
+                        if not w.label[-1].isupper() or u < len(w.label) - 5:
                             datacheckerrors.append(DatacheckEntry(r,[w.label],'LONG_UNDERSCORE'))
+                    # look for labels with a slash after an underscore
+                    if '/' in w.label[u+1:]:
+                        datacheckerrors.append(DatacheckEntry(r,[w.label],'NONTERMINAL_UNDERSCORE'))
+                    # look for suffix starting with lowercase letter
+                    # slicing avoids an IndexError if underscore is final character
+                    if w.label[u+1:u+2].islower():
+                        datacheckerrors.append(DatacheckEntry(r,[w.label],'LOWERCASE_SUFFIX'))
 
                 # look for too many slashes in label
                 if w.label.count('/') > 1:
@@ -4226,15 +4237,16 @@ for h in highway_systems:
                 if w.label[-1] == "_" or w.label[-1] == "/":
                     datacheckerrors.append(DatacheckEntry(r,[w.label],'INVALID_FINAL_CHAR', w.label[-1]))
 
-                # look for labels with a slash after an underscore
-                if '_' in w.label and '/' in w.label and \
-                        w.label.index('/') > w.label.index('_'):
-                    datacheckerrors.append(DatacheckEntry(r,[w.label],'NONTERMINAL_UNDERSCORE'))
-
                 # look for labels that look like hidden waypoints but
                 # which aren't hidden
                 if re.fullmatch('X[0-9][0-9][0-9][0-9][0-9][0-9]', w.label):
                     datacheckerrors.append(DatacheckEntry(r,[w.label],'LABEL_LOOKS_HIDDEN'))
+
+                # label starts with lowercase letter
+                index = w.label[0] == '*'
+                # slicing avoids an IndexError if a label consists of only an asterisk
+                if w.label[index:index+1].islower():
+                    datacheckerrors.append(DatacheckEntry(r,[w.label],'LABEL_LOWERCASE'))
 
                 # lacks generic highway type
                 if re.fullmatch('^\*?[Oo][lL][dD][0-9].*', w.label):
