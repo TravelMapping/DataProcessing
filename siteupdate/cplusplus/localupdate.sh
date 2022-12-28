@@ -15,6 +15,7 @@ datestr=`date '+%Y-%m-%d@%H:%M:%S'`
 logdir=logs
 statdir=stats
 graphdir=graphdata
+grapharchives=grapharchives
 nmpmdir=nmp_merged
 graphflag=
 date
@@ -100,6 +101,11 @@ fi
 echo "$0: loading primary DB"
 date
 mysql --defaults-group-suffix=tmapadmin -u travmapadmin TravelMapping < TravelMapping-$datestr.sql
+if [ -d $tmwebbase/$grapharchives ]; then
+    for archive in $tmwebbase/$grapharchives/*/*.sql; do
+	mysql --defaults-group-suffix=tmapadmin -u travmapadmin TravelMapping < $archive
+    done
+fi
 /bin/rm $tmwebbase/dbupdating
 echo "$0: switching to primary DB"
 date
@@ -121,6 +127,11 @@ rmdir $datestr
 
 echo "$0: loading DB copy"
 mysql --defaults-group-suffix=tmapadmin -u travmapadmin TravelMappingCopy < TravelMapping-$datestr.sql
+if [ -d $tmwebbase/$grapharchives ]; then
+    for archive in $tmwebbase/$grapharchives/*/*.sql; do
+	mysql --defaults-group-suffix=tmapadmin -u travmapadmin TravelMappingCopy < $archive
+    done
+fi
 echo "$0: moving sql file to archive"
 mv TravelMapping-$datestr.sql $tmpdir
 echo "$0: sending email notification"
