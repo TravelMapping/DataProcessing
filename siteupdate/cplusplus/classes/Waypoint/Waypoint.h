@@ -62,6 +62,7 @@ class Waypoint
 	void interstate_no_hyphen();
 	void label_invalid_ends();
 	void label_looks_hidden();
+	void label_lowercase();
 	void label_parens();
 	void label_selfref();
 	void label_slashes(const char *);

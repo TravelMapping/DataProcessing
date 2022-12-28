@@ -454,6 +454,10 @@ void Waypoint::label_looks_hidden()
 	Datacheck::add(route, label, "", "", "LABEL_LOOKS_HIDDEN", "");
 }
 
+void Waypoint::label_lowercase()
+{	if (islower(label[label[0]=='*'])) Datacheck::add(route, label, "", "", "LABEL_LOWERCASE", "");
+}
+
 void Waypoint::label_parens()
 {	// look for parenthesis balance in label
 	int parens = 0;
@@ -550,6 +554,9 @@ void Waypoint::underscore_datachecks(const char *slash)
 		// look for labels with a slash after an underscore
 		if (slash > underscore)
 			Datacheck::add(route, label, "", "", "NONTERMINAL_UNDERSCORE", "");
+		// look for suffix starting with lowercase letter
+		if (islower(underscore[1]))
+			Datacheck::add(route, label, "", "", "LOWERCASE_SUFFIX", "");
 	}
 }
 
