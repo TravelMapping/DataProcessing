@@ -475,6 +475,8 @@ void sqlfile2(ElapsedTime *et, std::list<std::array<std::string,3>> *graph_types
 	      #ifndef threading_enabled
 		std::cout << et->et() << "...graphs" << std::endl;
 	      #endif
+		sqlfile << "DROP TABLE IF EXISTS graphArchives;\n";
+		sqlfile << "DROP TABLE IF EXISTS graphArchiveSets;\n";
 		sqlfile << "DROP TABLE IF EXISTS graphs;\n";
 		sqlfile << "DROP TABLE IF EXISTS graphTypes;\n";
 		sqlfile << "CREATE TABLE graphTypes (category VARCHAR(" << DBFieldLength::graphCategory
@@ -496,6 +498,27 @@ void sqlfile2(ElapsedTime *et, std::list<std::array<std::string,3>> *graph_types
 			<< "format VARCHAR(" << DBFieldLength::graphFormat
 			<< "), category VARCHAR(" << DBFieldLength::graphCategory
 			<< "), FOREIGN KEY (category) REFERENCES graphTypes(category));\n";
+		sqlfile << "CREATE TABLE graphArchiveSets (setName VARCHAR("
+			<< DBFieldLength::setName << "), descr VARCHAR("
+			<< DBFieldLength::graphDescr
+			<< "), dateStamp DATE, hwyDataVers VARCHAR("
+			<< DBFieldLength::gitCommit
+			<< "), userDataVers VARCHAR("
+			<< DBFieldLength::gitCommit 
+			<< "), dataProcVers VARCHAR("
+			<< DBFieldLength::gitCommit
+			<< "), PRIMARY KEY(setName));\n";
+		sqlfile << "CREATE TABLE graphArchives (filename VARCHAR("
+			<< DBFieldLength::graphFilename
+			<< "), descr VARCHAR("
+			<< DBFieldLength::graphDescr
+			<< "), vertices INTEGER, edges INTEGER, travelers INTEGER, format VARCHAR("
+			<< DBFieldLength::graphFormat
+			<< "), category VARCHAR("
+			<< DBFieldLength::graphCategory
+			<< "), setName VARCHAR("
+			<< DBFieldLength::setName
+			<< "), maxDegree INTEGER, avgDegree FLOAT, aspectRatio FLOAT, components INTEGER, FOREIGN KEY (category) REFERENCES graphTypes(category), FOREIGN KEY (setName) REFERENCES graphArchiveSets(setName));\n";
 		if (GraphListEntry::entries.size())
 		{	sqlfile << "INSERT INTO graphs VALUES\n";
 			for (size_t g = 0; g < GraphListEntry::entries.size(); g++)

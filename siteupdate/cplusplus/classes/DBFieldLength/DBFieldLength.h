@@ -13,6 +13,7 @@ class DBFieldLength
 	static const size_t countryName;
 	static const size_t date;
 	static const size_t dcErrCode;
+	static const size_t gitCommit;
 	static const size_t graphCategory;
 	static const size_t graphDescr;
 	static const size_t graphFilename;
@@ -25,6 +26,7 @@ class DBFieldLength
 	static const size_t root;
 	static const size_t route;
 	static const size_t routeLongName;
+	static const size_t setName;
 	static const size_t statusChange;
 	static const size_t systemFullName;
 	static const size_t systemName;
