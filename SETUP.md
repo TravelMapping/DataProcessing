@@ -2,9 +2,9 @@ This document is intended to describe how one can set up an environment to run T
 
 ### Needed Software
 
-Standard tools expected include bash, bzip2, ssh.
+Standard tools expected include `bash`, `bzip2`, a GNU version of `make` (often named `gmake`), `ssh`.
 
-The system should have a Python3 installation.  As of this writing, Python 3.6.4 is being used.  Below, we will assume that Python can be launched with the command "python3".
+There are two versions of the site update program: one written in Python and one in C++.  Both produce the same result.  The Python version requires a Python3 installation (as of this writing, Python 3.9.13).  Below, we will assume that Python can be launched with the command "python3".  The C++ version requires a C++ compiler (as of this writing, FreeBSD clang 13.0.0).
 
 ### Cloning Needed Repositories
 
@@ -14,13 +14,37 @@ Information from three repositories is needed to run the site update process:
 2. [HighwayData](https://github.com/TravelMapping/HighwayData/)
 3. [UserData](https://github.com/TravelMapping/UserData/)
 
-These should be cloned into the same parent directory.  Typically, this might be called "travelmapping" and sit off the user's home directory.  Below, we will assume that directory is in an environment variable TMBASE, so we refer to it as $(TMBASE).
+These should be cloned into the same parent directory.  Typically, this might be called "`travelmapping`" and sit off the user's home directory.  Below, we will assume that directory is in an environment variable `TMBASE`, so we refer to it as `$(TMBASE)`.
 
-Once all repositories have been updated to match the latest versions on GitHub (using "git pull"), the site update program can be run.  To run the basic data processing to ensure that all data can be loaded correcly and that no other errors are encountered:
+### Compiling the C++ Version
+
+For those using the C++ version of the site update process, it must first be compiled.
+
+```
+cd $(TMBASE)/DataProcessing/siteupdate/cplusplus
+gmake
+```
+
+On some systems `gmake` might be named `make`.  This will launch a series of compile and link commands to build executables `siteupdate` and `siteupdateST`.  This command should be re-run each time that the C++ site update code is updated.
+
+### Running Main Site Update Code
+
+Once all repositories have been updated to match the latest versions on GitHub (using `git pull`), the site update program can be run.  To run the basic data processing to ensure that all data can be loaded correctly and that no other errors are encountered, either of the following can be used:
+
+For Python:
+
 
 ```
 cd $(TMBASE)/DataProcessing/siteupdate/python-teresco
 python3 siteupdate.py
+```
+
+For C++:
+
+
+```
+cd $(TMBASE)/DataProcessing/siteupdate/cplusplus
+./siteupdateST
 ```
 
 There is also a collection of bash scripts that run this program, typically launched with
@@ -29,4 +53,4 @@ There is also a collection of bash scripts that run this program, typically laun
 sh localupdate.sh
 ```
 
-right on the main server.  In addition to running the siteupdate.py program, this also transfers files to the appropriate directories on the web servers and reloads the DB.
+right on the main server in the same directory as the Python or C++ programs above.  In addition to running the site update program, this also transfers files to the appropriate directories on the web servers and reloads the database (which is assumed to be set up previously).
