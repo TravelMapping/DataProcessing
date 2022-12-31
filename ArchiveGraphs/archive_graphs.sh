@@ -3,9 +3,6 @@
 # script to run to take the current set of METAL graphs and
 # save them as an archive
 #
-# prerequisite: generation of intersection-only graphs and
-# computation of stats for all current graphs
-#
 # Jim Teresco, Tue Jun 28 18:25:28 EDT 2022
 #
 set -e
@@ -49,4 +46,5 @@ echo "Command line is:"
 echo "./archivegraphs $1 \"$2\" $datestr $hwydatavers $userdatavers $dataprocvers $archivedir"
 ./archivegraphs $1 "\"$2\"" $datestr $hwydatavers $userdatavers $dataprocvers $archivedir
 echo "Adding archive entries to DB"
-mysql --defaults-group-suffix=tmapadmin -u travmapadmin TravelMappingTest < $archivedir/$1.sql
+mysql --defaults-group-suffix=tmapadmin -u travmapadmin TravelMapping < $archivedir/$1.sql
+mysql --defaults-group-suffix=tmapadmin -u travmapadmin TravelMappingCopy < $archivedir/$1.sql
