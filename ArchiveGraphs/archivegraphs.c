@@ -280,7 +280,7 @@ int main(int argc, char *argv[]) {
 
   /* new graphArchiveSets DB table entry for this archive set */
   fprintf(sqlfp, "INSERT INTO graphArchiveSets VALUES\n");
-  fprintf(sqlfp, "('%s','%s','%s','%s','%s','%s');", archive_name, description,
+  fprintf(sqlfp, "('%s','%s','%s','%s','%s','%s');\n", archive_name, description,
 	  datestamp, hwy_vers, user_vers, dataproc_vers);
 
   /* start processing graphs */
