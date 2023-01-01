@@ -6,7 +6,7 @@ file.open(Args::highwaydatapath+"/updates.csv");
 getline(file, line); // ignore header line
 while (getline(file, line))
 {	// trim DOS newlines & trailing whitespace
-	while (line.back() == 0x0D || line.back() == ' ' || line.back() == '\t')
+	while (line.size() && (line.back() == 0x0D || line.back() == ' ' || line.back() == '\t'))
 		line.pop_back();
 	if (line.empty()) continue;
 	// parse updates.csv line
@@ -69,7 +69,7 @@ cout << et.et() << "Reading systemupdates file." << endl;
 file.open(Args::highwaydatapath+"/systemupdates.csv");
 getline(file, line);  // ignore header line
 while (getline(file, line))
-{	if (line.back() == 0x0D) line.erase(line.end()-1);	// trim DOS newlines
+{	if (line.size() && line.back() == 0x0D) line.erase(line.end()-1);	// trim DOS newlines
 	if (line.empty()) continue;
 	// parse systemupdates.csv line
 	size_t NumFields = 5;
