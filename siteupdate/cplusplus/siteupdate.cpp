@@ -90,7 +90,7 @@ int main(int argc, char *argv[])
 	if (!file) el.add_error("Could not open "+Args::highwaydatapath+"/continents.csv");
 	else {	getline(file, line); // ignore header line
 		while(getline(file, line))
-		{	if (line.back() == 0x0D) line.erase(line.end()-1);	// trim DOS newlines
+		{	if (line.size() && line.back() == 0x0D) line.pop_back();	// trim DOS newlines
 			if (line.empty()) continue;
 			size_t delim = line.find(';');
 			if (delim == string::npos)
@@ -125,7 +125,7 @@ int main(int argc, char *argv[])
 	if (!file) el.add_error("Could not open "+Args::highwaydatapath+"/countries.csv");
 	else {	getline(file, line); // ignore header line
 		while(getline(file, line))
-		{	if (line.back() == 0x0D) line.erase(line.end()-1);	// trim DOS newlines
+		{	if (line.size() && line.back() == 0x0D) line.pop_back();	// trim DOS newlines
 			if (line.empty()) continue;
 			size_t delim = line.find(';');
 			if (delim == string::npos)
@@ -159,7 +159,7 @@ int main(int argc, char *argv[])
 	if (!file) el.add_error("Could not open "+Args::highwaydatapath+"/regions.csv");
 	else {	getline(file, line); // ignore header line
 		while(getline(file, line))
-		{	if (line.back() == 0x0D) line.erase(line.end()-1);	// trim DOS newlines
+		{	if (line.size() && line.back() == 0x0D) line.pop_back();	// trim DOS newlines
 			if (line.empty()) continue;
 			Region* r = new Region(line, countries, continents, el);
 				    // deleted on termination of program
@@ -181,7 +181,7 @@ int main(int argc, char *argv[])
 	else {	getline(file, line); // ignore header line
 		list<string> ignoring;
 		while(getline(file, line))
-		{	if (line.back() == 0x0D) line.erase(line.end()-1);	// trim DOS newlines
+		{	if (line.size() && line.back() == 0x0D) line.pop_back();	// trim DOS newlines
 			if (line.empty()) continue;
 			if (line[0] == '#')
 			{	ignoring.push_back("Ignored comment in " + Args::systemsfile + ": " + line);
