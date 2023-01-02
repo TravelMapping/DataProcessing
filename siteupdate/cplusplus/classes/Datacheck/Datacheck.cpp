@@ -47,7 +47,7 @@ void Datacheck::read_fps(std::string& path, ErrorList &el)
 	getline(file, line); // ignore header line
 	while (getline(file, line))
 	{	// trim DOS newlines & trailing whitespace
-		while (line.back() == 0x0D || line.back() == ' ' || line.back() == '\t')
+		while (line.size() && (line.back() == 0x0D || line.back() == ' ' || line.back() == '\t'))
 			line.pop_back();
 		// trim leading whitespace
 		while (line[0] == ' ' || line[0] == '\t')
