@@ -72,8 +72,8 @@ cd $tmbase/UserData/list_files
 for u in *; do echo $u `git log -n 1 --pretty=%ci $u`; done | tee $execdir/listupdates.txt
 cd -
 
-echo "$0: launching siteupdateST"
-./siteupdateST -d TravelMapping-$datestr $graphflag -l $datestr/$logdir -c $datestr/$statdir -g $datestr/$graphdir -n $datestr/$nmpmdir | tee -a $datestr/$logdir/siteupdate.log 2>&1 || exit 1
+echo "$0: launching siteupdate (8 threads)"
+./siteupdate -t 8 -d TravelMapping-$datestr $graphflag -l $datestr/$logdir -c $datestr/$statdir -g $datestr/$graphdir -n $datestr/$nmpmdir | tee -a $datestr/$logdir/siteupdate.log 2>&1 || exit 1
 date
 
 echo "$0: deleting listupdates.txt"
