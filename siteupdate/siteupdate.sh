@@ -8,8 +8,7 @@
 #
 
 function usage {
-    echo "Usage: $0 [--help] [--nographs] [--noinstall] [--nopull] [--use-python] [--remote server]"
-
+    echo "Usage: $0 [--help] [--nographs] [--noinstall] [--nopull] [--use-python] [--remote server] [--numthreads nt]"
 }
 
 set -e
@@ -29,31 +28,35 @@ graphdir=graphdata
 grapharchives=grapharchives
 nmpmdir=nmp_merged
 graphflag=
-language=cpp_mt
+language=cpp
 remote=0
+numthreads=1
 
 # process command line args
 nextitem=
 for arg in "$@"; do
-    if [ "$nextitem" == "remote" ]; then
+    if [[ "$nextitem" == remote ]]; then
 	nextitem=
 	remote=$arg
-    elif [ "$arg" == "--help" ]; then
+    elif [[ "$nextitem" == numthreads ]]; then
+	nextitem=
+	numthreads=$arg
+    elif [[ "$arg" == --help ]]; then
 	usage
 	exit 0
-    elif [ "$arg" == "--nographs" ]; then
+    elif [[ "$arg" == --nographs ]]; then
 	# -k to siteupdate supresses graph generation
 	graphflag="-k"
-    elif [ "$arg" == "--noinstall" ]; then
+    elif [[ "$arg" == --noinstall ]]; then
 	install=0
-    elif [ "$arg" == "--nopull" ]; then
+    elif [[ "$arg" == --nopull ]]; then
 	pull=0
-    elif [ "$arg" == "--use-python" ]; then
+    elif [[ "$arg" == --use-python ]]; then
 	language=python
-    elif [ "$arg" == "--nothreads" ]; then
-	language=cpp
-    elif [ "$arg" == "--remote" ]; then
+    elif [[ "$arg" == --remote ]]; then
 	nextitem=remote
+    elif [[ "$arg" == --numthreads ]]; then
+	nextitem=numthreads
     else
 	echo "Unknown argument $arg"
 	usage
@@ -63,14 +66,31 @@ for arg in "$@"; do
 done
 
 # check for any missing nextitem
-if [ "$nextitem" != "" ]; then
+if [[ "$nextitem" != "" ]]; then
     echo "Missing argument for $nextitem"
     usage
     exit 1
 fi
 
-exit 0
-if [ "$pull" == "1" ]; then
+# no threads with python allowed
+if [[ "$language" == python && "$numthreads" != "1" ]]; then
+    echo "Python is not compatible with multiple threads"
+    exit 1
+fi
+
+# no remote support, yet
+if [[ "$remote" != "0" ]]; then
+    echo "Remote updates not yet supported"
+    exit 1
+fi
+
+# check for valid language option
+if [[ "$language" != python && "$language" != cpp ]]; then
+    echo "Language $language not supported, only python and cpp"
+    exit 1
+fi
+
+if [[ "$pull" == "1" ]]; then
       echo "$0: updating TM repositories"
       (cd $tmbase/HighwayData; git pull)
       (cd $tmbase/UserData; git pull)
@@ -78,25 +98,8 @@ fi
 
 echo "$0: creating directories"
 mkdir -p $datestr/$logdir/users $datestr/$statdir $datestr/$nmpmdir $datestr/$logdir/nmpbyregion
-if [ "$graphflag" != "-k" ]; then
+if [[ "$graphflag" != "-k" ]]; then
     mkdir -p $datestr/$graphdir
-fi
-if [ "$install" == "1" ]; then
-    echo "$0: switching to DB copy"
-    ln -sf $tmwebbase/lib/tm.conf.updating $tmwebbase/lib/tm.conf
-    touch $tmwebbase/dbupdating
-    echo "**********************************************************************"
-    echo "**********************************************************************"
-    echo "*                                                                    *"
-    echo "* CHECKING FOR USER SLEEP MYSQL PROCESSES USING SHOW PROCESSLIST;    *"
-    echo "* REMOVE ANY ENTRIES BEFORE THE SITE UPDATE SCRIPT FINISHES TO AVOID *"
-    echo "* A POSSIBLE HANG DURING INGESTION OF THE NEW .sql FILE.             *"
-    echo "*                                                                    *"
-    echo "**********************************************************************"
-    echo "**********************************************************************"
-    echo "show processlist;" | mysql --defaults-group-suffix=travmap -u travmap
-else
-    echo "$0: SKIPPING switch to DB copy"
 fi
 
 echo "$0: gathering repo head info"
@@ -109,8 +112,16 @@ cd $tmbase/UserData/list_files
 for u in *; do echo $u `git log -n 1 --pretty=%ci $u`; done | tee $execdir/listupdates.txt
 cd -
 
-echo "$0: launching siteupdateST"
-./siteupdateST -d TravelMapping-$datestr $graphflag -l $datestr/$logdir -c $datestr/$statdir -g $datestr/$graphdir -n $datestr/$nmpmdir | tee -a $datestr/$logdir/siteupdate.log 2>&1 || exit 1
+# pick our language, number of threads for the command
+siteupdate="./cplusplus/siteupdateST"
+if [[ "$language" == python ]]; then
+    siteupdate="python3 python-teresco/siteupdate.py"
+elif [[ "$numthreads" != "1" ]]; then
+    siteupdate="./cplusplus/siteupdate -t $numthreads"
+fi
+   
+echo "$0: launching $siteupdate"
+$siteupdate -d TravelMapping-$datestr $graphflag -l $datestr/$logdir -c $datestr/$statdir -g $datestr/$graphdir -n $datestr/$nmpmdir | tee -a $datestr/$logdir/siteupdate.log 2>&1 || exit 1
 date
 
 echo "$0: deleting listupdates.txt"
@@ -134,6 +145,10 @@ if [ "$graphflag" != "-k" ]; then
     zip -q graphs.zip *.tmg
     cd -
 fi
+
+echo "$0: switching to DB copy"
+ln -sf $tmwebbase/lib/tm.conf.updating $tmwebbase/lib/tm.conf
+touch $tmwebbase/dbupdating
 
 echo "$0: loading primary DB"
 date
