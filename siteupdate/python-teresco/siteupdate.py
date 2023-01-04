@@ -4798,7 +4798,7 @@ else:
                       str(DBFieldLength.gitCommit) +
                       '), dataProcVers VARCHAR(' +
                       str(DBFieldLength.gitCommit) +
-                      '), PRIMARY KEY(setName));')
+                      '), PRIMARY KEY(setName));\n')
         sqlfile.write('CREATE TABLE graphArchives (filename VARCHAR(' +
                       str(DBFieldLength.graphFilename) + '), descr VARCHAR(' +
                       str(DBFieldLength.graphDescr) +
@@ -4807,7 +4807,7 @@ else:
                       '), category VARCHAR(' +
                       str(DBFieldLength.graphCategory) +
                       '), setName VARCHAR(' + str(DBFieldLength.setName) +
-                      '), maxDegree INTEGER, avgDegree FLOAT, aspectRatio FLOAT, components INTEGER, FOREIGN KEY (category) REFERENCES graphTypes(category), FOREIGN KEY (setName) REFERENCES graphArchiveSets(setName));')
+                      '), maxDegree INTEGER, avgDegree FLOAT, aspectRatio FLOAT, components INTEGER, FOREIGN KEY (category) REFERENCES graphTypes(category), FOREIGN KEY (setName) REFERENCES graphArchiveSets(setName));\n')
         if len(graph_list) > 0:
             sqlfile.write('INSERT INTO graphs VALUES\n')
             first = True
