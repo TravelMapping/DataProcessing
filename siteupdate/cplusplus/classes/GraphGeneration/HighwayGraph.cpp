@@ -28,7 +28,7 @@ HighwayGraph::HighwayGraph(WaypointQuadtree &all_waypoints, ElapsedTime &et)
 
 	// allocate vertices, and a bit field to track their inclusion in subgraphs
 	vertices.resize(hi_priority_points.size()+lo_priority_points.size());
-	vbytes = double(ceil(vertices.size())/8);
+	vbytes = ceil(double(vertices.size())/8);
 	vbits = new unsigned char[vbytes*Args::numthreads];
 		// deleted by HighwayGraph::clear
 	for (size_t i = 0; i < vbytes*Args::numthreads; ++i) vbits[i] = 0;

@@ -215,14 +215,14 @@ void Route::write_nmp_merged()
 	wptfile.close();
 }
 
-void Route::store_traveled_segments(TravelerList* t, std::ofstream& log, std::string* update, unsigned int beg, unsigned int end)
+void Route::store_traveled_segments(TravelerList* t, std::ofstream& log, std::string& update, unsigned int beg, unsigned int end)
 {	// store clinched segments with traveler and traveler with segments
 	for (unsigned int pos = beg; pos < end; pos++)
 	{	HighwaySegment *hs = segment_list[pos];
 		hs->add_clinched_by(t);
 		t->clinched_segments.insert(hs);
 	}
-	if (last_update && t->updated_routes.insert(this).second && update && last_update[0] >= *update)
+	if (last_update && t->updated_routes.insert(this).second && update.size() && last_update[0] >= update)
 		log << "Route updated " << last_update[0] << ": " << readable_name() << '\n';
 }
 
