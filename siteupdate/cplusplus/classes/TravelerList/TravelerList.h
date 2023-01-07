@@ -56,7 +56,7 @@ class TravelerList
 	TravelerList(std::string, ErrorList*);
 	double active_only_miles();
 	double active_preview_miles();
-	double system_region_miles(HighwaySystem *);
+	double system_miles(HighwaySystem *);
 	void userlog(const double, const double);
 };
 
