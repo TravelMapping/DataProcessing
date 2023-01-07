@@ -1415,7 +1415,7 @@ class TravelerList:
     start_region start_route start_point end_region end_route end_point
     """
 
-    def __init__(self,travelername,update,el,path="../../../UserData/list_files"):
+    def __init__(self,travelername,el,path="../../../UserData/list_files"):
         list_entries = 0
         self.clinched_segments = set()
         self.traveler_name = travelername[:-5]
@@ -1423,14 +1423,16 @@ class TravelerList:
             el.add_error("Traveler name " + self.traveler_name + " > " + str(DBFieldLength.traveler) + "bytes")
         with open(path+"/"+travelername,"rt", encoding='UTF-8') as file:
             lines = file.readlines()
-        file.close()
         # strip UTF-8 byte order mark if present
         if len(lines):
             lines[0] = lines[0].encode('utf-8').decode("utf-8-sig")
         try:
-            self.log_entries = [travelername+" last updated: "+update[0]+' '+update[1]+' '+update[2]]
-            self.update = update[0]
-        except TypeError:
+            file = open(path+"/../time_files/"+self.traveler_name+".time")
+            line = file.readline().rstrip()
+            self.log_entries = [travelername+" last updated: "+line]
+            self.update = line[:10]
+            file.close()
+        except FileNotFoundError:
             self.log_entries = []
             self.update = None
         self.updated_routes = set()
@@ -3127,7 +3129,6 @@ updates = []
 print(et.et() + "Reading updates file.",flush=True)
 with open(args.highwaydatapath+"/updates.csv", "rt", encoding='UTF-8') as file:
     lines = file.readlines()
-file.close()
 
 lines.pop(0)  # ignore header line
 for line in lines:
@@ -3177,7 +3178,6 @@ systemupdates = []
 print(et.et() + "Reading systemupdates file.",flush=True)
 with open(args.highwaydatapath+"/systemupdates.csv", "rt", encoding='UTF-8') as file:
     lines = file.readlines()
-file.close()
 
 lines.pop(0)  # ignore header line
 for line in lines:
@@ -3207,40 +3207,15 @@ for line in lines:
                      " bytes in systemupdates.csv line " + line)
     systemupdates.append(fields)
 
-# Read most recent update dates/times for .list files
-# one line for each traveler, containing 4 space-separated fields:
-# 0: username with .list extension
-# 1-3: date, time, and time zone as written by "git log -n 1 --pretty=%ci"
-listupdates = {}
-try:
-    file = open("listupdates.txt", "rt", encoding='UTF-8')
-    print(et.et() + "Reading .list updates file.",flush=True)
-    for line in file.readlines():
-        line = line.strip()
-        fields = line.split(' ')
-        if len(fields) != 4:
-            print("WARNING: Could not parse listupdates.txt line: [" +
-                  line + "], expected 4 fields, found " + str(len(fields)))
-            continue
-        listupdates[fields[0]] = fields[1:]
-    file.close()
-except FileNotFoundError:
-    pass
-
 # Create a list of TravelerList objects, one per person
 traveler_lists = []
 
 print(et.et() + "Processing traveler list files:",flush=True)
 for t in traveler_ids:
     if t.endswith('.list'):
-        try:
-            update = listupdates[t]
-        except KeyError:
-            update = None
         print(t + " ",end="",flush=True)
-        traveler_lists.append(TravelerList(t,update,el,args.userlistfilepath))
+        traveler_lists.append(TravelerList(t,el,args.userlistfilepath))
 del traveler_ids
-del listupdates
 print('\n' + et.et() + "Processed " + str(len(traveler_lists)) + " traveler list files. Sorting and numbering.")
 traveler_lists.sort(key=lambda TravelerList: TravelerList.traveler_name)
 # assign traveler numbers
@@ -3736,7 +3711,6 @@ for h in highway_systems:
 print(et.et() + "Reading datacheckfps.csv.",flush=True)
 with open(args.highwaydatapath+"/datacheckfps.csv", "rt",encoding='utf-8') as file:
     lines = file.readlines()
-file.close()
 
 lines.pop(0)  # ignore header line
 datacheckfps = []
@@ -3813,7 +3787,6 @@ else:
     print(et.et() + "Creating area data graphs.", flush=True)
     with open(args.highwaydatapath+"/graphs/areagraphs.csv", "rt",encoding='utf-8') as file:
         lines = file.readlines()
-    file.close()
     lines.pop(0);  # ignore header line
     for line in lines:
         line=line.strip()
@@ -3895,7 +3868,6 @@ else:
     h = None
     with open(args.highwaydatapath+"/graphs/systemgraphs.csv", "rt",encoding='utf-8') as file:
         lines = file.readlines()
-    file.close()
     lines.pop(0);  # ignore header line
     for hname in lines:
         h = None
@@ -3920,7 +3892,6 @@ else:
 
     with open(args.highwaydatapath+"/graphs/multisystem.csv", "rt",encoding='utf-8') as file:
         lines = file.readlines()
-    file.close()
     lines.pop(0);  # ignore header line
     for line in lines:
         line=line.strip()
@@ -3957,7 +3928,6 @@ else:
 
     with open(args.highwaydatapath+"/graphs/multiregion.csv", "rt",encoding='utf-8') as file:
         lines = file.readlines()
-    file.close()
     lines.pop(0);  # ignore header line
     for line in lines:
         line=line.strip()
