@@ -4759,6 +4759,15 @@ else:
                   '), vertices INTEGER, edges INTEGER, travelers INTEGER, format VARCHAR(' + str(DBFieldLength.graphFormat) +
                   '), category VARCHAR(' + str(DBFieldLength.graphCategory) +
                   '), FOREIGN KEY (category) REFERENCES graphTypes(category));\n')
+        if len(graph_list) > 0:
+            sqlfile.write('INSERT INTO graphs VALUES\n')
+            first = True
+            for g in graph_list:
+                if not first:
+                    sqlfile.write(',')
+                first = False
+                sqlfile.write("('" + g.filename + "','" + g.descr.replace("'","''") + "','" + str(g.vertices) + "','" + str(g.edges) + "','" + str(g.travelers) + "','" + g.format + "','" + g.category + "')\n")
+            sqlfile.write(";\n")
         sqlfile.write('CREATE TABLE graphArchiveSets (setName VARCHAR(' +
                       str(DBFieldLength.setName) + '), descr VARCHAR(' +
                       str(DBFieldLength.graphDescr) +
@@ -4778,15 +4787,6 @@ else:
                       str(DBFieldLength.graphCategory) +
                       '), setName VARCHAR(' + str(DBFieldLength.setName) +
                       '), maxDegree INTEGER, avgDegree FLOAT, aspectRatio FLOAT, components INTEGER, FOREIGN KEY (category) REFERENCES graphTypes(category), FOREIGN KEY (setName) REFERENCES graphArchiveSets(setName));\n')
-        if len(graph_list) > 0:
-            sqlfile.write('INSERT INTO graphs VALUES\n')
-            first = True
-            for g in graph_list:
-                if not first:
-                    sqlfile.write(',')
-                first = False
-                sqlfile.write("('" + g.filename + "','" + g.descr.replace("'","''") + "','" + str(g.vertices) + "','" + str(g.edges) + "','" + str(g.travelers) + "','" + g.format + "','" + g.category + "')\n")
-            sqlfile.write(";\n")
 
     sqlfile.close()
 
