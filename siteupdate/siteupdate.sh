@@ -113,11 +113,27 @@ for u in *; do echo $u `git log -n 1 --pretty=%ci $u`; done | tee $execdir/listu
 cd -
 
 # pick our language, number of threads for the command
-siteupdate="./cplusplus/siteupdateST"
 if [[ "$language" == python ]]; then
-    siteupdate="python3 python-teresco/siteupdate.py"
+    if hash python3 2>/dev/null; then
+	siteupdate="python3 python-teresco/siteupdate.py"
+    else
+	echo "No python3 command found."
+	exit 1
+    fi
 elif [[ "$numthreads" != "1" ]]; then
-    siteupdate="./cplusplus/siteupdate -t $numthreads"
+    if [ -x ./cplusplus/siteupdate ]; then
+	siteupdate="./cplusplus/siteupdate -t $numthreads"
+    else
+	echo "./cplusplus/siteupdate program not found."
+	exit 1
+    fi
+else
+    if [ -x ./cplusplus/siteupdateST ]; then
+	siteupdate="./cplusplus/siteupdateST"
+    else
+	echo "./cplusplus/siteupdateST program not found."
+	exit 1
+    fi
 fi
    
 echo "$0: launching $siteupdate"
