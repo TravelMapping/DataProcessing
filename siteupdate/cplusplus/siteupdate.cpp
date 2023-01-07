@@ -342,7 +342,6 @@ int main(int argc, char *argv[])
 	}
       #endif
 	TravelerList::ids.clear();
-	TravelerList::listupdates.clear();
 	cout << endl << et.et() << "Processed " << TravelerList::allusers.size() << " traveler list files. Sorting and numbering." << endl;
 	TravelerList::allusers.sort(sort_travelers_by_name);
 	// assign traveler numbers for master traveled graph

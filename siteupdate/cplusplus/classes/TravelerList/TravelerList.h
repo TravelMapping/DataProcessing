@@ -52,7 +52,6 @@ class TravelerList
 	static std::list<std::string>::iterator id_it;
 	static std::list<TravelerList*> allusers;
 	static std::list<TravelerList*>::iterator tl_it;
-	static std::unordered_map<std::string, std::string**> listupdates;
 
 	TravelerList(std::string, ErrorList*);
 	double active_only_miles();
