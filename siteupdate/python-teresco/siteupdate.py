@@ -3538,10 +3538,8 @@ for t in traveler_lists:
     # stats by system
     for h in highway_systems:
         if h.active_or_preview():
-            t_system_overall = 0.0
             if h.systemname in t.system_region_mileages:
                 t_system_overall = math.fsum(t.system_region_mileages[h.systemname].values())
-            if t_system_overall > 0.0:
                 if h.active():
                     t.active_systems_traveled += 1
                 else:
@@ -3619,15 +3617,10 @@ for t in traveler_lists:
                          " preview systems")
     # updated routes, sorted by date
     t.log_entries.append("\nMost recent updates for listed routes:")
-    route_list = []
-    for r in t.updated_routes:
-        if r.last_update:
-            route_list.append(r)
-    del t.updated_routes
-    route_list.sort(key=lambda r: r.last_update[0]+r.last_update[3])
-    for r in route_list:
+    for r in sorted(t.updated_routes, key=lambda r: r.last_update[0]+r.last_update[3]):
         t.log_entries.append(r.last_update[0] + " | " + r.last_update[1] + " | " + \
                              r.last_update[2] + " | " + r.last_update[3] + " | " + r.last_update[4])
+    del t.updated_routes
 
 print("!", flush=True)
 
@@ -4759,6 +4752,15 @@ else:
                   '), vertices INTEGER, edges INTEGER, travelers INTEGER, format VARCHAR(' + str(DBFieldLength.graphFormat) +
                   '), category VARCHAR(' + str(DBFieldLength.graphCategory) +
                   '), FOREIGN KEY (category) REFERENCES graphTypes(category));\n')
+        if len(graph_list) > 0:
+            sqlfile.write('INSERT INTO graphs VALUES\n')
+            first = True
+            for g in graph_list:
+                if not first:
+                    sqlfile.write(',')
+                first = False
+                sqlfile.write("('" + g.filename + "','" + g.descr.replace("'","''") + "','" + str(g.vertices) + "','" + str(g.edges) + "','" + str(g.travelers) + "','" + g.format + "','" + g.category + "')\n")
+            sqlfile.write(";\n")
         sqlfile.write('CREATE TABLE graphArchiveSets (setName VARCHAR(' +
                       str(DBFieldLength.setName) + '), descr VARCHAR(' +
                       str(DBFieldLength.graphDescr) +
@@ -4778,15 +4780,6 @@ else:
                       str(DBFieldLength.graphCategory) +
                       '), setName VARCHAR(' + str(DBFieldLength.setName) +
                       '), maxDegree INTEGER, avgDegree FLOAT, aspectRatio FLOAT, components INTEGER, FOREIGN KEY (category) REFERENCES graphTypes(category), FOREIGN KEY (setName) REFERENCES graphArchiveSets(setName));\n')
-        if len(graph_list) > 0:
-            sqlfile.write('INSERT INTO graphs VALUES\n')
-            first = True
-            for g in graph_list:
-                if not first:
-                    sqlfile.write(',')
-                first = False
-                sqlfile.write("('" + g.filename + "','" + g.descr.replace("'","''") + "','" + str(g.vertices) + "','" + str(g.edges) + "','" + str(g.travelers) + "','" + g.format + "','" + g.category + "')\n")
-            sqlfile.write(";\n")
 
     sqlfile.close()
 
