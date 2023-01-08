@@ -157,7 +157,7 @@ double TravelerList::active_preview_miles()
 }
 
 /* Return mileage across all regions for a specified system */
-double TravelerList::system_region_miles(HighwaySystem *h)
+double TravelerList::system_miles(HighwaySystem *h)
 {	double mi = 0;
 	for (std::pair<Region* const, double>& rm : system_region_mileages.at(h)) mi += rm.second;
 	return mi;

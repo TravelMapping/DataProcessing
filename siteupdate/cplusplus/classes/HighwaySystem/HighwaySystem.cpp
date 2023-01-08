@@ -171,7 +171,7 @@ void HighwaySystem::stats_csv()
 	{	// only include entries for travelers who have any mileage in system
 		auto it = t->system_region_mileages.find(this);
 		if (it != t->system_region_mileages.end())
-		{	sprintf(fstr, ",%.2f", t->system_region_miles(this));
+		{	sprintf(fstr, ",%.2f", t->system_miles(this));
 			sysfile << t->traveler_name << fstr;
 			for (Region *region : regions)
 			  try {	sprintf(fstr, ",%.2f", it->second.at(region));
