@@ -28,7 +28,7 @@ TravelerList::TravelerList(std::string travname, ErrorList* el)
 	// variables used in construction
 	unsigned int list_entries = 0;
 	std::ofstream splist;
-	std::string* update;
+	std::string update;
 	if (Args::splitregionpath != "") splist.open(Args::splitregionpath+"/list_files/"+travname);
 
 	// init user log
@@ -39,21 +39,19 @@ TravelerList::TravelerList(std::string travname, ErrorList* el)
 	log << ctime(&StartTime);
 	mtx.unlock();
 	// write last update date & time if known
-	try {	std::string** updarr = TravelerList::listupdates.at(travname);
-		log << travname << " last updated: " << *updarr[1] << ' ' << *updarr[2] << ' ' << *updarr[3] << '\n';
-		update = updarr[1];
-		delete updarr[2];
-		delete updarr[3];
-		delete[] updarr;
-	    }	catch (const std::out_of_range& oor)
-	    {	update = 0;
-	    }
+	std::ifstream file(Args::userlistfilepath+"/../time_files/"+traveler_name+".time");
+	if (file.is_open())
+	{	getline(file, update);
+		log << travname << " last updated: " << update << '\n';
+		update.assign(update, 0, 10);
+		file.close();
+	}
 
 	// read .list file into memory
 	  // we can't getline here because it only allows one delimiter, and we need two; '\r' and '\n'.
 	  // at least one .list file contains newlines using only '\r' (0x0D):
 	  // https://github.com/TravelMapping/UserData/blob/6309036c44102eb3325d49515b32c5eef3b3cb1e/list_files/whopperman.list
-	std::ifstream file(Args::userlistfilepath+"/"+travname);
+	file.open(Args::userlistfilepath+"/"+travname);
 	file.seekg(0, std::ios::end);
 	unsigned long listdatasize = file.tellg();
 	file.seekg(0, std::ios::beg);
@@ -139,7 +137,6 @@ TravelerList::TravelerList(std::string travname, ErrorList* el)
 		#undef UPDATE_NOTE
 	}
 	delete[] listdata;
-	if (update) delete update;
 	log << "Processed " << list_entries << " good lines marking " << clinched_segments.size() << " segments traveled.\n";
 	log.close();
 	splist.close();
@@ -160,7 +157,7 @@ double TravelerList::active_preview_miles()
 }
 
 /* Return mileage across all regions for a specified system */
-double TravelerList::system_region_miles(HighwaySystem *h)
+double TravelerList::system_miles(HighwaySystem *h)
 {	double mi = 0;
 	for (std::pair<Region* const, double>& rm : system_region_mileages.at(h)) mi += rm.second;
 	return mi;
@@ -171,7 +168,6 @@ std::list<std::string> TravelerList::ids;
 std::list<std::string>::iterator TravelerList::id_it;
 std::list<TravelerList*> TravelerList::allusers;
 std::list<TravelerList*>::iterator TravelerList::tl_it;
-std::unordered_map<std::string, std::string**> TravelerList::listupdates;
 
 bool sort_travelers_by_name(const TravelerList *t1, const TravelerList *t2)
 {	return t1->traveler_name < t2->traveler_name;

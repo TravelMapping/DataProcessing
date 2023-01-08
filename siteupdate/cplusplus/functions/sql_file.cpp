@@ -498,6 +498,19 @@ void sqlfile2(ElapsedTime *et, std::list<std::array<std::string,3>> *graph_types
 			<< "format VARCHAR(" << DBFieldLength::graphFormat
 			<< "), category VARCHAR(" << DBFieldLength::graphCategory
 			<< "), FOREIGN KEY (category) REFERENCES graphTypes(category));\n";
+		if (GraphListEntry::entries.size())
+		{	sqlfile << "INSERT INTO graphs VALUES\n";
+			for (size_t g = 0; g < GraphListEntry::entries.size(); g++)
+			{	if (g) sqlfile << ',';
+				#define G GraphListEntry::entries[g]
+				sqlfile << "('"  << G.filename() << "','" << double_quotes(G.descr)
+					<< "','" << G.vertices   << "','" << G.edges
+					<< "','" << G.travelers  << "','" << G.format()
+					<< "','" << G.category() << "')\n";
+				#undef G
+			}
+			sqlfile << ";\n";
+		}
 		sqlfile << "CREATE TABLE graphArchiveSets (setName VARCHAR("
 			<< DBFieldLength::setName << "), descr VARCHAR("
 			<< DBFieldLength::graphDescr
@@ -519,19 +532,6 @@ void sqlfile2(ElapsedTime *et, std::list<std::array<std::string,3>> *graph_types
 			<< "), setName VARCHAR("
 			<< DBFieldLength::setName
 			<< "), maxDegree INTEGER, avgDegree FLOAT, aspectRatio FLOAT, components INTEGER, FOREIGN KEY (category) REFERENCES graphTypes(category), FOREIGN KEY (setName) REFERENCES graphArchiveSets(setName));\n";
-		if (GraphListEntry::entries.size())
-		{	sqlfile << "INSERT INTO graphs VALUES\n";
-			for (size_t g = 0; g < GraphListEntry::entries.size(); g++)
-			{	if (g) sqlfile << ',';
-				#define G GraphListEntry::entries[g]
-				sqlfile << "('"  << G.filename() << "','" << double_quotes(G.descr)
-					<< "','" << G.vertices   << "','" << G.edges
-					<< "','" << G.travelers  << "','" << G.format()
-					<< "','" << G.category() << "')\n";
-				#undef G
-			}
-			sqlfile << ";\n";
-		}
 	}
 
 	sqlfile.close();

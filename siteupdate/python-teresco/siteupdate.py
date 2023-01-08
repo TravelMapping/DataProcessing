@@ -1415,7 +1415,7 @@ class TravelerList:
     start_region start_route start_point end_region end_route end_point
     """
 
-    def __init__(self,travelername,update,el,path="../../../UserData/list_files"):
+    def __init__(self,travelername,el,path="../../../UserData/list_files"):
         list_entries = 0
         self.clinched_segments = set()
         self.traveler_name = travelername[:-5]
@@ -1423,14 +1423,16 @@ class TravelerList:
             el.add_error("Traveler name " + self.traveler_name + " > " + str(DBFieldLength.traveler) + "bytes")
         with open(path+"/"+travelername,"rt", encoding='UTF-8') as file:
             lines = file.readlines()
-        file.close()
         # strip UTF-8 byte order mark if present
         if len(lines):
             lines[0] = lines[0].encode('utf-8').decode("utf-8-sig")
         try:
-            self.log_entries = [travelername+" last updated: "+update[0]+' '+update[1]+' '+update[2]]
-            self.update = update[0]
-        except TypeError:
+            file = open(path+"/../time_files/"+self.traveler_name+".time")
+            line = file.readline().rstrip()
+            self.log_entries = [travelername+" last updated: "+line]
+            self.update = line[:10]
+            file.close()
+        except FileNotFoundError:
             self.log_entries = []
             self.update = None
         self.updated_routes = set()
@@ -3127,7 +3129,6 @@ updates = []
 print(et.et() + "Reading updates file.",flush=True)
 with open(args.highwaydatapath+"/updates.csv", "rt", encoding='UTF-8') as file:
     lines = file.readlines()
-file.close()
 
 lines.pop(0)  # ignore header line
 for line in lines:
@@ -3177,7 +3178,6 @@ systemupdates = []
 print(et.et() + "Reading systemupdates file.",flush=True)
 with open(args.highwaydatapath+"/systemupdates.csv", "rt", encoding='UTF-8') as file:
     lines = file.readlines()
-file.close()
 
 lines.pop(0)  # ignore header line
 for line in lines:
@@ -3207,40 +3207,15 @@ for line in lines:
                      " bytes in systemupdates.csv line " + line)
     systemupdates.append(fields)
 
-# Read most recent update dates/times for .list files
-# one line for each traveler, containing 4 space-separated fields:
-# 0: username with .list extension
-# 1-3: date, time, and time zone as written by "git log -n 1 --pretty=%ci"
-listupdates = {}
-try:
-    file = open("listupdates.txt", "rt", encoding='UTF-8')
-    print(et.et() + "Reading .list updates file.",flush=True)
-    for line in file.readlines():
-        line = line.strip()
-        fields = line.split(' ')
-        if len(fields) != 4:
-            print("WARNING: Could not parse listupdates.txt line: [" +
-                  line + "], expected 4 fields, found " + str(len(fields)))
-            continue
-        listupdates[fields[0]] = fields[1:]
-    file.close()
-except FileNotFoundError:
-    pass
-
 # Create a list of TravelerList objects, one per person
 traveler_lists = []
 
 print(et.et() + "Processing traveler list files:",flush=True)
 for t in traveler_ids:
     if t.endswith('.list'):
-        try:
-            update = listupdates[t]
-        except KeyError:
-            update = None
         print(t + " ",end="",flush=True)
-        traveler_lists.append(TravelerList(t,update,el,args.userlistfilepath))
+        traveler_lists.append(TravelerList(t,el,args.userlistfilepath))
 del traveler_ids
-del listupdates
 print('\n' + et.et() + "Processed " + str(len(traveler_lists)) + " traveler list files. Sorting and numbering.")
 traveler_lists.sort(key=lambda TravelerList: TravelerList.traveler_name)
 # assign traveler numbers
@@ -3563,10 +3538,8 @@ for t in traveler_lists:
     # stats by system
     for h in highway_systems:
         if h.active_or_preview():
-            t_system_overall = 0.0
             if h.systemname in t.system_region_mileages:
                 t_system_overall = math.fsum(t.system_region_mileages[h.systemname].values())
-            if t_system_overall > 0.0:
                 if h.active():
                     t.active_systems_traveled += 1
                 else:
@@ -3644,15 +3617,10 @@ for t in traveler_lists:
                          " preview systems")
     # updated routes, sorted by date
     t.log_entries.append("\nMost recent updates for listed routes:")
-    route_list = []
-    for r in t.updated_routes:
-        if r.last_update:
-            route_list.append(r)
-    del t.updated_routes
-    route_list.sort(key=lambda r: r.last_update[0]+r.last_update[3])
-    for r in route_list:
+    for r in sorted(t.updated_routes, key=lambda r: r.last_update[0]+r.last_update[3]):
         t.log_entries.append(r.last_update[0] + " | " + r.last_update[1] + " | " + \
                              r.last_update[2] + " | " + r.last_update[3] + " | " + r.last_update[4])
+    del t.updated_routes
 
 print("!", flush=True)
 
@@ -3736,7 +3704,6 @@ for h in highway_systems:
 print(et.et() + "Reading datacheckfps.csv.",flush=True)
 with open(args.highwaydatapath+"/datacheckfps.csv", "rt",encoding='utf-8') as file:
     lines = file.readlines()
-file.close()
 
 lines.pop(0)  # ignore header line
 datacheckfps = []
@@ -3813,7 +3780,6 @@ else:
     print(et.et() + "Creating area data graphs.", flush=True)
     with open(args.highwaydatapath+"/graphs/areagraphs.csv", "rt",encoding='utf-8') as file:
         lines = file.readlines()
-    file.close()
     lines.pop(0);  # ignore header line
     for line in lines:
         line=line.strip()
@@ -3895,7 +3861,6 @@ else:
     h = None
     with open(args.highwaydatapath+"/graphs/systemgraphs.csv", "rt",encoding='utf-8') as file:
         lines = file.readlines()
-    file.close()
     lines.pop(0);  # ignore header line
     for hname in lines:
         h = None
@@ -3920,7 +3885,6 @@ else:
 
     with open(args.highwaydatapath+"/graphs/multisystem.csv", "rt",encoding='utf-8') as file:
         lines = file.readlines()
-    file.close()
     lines.pop(0);  # ignore header line
     for line in lines:
         line=line.strip()
@@ -3957,7 +3921,6 @@ else:
 
     with open(args.highwaydatapath+"/graphs/multiregion.csv", "rt",encoding='utf-8') as file:
         lines = file.readlines()
-    file.close()
     lines.pop(0);  # ignore header line
     for line in lines:
         line=line.strip()
@@ -4789,6 +4752,15 @@ else:
                   '), vertices INTEGER, edges INTEGER, travelers INTEGER, format VARCHAR(' + str(DBFieldLength.graphFormat) +
                   '), category VARCHAR(' + str(DBFieldLength.graphCategory) +
                   '), FOREIGN KEY (category) REFERENCES graphTypes(category));\n')
+        if len(graph_list) > 0:
+            sqlfile.write('INSERT INTO graphs VALUES\n')
+            first = True
+            for g in graph_list:
+                if not first:
+                    sqlfile.write(',')
+                first = False
+                sqlfile.write("('" + g.filename + "','" + g.descr.replace("'","''") + "','" + str(g.vertices) + "','" + str(g.edges) + "','" + str(g.travelers) + "','" + g.format + "','" + g.category + "')\n")
+            sqlfile.write(";\n")
         sqlfile.write('CREATE TABLE graphArchiveSets (setName VARCHAR(' +
                       str(DBFieldLength.setName) + '), descr VARCHAR(' +
                       str(DBFieldLength.graphDescr) +
@@ -4808,15 +4780,6 @@ else:
                       str(DBFieldLength.graphCategory) +
                       '), setName VARCHAR(' + str(DBFieldLength.setName) +
                       '), maxDegree INTEGER, avgDegree FLOAT, aspectRatio FLOAT, components INTEGER, FOREIGN KEY (category) REFERENCES graphTypes(category), FOREIGN KEY (setName) REFERENCES graphArchiveSets(setName));\n')
-        if len(graph_list) > 0:
-            sqlfile.write('INSERT INTO graphs VALUES\n')
-            first = True
-            for g in graph_list:
-                if not first:
-                    sqlfile.write(',')
-                first = False
-                sqlfile.write("('" + g.filename + "','" + g.descr.replace("'","''") + "','" + str(g.vertices) + "','" + str(g.edges) + "','" + str(g.travelers) + "','" + g.format + "','" + g.category + "')\n")
-            sqlfile.write(";\n")
 
     sqlfile.close()
 

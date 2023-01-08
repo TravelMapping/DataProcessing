@@ -32,11 +32,9 @@ void TravelerList::userlog(const double total_active_only_miles, const double to
 	// stats by system
 	for (HighwaySystem *h : HighwaySystem::syslist)
 	  if (h->active_or_preview())
-	  {	double t_system_overall = 0;
-		if (system_region_mileages.count(h))
-			t_system_overall = system_region_miles(h);
-		if (t_system_overall)
-		{	if (h->active())
+	  {	if (system_region_mileages.count(h))
+		{	double t_system_overall = system_miles(h);
+			if (h->active())
 				active_systems_traveled++;
 			else	preview_systems_traveled++;
 			if (float(t_system_overall) == float(h->total_mileage()))
@@ -118,8 +116,7 @@ void TravelerList::userlog(const double total_active_only_miles, const double to
 
 	// updated routes, sorted by date
 	log << "\nMost recent updates for listed routes:\n";
-	std::list<Route*> route_list;
-	for (Route* r : updated_routes) if (r->last_update) route_list.push_back(r);
+	std::list<Route*> route_list(updated_routes.begin(), updated_routes.end());
 	updated_routes.clear();
 	route_list.sort(sort_route_updates_oldest);
 	for (Route* r : route_list)

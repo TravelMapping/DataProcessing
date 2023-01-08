@@ -55,10 +55,9 @@ To run it, you will enter the following at your $ prompt:
 ```
 cd ~/DataProcessing/siteupdate/cplusplus
 git pull
-gmake
 sh datacheck.sh
 ```
 
-The `git pull` makes sure you have the latest version of the site update program from the `DataProcessing` repository, `gmake` compiles and links the latest version, and `sh datacheck.sh` does the real work.
+The `git pull` makes sure you have the latest version of the site update program from the `DataProcessing` repository, and `sh datacheck.sh` does the real work.
 
 The process that launches will likely run for a few minutes.  If the program runs to completion without reporting errors, you are likely in good shape to make your pull request with your highway data changes. If not, you have things to fix.
