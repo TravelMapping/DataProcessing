@@ -2,7 +2,7 @@
 #
 # TM common site update script
 #
-# Based on language, OS, and other specific scripts
+# Based on language-, OS-, and other specific scripts
 #
 # Jim Teresco, Sat Dec 31 22:59:48 EST 2022
 #
@@ -107,9 +107,9 @@ echo HighwayData '@' `(cd $tmbase/HighwayData; git show -s | head -n 1 | cut -f2
 echo UserData '@' `(cd $tmbase/UserData; git show -s | head -n 1 | cut -f2 -d' ')` | tee -a $datestr/$logdir/siteupdate.log
 echo DataProcessing '@' `git show -s | head -n 1 | cut -f2 -d' '` | tee -a $datestr/$logdir/siteupdate.log
 
-echo "$0: creating listupdates.txt"
-cd $tmbase/UserData/list_files
-for u in *; do echo $u `git log -n 1 --pretty=%ci $u`; done | tee $execdir/listupdates.txt
+echo "$0: creating .time files"
+cd $tmbase/UserData/time_files
+for t in `ls ../list_files/*.list | sed -r 's~../list_files/(.*).list~\1.time~'`; do make $t; done
 cd -
 
 # pick our language, number of threads for the command
@@ -139,9 +139,6 @@ fi
 echo "$0: launching $siteupdate"
 $siteupdate -d TravelMapping-$datestr $graphflag -l $datestr/$logdir -c $datestr/$statdir -g $datestr/$graphdir -n $datestr/$nmpmdir | tee -a $datestr/$logdir/siteupdate.log 2>&1 || exit 1
 date
-
-echo "$0: deleting listupdates.txt"
-rm $execdir/listupdates.txt
 
 if [ -x ../../nmpfilter/nmpbyregion ]; then
     echo "$0: running nmpbyregion"
