@@ -1090,7 +1090,7 @@ class Route:
         """printable version of the object"""
         return self.root + " (" + str(len(self.point_list)) + " total points)"
 
-    def read_wpt(self,all_waypoints,all_waypoints_lock,datacheckerrors,el,path="../../../HighwayData/hwy_data"):
+    def read_wpt(self,all_waypoints,all_waypoints_lock,datacheckerrors,el,path="../../HighwayData/hwy_data"):
         """read data into the Route's waypoint list from a .wpt file"""
         #print("read_wpt on " + str(self))
         self.point_list = []
@@ -1312,7 +1312,7 @@ class HighwaySystem:
     num_preview = 0
 
     def __init__(self,systemname,country,fullname,color,tier,level,el,
-                 path="../../../HighwayData/hwy_data/_systems"):
+                 path="../../HighwayData/hwy_data/_systems"):
         self.route_list = []
         self.con_route_list = []
         self.systemname = systemname
@@ -1415,7 +1415,7 @@ class TravelerList:
     start_region start_route start_point end_region end_route end_point
     """
 
-    def __init__(self,travelername,el,path="../../../UserData/list_files"):
+    def __init__(self,travelername,el,path="../../UserData/list_files"):
         list_entries = 0
         self.clinched_segments = set()
         self.traveler_name = travelername[:-5]
@@ -2646,11 +2646,11 @@ el = ErrorList()
 # argument parsing
 #
 parser = argparse.ArgumentParser(description="Create SQL, stats, graphs, and log files from highway and user data for the Travel Mapping project.")
-parser.add_argument("-w", "--highwaydatapath", default="../../../HighwayData", \
+parser.add_argument("-w", "--highwaydatapath", default="../../HighwayData", \
                         help="path to the root of the highway data directory structure")
 parser.add_argument("-s", "--systemsfile", default="systems.csv", \
                         help="file of highway systems to include")
-parser.add_argument("-u", "--userlistfilepath", default="../../../UserData/list_files",\
+parser.add_argument("-u", "--userlistfilepath", default="../../UserData/list_files",\
                         help="path to the user list file data")
 parser.add_argument("-d", "--databasename", default="TravelMapping", \
                         help="Database name for .sql file name")

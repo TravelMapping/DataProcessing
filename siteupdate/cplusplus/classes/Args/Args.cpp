@@ -7,9 +7,9 @@
 /* k */ bool Args::skipgraphs = 0;
 /* v */ bool Args::mtvertices = 0;
 /* C */ bool Args::mtcsvfiles = 0;
-/* w */ std::string Args::highwaydatapath = "../../../HighwayData";
+/* w */ std::string Args::highwaydatapath = "../../HighwayData";
 /* s */ std::string Args::systemsfile = "systems.csv";
-/* u */ std::string Args::userlistfilepath = "../../../UserData/list_files";
+/* u */ std::string Args::userlistfilepath = "../../UserData/list_files";
 /* d */ std::string Args::databasename = "TravelMapping";
 /* l */ std::string Args::logfilepath = ".";
 /* c */ std::string Args::csvstatfilepath = ".";
