@@ -302,7 +302,7 @@ mv $tmwebdir/$statdir $tmarchivedir/$datestr
 mv $indir/$statdir $tmwebdir
 $chcon $tmwebdir/$statdir
 mv $tmwebdir/$nmpmdir $tmarchivedir/$datestr
-mv $instr/$nmpmdir $tmwebdir
+mv $indir/$nmpmdir $tmwebdir
 if [[ "$graphflag" != "-k" ]]; then
     mv $tmwebdir/$graphdir $tmarchivedir/$datestr
     mv $indir/$graphdir $tmwebdir
