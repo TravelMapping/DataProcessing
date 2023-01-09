@@ -44,7 +44,7 @@ fi
 # null command "false" otherwise
 chcon=false
 if hash chcon 2>/dev/null; then
-    chcon=sudo chcon -R --type=httpd_sys_content_t
+    chcon="sudo chcon -R --type=httpd_sys_content_t"
 fi
 # check default locations of TM web server files
 # NOTE: should check on remote server when remote install
