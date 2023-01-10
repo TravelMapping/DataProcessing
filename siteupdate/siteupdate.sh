@@ -297,16 +297,16 @@ echo "$0: installing logs, stats, nmp_merged, graphs, archiving old contents in 
 mkdir -p $tmarchivedir/$datestr
 mv $tmwebdir/$logdir $tmarchivedir/$datestr
 mv $indir/$logdir $tmwebdir
-$chcon $tmwebdir/$logdir
+# not working yet: $chcon $tmwebdir/$logdir
 mv $tmwebdir/$statdir $tmarchivedir/$datestr
 mv $indir/$statdir $tmwebdir
-$chcon $tmwebdir/$statdir
+#$chcon $tmwebdir/$statdir
 mv $tmwebdir/$nmpmdir $tmarchivedir/$datestr
 mv $indir/$nmpmdir $tmwebdir
 if [[ "$graphflag" != "-k" ]]; then
     mv $tmwebdir/$graphdir $tmarchivedir/$datestr
     mv $indir/$graphdir $tmwebdir
-    $chcon $tmwebdir/$graphdir
+    #$chcon $tmwebdir/$graphdir
 fi
 rmdir $indir
 
