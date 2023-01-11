@@ -4,11 +4,11 @@
 #
 # Based on language-, OS-, and other specific scripts
 #
-# Jim Teresco, Sat Dec 31 22:59:48 EST 2022
+# Jim Teresco, Sat Dec 31 22:59:48 EST 2022 (started)
 #
 
 function usage {
-    echo "Usage: $0 [--help] [--nographs] [--noinstall] [--nopull] [--use-python] [--remote server] [--numthreads nt] [--tmbasedir dir] [--workdir dir] [--archivedir dir] [--webdir dir]"
+    echo "Usage: $0 [--help] [--nographs] [--noinstall] [--nopull] [--mail] [--use-python] [--remote server] [--numthreads nt] [--tmbasedir dir] [--workdir dir] [--archivedir dir] [--webdir dir]"
 }
 
 set -e
@@ -17,6 +17,7 @@ datestr=`date '+%Y-%m-%d@%H:%M:%S'`
 
 # start with some defaults, can override with command-line parameters
 install=1
+mail=0
 pull=1
 graphflag=
 language=cpp
@@ -27,7 +28,9 @@ workdir=.
 # check default locations of TM repositories, can be overridden
 # by the --tmbasedir command-line parameter
 tmbasedir=$HOME/travelmapping
-if [[ -d $HOME/tm ]]; then
+if [[ -d $HOME/TravelMapping ]]; then
+    tmbasedir=$HOME/TravelMapping
+elif [[ -d $HOME/tm ]]; then
     tmbasedir=$HOME/tm
 fi
 
@@ -42,9 +45,9 @@ fi
 
 # centos sometimes needs a "chcon" command for permissions, we'll run the
 # null command "false" otherwise
-chcon=false
+chcon=0
 if hash chcon 2>/dev/null; then
-    chcon="sudo chcon -R --type=httpd_sys_content_t"
+    chcon=1
 fi
 # check default locations of TM web server files
 # NOTE: should check on remote server when remote install
@@ -96,6 +99,8 @@ for arg in "$@"; do
 	install=0
     elif [[ "$arg" == --nopull ]]; then
 	pull=0
+    elif [[ "$arg" == --mail ]]; then
+	mail=1
     elif [[ "$arg" == --use-python ]]; then
 	language=python
     elif [[ "$arg" == --remote ]]; then
@@ -141,6 +146,14 @@ fi
 if [[ "$language" != python && "$language" != cpp ]]; then
     echo "Language $language not supported, only python and cpp"
     exit 1
+fi
+
+# make sure we have mailx if mail=1
+if [[ "$mail" == "1" ]]; then
+    if ! hash mailx 2>/dev/null; then
+	mail=0
+	echo "Ignoring --mail option, no mailx program found"
+    fi
 fi
 
 # make sure we have a valid location for tmbasedir and it has the two
@@ -297,16 +310,19 @@ echo "$0: installing logs, stats, nmp_merged, graphs, archiving old contents in 
 mkdir -p $tmarchivedir/$datestr
 mv $tmwebdir/$logdir $tmarchivedir/$datestr
 mv $indir/$logdir $tmwebdir
-# not working yet: $chcon $tmwebdir/$logdir
 mv $tmwebdir/$statdir $tmarchivedir/$datestr
 mv $indir/$statdir $tmwebdir
-#$chcon $tmwebdir/$statdir
 mv $tmwebdir/$nmpmdir $tmarchivedir/$datestr
 mv $indir/$nmpmdir $tmwebdir
+if [[ "$chcon" == "1" ]]; then
+    sudo chcon -R --type=httpd_sys_content_t $tmwebdir/$logdir $tmwebdir/$statdir $tmwebdir/$nmpdir
+fi
 if [[ "$graphflag" != "-k" ]]; then
     mv $tmwebdir/$graphdir $tmarchivedir/$datestr
     mv $indir/$graphdir $tmwebdir
-    #$chcon $tmwebdir/$graphdir
+    if [[ "$chcon" == "1" ]]; then
+	sudo chcon -R --type=httpd_sys_content_t $tmwebdir/$graphdir
+    fi
 fi
 rmdir $indir
 
@@ -319,15 +335,15 @@ if [[ -d $tmwebdir/$grapharchives ]]; then
 fi
 echo "$0: moving sql file to archive"
 mv TravelMapping-$datestr.sql $tmarchivedir
-if hash mailx 2>/dev/null; then
+
+if [[ "$mail" == "1" ]]; then
     echo "$0: sending email notification"
     mailx -s "Travel Mapping Site Update Complete" travelmapping-siteupdates@teresco.org <<EOF
 A Travel Mapping site update has just successfully completed.
 The complete log is available at https://travelmapping.net/logs/siteupdate.log .
 Please report any problems to travmap@teresco.org .
 EOF
-else
-    echo "$0: no mailx program, skipping email notification"
 fi
+
 echo "$0: complete"
 date
