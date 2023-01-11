@@ -20,10 +20,21 @@ install=1
 mail=0
 pull=1
 graphflag=
+errorcheck=
 language=cpp
 remote=0
 numthreads=1
 workdir=.
+
+# If running as datacheck, we change some defaults
+if [[ "$0" == "./datacheck.sh" ]]; then
+    echo "$0: Running as datacheck, setting appropriate defaults"
+    install=0
+    numthreads=4
+    graphflag="-k"
+    # -e flag runs site update in check-only mode
+    errorcheck="-e"
+fi
 
 # check default locations of TM repositories, can be overridden
 # by the --tmbasedir command-line parameter
@@ -92,6 +103,8 @@ for arg in "$@"; do
     elif [[ "$arg" == --help ]]; then
 	usage
 	exit 0
+    elif [[ "$arg" == --graphs ]]; then
+	graphflag=
     elif [[ "$arg" == --nographs ]]; then
 	# -k to siteupdate supresses graph generation
 	graphflag="-k"
@@ -213,8 +226,8 @@ if [[ ! -d $workdir ]]; then
     fi
 fi
 
-# if local, make sure the tmwebdir directory exists
-if [[ "$remote" == "0" ]]; then
+# if local and installing, make sure the tmwebdir directory exists
+if [[ "$remote" == "0" && "$install" == "1" ]]; then
     if [[ ! -d $tmwebdir ]]; then
 	echo "Web directory $tmwebdir does not exist"
 	exit 1
@@ -225,8 +238,8 @@ if [[ "$remote" == "0" ]]; then
     fi
 fi
 
-# if local, make sure the archive directory exists
-if [[ "$remote" == "0" ]]; then
+# if local and installing, make sure the archive directory exists
+if [[ "$remote" == "0" && "$install" == "1" ]]; then
     if [[ ! -d $tmarchivedir ]]; then
 	echo "Archive directory $tmarchivedir does not exist"
 	exit 1
@@ -260,7 +273,7 @@ for t in `ls ../list_files/*.list | sed -r 's~../list_files/(.*).list~\1.time~'`
 cd -
   
 echo "$0: launching $siteupdate"
-$siteupdate -d TravelMapping-$datestr $graphflag -l $indir/$logdir -c $indir/$statdir -g $indir/$graphdir -n $indir/$nmpmdir | tee -a $indir/$logdir/siteupdate.log 2>&1 || exit 1
+$siteupdate $errorcheck -d TravelMapping-$datestr $graphflag -l $indir/$logdir -c $indir/$statdir -g $indir/$graphdir -n $indir/$nmpmdir | tee -a $indir/$logdir/siteupdate.log 2>&1 || exit 1
 date
 
 if [[ -x ../nmpfilter/nmpbyregion ]]; then
