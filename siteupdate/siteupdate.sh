@@ -294,9 +294,9 @@ if ! hash mysql 2>/dev/null; then
 fi
 
 if [[ "$graphflag" != "-k" ]]; then
-    echo "$0: creating zip archive of all graphs"
+    echo "$0: creating zip archive of all graphs (backgrounding)"
     cd $indir/$graphdir
-    zip -q graphs.zip *.tmg
+    zip -q graphs.zip *.tmg &
     cd -
 fi
 
