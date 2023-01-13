@@ -8,7 +8,7 @@
 #
 
 function usage {
-    echo "Usage: $0 [--help] [--nographs] [--noinstall] [--nopull] [--mail] [--use-python] [--remote server] [--numthreads nt] [--tmbasedir dir] [--workdir dir] [--archivedir dir] [--webdir dir]"
+    echo "Usage: $0 [--help] [--nographs] [--noinstall] [--nopull] [--mail] [--use-python] [--remote server] [--numthreads nt] [--tmbasedir dir] [--workdir dir] [--webdir dir]"
 }
 
 set -e
@@ -27,6 +27,8 @@ numthreads=1
 workdir=.
 chcon=0
 makesiteupdate=0
+compress=0
+compressflag=
 
 # If running as datacheck, we change some defaults
 if [[ "$0" == "./datacheck.sh" ]]; then
@@ -61,6 +63,19 @@ else
     make=make
 fi
 
+# Find a program to create .bz2, .gz, or .Z files
+if hash bzip2 2>/dev/null; then
+    compress=bzip2
+    compressflag=-9
+elif
+    hash gzip 2>/dev/null; then
+    compress=gzip
+    compressflag=-9
+elif
+    hash compress 2>/dev/null; then
+    compress=compress
+fi
+
 # If SELinux is installed and enabled, web install needs a "chcon"
 # command
 if hash getenforce 2>/dev/null; then
@@ -74,12 +89,6 @@ fi
 tmwebdir=/fast/www/tm
 if [[ -d /var/www/html ]]; then
     tmwebdir=/var/www/html
-fi
-
-# check default locations for TM archives
-tmarchivedir=/home/tmp/tm
-if [[ -d $HOME/tmp/tm ]]; then
-    tmarchivedir=$HOME/tmp/tm
 fi
 
 logdir=logs
@@ -103,9 +112,6 @@ for arg in "$@"; do
     elif [[ "$nextitem" == workdir ]]; then
 	nextitem=
 	workdir=$arg
-    elif [[ "$nextitem" == archivedir ]]; then
-	nextitem=
-	tmarchivedir=$arg
     elif [[ "$nextitem" == webdir ]]; then
 	nextitem=
 	tmwebdir=$arg
@@ -133,8 +139,6 @@ for arg in "$@"; do
 	nextitem=tmbasedir
     elif [[ "$arg" == --workdir ]]; then
 	nextitem=workdir
-    elif [[ "$arg" == --archivedir ]]; then
-	nextitem=archivedir
     elif [[ "$arg" == --webdir ]]; then
 	nextitem=webdir
     else
@@ -255,14 +259,6 @@ if [[ "$remote" == "0" && "$install" == "1" ]]; then
     fi
 fi
 
-# if local and installing, make sure the archive directory exists
-if [[ "$remote" == "0" && "$install" == "1" ]]; then
-    if [[ ! -d $tmarchivedir ]]; then
-	echo "Archive directory $tmarchivedir does not exist"
-	exit 1
-    fi
-fi
-
 # set up directory for this update in work directory
 indir=$workdir/$datestr
 
@@ -334,27 +330,24 @@ echo "$0: switching to primary DB"
 date
 ln -sf $tmwebdir/lib/tm.conf.standard $tmwebdir/lib/tm.conf
 
-# NOTE: doesn't this install previous data in a directory with this update's
-# date stamp?!
-echo "$0: installing logs, stats, nmp_merged, graphs, archiving old contents in $tmarchivedir/$datestr"
-mkdir -p $tmarchivedir/$datestr
-mv $tmwebdir/$logdir $tmarchivedir/$datestr
-mv $indir/$logdir $tmwebdir
-mv $tmwebdir/$statdir $tmarchivedir/$datestr
-mv $indir/$statdir $tmwebdir
-mv $tmwebdir/$nmpmdir $tmarchivedir/$datestr
-mv $indir/$nmpmdir $tmwebdir
+instdir=$tmwebdir/updates/$datestr
+echo "$0: installing logs, stats, nmp_merged, graphs in $instdir"
+mkdir -p $instdir
+mv $indir/$logdir $indir/$statdir $indir/nmpmdir $instdir
 if [[ "$chcon" == "1" ]]; then
-    sudo chcon -R --type=httpd_sys_content_t $tmwebdir/$logdir $tmwebdir/$statdir $tmwebdir/$nmpdir
+    sudo chcon -R --type=httpd_sys_content_t $instdir/$logdir $instdir/$statdir $instdir/$nmpdir
 fi
 if [[ "$graphflag" != "-k" ]]; then
-    mv $tmwebdir/$graphdir $tmarchivedir/$datestr
-    mv $indir/$graphdir $tmwebdir
+    mv $indir/$graphdir $instdir
     if [[ "$chcon" == "1" ]]; then
-	sudo chcon -R --type=httpd_sys_content_t $tmwebdir/$graphdir
+	sudo chcon -R --type=httpd_sys_content_t $instdir/$graphdir
     fi
 fi
 rmdir $indir
+echo "$0: linking current to $instdir"
+cd $tmwebdir
+ln -sf $instdir current
+cd -
 
 echo "$0: loading DB copy"
 mysql --defaults-group-suffix=tmapadmin -u travmapadmin TravelMappingCopy < TravelMapping-$datestr.sql
@@ -363,8 +356,13 @@ if [[ -d $tmwebdir/$grapharchives ]]; then
 	mysql --defaults-group-suffix=tmapadmin -u travmapadmin TravelMappingCopy < $archive
     done
 fi
-echo "$0: moving sql file to archive"
-mv TravelMapping-$datestr.sql $tmarchivedir
+echo "$0: moving sql file to $instdir"
+mv TravelMapping-$datestr.sql $instdir
+
+if [[ "$compress" != "0" ]]; then
+    echo "$0: Compressing TravelMapping-$datestr.sql with $compress $compressflag (backgrounded)"
+    $compress $compressflag $instdir/TravelMapping-$datestr.sql &
+fi
 
 if [[ "$mail" == "1" ]]; then
     echo "$0: sending email notification"
