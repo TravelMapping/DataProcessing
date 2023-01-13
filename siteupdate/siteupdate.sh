@@ -38,9 +38,11 @@ fi
 
 # check default locations of TM repositories, can be overridden
 # by the --tmbasedir command-line parameter
-tmbasedir=$HOME/travelmapping
+tmbasedir=$HOME
 if [[ -d $HOME/TravelMapping ]]; then
     tmbasedir=$HOME/TravelMapping
+elif [[ -d $HOME/travelmapping ]]; then
+    tmbasedir=$HOME/travelmapping
 elif [[ -d $HOME/tm ]]; then
     tmbasedir=$HOME/tm
 fi
