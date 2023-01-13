@@ -333,9 +333,9 @@ ln -sf $tmwebdir/lib/tm.conf.standard $tmwebdir/lib/tm.conf
 instdir=$tmwebdir/updates/$datestr
 echo "$0: installing logs, stats, nmp_merged, graphs in $instdir"
 mkdir -p $instdir
-mv $indir/$logdir $indir/$statdir $indir/nmpmdir $instdir
+mv $indir/$logdir $indir/$statdir $indir/$nmpmdir $instdir
 if [[ "$chcon" == "1" ]]; then
-    sudo chcon -R --type=httpd_sys_content_t $instdir/$logdir $instdir/$statdir $instdir/$nmpdir
+    sudo chcon -R --type=httpd_sys_content_t $instdir/$logdir $instdir/$statdir $instdir/$nmpmdir
 fi
 if [[ "$graphflag" != "-k" ]]; then
     mv $indir/$graphdir $instdir
