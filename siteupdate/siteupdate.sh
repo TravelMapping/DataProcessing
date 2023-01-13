@@ -25,6 +25,7 @@ language=cpp
 remote=0
 numthreads=1
 workdir=.
+chcon=0
 
 # If running as datacheck, we change some defaults
 if [[ "$0" == "./datacheck.sh" ]]; then
@@ -56,11 +57,13 @@ else
     make=make
 fi
 
-# centos sometimes needs a "chcon" command for permissions, we'll run the
-# null command "false" otherwise
-chcon=0
-if hash chcon 2>/dev/null; then
-    chcon=1
+# If SELinux is installed and enabled, web install needs a "chcon"
+# command
+if hash getenforce 2>/dev/null; then
+    geout=`getenforce`
+    if [[ "$geout" != "Disabled" ]]; then
+	chcon=1
+    fi
 fi
 # check default locations of TM web server files
 # NOTE: should check on remote server when remote install
