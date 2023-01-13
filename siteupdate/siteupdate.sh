@@ -346,7 +346,7 @@ fi
 rmdir $indir
 echo "$0: linking current to $instdir"
 cd $tmwebdir
-ln -sf $instdir current
+ln -sf updates/$datestr current
 cd -
 
 echo "$0: loading DB copy"
