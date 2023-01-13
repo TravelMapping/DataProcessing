@@ -1685,6 +1685,10 @@ class TravelerList:
                         r1.store_traveled_segments(self, index1, index2)
                     else:
                         r1.store_traveled_segments(self, index2, index1)
+                    r1.labels_in_use.add(list_label_1)
+                    r1.unused_alt_labels.discard(list_label_1)
+                    r2.labels_in_use.add(list_label_2)
+                    r2.unused_alt_labels.discard(list_label_2)
                 else:
                     # user log warning for DISCONNECTED_ROUTE errors
                     if r1.con_route.disconnected:
@@ -1704,6 +1708,15 @@ class TravelerList:
                     if r1.rootOrder > r2.rootOrder:
                         (r1, r2) = (r2, r1)
                         (index1, index2) = (index2, index1)
+                        r1.labels_in_use.add(list_label_2)
+                        r1.unused_alt_labels.discard(list_label_2)
+                        r2.labels_in_use.add(list_label_1)
+                        r2.unused_alt_labels.discard(list_label_1)
+                    else:
+                        r1.labels_in_use.add(list_label_1)
+                        r1.unused_alt_labels.discard(list_label_1)
+                        r2.labels_in_use.add(list_label_2)
+                        r2.unused_alt_labels.discard(list_label_2)
                     # mark the beginning chopped route from index1 to its end
                     if r1.is_reversed():
                         r1.store_traveled_segments(self, 0, index1)
@@ -1720,12 +1733,8 @@ class TravelerList:
                 # both labels are valid; mark in use & proceed
                 r1.system.listnamesinuse.add(lookup1)
                 r1.system.unusedaltroutenames.discard(lookup1)
-                r1.labels_in_use.add(list_label_1)
-                r1.unused_alt_labels.discard(list_label_1)
                 r2.system.listnamesinuse.add(lookup2)
                 r2.system.unusedaltroutenames.discard(lookup2)
-                r2.labels_in_use.add(list_label_2)
-                r2.unused_alt_labels.discard(list_label_2)
                 list_entries += 1
             else:
                 self.log_entries.append("Incorrect format line (4 or 6 fields expected, found " + \

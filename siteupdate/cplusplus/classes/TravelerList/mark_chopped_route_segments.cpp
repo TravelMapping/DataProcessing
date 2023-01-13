@@ -87,20 +87,8 @@ if (lit1->second == lit2->second)
 	UPDATE_NOTE(r)
 }
 // otherwise both labels are valid; mark in use & proceed
-else {	r->system->lniu_mtx.lock();
-	r->system->listnamesinuse.insert(lookup);
-	r->system->lniu_mtx.unlock();
-	r->system->uarn_mtx.lock();
-	r->system->unusedaltroutenames.erase(lookup);
-	r->system->uarn_mtx.unlock();
-	r->liu_mtx.lock();
-	r->labels_in_use.insert(fields[2]);
-	r->labels_in_use.insert(fields[3]);
-	r->liu_mtx.unlock();
-	r->ual_mtx.lock();
-	r->unused_alt_labels.erase(fields[2]);
-	r->unused_alt_labels.erase(fields[3]);
-	r->ual_mtx.unlock();
+else {	r->system->mark_route_in_use(lookup);
+	r->mark_labels_in_use(fields[2], fields[3]);
 
 	list_entries++;
 	bool reverse = 0;

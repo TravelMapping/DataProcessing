@@ -265,6 +265,26 @@ void Route::con_mismatch()
 			       (con_route->banner.size() ? con_route->banner : "(blank)"));
 }
 
+void Route::mark_label_in_use(char* label)
+{	ual_mtx.lock();
+	unused_alt_labels.erase(label);
+	ual_mtx.unlock();
+	liu_mtx.lock();
+	labels_in_use.insert(label);
+	liu_mtx.unlock();
+}
+
+void Route::mark_labels_in_use(char* label1, char* label2)
+{	ual_mtx.lock();
+	unused_alt_labels.erase(label1);
+	unused_alt_labels.erase(label2);
+	ual_mtx.unlock();
+	liu_mtx.lock();
+	labels_in_use.insert(label1);
+	labels_in_use.insert(label2);
+	liu_mtx.unlock();
+}
+
 // sort routes by most recent update for use at end of user logs
 // all should have a valid updates entry pointer before being passed here
 bool sort_route_updates_oldest(const Route *r1, const Route *r2)

@@ -121,6 +121,7 @@ if (r1 == r2)
 	if (index1 <= index2)
 		r1->store_traveled_segments(this, log, update, index1, index2);
 	else	r1->store_traveled_segments(this, log, update, index2, index1);
+	r1->mark_labels_in_use(fields[2], fields[5]);
      }
 else {	// user log warning for DISCONNECTED_ROUTE errors
 	if (r1->con_route->disconnected)
@@ -138,11 +139,16 @@ else {	// user log warning for DISCONNECTED_ROUTE errors
 	}
 	// Is .list entry forward or backward?
 	if (r1->rootOrder > r2->rootOrder)
-	{	std::swap(r1, r2);
+	     {	std::swap(r1, r2);
 		index1 = lit2->second;
 		index2 = lit1->second;
 		reverse = 1;
-	}
+		r1->mark_label_in_use(fields[5]);
+		r2->mark_label_in_use(fields[2]);
+	     }
+	else {	r1->mark_label_in_use(fields[2]);
+		r2->mark_label_in_use(fields[5]);
+	     }
 	// mark the beginning chopped route from index1 to its end
 	if (r1->is_reversed())
 		r1->store_traveled_segments(this, log, update, 0, index1);
@@ -155,31 +161,7 @@ else {	// user log warning for DISCONNECTED_ROUTE errors
 	for (size_t r = r1->rootOrder+1; r < r2->rootOrder; r++)
 	  r1->con_route->roots[r]->store_traveled_segments(this, log, update, 0, r1->con_route->roots[r]->segment_list.size());
      }
-// both labels are valid; mark in use & proceed
-r1->system->lniu_mtx.lock();
-r1->system->listnamesinuse.insert(lookup1);
-r1->system->lniu_mtx.unlock();
-r1->system->uarn_mtx.lock();
-r1->system->unusedaltroutenames.erase(lookup1);
-r1->system->uarn_mtx.unlock();
-r1->liu_mtx.lock();
-r1->labels_in_use.insert(fields[2]);
-r1->liu_mtx.unlock();
-r1->ual_mtx.lock();
-r1->unused_alt_labels.erase(fields[2]);
-r1->ual_mtx.unlock();
-r2->system->lniu_mtx.lock();
-r2->system->listnamesinuse.insert(lookup2);
-r2->system->lniu_mtx.unlock();
-r2->system->uarn_mtx.lock();
-r2->system->unusedaltroutenames.erase(lookup2);
-r2->system->uarn_mtx.unlock();
-r2->liu_mtx.lock();
-r2->labels_in_use.insert(fields[5]);
-r2->liu_mtx.unlock();
-r2->ual_mtx.lock();
-r2->unused_alt_labels.erase(fields[5]);
-r2->ual_mtx.unlock();
+r1->system->mark_routes_in_use(lookup1, lookup2);
 list_entries++;
 // new .list lines for region split-ups
 if (Args::splitregion == r1->region->code || Args::splitregion == r2->region->code)
