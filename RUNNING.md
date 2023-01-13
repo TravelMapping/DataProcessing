@@ -46,18 +46,24 @@ If all were successful, you should now have copies of each of the repositories i
 
 ### Running the site update code in "highway data check mode"
 
-The above is only needed on the initial setup.  Everything from here on is what you'll do every time you want to perform a data check before issuing a pull request to bring your changes into the master.
+The steps above are only needed on the initial setup.  Everything from here on is what you'll do every time you want to perform a data check before issuing a pull request to bring your changes into the master.
 
-At this time, run the site update program in "highway data check mode".  Since for checking highway data updates, it is not necessary to complete a few parts of the process nor is it necessary to generate the large SQL file that would populate the database, the program should be run with the `-e` flag.  A script called `datacheck.sh` has been provided that will run this program with appropriate parameters, and it will make sure your `HighwayData` and `UserData` repositories are up to date as well.
+A data check is completed by running the site update program in "highway data check mode".  Since for checking highway data updates involves only a subset of the tasks needed to complete an actual site update, a script called `datacheck.sh` has been provided that will run this program with appropriate parameters, and it will make sure your `HighwayData` and `UserData` repositories are up to date as well.
 
 To run it, you will enter the following at your $ prompt:
 
 ```
-cd ~/DataProcessing/siteupdate/cplusplus
+cd ~/DataProcessing/siteupdate
 git pull
-sh datacheck.sh
+./datacheck.sh
 ```
 
-The `git pull` makes sure you have the latest version of the site update program from the `DataProcessing` repository, and `sh datacheck.sh` does the real work.
+The `git pull` makes sure you have the latest version of the site update program from the `DataProcessing` repository, and `./datacheck.sh` does the real work.
 
-The process that launches will likely run for a few minutes.  If the program runs to completion without reporting errors, you are likely in good shape to make your pull request with your highway data changes. If not, you have things to fix.
+The process that launches will likely run for a few minutes.  If the program runs to completion without reporting errors and you see
+
+```
+!!! DATA CHECK SUCCESSFUL !!!
+```
+
+a few lines from the end of your output, you should be ok to proceed with a pull request with your highway data changes. If not, you have things to fix.
