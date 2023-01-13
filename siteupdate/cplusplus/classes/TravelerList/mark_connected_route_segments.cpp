@@ -104,6 +104,9 @@ if (duplicate)
 {	splist << orig_line << endlines[l];
 	log << "  Please report this error in the Travel Mapping forum.\n"
 	    << "  Unable to parse line: " << trim_line << '\n';
+	r1->system->mark_routes_in_use(lookup1, lookup2);
+	r1->mark_label_in_use(fields[2]);
+	r2->mark_label_in_use(fields[5]);
 	continue;
 }
 bool reverse = 0;

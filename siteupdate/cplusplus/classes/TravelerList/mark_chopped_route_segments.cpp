@@ -78,6 +78,8 @@ if (duplicate)
 {	splist << orig_line << endlines[l];
 	log << "  Please report this error in the Travel Mapping forum.\n  Unable to parse line: "
 	    << trim_line << '\n';
+	r->system->mark_route_in_use(lookup);
+	r->mark_labels_in_use(fields[2], fields[3]);
 	continue;
 }
 // if both labels reference the same waypoint...

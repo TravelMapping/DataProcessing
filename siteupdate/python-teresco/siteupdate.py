@@ -1525,6 +1525,12 @@ class TravelerList:
                     duplicate = True
                 if duplicate:
                     self.log_entries.append("  Please report this error in the Travel Mapping forum.\n  Unable to parse line: " + line)
+                    r.system.listnamesinuse.add(lookup)
+                    r.system.unusedaltroutenames.discard(lookup)
+                    r.labels_in_use.add(list_label_1)
+                    r.labels_in_use.add(list_label_2)
+                    r.unused_alt_labels.discard(list_label_1)
+                    r.unused_alt_labels.discard(list_label_2)
                     continue
                 # if both labels reference the same waypoint...
                 if index1 == index2:
@@ -1671,6 +1677,14 @@ class TravelerList:
                     duplicate = True
                 if duplicate:
                     self.log_entries.append("  Please report this error in the Travel Mapping forum.\n  Unable to parse line: " + line)
+                    r1.system.listnamesinuse.add(lookup1)
+                    r1.system.unusedaltroutenames.discard(lookup1)
+                    r2.system.listnamesinuse.add(lookup2)
+                    r2.system.unusedaltroutenames.discard(lookup2)
+                    r1.labels_in_use.add(list_label_1)
+                    r1.unused_alt_labels.discard(list_label_1)
+                    r2.labels_in_use.add(list_label_2)
+                    r2.unused_alt_labels.discard(list_label_2)
                     continue
                 # if both region/route combos point to the same chopped route...
                 if r1 == r2:
