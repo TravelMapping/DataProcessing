@@ -26,6 +26,7 @@ remote=0
 numthreads=1
 workdir=.
 chcon=0
+makesiteupdate=0
 
 # If running as datacheck, we change some defaults
 if [[ "$0" == "./datacheck.sh" ]]; then
@@ -35,6 +36,9 @@ if [[ "$0" == "./datacheck.sh" ]]; then
     graphflag="-k"
     # -e flag runs site update in check-only mode
     errorcheck="-e"
+    # only in datacheck mode do we automatically make the latest
+    # C++ site update (if using C++)
+    makesiteupdate=1
 fi
 
 # check default locations of TM repositories, can be overridden
@@ -205,19 +209,27 @@ if [[ "$language" == python ]]; then
 	echo "No python3 command found."
 	exit 1
     fi
-elif [[ "$numthreads" != "1" ]]; then
-    if [[ -x ./cplusplus/siteupdate ]]; then
-	siteupdate="./cplusplus/siteupdate -t $numthreads"
-    else
-	echo "./cplusplus/siteupdate program not found."
-	exit 1
+else # C++
+    if [[ "$makesiteupdate" == "1" ]]; then
+	echo "$0: compiling the latest siteupdate program"
+	cd cplusplus
+	$make
+	cd -
     fi
-else
-    if [[ -x ./cplusplus/siteupdateST ]]; then
-	siteupdate="./cplusplus/siteupdateST"
+    if [[ "$numthreads" != "1" ]]; then
+	if [[ -x ./cplusplus/siteupdate ]]; then
+	    siteupdate="./cplusplus/siteupdate -t $numthreads"
+	else
+	    echo "./cplusplus/siteupdate program not found."
+	    exit 1
+	fi
     else
-	echo "./cplusplus/siteupdateST program not found."
-	exit 1
+	if [[ -x ./cplusplus/siteupdateST ]]; then
+	    siteupdate="./cplusplus/siteupdateST"
+	else
+	    echo "./cplusplus/siteupdateST program not found."
+	    exit 1
+	fi
     fi
 fi
 
