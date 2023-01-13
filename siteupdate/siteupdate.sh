@@ -346,6 +346,7 @@ fi
 rmdir $indir
 echo "$0: linking current to $instdir"
 cd $tmwebdir
+rm -f current
 ln -sf updates/$datestr current
 cd -
 
