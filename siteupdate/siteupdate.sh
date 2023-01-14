@@ -208,6 +208,7 @@ fi
 # and number of threads for the command
 if [[ "$language" == python ]]; then
     if hash python3 2>/dev/null; then
+	PYTHONIOENCODING='utf-8'
 	siteupdate="python3 python-teresco/siteupdate.py"
     else
 	echo "No python3 command found."
