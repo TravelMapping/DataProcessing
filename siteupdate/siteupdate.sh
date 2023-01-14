@@ -287,7 +287,7 @@ for t in `ls ../list_files/*.list | sed -r 's~../list_files/(.*).list~\1.time~'`
 cd -
   
 echo "$0: launching $siteupdate"
-$siteupdate $errorcheck -d TravelMapping-$datestr $graphflag -l $indir/$logdir -c $indir/$statdir -g $indir/$graphdir -n $indir/$nmpmdir | tee -a $indir/$logdir/siteupdate.log 2>&1 || exit 1
+$siteupdate $errorcheck -d TravelMapping-$datestr $graphflag -l $indir/$logdir -c $indir/$statdir -g $indir/$graphdir -n $indir/$nmpmdir -w $tmbasedir/HighwayData -u $tmbasedir/UserData/list_files | tee -a $indir/$logdir/siteupdate.log 2>&1 || exit 1
 date
 
 if [[ -x ../nmpfilter/nmpbyregion ]]; then
