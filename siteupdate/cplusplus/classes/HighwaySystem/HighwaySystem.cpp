@@ -192,3 +192,23 @@ void HighwaySystem::stats_csv()
 	sysfile << '\n';
 	sysfile.close();
 }
+
+void HighwaySystem::mark_route_in_use(std::string& lookup)
+{	uarn_mtx.lock();
+	unusedaltroutenames.erase(lookup);
+	uarn_mtx.unlock();
+	lniu_mtx.lock();
+	listnamesinuse.insert(std::move(lookup));
+	lniu_mtx.unlock();
+}
+
+void HighwaySystem::mark_routes_in_use(std::string& lookup1, std::string& lookup2)
+{	uarn_mtx.lock();
+	unusedaltroutenames.erase(lookup1);
+	unusedaltroutenames.erase(lookup2);
+	uarn_mtx.unlock();
+	lniu_mtx.lock();
+	listnamesinuse.insert(std::move(lookup1));
+	listnamesinuse.insert(std::move(lookup2));
+	lniu_mtx.unlock();
+}

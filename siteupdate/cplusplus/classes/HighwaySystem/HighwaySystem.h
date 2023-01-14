@@ -60,4 +60,6 @@ class HighwaySystem
 	void route_integrity(ErrorList& el);
 	void add_vertex(HGVertex*);
 	void stats_csv();
+	void mark_route_in_use(std::string&);
+	void mark_routes_in_use(std::string&, std::string&);
 };
