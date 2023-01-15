@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# TM common site update script
+# TM common site update/datacheck script
 #
 # Based on language-, OS-, and other specific scripts
 #
@@ -260,9 +260,12 @@ if [[ "$remote" == "0" && "$install" == "1" ]]; then
     fi
 fi
 
-# set up directory for this update in work directory
 indir=$workdir/$datestr
-
+# for datacheck, no need for date-specific indir
+if [[ "$0" == "./datacheck.sh" ]]; then
+   indir=$workdir
+fi
+   
 # Update repositories unless not updating
 if [[ "$pull" == "1" ]]; then
       echo "$0: updating TM repositories"
