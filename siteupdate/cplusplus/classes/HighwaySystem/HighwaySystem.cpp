@@ -122,7 +122,7 @@ double HighwaySystem::total_mileage()
 	return mi;
 }
 
-/* return full "active" / "preview" / "devel" string" */
+/* Return full "active" / "preview" / "devel" string */
 std::string HighwaySystem::level_name()
 {	switch(level)
 	{	case 'a': return "active";
