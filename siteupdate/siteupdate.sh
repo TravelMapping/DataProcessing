@@ -275,7 +275,7 @@ fi
 
 indir=$workdir/$datestr
 # for datacheck, no need for date-specific indir
-if [[ "$0" == "./datacheck.sh" ]]; then
+if [[ "$0" == "./datacheck.sh" || "$0" == "/fast/tm/datacheck" ]]; then
    indir=$workdir
 fi
    
