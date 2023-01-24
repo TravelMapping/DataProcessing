@@ -1426,15 +1426,17 @@ class TravelerList:
         # strip UTF-8 byte order mark if present
         if len(lines):
             lines[0] = lines[0].encode('utf-8').decode("utf-8-sig")
+        self.log_entries = []
+        self.update = None
         try:
             file = open(path+"/../time_files/"+self.traveler_name+".time")
             line = file.readline().rstrip()
-            self.log_entries = [travelername+" last updated: "+line]
-            self.update = line[:10]
+            if len(line):
+                self.log_entries = [travelername+" last updated: "+line]
+                self.update = line[:10]
             file.close()
         except FileNotFoundError:
-            self.log_entries = []
-            self.update = None
+                pass
         self.updated_routes = set()
 
         for line in lines:
