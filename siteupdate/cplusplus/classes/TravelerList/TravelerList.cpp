@@ -42,8 +42,10 @@ TravelerList::TravelerList(std::string travname, ErrorList* el)
 	std::ifstream file(Args::userlistfilepath+"/../time_files/"+traveler_name+".time");
 	if (file.is_open())
 	{	getline(file, update);
-		log << travname << " last updated: " << update << '\n';
-		update.assign(update, 0, 10);
+		if (update.size())
+		{	log << travname << " last updated: " << update << '\n';
+			update.assign(update, 0, 10);
+		}
 		file.close();
 	}
 
