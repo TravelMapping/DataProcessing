@@ -30,7 +30,17 @@ makesiteupdate=0
 compress=0
 compressflag=
 
-# If running as datacheck, we change some defaults
+# If running as datacheck, we change some defaults.
+# Running from the common install?
+if [[ "$0" == "/fast/tm/datacheck" ]]; then
+    echo "$0: Running as common datacheck, setting appropriate defaults"
+    install=0
+    numthreads=4
+    graphflag="-k"
+    # -e flag runs site update in check-only mode
+    errorcheck="-e"
+fi
+
 if [[ "$0" == "./datacheck.sh" ]]; then
     echo "$0: Running as datacheck, setting appropriate defaults"
     install=0
@@ -205,8 +215,11 @@ else
 fi
 
 # find the right site update program based on the selected language
-# and number of threads for the command
-if [[ "$language" == python ]]; then
+# and number of threads for the command, but first see if
+# this is the common datacheck
+if [[ "$0" == "/fast/tm/datacheck" ]]; then
+    siteupdate="/fast/tm/DataProcessing/siteupdate/cplusplus/siteupdate -t $numthreads"
+elif [[ "$language" == python ]]; then
     if hash python3 2>/dev/null; then
 	PYTHONIOENCODING='utf-8'
 	siteupdate="python3 python-teresco/siteupdate.py"
