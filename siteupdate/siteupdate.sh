@@ -8,7 +8,7 @@
 #
 
 function usage {
-    echo "Usage: $0 [--help] [--nographs] [--noinstall] [--nopull] [--mail] [--use-python] [--remote server] [--numthreads nt] [--tmbasedir dir] [--workdir dir] [--webdir dir]"
+    echo "Usage: $0 [--help] [--nographs] [--nmpmerged] [--noinstall] [--nopull] [--mail] [--use-python] [--remote server] [--numthreads nt] [--tmbasedir dir] [--workdir dir] [--webdir dir]"
 }
 
 set -e
@@ -105,7 +105,8 @@ logdir=logs
 statdir=stats
 graphdir=graphdata
 grapharchives=grapharchives
-nmpmdir=nmp_merged
+nmpmdir=
+nmpmflags=
 
 # process command line args
 nextitem=
@@ -130,6 +131,8 @@ for arg in "$@"; do
 	exit 0
     elif [[ "$arg" == --graphs ]]; then
 	graphflag=
+    elif [[ "$arg" == --nmpmerged ]]; then
+	nmpmdir=nmp_merged
     elif [[ "$arg" == --nographs ]]; then
 	# -k to siteupdate supresses graph generation
 	graphflag="-k"
@@ -287,7 +290,10 @@ if [[ "$pull" == "1" ]]; then
 fi
 
 echo "$0: creating directories"
-mkdir -p $indir/$logdir/users $indir/$statdir $indir/$nmpmdir $indir/$logdir/nmpbyregion
+mkdir -p $indir/$logdir/users $indir/$statdir $indir/$logdir/nmpbyregion
+if [[ "$nmpmdir" != "" ]]; then
+    mkdir -p $indir/$nmpmdir
+fi
 if [[ "$graphflag" != "-k" ]]; then
     mkdir -p $indir/$graphdir
 fi
@@ -302,8 +308,11 @@ cd $tmbasedir/UserData/time_files
 for t in `ls ../list_files/*.list | sed -r 's~../list_files/(.*).list~\1.time~'`; do $make $t; done
 cd -
   
+if [[ "$nmpmdir" != "" ]]; then
+    nmpmflags="-n $indir/$nmpmdir"
+fi
 echo "$0: launching $siteupdate"
-$siteupdate $errorcheck -d TravelMapping-$datestr $graphflag -l $indir/$logdir -c $indir/$statdir -g $indir/$graphdir -n $indir/$nmpmdir -w $tmbasedir/HighwayData -u $tmbasedir/UserData/list_files | tee -a $indir/$logdir/siteupdate.log 2>&1 || exit 1
+$siteupdate $errorcheck -d TravelMapping-$datestr $graphflag -l $indir/$logdir -c $indir/$statdir -g $indir/$graphdir $nmpmflags -w $tmbasedir/HighwayData -u $tmbasedir/UserData/list_files | tee -a $indir/$logdir/siteupdate.log 2>&1 || exit 1
 date
 
 if [[ -x ../nmpfilter/nmpbyregion ]]; then
@@ -348,11 +357,17 @@ date
 ln -sf $tmwebdir/lib/tm.conf.standard $tmwebdir/lib/tm.conf
 
 instdir=$tmwebdir/updates/$datestr
-echo "$0: installing logs, stats, nmp_merged, graphs in $instdir"
+echo "$0: installing logs, stats, graphs in $instdir"
 mkdir -p $instdir
-mv $indir/$logdir $indir/$statdir $indir/$nmpmdir $instdir
+mv $indir/$logdir $indir/$statdir $instdir
 if [[ "$chcon" == "1" ]]; then
-    sudo chcon -R --type=httpd_sys_content_t $instdir/$logdir $instdir/$statdir $instdir/$nmpmdir
+    sudo chcon -R --type=httpd_sys_content_t $instdir/$logdir $instdir/$statdir
+fi
+if [[ "$nmpmdir" != "" ]]; then
+    mv $indir/$nmpmdir $instdir
+    if [[ "$chcon" == "1" ]]; then
+	sudo chcon -R --type=httpd_sys_content_t $instdir/$nmpmdir
+    fi
 fi
 if [[ "$graphflag" != "-k" ]]; then
     mv $indir/$graphdir $instdir
