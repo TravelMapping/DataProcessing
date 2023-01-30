@@ -24,7 +24,7 @@ Where you would replace "username" with your assigned username, and "portnum" wi
 
 ### First time setup
 
-The first time you connect, you will need to clone the appropriate GitHub repositories into your account.  You will need the HighwayData repository, the UserData repository, and the DataProcessing repository.  Most often, you will want your own fork of the first, and the master versions of the latter two, as this process is intended to help test changes to highway data.  We'll assume that's the case here, and will use "jcool" as the GitHub account into which you have forked the HighwayData repository.
+The first time you connect, you will need to clone the appropriate GitHub repositories into your account.  You will need a clone of the `HighwayData` that contains the files you wish to check and a clone of the `UserData` repository.  It is no longer necessary to clone the `DataProcessing` repository.  Most often, you will want your own fork of the first, and the master version of the latter, as this process is intended to help test changes to highway data.  We'll assume that's the case here, and will use "`jcool`" as the GitHub account into which you have forked the `HighwayData` repository.
 
 Once you are logged in, you will see a prompt something like this:
 
@@ -32,12 +32,11 @@ Once you are logged in, you will see a prompt something like this:
 [jcool@noreaster ~]$ 
 ```
 
-That is your Unix command prompt, and by default it is in a "shell" program called Bash.  Basically, a shell is a way for you to issue commands directly to the operating system.  Our first commands will clone the needed repositories from GitHub.  Again, this assumes a GitHub username of "jcool".  Type each of these, in turn, at that `$` prompt.  You may be prompted for a GitHub username and password.  Any output from successful or unsuccessful commands will appear in your terminal, followed by a new `$` prompt.
+That is your Unix command prompt, and by default it is in a "shell" program called Bash.  Basically, a shell is a way for you to issue commands directly to the operating system.  Our first commands will clone the needed repositories from GitHub.  Again, this assumes a GitHub username of "`jcool`".  Type each of these, in turn, at that `$` prompt.  You may be prompted for a GitHub username and password.  Any output from successful or unsuccessful commands will appear in your terminal, followed by a new `$` prompt.
 
 ```
 git clone https://github.com/jcool/HighwayData.git
 git clone https://github.com/TravelMapping/UserData.git
-git clone https://github.com/TravelMapping/DataProcessing.git
 ```
 
 Don't forget to replace "jcool" with your GitHub username into which you have forked the `HighwayData` repository.
@@ -46,18 +45,20 @@ If all were successful, you should now have copies of each of the repositories i
 
 ### Running the site update code in "highway data check mode"
 
-The above is only needed on the initial setup.  Everything from here on is what you'll do every time you want to perform a data check before issuing a pull request to bring your changes into the master.
+The steps above are only needed on the initial setup.  Everything from here on is what you'll do every time you want to perform a data check before issuing a pull request to bring your changes into the master.
 
-At this time, run the site update program in "highway data check mode".  Since for checking highway data updates, it is not necessary to complete a few parts of the process nor is it necessary to generate the large SQL file that would populate the database, the program should be run with the `-e` flag.  A script called `datacheck.sh` has been provided that will run this program with appropriate parameters, and it will make sure your `HighwayData` and `UserData` repositories are up to date as well.
+A data check is completed by running the site update program in "highway data check mode".  Since for checking highway data updates involves only a subset of the tasks needed to complete an actual site update, a script has been provided that will run this program with appropriate parameters, and it will make sure your `HighwayData` and `UserData` repositories are up to date as well.
 
 To run it, you will enter the following at your $ prompt:
 
 ```
-cd ~/DataProcessing/siteupdate/cplusplus
-git pull
-sh datacheck.sh
+/fast/tm/datacheck
 ```
 
-The `git pull` makes sure you have the latest version of the site update program from the `DataProcessing` repository, and `sh datacheck.sh` does the real work.
+The process that launches can take as long as a few minutes.  If the program runs to completion without reporting errors and you see
 
-The process that launches will likely run for a few minutes.  If the program runs to completion without reporting errors, you are likely in good shape to make your pull request with your highway data changes. If not, you have things to fix.
+```
+!!! DATA CHECK SUCCESSFUL !!!
+```
+
+a few lines from the end of your output, you should be ok to proceed with a pull request with your highway data changes. If not, you have things to fix.  The process will create some files in directories named `logs` and `stats` in your directory.  Most of the time you can ignore these.
