@@ -79,4 +79,4 @@ siteupdateST: $(STObjects) $(CommonObjects)
 	@$(CXX) $(CXXFLAGS) -o siteupdateST $(STObjects) $(CommonObjects)
 
 clean:
-	@rm -f siteupdate siteupdateST `find . -name \*.d` `find -name \*.o`
+	@rm -f siteupdate siteupdateST `find . -name \*.d` `find . -name \*.o`
