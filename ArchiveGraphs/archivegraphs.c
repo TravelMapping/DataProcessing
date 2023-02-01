@@ -215,7 +215,7 @@ int main(int argc, char *argv[]) {
   /* check for required command-line parameters:
 
      argv[1]: name of archive
-     argv[2]: longer description of the archive set
+     argv[2]: longer description of the archive set, must be in double quotes
      argv[3]: SQL-format date string YYYY-MM-DD
      argv[4]: TravelMapping/HighwayData repository version
      argv[5]: TravelMapping/UserData repository version
@@ -229,8 +229,17 @@ int main(int argc, char *argv[]) {
     usage(argv[0]);
   }
 
+  if (argv[2][0] != '"') {
+    fprintf(stderr, "Error: description must be specified in double quotes.\n");
+    usage(argv[0]);
+  }
+
   char *archive_name = argv[1];
   char *description = argv[2];
+  // strip off double quotes from description
+  description++;
+  description[strlen(description)-1] = '\0';
+  
   /* should check here for a proper date format */
   char *datestamp = argv[3];
   char *hwy_vers = argv[4];
