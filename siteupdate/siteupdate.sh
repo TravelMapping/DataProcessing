@@ -99,6 +99,8 @@ fi
 tmwebdir=/fast/www/tm
 if [[ -d /var/www/html ]]; then
     tmwebdir=/var/www/html
+elif [[ -d /opt/local/www/apache2/html ]]; then
+    tmwebdir=/opt/local/www/apache2/html
 fi
 
 logdir=logs
