@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-# Travel Mapping Project, Jim Teresco, 2015-2022
+# Travel Mapping Project, Jim Teresco, 2015-2023
 """Python code to read .csv and .wpt files and prepare for
 adding to the Travel Mapping Project database.
 
-(c) 2015-2022, Jim Teresco, Eric Bryant, and Travel Mapping Project contributors
+(c) 2015-2023, Jim Teresco, Eric Bryant, and Travel Mapping Project contributors
 
 This module defines classes to represent the contents of a
 .csv file that lists the highways within a system, and a
