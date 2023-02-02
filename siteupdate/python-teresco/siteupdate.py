@@ -4097,6 +4097,7 @@ else:
                     if h.systemname in fields[6].split(","):
                         systems.append(h)
 
+            print(fields[1] + ' ', end="", flush=True)
             graph_data.write_subgraphs_tmg(graph_list, args.graphfilepath + "/", fields[1],
                                            fields[0], "fullcustom", region_list,
                                            systems, placeradius, all_waypoints)
