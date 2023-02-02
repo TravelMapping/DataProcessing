@@ -20,6 +20,6 @@ void ConcAugThread(unsigned int id, std::mutex* tl_mtx, std::list<std::string>* 
 		      {	augment_list->push_back("Concurrency augment for traveler " + t->traveler_name + ": [" + hs->str() + "] based on [" + s->str() + ']');
 			to_add.push_back(hs);
 		      }
-		t->clinched_segments.insert(to_add.begin(), to_add.end());
+		t->clinched_segments.insert(t->clinched_segments.end(), to_add.begin(), to_add.end());
 	}
 }

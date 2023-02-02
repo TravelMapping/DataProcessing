@@ -1173,8 +1173,8 @@ class Route:
         # store clinched segments with traveler and traveler with segments
         for pos in range(beg, end):
             hs = self.segment_list[pos]
-            hs.add_clinched_by(t)
-            t.clinched_segments.add(hs)
+            if hs.add_clinched_by(t):
+                t.clinched_segments.append(hs)
         if self.last_update and self not in t.updated_routes:
             t.updated_routes.add(self)
             if t.update and self.last_update[0] >= t.update:
@@ -1417,7 +1417,7 @@ class TravelerList:
 
     def __init__(self,travelername,el,path="../../../UserData/list_files"):
         list_entries = 0
-        self.clinched_segments = set()
+        self.clinched_segments = []
         self.traveler_name = travelername[:-5]
         if len(self.traveler_name.encode('utf-8')) > DBFieldLength.traveler:
             el.add_error("Traveler name " + self.traveler_name + " > " + str(DBFieldLength.traveler) + "bytes")

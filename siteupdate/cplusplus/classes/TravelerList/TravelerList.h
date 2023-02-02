@@ -31,7 +31,7 @@ class TravelerList
     start_region start_route start_point end_region end_route end_point
     */
 	public:
-	std::unordered_set<HighwaySegment*> clinched_segments;
+	std::vector<HighwaySegment*> clinched_segments;
 	std::string traveler_name;
 	std::unordered_map<Region*, double> active_preview_mileage_by_region;				// total mileage per region, active+preview only
 	std::unordered_map<Region*, double> active_only_mileage_by_region;				// total mileage per region, active only
