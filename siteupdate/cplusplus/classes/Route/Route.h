@@ -6,7 +6,6 @@ class Region;
 class TravelerList;
 class Waypoint;
 class WaypointQuadtree;
-#include <deque>
 #include <mutex>
 #include <unordered_map>
 #include <unordered_set>
@@ -59,7 +58,7 @@ class Route
 	std::string abbrev;
 	std::string city;
 	std::string root;
-	std::deque<std::string> alt_route_names;
+	std::vector<std::string> alt_route_names;
 	ConnectedRoute *con_route;
 
 	std::vector<Waypoint*> point_list;
