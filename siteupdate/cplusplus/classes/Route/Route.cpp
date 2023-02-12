@@ -219,8 +219,8 @@ void Route::store_traveled_segments(TravelerList* t, std::ofstream& log, std::st
 {	// store clinched segments with traveler and traveler with segments
 	for (unsigned int pos = beg; pos < end; pos++)
 	{	HighwaySegment *hs = segment_list[pos];
-		hs->add_clinched_by(t);
-		t->clinched_segments.insert(hs);
+		if (hs->add_clinched_by(t))
+		  t->clinched_segments.push_back(hs);
 	}
 	if (last_update && t->updated_routes.insert(this).second && update.size() && last_update[0] >= update)
 		log << "Route updated " << last_update[0] << ": " << readable_name() << '\n';

@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-# Travel Mapping Project, Jim Teresco, 2015-2022
+# Travel Mapping Project, Jim Teresco, 2015-2023
 """Python code to read .csv and .wpt files and prepare for
 adding to the Travel Mapping Project database.
 
-(c) 2015-2022, Jim Teresco, Eric Bryant, and Travel Mapping Project contributors
+(c) 2015-2023, Jim Teresco, Eric Bryant, and Travel Mapping Project contributors
 
 This module defines classes to represent the contents of a
 .csv file that lists the highways within a system, and a
@@ -1173,8 +1173,8 @@ class Route:
         # store clinched segments with traveler and traveler with segments
         for pos in range(beg, end):
             hs = self.segment_list[pos]
-            hs.add_clinched_by(t)
-            t.clinched_segments.add(hs)
+            if hs.add_clinched_by(t):
+                t.clinched_segments.append(hs)
         if self.last_update and self not in t.updated_routes:
             t.updated_routes.add(self)
             if t.update and self.last_update[0] >= t.update:
@@ -1417,7 +1417,7 @@ class TravelerList:
 
     def __init__(self,travelername,el,path="../../UserData/list_files"):
         list_entries = 0
-        self.clinched_segments = set()
+        self.clinched_segments = []
         self.traveler_name = travelername[:-5]
         if len(self.traveler_name.encode('utf-8')) > DBFieldLength.traveler:
             el.add_error("Traveler name " + self.traveler_name + " > " + str(DBFieldLength.traveler) + "bytes")
@@ -4097,6 +4097,7 @@ else:
                     if h.systemname in fields[6].split(","):
                         systems.append(h)
 
+            print(fields[1] + ' ', end="", flush=True)
             graph_data.write_subgraphs_tmg(graph_list, args.graphfilepath + "/", fields[1],
                                            fields[0], "fullcustom", region_list,
                                            systems, placeradius, all_waypoints)
