@@ -2,12 +2,12 @@ class ElapsedTime;
 class ErrorList;
 class HighwayGraph;
 class WaypointQuadtree;
-#include <list>
 #include <mutex>
+#include <vector>
 
 void CompStatsRThread(unsigned int, std::mutex*);
 void CompStatsTThread(unsigned int, std::mutex*);
-void ConcAugThread   (unsigned int, std::mutex*, std::list<std::string>*);
+void ConcAugThread   (unsigned int, std::mutex*, std::vector<std::string>*);
 void MasterTmgThread(HighwayGraph*, std::mutex*, std::mutex*, WaypointQuadtree*, ElapsedTime*);
 void NmpMergedThread (unsigned int, std::mutex*);
 void NmpSearchThread (unsigned int, std::mutex*, WaypointQuadtree*);
