@@ -1,4 +1,4 @@
-void ConcAugThread(unsigned int id, std::mutex* tl_mtx, std::list<std::string>* augment_list)
+void ConcAugThread(unsigned int id, std::mutex* tl_mtx, std::vector<std::string>* augment_list)
 {	//printf("Starting ConcAugThread %02i\n", id); fflush(stdout);
 	while (TravelerList::tl_it != TravelerList::allusers.end())
 	{	tl_mtx->lock();
