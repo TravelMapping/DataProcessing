@@ -14,7 +14,7 @@ void ReadWptThread
 		HighwaySystem::it++;
 		//printf("ReadWptThread %02i HighwaySystem::it++\n", id); fflush(stdout);
 		hs_mtx->unlock();
-		std::cout << h->systemname << std::flush;
+		std::cout << h->systemname << ' ' << std::flush;
 		bool usa_flag = h->country->first == "USA";
 		Region* prev_region = nullptr;
 		for (Route *r : h->route_list)
@@ -25,6 +25,6 @@ void ReadWptThread
 			}
 			r->read_wpt(all_waypoints, el, usa_flag);
 		}
-		std::cout << "!" << std::endl;
+		//std::cout << "!" << std::endl;
 	}
 }

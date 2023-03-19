@@ -128,7 +128,7 @@ void Route::read_wpt(WaypointQuadtree *all_waypoints, ErrorList *el, bool usa_fl
 			     }
 		}
 	     }
-	std::cout << '.' << std::flush;
+	//std::cout << '.' << std::flush;
 	//std::cout << str() << std::flush;
 	//print_route();
 }

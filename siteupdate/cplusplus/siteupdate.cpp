@@ -222,13 +222,14 @@ int main(int argc, char *argv[])
 	THREADLOOP thr[t].join();
       #else
 	for (HighwaySystem* h : HighwaySystem::syslist)
-	{	std::cout << h->systemname << std::flush;
+	{	std::cout << h->systemname << ' ' << std::flush;
 		bool usa_flag = h->country->first == "USA";
 		for (Route* r : h->route_list)
 			r->read_wpt(&all_waypoints, &el, usa_flag);
-		std::cout << "!" << std::endl;
+		//std::cout << "!" << std::endl;
 	}
       #endif
+	std::cout << std::endl;
 
 	//cout << et.et() << "Writing WaypointQuadtree.tmg." << endl;
 	//all_waypoints.write_qt_tmg(Args::logfilepath+"/WaypointQuadtree.tmg");
