@@ -4838,7 +4838,7 @@ if not args.errorcheck:
     print("Unique locations: " + str(unique_locations), flush=True)
 
 if args.errorcheck:
-    print("!!! DATA CHECK SUCCESSFUL !!!", flush=True)
+    print("\n!!! DATA CHECK SUCCESSFUL !!!\n", flush=True)
 
 print("Finish: " + str(datetime.datetime.now()))
 print("Total run time: " + et.et())

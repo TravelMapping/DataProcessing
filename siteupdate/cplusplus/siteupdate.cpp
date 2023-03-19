@@ -679,7 +679,7 @@ int main(int argc, char *argv[])
 	cout << total_rtes << " total routes." << endl;//*/
 
 	if (Args::errorcheck)
-	    cout << "!!! DATA CHECK SUCCESSFUL !!!" << endl;
+	    cout << "\n!!! DATA CHECK SUCCESSFUL !!!\n" << endl;
 
 	timestamp = time(0);
 	cout << "Finish: " << ctime(&timestamp);
