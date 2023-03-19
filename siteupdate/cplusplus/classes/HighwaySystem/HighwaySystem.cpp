@@ -60,7 +60,7 @@ HighwaySystem::HighwaySystem(std::string &line, ErrorList &el, std::vector<std::
 	{	case 'a': num_active++; break;
 		case 'p': num_preview++;
 	}
-	std::cout << systemname << '.' << std::flush;
+	std::cout /*<< systemname*/ << '.' << std::flush;
 
 	// read chopped routes CSV
 	file.open(Args::highwaydatapath+"/hwy_data/_systems"+"/"+systemname+".csv");
