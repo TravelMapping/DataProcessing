@@ -179,14 +179,9 @@ int main(int argc, char *argv[])
 	file.open(Args::highwaydatapath+"/"+Args::systemsfile);
 	if (!file) el.add_error("Could not open "+Args::highwaydatapath+"/"+Args::systemsfile);
 	else {	getline(file, line); // ignore header line
-		list<string> ignoring;
 		while(getline(file, line))
 		{	if (line.size() && line.back() == 0x0D) line.pop_back();	// trim DOS newlines
-			if (line.empty()) continue;
-			if (line[0] == '#')
-			{	ignoring.push_back("Ignored comment in " + Args::systemsfile + ": " + line);
-				continue;
-			}
+			if (line.empty() || line[0] == '#') continue;
 			HighwaySystem *hs = new HighwaySystem(line, el, countries);
 					    // deleted on termination of program
 			if (!hs->is_valid) delete hs;
@@ -194,9 +189,6 @@ int main(int argc, char *argv[])
 			     }
 		}
 		cout << endl;
-		// at the end, print the lines ignored
-		for (string& l : ignoring) cout << l << endl;
-		ignoring.clear();
 	     }
 	file.close();
 
