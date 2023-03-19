@@ -13,10 +13,6 @@
 
 TravelerList::TravelerList(std::string travname, ErrorList* el)
 {	// initialize object variables
-	active_systems_traveled = 0;
-	active_systems_clinched = 0;
-	preview_systems_traveled = 0;
-	preview_systems_clinched = 0;
 	in_subgraph = new bool[Args::numthreads];
 	traveler_num = new unsigned int[Args::numthreads];
 		       // deleted on termination of program

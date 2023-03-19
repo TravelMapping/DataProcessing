@@ -28,6 +28,10 @@ void TravelerList::userlog(const double total_active_only_miles, const double to
 		log << region->code << ": " << format_clinched_mi(fstr, t_active_miles, region->active_only_mileage) << ", "
 		    << format_clinched_mi(fstr, active_preview_mileage_by_region.at(region), region->active_preview_mileage) << '\n';
 	}
+	unsigned int active_systems_traveled = 0;
+	unsigned int active_systems_clinched = 0;
+	unsigned int preview_systems_traveled = 0;
+	unsigned int preview_systems_clinched = 0;
 
 	// stats by system
 	for (HighwaySystem *h : HighwaySystem::syslist)
@@ -37,10 +41,6 @@ void TravelerList::userlog(const double total_active_only_miles, const double to
 			if (h->active())
 				active_systems_traveled++;
 			else	preview_systems_traveled++;
-			if (float(t_system_overall) == float(h->total_mileage()))
-			  if (h->active())
-				active_systems_clinched++;
-			  else	preview_systems_clinched++;
 
 			// stats by region covered by system, always in csmbr for
 			// the DB, but add to logs only if it's been traveled at
@@ -96,6 +96,10 @@ void TravelerList::userlog(const double total_active_only_miles, const double to
 					     }
 				}
 			}
+			if (num_con_rtes_clinched == h->con_route_list.size())
+			  if (h->active())
+				active_systems_clinched++;
+			  else	preview_systems_clinched++;
 			sprintf(fstr, " connected routes traveled: %i of %i (%.1f%%), clinched: %i of %i (%.1f%%).",
 				num_con_rtes_traveled, (int)h->con_route_list.size(), 100*(double)num_con_rtes_traveled/h->con_route_list.size(),
 				num_con_rtes_clinched, (int)h->con_route_list.size(), 100*(double)num_con_rtes_clinched/h->con_route_list.size());
