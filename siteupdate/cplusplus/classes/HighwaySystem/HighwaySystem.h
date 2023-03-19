@@ -39,7 +39,7 @@ class HighwaySystem
 	std::vector<HGVertex*> vertices;
 	std::unordered_map<Region*, double> mileage_by_region;
 	std::unordered_set<std::string>listnamesinuse, unusedaltroutenames;
-	std::mutex lniu_mtx, uarn_mtx;
+	std::mutex mtx;
 	bool is_valid;
 
 	static std::list<HighwaySystem*> syslist;

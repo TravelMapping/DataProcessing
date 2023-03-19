@@ -336,10 +336,7 @@ int main(int argc, char *argv[])
 	THREADLOOP thr[t] = thread(ReadListThread, t, &list_mtx, &el);
 	THREADLOOP thr[t].join();
       #else
-	for (string &t : TravelerList::ids)
-	{	cout << t << ' ' << std::flush;
-		TravelerList::allusers.push_back(new TravelerList(t, &el));
-	}
+	for (string &t : TravelerList::ids) TravelerList::allusers.push_back(new TravelerList(t, &el));
       #endif
 	TravelerList::ids.clear();
 	cout << endl << et.et() << "Processed " << TravelerList::allusers.size() << " traveler list files. Sorting and numbering." << endl;
@@ -468,30 +465,15 @@ int main(int argc, char *argv[])
 	// compute lots of regional stats:
 	// overall, active+preview, active only,
 	// and per-system which falls into just one of these categories
+	cout << et.et() << "Computing stats." << flush;
       #ifdef threading_enabled
-	cout << et.et() << "Performing per-route data checks and computing stats." << flush;
-	HighwaySystem::it = HighwaySystem::syslist.begin();
-	THREADLOOP thr[t] = thread(CompStatsRThread, t, &list_mtx);
+	Region::rg_it = Region::allregions.begin();
+	THREADLOOP thr[t] = thread(CompStatsThread, t, &list_mtx);
 	THREADLOOP thr[t].join();
-	cout << '!' << endl;
-	cout << et.et() << "Computing stats per traveler." << flush;
-	TravelerList::tl_it = TravelerList::allusers.begin();
-	THREADLOOP thr[t] = thread(CompStatsTThread, t, &list_mtx);
-	THREADLOOP thr[t].join();
-	cout << '!' << endl;
       #else
-	cout << et.et() << "Performing per-route data checks and computing stats." << flush;
-	for (HighwaySystem *h : HighwaySystem::syslist)
-	{	cout << "." << flush;
-		for (Route *r : h->route_list)
-		{ 	r->compute_stats_r();
-		  	for (HighwaySegment *s : r->segment_list)
-			  for (TravelerList *t : s->clinched_by)
-			    s->compute_stats_t(t);
-		}
-	}
-	cout << '!' << endl;
+	for (Region* rg : Region::allregions) rg->compute_stats();
       #endif
+	cout << '!' << endl;
 
 	cout << et.et() << "Writing highway data stats log file (highwaydatastats.log)." << endl;
 	char fstr[112];

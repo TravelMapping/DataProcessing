@@ -4,7 +4,6 @@ class HighwaySegment;
 class HighwaySystem;
 class Region;
 class Route;
-#include <iostream>
 #include <list>
 #include <mutex>
 #include <unordered_map>

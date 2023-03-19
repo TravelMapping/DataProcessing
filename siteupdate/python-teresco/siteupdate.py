@@ -3093,6 +3093,15 @@ for h in highway_systems:
         if r.con_route is None:
             el.add_error(r.system.systemname + ".csv: root " + r.root + " not matched by any connected route root.")
 
+        # datachecks
+        if r.abbrev == "":
+            if len(r.banner) and r.city.startswith(r.banner):
+                datacheckerrors.append(DatacheckEntry(r, [], "ABBREV_AS_CHOP_BANNER",
+                                       h.systemname + ".csv#L" + str(r.system.route_index(r)+2)))
+        elif r.city == "":
+                datacheckerrors.append(DatacheckEntry(r, [], "ABBREV_NO_CITY",
+                                       h.systemname + ".csv#L" + str(r.system.route_index(r)+2)))
+
         # create label hashes and check for duplicates
         for index, w in enumerate(r.point_list):
             # ignore case and leading '+' or '*'
@@ -3373,7 +3382,7 @@ sanetravfile.close()
 # compute lots of regional stats:
 # overall, active+preview, active only,
 # and per-system which falls into just one of these categories
-print(et.et() + "Performing per-route data checks and computing stats.",end="",flush=True)
+print(et.et() + "Computing stats.",end="",flush=True)
 active_only_mileage_by_region = dict()
 active_preview_mileage_by_region = dict()
 overall_mileage_by_region = dict()
@@ -3463,15 +3472,6 @@ for h in highway_systems:
                     t_system_dict[r.region] += s.length/system_concurrency_count
                 except KeyError:
                     t_system_dict[r.region] = s.length/system_concurrency_count
-
-        # datachecks
-        if r.abbrev == "":
-            if len(r.banner) and r.city.startswith(r.banner):
-                datacheckerrors.append(DatacheckEntry(r, [], "ABBREV_AS_CHOP_BANNER",
-                                       h.systemname + ".csv#L" + str(r.system.route_index(r)+2)))
-        elif r.city == "":
-                datacheckerrors.append(DatacheckEntry(r, [], "ABBREV_NO_CITY",
-                                       h.systemname + ".csv#L" + str(r.system.route_index(r)+2)))
 print("!", flush=True)
 
 print(et.et() + "Writing highway data stats log file (highwaydatastats.log).",flush=True)

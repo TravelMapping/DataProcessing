@@ -22,6 +22,7 @@ TravelerList::TravelerList(std::string travname, ErrorList* el)
 		       // deleted on termination of program
 	for (size_t i = 0; i < Args::numthreads; i++) in_subgraph[i] = 0;
 	traveler_name = travname.substr(0, travname.size()-5); // strip ".list" from end of travname
+	std::cout << traveler_name << ' ' << std::flush;
 	if (traveler_name.size() > DBFieldLength::traveler)
 	  el->add_error("Traveler name " + traveler_name + " > " + std::to_string(DBFieldLength::traveler) + "bytes");
 

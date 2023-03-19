@@ -5,12 +5,23 @@
 #include "../Route/Route.h"
 #include "../Waypoint/Waypoint.h"
 #include "../../functions/upper.h"
+#include <cstring>
 
 void HighwaySystem::route_integrity(ErrorList& el)
 {	for (Route* r : route_list)
 	{	// check for unconnected chopped routes
 		if (!r->con_route)
 			el.add_error(systemname + ".csv: root " + r->root + " not matched by any connected route root.");
+
+		// datachecks
+		#define CSV_LINE r->system->systemname + ".csv#L" + std::to_string(r->system->route_index(r)+2)
+		if (r->abbrev.empty())
+		{	if ( r->banner.size() && !strncmp(r->banner.data(), r->city.data(), r->banner.size()) )
+			  Datacheck::add(r, "", "", "", "ABBREV_AS_CHOP_BANNER", CSV_LINE);
+		} else	if (r->city.empty())
+			  Datacheck::add(r, "", "", "", "ABBREV_NO_CITY", CSV_LINE);
+		#undef CSV_LINE
+		for (Waypoint* w : r->point_list) w->label_selfref();
 
 		// create label hashes and check for duplicates
 		for (unsigned int index = 0; index < r->point_list.size(); index++)
@@ -54,8 +65,8 @@ void HighwaySystem::route_integrity(ErrorList& el)
 		cr->roots[0]->con_mismatch();
 		for (size_t i = 1; i < cr->roots.size(); i++)
 		{	// check for mismatched route endpoints within connected routes
-			#define q cr->roots[i-1]
-			#define r cr->roots[i]
+			auto& q = cr->roots[i-1];
+			auto& r = cr->roots[i];
 			r->con_mismatch();
 			if ( q->point_list.size() > 1 && r->point_list.size() > 1 && !r->con_beg()->same_coords(q->con_end()) )
 			{	if	( q->con_beg()->same_coords(r->con_beg()) )
@@ -76,8 +87,6 @@ void HighwaySystem::route_integrity(ErrorList& el)
 					r->set_disconnected();
 				}
 			}
-			#undef q
-			#undef r
 		}
 	}
 }
