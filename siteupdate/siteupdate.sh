@@ -237,7 +237,7 @@ else # C++
 	echo "$0: compiling the latest siteupdate program"
 	cd cplusplus
 	$make
-	cd -
+	cd - > /dev/null
     fi
     if [[ "$numthreads" != "1" ]]; then
 	if [[ -x ./cplusplus/siteupdate ]]; then
@@ -307,8 +307,8 @@ echo DataProcessing '@' `git show -s | head -n 1 | cut -f2 -d' '` | tee -a $indi
 
 echo "$0: creating .time files"
 cd $tmbasedir/UserData/time_files
-for t in `ls ../list_files/*.list | sed -r 's~../list_files/(.*).list~\1.time~'`; do $make $t; done
-cd -
+for t in `ls ../list_files/*.list | sed -r 's~../list_files/(.*).list~\1.time~'`; do $make -s $t; done
+cd - > /dev/null
   
 if [[ "$nmpmdir" != "" ]]; then
     nmpmflags="-n $indir/$nmpmdir"
