@@ -13,15 +13,12 @@
 
 TravelerList::TravelerList(std::string travname, ErrorList* el)
 {	// initialize object variables
-	active_systems_traveled = 0;
-	active_systems_clinched = 0;
-	preview_systems_traveled = 0;
-	preview_systems_clinched = 0;
 	in_subgraph = new bool[Args::numthreads];
 	traveler_num = new unsigned int[Args::numthreads];
 		       // deleted on termination of program
 	for (size_t i = 0; i < Args::numthreads; i++) in_subgraph[i] = 0;
 	traveler_name = travname.substr(0, travname.size()-5); // strip ".list" from end of travname
+	std::cout << traveler_name << ' ' << std::flush;
 	if (traveler_name.size() > DBFieldLength::traveler)
 	  el->add_error("Traveler name " + traveler_name + " > " + std::to_string(DBFieldLength::traveler) + "bytes");
 

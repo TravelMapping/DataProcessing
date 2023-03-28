@@ -4,7 +4,6 @@
 #include "../TravelerList/TravelerList.h"
 #include "../Waypoint/Waypoint.h"
 #include "../../templates/contains.cpp"
-#include <cmath>
 
 HighwaySegment::HighwaySegment(Waypoint *w1, Waypoint *w2, Route *rte)
 {	waypoint1 = w1;
@@ -12,9 +11,6 @@ HighwaySegment::HighwaySegment(Waypoint *w1, Waypoint *w2, Route *rte)
 	route = rte;
 	length = waypoint1->distance_to(waypoint2);
 	concurrent = 0;
-	system_concurrency_count = 1;
-	active_only_concurrency_count = 1;
-	active_preview_concurrency_count = 1;
 }
 
 std::string HighwaySegment::str()
@@ -110,5 +106,3 @@ void HighwaySegment::write_label(std::ofstream& file, std::list<HighwaySystem*> 
 		file << route->abbrev;
 	     }
 }
-
-#include "compute_stats_t.cpp"

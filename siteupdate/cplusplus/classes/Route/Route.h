@@ -66,8 +66,7 @@ class Route
 	std::unordered_set<std::string> unused_alt_labels;
 	std::unordered_set<std::string> duplicate_labels;
 	std::unordered_map<std::string, unsigned int> pri_label_hash, alt_label_hash;
-	std::mutex liu_mtx;	// for locking the labels_in_use set when inserting labels during TravelerList processing
-	std::mutex ual_mtx;	// for locking the unused_alt_labels set when removing in-use alt_labels
+	std::mutex usage_mtx;	// for locking labels_in_use & unused_alt_labels during TravelerList processing
 	std::vector<HighwaySegment*> segment_list;
 	std::string* last_update;
 	double mileage;
@@ -96,7 +95,6 @@ class Route
 	void store_traveled_segments(TravelerList*, std::ofstream&, std::string&, unsigned int, unsigned int);
 	void mark_label_in_use(char*);
 	void mark_labels_in_use(char*, char*);
-	void compute_stats_r();
 	void con_mismatch();
 	Waypoint* con_beg();
 	Waypoint* con_end();

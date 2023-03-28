@@ -48,7 +48,7 @@ Waypoint::Waypoint(char *line, Route *rte)
 			while (excess.back() < 0)	excess.erase(excess.end()-1);	// strip any partial multi-byte characters off the end,
 			excess += "...";						// and append "..."
 		}
-		label = label.assign(label, 0, slicepoint);				// Now truncate the label itself
+		label.assign(label, 0, slicepoint);					// Now truncate the label itself
 		Datacheck::add(route, label+"...", "", "", "LABEL_TOO_LONG", "..."+excess);
 		valid_line = 0;
 	}

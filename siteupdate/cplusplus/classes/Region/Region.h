@@ -1,10 +1,10 @@
 class ErrorList;
 class HGVertex;
+class Route;
 class Waypoint;
 #include <mutex>
 #include <string>
 #include <unordered_map>
-#include <utility>
 #include <vector>
 
 std::pair<std::string, std::string> *country_or_continent_by_code(std::string, std::vector<std::pair<std::string, std::string>>&);
@@ -45,10 +45,12 @@ class Region
 	double active_preview_mileage;
 	double overall_mileage;
 	std::mutex mtx;
+	std::vector<Route*> routes;
 	std::vector<std::pair<HGVertex*,Waypoint*>> vertices;
 	bool is_valid;
 
 	static std::vector<Region*> allregions;
+	static std::vector<Region*>::iterator rg_it;
 	static std::unordered_map<std::string, Region*> code_hash;
 
 	Region (const std::string&,
@@ -56,6 +58,7 @@ class Region
 		std::vector<std::pair<std::string, std::string>>&,
 		ErrorList&);
 
+	void compute_stats();
 	std::string &country_code();
 	std::string &continent_code();
 	void add_vertex(HGVertex*, Waypoint*);

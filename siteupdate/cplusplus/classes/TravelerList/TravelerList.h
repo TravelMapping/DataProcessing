@@ -4,7 +4,6 @@ class HighwaySegment;
 class HighwaySystem;
 class Region;
 class Route;
-#include <iostream>
 #include <list>
 #include <mutex>
 #include <unordered_map>
@@ -41,10 +40,6 @@ class TravelerList
 	std::vector<std::pair<ConnectedRoute*,double>> ccr_values;	// for the clinchedConnectedRoutes DB table
 	bool* in_subgraph;
 	unsigned int *traveler_num;
-	unsigned int active_systems_traveled;
-	unsigned int active_systems_clinched;
-	unsigned int preview_systems_traveled;
-	unsigned int preview_systems_clinched;
 	// for locking the allusers list when reading .lists from disk
 	// and avoiding data races when creating userlog timestamps
 	static std::mutex mtx;

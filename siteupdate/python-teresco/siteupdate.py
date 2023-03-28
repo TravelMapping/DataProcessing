@@ -3093,6 +3093,15 @@ for h in highway_systems:
         if r.con_route is None:
             el.add_error(r.system.systemname + ".csv: root " + r.root + " not matched by any connected route root.")
 
+        # datachecks
+        if r.abbrev == "":
+            if len(r.banner) and r.city.startswith(r.banner):
+                datacheckerrors.append(DatacheckEntry(r, [], "ABBREV_AS_CHOP_BANNER",
+                                       h.systemname + ".csv#L" + str(r.system.route_index(r)+2)))
+        elif r.city == "":
+                datacheckerrors.append(DatacheckEntry(r, [], "ABBREV_NO_CITY",
+                                       h.systemname + ".csv#L" + str(r.system.route_index(r)+2)))
+
         # create label hashes and check for duplicates
         for index, w in enumerate(r.point_list):
             # ignore case and leading '+' or '*'
@@ -3373,7 +3382,7 @@ sanetravfile.close()
 # compute lots of regional stats:
 # overall, active+preview, active only,
 # and per-system which falls into just one of these categories
-print(et.et() + "Performing per-route data checks and computing stats.",end="",flush=True)
+print(et.et() + "Computing stats.",end="",flush=True)
 active_only_mileage_by_region = dict()
 active_preview_mileage_by_region = dict()
 overall_mileage_by_region = dict()
@@ -3463,15 +3472,6 @@ for h in highway_systems:
                     t_system_dict[r.region] += s.length/system_concurrency_count
                 except KeyError:
                     t_system_dict[r.region] = s.length/system_concurrency_count
-
-        # datachecks
-        if r.abbrev == "":
-            if len(r.banner) and r.city.startswith(r.banner):
-                datacheckerrors.append(DatacheckEntry(r, [], "ABBREV_AS_CHOP_BANNER",
-                                       h.systemname + ".csv#L" + str(r.system.route_index(r)+2)))
-        elif r.city == "":
-                datacheckerrors.append(DatacheckEntry(r, [], "ABBREV_NO_CITY",
-                                       h.systemname + ".csv#L" + str(r.system.route_index(r)+2)))
 print("!", flush=True)
 
 print(et.et() + "Writing highway data stats log file (highwaydatastats.log).",flush=True)
@@ -3555,10 +3555,10 @@ for t in traveler_lists:
                              format_clinched_mi(t.active_preview_mileage_by_region[region],
                                                 active_preview_mileage_by_region[region]))
 
-    t.active_systems_traveled = 0
-    t.active_systems_clinched = 0
-    t.preview_systems_traveled = 0
-    t.preview_systems_clinched = 0
+    active_systems_traveled = 0
+    active_systems_clinched = 0
+    preview_systems_traveled = 0
+    preview_systems_clinched = 0
 
     # stats by system
     for h in highway_systems:
@@ -3566,14 +3566,9 @@ for t in traveler_lists:
             if h.systemname in t.system_region_mileages:
                 t_system_overall = math.fsum(t.system_region_mileages[h.systemname].values())
                 if h.active():
-                    t.active_systems_traveled += 1
+                    active_systems_traveled += 1
                 else:
-                    t.preview_systems_traveled += 1
-                if t_system_overall == math.fsum(h.mileage_by_region.values()):
-                    if h.active():
-                        t.active_systems_clinched += 1
-                    else:
-                        t.preview_systems_clinched += 1
+                    preview_systems_traveled += 1
 
                 # stats by region covered by system, always in csmbr for
                 # the DB, but add to logs only if it's been traveled at
@@ -3618,6 +3613,11 @@ for t in traveler_lists:
                             t.log_entries.append(" (" + cr.roots[0].readable_name() + " only)")
                         else:
                             t.log_entries.append(to_write)
+                if con_routes_clinched == len(h.con_route_list):
+                    if h.active():
+                        active_systems_clinched += 1
+                    else:
+                        preview_systems_clinched += 1
                 t.log_entries.append("System " + h.systemname + " connected routes traveled: " + \
                                          str(con_routes_traveled) + " of " + \
                                          str(len(h.con_route_list)) + \
@@ -3629,16 +3629,16 @@ for t in traveler_lists:
 
 
     # grand summary, active only
-    t.log_entries.append("\nTraveled " + str(t.active_systems_traveled) + " of " + str(HighwaySystem.num_active) +
-                         " ({0:.1f}%)".format(100*t.active_systems_traveled/HighwaySystem.num_active) +
-                         ", Clinched " + str(t.active_systems_clinched) + " of " + str(HighwaySystem.num_active) +
-                         " ({0:.1f}%)".format(100*t.active_systems_clinched/HighwaySystem.num_active) +
+    t.log_entries.append("\nTraveled " + str(active_systems_traveled) + " of " + str(HighwaySystem.num_active) +
+                         " ({0:.1f}%)".format(100*active_systems_traveled/HighwaySystem.num_active) +
+                         ", Clinched " + str(active_systems_clinched) + " of " + str(HighwaySystem.num_active) +
+                         " ({0:.1f}%)".format(100*active_systems_clinched/HighwaySystem.num_active) +
                          " active systems")
     # grand summary, active+preview
-    t.log_entries.append("Traveled " + str(t.preview_systems_traveled) + " of " + str(HighwaySystem.num_preview) +
-                         " ({0:.1f}%)".format(100*t.preview_systems_traveled/HighwaySystem.num_preview) +
-                         ", Clinched " + str(t.preview_systems_clinched) + " of " + str(HighwaySystem.num_preview) +
-                         " ({0:.1f}%)".format(100*t.preview_systems_clinched/HighwaySystem.num_preview) +
+    t.log_entries.append("Traveled " + str(preview_systems_traveled) + " of " + str(HighwaySystem.num_preview) +
+                         " ({0:.1f}%)".format(100*preview_systems_traveled/HighwaySystem.num_preview) +
+                         ", Clinched " + str(preview_systems_clinched) + " of " + str(HighwaySystem.num_preview) +
+                         " ({0:.1f}%)".format(100*preview_systems_clinched/HighwaySystem.num_preview) +
                          " preview systems")
     # updated routes, sorted by date
     t.log_entries.append("\nMost recent updates for listed routes:")
@@ -4838,7 +4838,7 @@ if not args.errorcheck:
     print("Unique locations: " + str(unique_locations), flush=True)
 
 if args.errorcheck:
-    print("!!! DATA CHECK SUCCESSFUL !!!", flush=True)
+    print("\n!!! DATA CHECK SUCCESSFUL !!!\n", flush=True)
 
 print("Finish: " + str(datetime.datetime.now()))
 print("Total run time: " + et.et())

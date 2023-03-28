@@ -175,28 +175,20 @@ int main(int argc, char *argv[])
 	Region::code_hash[Region::allregions.back()->code] = Region::allregions.back();
 
 	// Create a list of HighwaySystem objects, one per system in systems.csv file
-	cout << et.et() << "Reading systems list in " << Args::highwaydatapath << "/" << Args::systemsfile << "." << endl;
+	cout << et.et() << "Reading systems list in " << Args::highwaydatapath << "/" << Args::systemsfile << "." /*<< endl*/;
 	file.open(Args::highwaydatapath+"/"+Args::systemsfile);
 	if (!file) el.add_error("Could not open "+Args::highwaydatapath+"/"+Args::systemsfile);
 	else {	getline(file, line); // ignore header line
-		list<string> ignoring;
 		while(getline(file, line))
 		{	if (line.size() && line.back() == 0x0D) line.pop_back();	// trim DOS newlines
-			if (line.empty()) continue;
-			if (line[0] == '#')
-			{	ignoring.push_back("Ignored comment in " + Args::systemsfile + ": " + line);
-				continue;
-			}
+			if (line.empty() || line[0] == '#') continue;
 			HighwaySystem *hs = new HighwaySystem(line, el, countries);
 					    // deleted on termination of program
 			if (!hs->is_valid) delete hs;
 			else {	HighwaySystem::syslist.push_back(hs);
 			     }
 		}
-		cout << endl;
-		// at the end, print the lines ignored
-		for (string& l : ignoring) cout << l << endl;
-		ignoring.clear();
+		cout << '!' << endl;
 	     }
 	file.close();
 
@@ -222,13 +214,14 @@ int main(int argc, char *argv[])
 	THREADLOOP thr[t].join();
       #else
 	for (HighwaySystem* h : HighwaySystem::syslist)
-	{	std::cout << h->systemname << std::flush;
+	{	std::cout << h->systemname << ' ' << std::flush;
 		bool usa_flag = h->country->first == "USA";
 		for (Route* r : h->route_list)
 			r->read_wpt(&all_waypoints, &el, usa_flag);
-		std::cout << "!" << std::endl;
+		//std::cout << "!" << std::endl;
 	}
       #endif
+	std::cout << std::endl;
 
 	//cout << et.et() << "Writing WaypointQuadtree.tmg." << endl;
 	//all_waypoints.write_qt_tmg(Args::logfilepath+"/WaypointQuadtree.tmg");
@@ -336,10 +329,7 @@ int main(int argc, char *argv[])
 	THREADLOOP thr[t] = thread(ReadListThread, t, &list_mtx, &el);
 	THREADLOOP thr[t].join();
       #else
-	for (string &t : TravelerList::ids)
-	{	cout << t << ' ' << std::flush;
-		TravelerList::allusers.push_back(new TravelerList(t, &el));
-	}
+	for (string &t : TravelerList::ids) TravelerList::allusers.push_back(new TravelerList(t, &el));
       #endif
 	TravelerList::ids.clear();
 	cout << endl << et.et() << "Processed " << TravelerList::allusers.size() << " traveler list files. Sorting and numbering." << endl;
@@ -468,30 +458,15 @@ int main(int argc, char *argv[])
 	// compute lots of regional stats:
 	// overall, active+preview, active only,
 	// and per-system which falls into just one of these categories
+	cout << et.et() << "Computing stats." << flush;
       #ifdef threading_enabled
-	cout << et.et() << "Performing per-route data checks and computing stats." << flush;
-	HighwaySystem::it = HighwaySystem::syslist.begin();
-	THREADLOOP thr[t] = thread(CompStatsRThread, t, &list_mtx);
+	Region::rg_it = Region::allregions.begin();
+	THREADLOOP thr[t] = thread(CompStatsThread, t, &list_mtx);
 	THREADLOOP thr[t].join();
-	cout << '!' << endl;
-	cout << et.et() << "Computing stats per traveler." << flush;
-	TravelerList::tl_it = TravelerList::allusers.begin();
-	THREADLOOP thr[t] = thread(CompStatsTThread, t, &list_mtx);
-	THREADLOOP thr[t].join();
-	cout << '!' << endl;
       #else
-	cout << et.et() << "Performing per-route data checks and computing stats." << flush;
-	for (HighwaySystem *h : HighwaySystem::syslist)
-	{	cout << "." << flush;
-		for (Route *r : h->route_list)
-		{ 	r->compute_stats_r();
-		  	for (HighwaySegment *s : r->segment_list)
-			  for (TravelerList *t : s->clinched_by)
-			    s->compute_stats_t(t);
-		}
-	}
-	cout << '!' << endl;
+	for (Region* rg : Region::allregions) rg->compute_stats();
       #endif
+	cout << '!' << endl;
 
 	cout << et.et() << "Writing highway data stats log file (highwaydatastats.log)." << endl;
 	char fstr[112];
@@ -697,7 +672,7 @@ int main(int argc, char *argv[])
 	cout << total_rtes << " total routes." << endl;//*/
 
 	if (Args::errorcheck)
-	    cout << "!!! DATA CHECK SUCCESSFUL !!!" << endl;
+	    cout << "\n!!! DATA CHECK SUCCESSFUL !!!\n" << endl;
 
 	timestamp = time(0);
 	cout << "Finish: " << ctime(&timestamp);

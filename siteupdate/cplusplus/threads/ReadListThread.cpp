@@ -6,11 +6,10 @@ void ReadListThread(unsigned int id, std::mutex* tl_mtx, ErrorList* el)
 		{	tl_mtx->unlock();
 			return;
 		}
-		std::string tl(*TravelerList::id_it);
+		std::string& tl(*TravelerList::id_it);
 		//printf("ReadListThread %02i assigned %s\n", id, tl.data()); fflush(stdout);
 		TravelerList::id_it++;
 		//printf("ReadListThread %02i (*it)++\n", id); fflush(stdout);
-		std::cout << tl << ' ' << std::flush;
 		tl_mtx->unlock();
 		TravelerList *t = new TravelerList(tl, el);
 				  // deleted on termination of program

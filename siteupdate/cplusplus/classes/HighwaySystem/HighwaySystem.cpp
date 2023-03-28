@@ -60,7 +60,7 @@ HighwaySystem::HighwaySystem(std::string &line, ErrorList &el, std::vector<std::
 	{	case 'a': num_active++; break;
 		case 'p': num_preview++;
 	}
-	std::cout << systemname << '.' << std::flush;
+	std::cout /*<< systemname*/ << '.' << std::flush;
 
 	// read chopped routes CSV
 	file.open(Args::highwaydatapath+"/hwy_data/_systems"+"/"+systemname+".csv");
@@ -72,7 +72,10 @@ HighwaySystem::HighwaySystem(std::string &line, ErrorList &el, std::vector<std::
 			if (line.empty()) continue;
 			Route* r = new Route(line, this, el);
 				   // deleted on termination of program
-			if (r->root.size()) route_list.push_back(r);
+			if (r->root.size())
+			     {	route_list.push_back(r);
+				r->region->routes.push_back(r);
+			     }
 			else {	el.add_error("Unable to find root in " + systemname +".csv line: ["+line+"]");
 				delete r;
 			     }
@@ -147,9 +150,9 @@ size_t HighwaySystem::con_route_index(ConnectedRoute* cr)
 }
 
 void HighwaySystem::add_vertex(HGVertex* v)
-{	lniu_mtx.lock();	// re-use an existing mutex...
+{	mtx.lock();
 	vertices.push_back(v);
-	lniu_mtx.unlock();	// ...rather than make a new one
+	mtx.unlock();
 }
 
 void HighwaySystem::stats_csv()
@@ -194,21 +197,17 @@ void HighwaySystem::stats_csv()
 }
 
 void HighwaySystem::mark_route_in_use(std::string& lookup)
-{	uarn_mtx.lock();
+{	mtx.lock();
 	unusedaltroutenames.erase(lookup);
-	uarn_mtx.unlock();
-	lniu_mtx.lock();
 	listnamesinuse.insert(std::move(lookup));
-	lniu_mtx.unlock();
+	mtx.unlock();
 }
 
 void HighwaySystem::mark_routes_in_use(std::string& lookup1, std::string& lookup2)
-{	uarn_mtx.lock();
+{	mtx.lock();
 	unusedaltroutenames.erase(lookup1);
 	unusedaltroutenames.erase(lookup2);
-	uarn_mtx.unlock();
-	lniu_mtx.lock();
 	listnamesinuse.insert(std::move(lookup1));
 	listnamesinuse.insert(std::move(lookup2));
-	lniu_mtx.unlock();
+	mtx.unlock();
 }

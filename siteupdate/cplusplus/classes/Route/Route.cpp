@@ -7,9 +7,7 @@
 #include "../HighwaySegment/HighwaySegment.h"
 #include "../HighwaySystem/HighwaySystem.h"
 #include "../Region/Region.h"
-#include "../TravelerList/TravelerList.h"
 #include "../Waypoint/Waypoint.h"
-#include "../../functions/double_quotes.h"
 #include "../../functions/lower.h"
 #include "../../functions/split.h"
 #include "../../functions/upper.h"
@@ -215,17 +213,6 @@ void Route::write_nmp_merged()
 	wptfile.close();
 }
 
-void Route::store_traveled_segments(TravelerList* t, std::ofstream& log, std::string& update, unsigned int beg, unsigned int end)
-{	// store clinched segments with traveler and traveler with segments
-	for (unsigned int pos = beg; pos < end; pos++)
-	{	HighwaySegment *hs = segment_list[pos];
-		if (hs->add_clinched_by(t))
-		  t->clinched_segments.push_back(hs);
-	}
-	if (last_update && t->updated_routes.insert(this).second && update.size() && last_update[0] >= update)
-		log << "Route updated " << last_update[0] << ": " << readable_name() << '\n';
-}
-
 Waypoint* Route::con_beg()
 {	return is_reversed() ? point_list.back() : point_list.front();
 }
@@ -266,23 +253,19 @@ void Route::con_mismatch()
 }
 
 void Route::mark_label_in_use(char* label)
-{	ual_mtx.lock();
+{	usage_mtx.lock();
 	unused_alt_labels.erase(label);
-	ual_mtx.unlock();
-	liu_mtx.lock();
 	labels_in_use.insert(label);
-	liu_mtx.unlock();
+	usage_mtx.unlock();
 }
 
 void Route::mark_labels_in_use(char* label1, char* label2)
-{	ual_mtx.lock();
+{	usage_mtx.lock();
 	unused_alt_labels.erase(label1);
 	unused_alt_labels.erase(label2);
-	ual_mtx.unlock();
-	liu_mtx.lock();
 	labels_in_use.insert(label1);
 	labels_in_use.insert(label2);
-	liu_mtx.unlock();
+	usage_mtx.unlock();
 }
 
 // sort routes by most recent update for use at end of user logs
@@ -292,5 +275,3 @@ bool sort_route_updates_oldest(const Route *r1, const Route *r2)
 	if (!p) return r1->last_update[3] < r2->last_update[3];
 		return p < 0;
 }
-
-#include "compute_stats_r.cpp"

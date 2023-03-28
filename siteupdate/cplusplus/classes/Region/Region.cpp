@@ -10,6 +10,7 @@ std::pair<std::string, std::string> *country_or_continent_by_code(std::string co
 }
 
 std::vector<Region*> Region::allregions;
+std::vector<Region*>::iterator Region::rg_it;
 std::unordered_map<std::string, Region*> Region::code_hash;
 
 Region::Region (const std::string &line,
