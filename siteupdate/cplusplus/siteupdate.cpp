@@ -188,7 +188,7 @@ int main(int argc, char *argv[])
 			else {	HighwaySystem::syslist.push_back(hs);
 			     }
 		}
-		cout << endl;
+		cout << '!' << endl;
 	     }
 	file.close();
 
