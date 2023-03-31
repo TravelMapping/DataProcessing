@@ -338,7 +338,7 @@ if [[ "$graphflag" != "-k" ]]; then
     echo "$0: creating zip archive of all graphs (backgrounding)"
     cd $indir/$graphdir
     zip -q graphs.zip *.tmg &
-    cd -
+    cd - > /dev/null
 fi
 
 echo "$0: switching to DB copy"
@@ -382,7 +382,7 @@ echo "$0: linking current to $instdir"
 cd $tmwebdir
 rm -f current
 ln -sf updates/$datestr current
-cd -
+cd - > /dev/null
 
 echo "$0: loading DB copy"
 mysql --defaults-group-suffix=tmapadmin -u travmapadmin TravelMappingCopy < TravelMapping-$datestr.sql
