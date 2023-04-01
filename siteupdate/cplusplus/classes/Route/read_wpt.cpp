@@ -12,7 +12,7 @@
 void Route::read_wpt(WaypointQuadtree *all_waypoints, ErrorList *el, bool usa_flag)
 {	/* read data into the Route's waypoint list from a .wpt file */
 	std::string filename = Args::highwaydatapath + "/hwy_data" + "/" + rg_str + "/" + system->systemname + "/" + root + ".wpt";
-	Waypoint *last_visible = 0;
+	Waypoint *last_visible;
 	double vis_dist = 0;
 	char fstr[112];
 
@@ -89,6 +89,10 @@ void Route::read_wpt(WaypointQuadtree *all_waypoints, ErrorList *el, bool usa_fl
 			segment_list.push_back(new HighwaySegment(point_list[point_list.size()-2], w, this));
 					       // deleted on termination of program
 		}
+		else if (point_list[0]->is_hidden) // look for hidden beginning
+		     {	Datacheck::add(this, point_list[0]->label, "", "", "HIDDEN_TERMINUS", "");
+			last_visible = point_list[0];
+		     }
 		// checks for visible points
 		if (!w->is_hidden)
 		{	const char *slash = strchr(w->label.data(), '/');
@@ -111,10 +115,13 @@ void Route::read_wpt(WaypointQuadtree *all_waypoints, ErrorList *el, bool usa_fl
 
 	// per-route datachecks
 	if (point_list.size() < 2) el->add_error("Route contains fewer than 2 points: " + str());
-	else {	// look for hidden termini
-		if (point_list.front()->is_hidden)	Datacheck::add(this, point_list.front()->label, "", "", "HIDDEN_TERMINUS", "");
-		if (point_list.back()->is_hidden)	Datacheck::add(this, point_list.back()->label, "", "", "HIDDEN_TERMINUS", "");
-
+	else {	// look for hidden endpoint
+		if (point_list.back()->is_hidden)
+		{	Datacheck::add(this, point_list.back()->label, "", "", "HIDDEN_TERMINUS", "");
+			// do one last check in case a VISIBLE_DISTANCE error coexists
+			// here, as this was only checked earlier for visible points
+			point_list.back()->visible_distance(fstr, vis_dist, last_visible);
+		}
 		// angle check is easier with a traditional for loop and array indices
 		for (unsigned int i = 1; i < point_list.size()-1; i++)
 		{	//cout << "computing angle for " << point_list[i-1].str() << ' ' << point_list[i].str() << ' ' << point_list[i+1].str() << endl;

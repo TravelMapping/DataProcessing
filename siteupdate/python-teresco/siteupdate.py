@@ -4118,17 +4118,8 @@ for h in highway_systems:
         coords_used = set()
 
         visible_distance = 0.0
-        # note that we assume the first point will be visible in each route
-        # so the following is simply a placeholder
-        last_visible = None
+        last_visible = r.point_list[0]
         prev_w = None
-
-        # look for hidden termini
-        if len(r.point_list) > 1:
-            if r.point_list[0].is_hidden:
-                datacheckerrors.append(DatacheckEntry(r,[r.point_list[0].label],'HIDDEN_TERMINUS'))
-            if r.point_list[-1].is_hidden:
-                datacheckerrors.append(DatacheckEntry(r,[r.point_list[-1].label],'HIDDEN_TERMINUS'))
 
         for w in r.point_list:
             # out-of-bounds coords
@@ -4275,6 +4266,18 @@ for h in highway_systems:
                     except IndexError:
                         pass
             prev_w = w
+
+        # look for hidden termini
+        if len(r.point_list) > 1:
+            if r.point_list[0].is_hidden:
+                datacheckerrors.append(DatacheckEntry(r,[r.point_list[0].label],'HIDDEN_TERMINUS'))
+            if r.point_list[-1].is_hidden:
+                datacheckerrors.append(DatacheckEntry(r,[r.point_list[-1].label],'HIDDEN_TERMINUS'))
+                if visible_distance > 10.0 and not h.active():
+                    # do one last check in case a VISIBLE_DISTANCE error coexists
+                    # here, as this was only checked earlier for visible points
+                    datacheckerrors.append(DatacheckEntry(r,[last_visible.label,w.label],'VISIBLE_DISTANCE',
+                                                          "{0:.2f}".format(visible_distance)))
 
         # angle check is easier with a traditional for loop and array indices
         for i in range(1, len(r.point_list)-1):
