@@ -9,6 +9,7 @@
 #include "../Route/Route.h"
 #include "../Waypoint/Waypoint.h"
 #include "../../functions/upper.h"
+#include "../../templates/contains.cpp"
 #include <cstring>
 
 TravelerList::TravelerList(std::string travname, ErrorList* el)

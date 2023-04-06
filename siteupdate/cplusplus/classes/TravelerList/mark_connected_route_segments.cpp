@@ -128,14 +128,12 @@ if (r1 == r2)
      }
 else {	// user log warning for DISCONNECTED_ROUTE errors
 	if (r1->con_route->disconnected)
-	{	std::unordered_set<Region*> region_set;
+	{	std::vector<Region*> regions;
 		for (Route* r : r1->con_route->roots)
-		  if (r->is_disconnected())
-		    region_set.insert(r->region);
-		std::list<Region*> region_list(region_set.begin(), region_set.end());
-		region_list.sort(sort_regions_by_code);
-		for (Region* r : region_list)
-		  log << r->code << (r == region_list.back() ? ':' : '/');
+		  if (r->is_disconnected() && !contains(regions, r->region))
+		    regions.push_back(r->region);
+		for (Region* r : regions)
+		  log << r->code << (r == regions.back() ? ':' : '/');
 		log << " DISCONNECTED_ROUTE error in " << r1->con_route->readable_name()
 		    << ".\n  Please report this error in the Travel Mapping forum"
 		    << ".\n  Travels may potentially be shown incorrectly for line: " << trim_line << '\n';

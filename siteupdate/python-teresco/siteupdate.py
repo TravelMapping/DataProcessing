@@ -1721,14 +1721,13 @@ class TravelerList:
                 else:
                     # user log warning for DISCONNECTED_ROUTE errors
                     if r1.con_route.disconnected:
-                        region_set = set()
+                        regions = []
                         for r in r1.con_route.roots:
-                          if r.is_disconnected():
-                            region_set.add(r.region)
-                        region_list = sorted(region_set)
+                          if r.is_disconnected() and r.region not in regions:
+                            regions.append(r.region)
                         log_entry = ''
-                        for r in region_list:
-                          log_entry += r + (':' if r == region_list[-1] else '/')
+                        for r in regions:
+                          log_entry += r + (':' if r == regions[-1] else '/')
                         log_entry += " DISCONNECTED_ROUTE error in " + r1.con_route.readable_name() \
                                   +  ".\n  Please report this error in the Travel Mapping forum" \
                                   +  ".\n  Travels may potentially be shown incorrectly for line: " + line
