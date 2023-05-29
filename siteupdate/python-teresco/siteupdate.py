@@ -955,6 +955,19 @@ class HighwaySegment:
             code += "0123456789ABCDEF"[c]
         return code
 
+    def canonical_edge_segment(self):
+        """find canonical segment for HGEdge construction, just in
+        case a devel system is listed earlier in systems.csv"""
+        if self.concurrent is None:
+            return self
+        for s in self.concurrent:
+            if s.route.system.active_or_preview():
+                return s
+        # We should never reach this point, because this function will
+        # only be called on active/preview segments and a concurrent
+        # segment should always be in its own concurrency list.
+        raise Exception
+
 class Route:
     """This class encapsulates the contents of one .csv file line
     that represents a highway within a system and the corresponding
@@ -2296,7 +2309,7 @@ class HighwayGraph:
             counter += 1;
             for r in h.route_list:
                 for s in r.segment_list:
-                    if s.concurrent is None or s == s.concurrent[0]:
+                    if s == s.canonical_edge_segment():
                         self.se += 1
                         HGEdge(s, self)
         self.ce = self.se

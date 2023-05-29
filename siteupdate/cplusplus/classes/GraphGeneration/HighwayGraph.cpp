@@ -62,7 +62,7 @@ HighwayGraph::HighwayGraph(WaypointQuadtree &all_waypoints, ElapsedTime &et)
 		counter++;
 		for (Route *r : h->route_list)
 		  for (HighwaySegment *s : r->segment_list)
-		    if (!s->concurrent || s == s->concurrent->front())
+		    if (s == s->canonical_edge_segment())
 		    { ++se; 
 		      new HGEdge(s);
 		      // deleted by HGEdge::detach via ~HGVertex via HighwayGraph::clear

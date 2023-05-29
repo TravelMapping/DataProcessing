@@ -106,3 +106,16 @@ void HighwaySegment::write_label(std::ofstream& file, std::list<HighwaySystem*> 
 		file << route->abbrev;
 	     }
 }
+
+// find canonical segment for HGEdge construction, just in case a devel system is listed earlier in systems.csv
+HighwaySegment* HighwaySegment::canonical_edge_segment()
+{	if (!concurrent) return this;
+	for (auto& s : *concurrent)
+	  if (s->route->system->active_or_preview())
+	    return s;
+	// We should never reach this point, because this function will
+	// only be called on active/preview segments and a concurrent
+	// segment should always be in its own concurrency list.
+	// Nonetheless, let's stop the compiler from complaining.
+	throw 0xBAD;
+}

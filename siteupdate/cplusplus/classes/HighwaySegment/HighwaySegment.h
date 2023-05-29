@@ -29,4 +29,5 @@ class HighwaySegment
 	const char* clinchedby_code(std::list<TravelerList*>*, char*, unsigned int);
 	bool system_match(std::list<HighwaySystem*>*);
 	void write_label(std::ofstream&, std::list<HighwaySystem*> *);
+	HighwaySegment* canonical_edge_segment();
 };
