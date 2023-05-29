@@ -109,11 +109,11 @@ HighwayGraph::HighwayGraph(WaypointQuadtree &all_waypoints, ElapsedTime &et)
 			{	new HGEdge(w->vertex, HGEdge::collapsed);
 				continue;
 			}
-			else if ((w->vertex->incident_c_edges.front() == w->vertex->incident_t_edges.front()
+			if   (	 (w->vertex->incident_c_edges.front() == w->vertex->incident_t_edges.front()
 			       && w->vertex->incident_c_edges.back()  == w->vertex->incident_t_edges.back())
 			      || (w->vertex->incident_c_edges.front() == w->vertex->incident_t_edges.back()
-			       && w->vertex->incident_c_edges.back()  == w->vertex->incident_t_edges.front()))
-				new HGEdge(w->vertex, HGEdge::collapsed | HGEdge::traveled);
+			       && w->vertex->incident_c_edges.back()  == w->vertex->incident_t_edges.front())
+			     )	new HGEdge(w->vertex, HGEdge::collapsed | HGEdge::traveled);
 			else {	new HGEdge(w->vertex, HGEdge::collapsed);
 				new HGEdge(w->vertex, HGEdge::traveled);
 				// Final collapsed edges are deleted by HGEdge::detach via ~HGVertex via HighwayGraph::clear.
