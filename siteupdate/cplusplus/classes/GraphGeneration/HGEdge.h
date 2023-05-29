@@ -18,9 +18,9 @@ class HGEdge
 	unsigned char format;
 
 	// constants for more human-readable format masks
-	static const unsigned char simple = 1;
-	static const unsigned char collapsed = 2;
-	static const unsigned char traveled = 4;
+	static constexpr unsigned char simple = 1;
+	static constexpr unsigned char collapsed = 2;
+	static constexpr unsigned char traveled = 4;
 
 	HGEdge(HighwaySegment *);
 	HGEdge(HGVertex *, unsigned char);
