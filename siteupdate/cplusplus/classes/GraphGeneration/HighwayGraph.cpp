@@ -91,22 +91,14 @@ HighwayGraph::HighwayGraph(WaypointQuadtree &all_waypoints, ElapsedTime &et)
 				w->vertex->visibility = 2;
 				continue;
 			}
-			// if edge clinched_by sets mismatch, set visibility to 1
-			// (visible in traveled graph; hidden in collapsed graph)
-			// first, the easy check, for whether set sizes mismatch
-			if (w->vertex->incident_t_edges.front()->segment->clinched_by.size()
-			 != w->vertex->incident_t_edges.back()->segment->clinched_by.size())
-				w->vertex->visibility = 1;
-			// next, compare clinched_by sets; look for any element in the 1st not in the 2nd
-			else for (TravelerList *t : w->vertex->incident_t_edges.front()->segment->clinched_by)
-				if (!w->vertex->incident_t_edges.back()->segment->clinched_by.count(t))
-				{	w->vertex->visibility = 1;
-					break;
-				}
 			// construct from vertex this time
 			--ce; --cv;
-			if (w->vertex->visibility == 1)
-			{	new HGEdge(w->vertex, HGEdge::collapsed);
+			// if edge clinched_by sets mismatch, set visibility to 1
+			// (visible in traveled graph; hidden in collapsed graph)
+			if (w->vertex->incident_t_edges.front()->segment->clinched_by
+			 != w->vertex->incident_t_edges.back()->segment->clinched_by)
+			{	w->vertex->visibility = 1;
+				new HGEdge(w->vertex, HGEdge::collapsed);
 				continue;
 			}
 			if   (	 (w->vertex->incident_c_edges.front() == w->vertex->incident_t_edges.front()
