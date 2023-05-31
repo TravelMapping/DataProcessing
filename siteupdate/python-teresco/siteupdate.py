@@ -2703,6 +2703,7 @@ args = parser.parse_args()
 
 #
 # Get list of travelers in the system
+print(et.et() + "Making list of travelers.")
 traveler_ids = args.userlist
 traveler_ids = os.listdir(args.userlistfilepath) if traveler_ids is None else (id + ".list" for id in traveler_ids)
 

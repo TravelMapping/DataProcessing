@@ -49,6 +49,7 @@ int main(int argc, char *argv[])
 {	ifstream file;
 	string line;
 	mutex list_mtx, term_mtx;
+	ErrorList el;
 
 	// argument parsing
 	if (Args::init(argc, argv)) return 1;
@@ -61,10 +62,8 @@ int main(int argc, char *argv[])
 	time_t timestamp = time(0);
 	cout << "Start: " << ctime(&timestamp);
 
-	// create ErrorList
-	ErrorList el;
-
 	// Get list of travelers in the system
+	cout << et.et() << "Making list of travelers." << endl;
 	TravelerList::ids = move(Args::userlist);
 	if (TravelerList::ids.empty())
 	{	DIR *dir;
