@@ -330,6 +330,10 @@ int main(int argc, char *argv[])
       #else
 	for (string &t : TravelerList::ids) TravelerList::allusers.push_back(new TravelerList(t, &el));
       #endif
+	if (TravelerList::file_not_found)
+	{	cout << "\nCheck for typos in your -U or --userlist arguments, and make sure .list files for all specified users exist.\nAborting." << endl;
+		return 1;
+	}
 	TravelerList::ids.clear();
 	cout << endl << et.et() << "Processed " << TravelerList::allusers.size() << " traveler list files. Sorting and numbering." << endl;
 	TravelerList::allusers.sort(sort_travelers_by_name);

@@ -47,6 +47,7 @@ class TravelerList
 	static std::list<std::string>::iterator id_it;
 	static std::list<TravelerList*> allusers;
 	static std::list<TravelerList*>::iterator tl_it;
+	static bool file_not_found;
 
 	TravelerList(std::string, ErrorList*);
 	double active_only_miles();

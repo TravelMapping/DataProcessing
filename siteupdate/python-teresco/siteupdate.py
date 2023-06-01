@@ -1428,14 +1428,26 @@ class TravelerList:
     start_region start_route start_point end_region end_route end_point
     """
 
+    file_not_found = False
+
     def __init__(self,travelername,el,path="../../UserData/list_files"):
         list_entries = 0
         self.clinched_segments = []
         self.traveler_name = travelername[:-5]
         if len(self.traveler_name.encode('utf-8')) > DBFieldLength.traveler:
             el.add_error("Traveler name " + self.traveler_name + " > " + str(DBFieldLength.traveler) + "bytes")
-        with open(path+"/"+travelername,"rt", encoding='UTF-8') as file:
-            lines = file.readlines()
+        try:
+            with open(path+"/"+travelername,"rt", encoding='UTF-8') as file:
+                lines = file.readlines()
+        except FileNotFoundError:
+            print("\nERROR: " + travelername + " not found.", end="")
+            TravelerList.file_not_found = True
+        if TravelerList.file_not_found:
+            # We're going to abort, so no point in continuing to fully build out TravelerList objects.
+            # Future constructors will proceed only this far, to get a complete list of invalid names.
+            return
+        else:
+            print(self.traveler_name + " ",end="",flush=True)
         # strip UTF-8 byte order mark if present
         if len(lines):
             lines[0] = lines[0].encode('utf-8').decode("utf-8-sig")
@@ -3258,13 +3270,14 @@ for line in lines:
 traveler_lists = []
 
 print(et.et() + "Processing traveler list files:",flush=True)
-for t in traveler_ids:
+for t in sorted(traveler_ids):
     if t.endswith('.list'):
-        print(t + " ",end="",flush=True)
         traveler_lists.append(TravelerList(t,el,args.userlistfilepath))
 del traveler_ids
-print('\n' + et.et() + "Processed " + str(len(traveler_lists)) + " traveler list files. Sorting and numbering.")
-traveler_lists.sort(key=lambda TravelerList: TravelerList.traveler_name)
+if TravelerList.file_not_found:
+    print("\nCheck for typos in your -U or --userlist arguments, and make sure .list files for all specified users exist.\nAborting.")
+    exit(1)
+print('\n' + et.et() + "Processed " + str(len(traveler_lists)) + " traveler list files.")
 # assign traveler numbers
 travnum = 0
 for t in traveler_lists:
