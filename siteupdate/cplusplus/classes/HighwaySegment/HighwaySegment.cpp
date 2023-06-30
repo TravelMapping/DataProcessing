@@ -5,21 +5,21 @@
 #include "../Waypoint/Waypoint.h"
 #include "../../templates/contains.cpp"
 
-HighwaySegment::HighwaySegment(Waypoint *w1, Waypoint *w2, Route *rte)
-{	waypoint1 = w1;
-	waypoint2 = w2;
-	route = rte;
-	length = waypoint1->distance_to(waypoint2);
-	concurrent = 0;
-}
+HighwaySegment::HighwaySegment(Waypoint *w1, Waypoint *w2, Route *rte):
+	waypoint1(w1),
+	waypoint2(w2),
+	route(rte),
+	length(w1->distance_to(w2)),
+	concurrent(0),
+	clinched_by(TravelerList::allusers.data, TravelerList::allusers.size) {}
 
 std::string HighwaySegment::str()
 {	return route->readable_name() + " " + waypoint1->label + " " + waypoint2->label;
 }
 
-bool HighwaySegment::add_clinched_by(TravelerList *traveler)
+bool HighwaySegment::add_clinched_by(size_t t)
 {	clin_mtx.lock();
-	bool result = clinched_by.insert(traveler).second;
+	bool result = clinched_by.add_index(t);
 	clin_mtx.unlock();
 	return result;
 }

@@ -14,7 +14,6 @@
 #include "../Waypoint/Waypoint.h"
 #include "../WaypointQuadtree/WaypointQuadtree.h"
 #include "../../templates/contains.cpp"
-#include <cmath>
 #include <fstream>
 #include <thread>
 

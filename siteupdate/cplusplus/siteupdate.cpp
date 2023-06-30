@@ -438,10 +438,11 @@ int main(int argc, char *argv[])
       #else
 	for (TravelerList *t = TravelerList::allusers.data, *end = TravelerList::allusers.end(); t != end; t++)
 	{	cout << '.' << flush;
+		size_t index = t-TravelerList::allusers.data;
 		for (HighwaySegment *s : t->clinched_segments)
 		  if (s->concurrent)
 		    for (HighwaySegment *hs : *(s->concurrent))
-		      if (hs != s && hs->route->system->active_or_preview() && hs->add_clinched_by(t))
+		      if (hs != s && hs->route->system->active_or_preview() && hs->add_clinched_by(index))
 		       	concurrencyfile << "Concurrency augment for traveler " << t->traveler_name << ": [" << hs->str() << "] based on [" << s->str() << "]\n";
 	}
 	cout << '!' << endl;

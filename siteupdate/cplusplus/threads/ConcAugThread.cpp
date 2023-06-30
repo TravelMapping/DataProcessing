@@ -7,11 +7,12 @@ void ConcAugThread(unsigned int id, std::mutex* mtx, std::vector<std::string>* a
 		TravelerList* t = TravelerList::tl_it++;
 		mtx->unlock();
 
+		size_t index = t - TravelerList::allusers.data;
 		std::cout << '.' << std::flush;
 		for (HighwaySegment *s : t->clinched_segments)
 		  if (s->concurrent)
 		    for (HighwaySegment *hs : *(s->concurrent))
-		      if (hs != s && hs->route->system->active_or_preview() && hs->add_clinched_by(t))
+		      if (hs != s && hs->route->system->active_or_preview() && hs->add_clinched_by(index))
 		      {	augment_list->push_back("Concurrency augment for traveler " + t->traveler_name + ": [" + hs->str() + "] based on [" + s->str() + ']');
 			// create key/value pairs in regional tables, to be computed in a threadsafe manner later
 			t->active_preview_mileage_by_region[hs->route->region];
