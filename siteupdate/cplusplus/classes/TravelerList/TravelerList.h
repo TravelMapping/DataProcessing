@@ -39,7 +39,6 @@ class TravelerList
 	std::unordered_set<Route*> updated_routes;
 	std::vector<std::pair<Route*,double>> cr_values;		// for the clinchedRoutes DB table
 	std::vector<std::pair<ConnectedRoute*,double>> ccr_values;	// for the clinchedConnectedRoutes DB table
-	bool* in_subgraph;
 	unsigned int *traveler_num;
 	static std::mutex mtx;	// for avoiding data races when creating userlog timestamps
 	static std::list<std::string> ids;
@@ -56,5 +55,3 @@ class TravelerList
 	double system_miles(HighwaySystem *);
 	void userlog(const double, const double);
 };
-
-bool sort_travelers_by_name(const TravelerList*, const TravelerList*);

@@ -14,11 +14,9 @@
 
 TravelerList::TravelerList(std::string& travname, ErrorList* el)
 {	// initialize object variables
-	in_subgraph = new bool[Args::numthreads];
 	traveler_num = new unsigned int[Args::numthreads];
 		       // deleted by ~TravelerList
 	traveler_num[0] = this - allusers.data; // init for master traveled graph
-	for (size_t i = 0; i < Args::numthreads; i++) in_subgraph[i] = 0;
 	traveler_name.assign(travname, 0, travname.size()-5); // strip ".list" from end of travname
 	if (traveler_name.size() > DBFieldLength::traveler)
 	  el->add_error("Traveler name " + traveler_name + " > " + std::to_string(DBFieldLength::traveler) + "bytes");
@@ -180,7 +178,3 @@ std::list<std::string>::iterator TravelerList::id_it;
 TMArray<TravelerList> TravelerList::allusers;
 TravelerList* TravelerList::tl_it;
 bool TravelerList::file_not_found = 0;
-
-bool sort_travelers_by_name(const TravelerList *t1, const TravelerList *t2)
-{	return t1->traveler_name < t2->traveler_name;
-}

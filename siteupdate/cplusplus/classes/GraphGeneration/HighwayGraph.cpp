@@ -194,90 +194,6 @@ void HighwayGraph::clear_vbit(HGVertex* v, const int threadnum)
 	vbits[threadnum*vbytes+index/8] &= ~(1 << index%8);
 }
 
-inline void HighwayGraph::matching_vertices_and_edges
-(	GraphListEntry &g, WaypointQuadtree *qt,
-	std::list<TravelerList*> &traveler_lists,
-	std::vector<HGVertex*> &mvvec,	// final vector of vertices matching all criteria
-	std::vector<HGEdge*> &mse,	// matching    simple edges
-	std::vector<HGEdge*> &mce,	// matching collapsed edges
-	std::vector<HGEdge*> &mte,	// matching  traveled edges
-	int threadnum, unsigned int &cv_count, unsigned int &tv_count
-)
-{	// Find a set of vertices from the graph, optionally
-	// restricted by region or system or placeradius area.
-	if (g.placeradius)
-		g.placeradius->vertices(mvvec, qt, this, g, threadnum);
-	else	if (g.regions)
-		{ if (g.systems)
-		  {	// iterate via region & check for a system_match
-			for (Region *r : *g.regions)
-			  for (auto& vw : r->vertices)
-			    if (!subgraph_contains(vw.first, threadnum) && vw.second->system_match(g.systems))
-			    {	mvvec.push_back(vw.first);
-				add_to_subgraph(vw.first, threadnum);
-			    }
-		  }
-		  else	for (Region *r : *g.regions)
-			  for (auto& vw : r->vertices)
-			    if (!subgraph_contains(vw.first, threadnum))
-			    {	mvvec.push_back(vw.first);
-				add_to_subgraph(vw.first, threadnum);
-			    }
-		} else	for (HighwaySystem *h : *g.systems)
-			  for (HGVertex* v : h->vertices)
-			    if (!subgraph_contains(v, threadnum))
-			    {	mvvec.push_back(v);
-				add_to_subgraph(v, threadnum);
-			    }
-
-	// initialize written booleans
-	for (HGVertex *v : mvvec)
-	{	for (HGEdge* e : v->incident_s_edges) e->written[threadnum] = 0;
-		for (HGEdge* e : v->incident_c_edges) e->written[threadnum] = 0;
-		for (HGEdge* e : v->incident_t_edges) e->written[threadnum] = 0;
-	}
-
-	// Compute sets of edges for subgraphs, optionally
-	// restricted by region or system or placeradius.
-	// Keep a count of collapsed & traveled vertices as we go.
-	#define AREA (!g.placeradius || subgraph_contains(e->vertex1, threadnum) && subgraph_contains(e->vertex2, threadnum))
-	#define REGION (!g.regions || contains(*g.regions, e->segment->route->region))
-	for (HGVertex *v : mvvec)
-	{	switch (v->visibility) // fall-thru is a Good Thing!
-		{   case 2:
-			cv_count++;
-			for (HGEdge *e : v->incident_c_edges)
-			  if (!(e->written[threadnum] & HGEdge::collapsed) && AREA && REGION && e->segment->system_match(g.systems))
-			  {	mce.push_back(e);
-				e->written[threadnum] |= HGEdge::collapsed;
-			  }
-		    case 1:
-			tv_count++;
-			for (HGEdge *e : v->incident_t_edges)
-			  if (!(e->written[threadnum] & HGEdge::traveled) && AREA && REGION && e->segment->system_match(g.systems))
-			  {	mte.push_back(e);
-				e->written[threadnum] |= HGEdge::traveled;
-
-				for (TravelerList *t : e->segment->clinched_by)
-				  if (!t->in_subgraph[threadnum])
-				  {	traveler_lists.push_back(t);
-					t->in_subgraph[threadnum] = 1;
-				  }
-			  }
-		    default:
-			for (HGEdge *e : v->incident_s_edges)
-			  if (!(e->written[threadnum] & HGEdge::simple) && AREA && REGION && e->segment->system_match(g.systems))
-			  {	mse.push_back(e);
-				e->written[threadnum] |= HGEdge::simple;
-			  }
-		}   clear_vbit(v, threadnum);
-	}
-	#undef AREA
-	#undef REGION
-	for (TravelerList* t : traveler_lists) t->in_subgraph[threadnum] = 0;
-	traveler_lists.sort(sort_travelers_by_name);
-}
-
 // write the entire set of highway data in .tmg format.
 // The first line is a header specifying the format and version number,
 // The second line specifies the number of waypoints, w, the number of connections, c,
@@ -363,15 +279,16 @@ void HighwayGraph::write_subgraphs_tmg
 	std::ofstream simplefile(Args::graphfilepath+'/'+g -> filename());
 	std::ofstream collapfile(Args::graphfilepath+'/'+g[1].filename());
 	std::ofstream travelfile(Args::graphfilepath+'/'+g[2].filename());
-	std::vector<HGVertex*> mv;
-	std::vector<HGEdge*> mse, mce, mte;
-	std::list<TravelerList*> traveler_lists;
-	matching_vertices_and_edges(*g, qt, traveler_lists, mv, mse, mce, mte, threadnum, cv_count, tv_count);
+	std::vector<HGVertex*> mv;		// vertices matching all criteria
+	std::vector<HGEdge*> mse, mce, mte;	// matching simple/collapsed/traveled edges
+	std::vector<TravelerList*> traveler_lists;
+	TMBitset<TravelerList*, uint32_t> traveler_set(TravelerList::allusers.data, TravelerList::allusers.size);
+	#include "get_subgraph_data.cpp"
 	// assign traveler numbers
 	unsigned int travnum = 0;
-	for (TravelerList *t : traveler_lists)
-	{	t->traveler_num[threadnum] = travnum;
-		travnum++;
+	for (TravelerList *t : traveler_set)
+	{	t->traveler_num[threadnum] = travnum++;
+		traveler_lists.push_back(t);
 	}
       #ifdef threading_enabled
 	term->lock();
