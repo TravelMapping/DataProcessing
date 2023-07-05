@@ -298,7 +298,7 @@ void HighwayGraph::write_master_graphs_tmg()
 	travelfile << "TMG 2.0 traveled\n";
 	simplefile << vertices.size() << ' ' << se << '\n';
 	collapfile << cv << ' ' << ce << '\n';
-	travelfile << tv << ' ' << te << ' ' << TravelerList::allusers.size() << '\n';
+	travelfile << tv << ' ' << te << ' ' << TravelerList::allusers.size << '\n';
 
 	// write vertices
 	unsigned int sv = 0;
@@ -314,7 +314,7 @@ void HighwayGraph::write_master_graphs_tmg()
 		}
 	}
 	// now edges, only write if not already written
-	size_t nibbles = ceil(double(TravelerList::allusers.size())/4);
+	size_t nibbles = ceil(double(TravelerList::allusers.size)/4);
 	char* cbycode = new char[nibbles+1];
 			// deleted after writing edges
 	cbycode[nibbles] = 0;
@@ -329,7 +329,7 @@ void HighwayGraph::write_master_graphs_tmg()
 			  if (!(e->written[0] &  HGEdge::traveled))
 			  {	e->written[0] |= HGEdge::traveled;
 				for (char*n=cbycode; n<cbycode+nibbles; ++n) *n = '0';
-				e->traveled_tmg_line(travelfile, fstr, 0, 0, &TravelerList::allusers, cbycode);
+				e->traveled_tmg_line(travelfile, fstr, 0, 0, TravelerList::allusers.size, cbycode);
 			  }
 	    default:	for (HGEdge *e : v.incident_s_edges)
 			  if (!(e->written[0] &  HGEdge::simple))
@@ -342,8 +342,8 @@ void HighwayGraph::write_master_graphs_tmg()
 	  }
 	delete[] cbycode;
 	// traveler names
-	for (TravelerList *t : TravelerList::allusers)
-		travelfile << t->traveler_name << ' ';
+	for (TravelerList& t : TravelerList::allusers)
+		travelfile << t.traveler_name << ' ';
 	travelfile << '\n';
 	simplefile.close();
 	collapfile.close();
@@ -391,7 +391,7 @@ void HighwayGraph::write_subgraphs_tmg
 	travelfile << "TMG 2.0 traveled\n";
 	simplefile << mv.size() << ' ' << mse.size() << '\n';
 	collapfile << cv_count << ' ' << mce.size() << '\n';
-	travelfile << tv_count << ' ' << mte.size() << ' ' << traveler_lists.size() << '\n';
+	travelfile << tv_count << ' ' << mte.size() << ' ' << travnum << '\n';
 
 	// write vertices
 	unsigned int sv = 0;
@@ -415,13 +415,13 @@ void HighwayGraph::write_subgraphs_tmg
 	}
 	for (HGEdge *e : mce)
 		e->collapsed_tmg_line(collapfile, fstr, threadnum, g->systems);
-	size_t nibbles = ceil(double(traveler_lists.size())/4);
+	size_t nibbles = ceil(double(travnum)/4);
 	char* cbycode = new char[nibbles+1];
 			// deleted after writing edges
 	cbycode[nibbles] = 0;
 	for (HGEdge *e : mte)
 	{	for (char*n=cbycode; n<cbycode+nibbles; ++n) *n = '0';
-		e->traveled_tmg_line (travelfile, fstr, threadnum, g->systems, &traveler_lists, cbycode);
+		e->traveled_tmg_line (travelfile, fstr, threadnum, g->systems, travnum, cbycode);
 	}
 	delete[] cbycode;
 	// traveler names
@@ -437,5 +437,5 @@ void HighwayGraph::write_subgraphs_tmg
 
 	g -> vertices = mv.size(); g -> edges = mse.size(); g -> travelers = 0;
 	g[1].vertices = cv_count;  g[1].edges = mce.size(); g[1].travelers = 0;
-	g[2].vertices = tv_count;  g[2].edges = mte.size(); g[2].travelers = traveler_lists.size();
+	g[2].vertices = tv_count;  g[2].edges = mte.size(); g[2].travelers = travnum;
 }

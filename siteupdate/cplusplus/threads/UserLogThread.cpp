@@ -1,20 +1,12 @@
-void UserLogThread
-(	unsigned int id, std::mutex* mtx,
-	const double total_active_only_miles,
-	const double total_active_preview_miles
-)
+void UserLogThread(unsigned int id, std::mutex* mtx, const double ao_mi, const double ap_mi)
 {	//printf("Starting UserLogThread %02i\n", id); fflush(stdout);
 	while (TravelerList::tl_it != TravelerList::allusers.end())
 	{	mtx->lock();
 		if (TravelerList::tl_it == TravelerList::allusers.end())
-		{	mtx->unlock();
-			return;
-		}
-		TravelerList* t(*TravelerList::tl_it);
-		//printf("UserLogThread %02i assigned %s\n", id, t->traveler_name.data()); fflush(stdout);
-		TravelerList::tl_it++;
-		//printf("UserLogThread %02i TravelerList::tl_it++\n", id); fflush(stdout);
+			return mtx->unlock();
+		TravelerList* t = TravelerList::tl_it++;
 		mtx->unlock();
-		t->userlog(total_active_only_miles, total_active_preview_miles);
+
+		t->userlog(ao_mi, ap_mi);
 	}
 }

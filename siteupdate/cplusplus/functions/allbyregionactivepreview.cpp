@@ -16,14 +16,14 @@ void allbyregionactivepreview(std::mutex* mtx, double total_mi)
 	for (Region *region : regions)
 		allfile << ',' << region->code;
 	allfile << '\n';
-	for (TravelerList *t : TravelerList::allusers)
+	for (TravelerList& t : TravelerList::allusers)
 	{	double t_total_mi = 0;
-		for (std::pair<Region* const, double>& rm : t->active_preview_mileage_by_region)
+		for (std::pair<Region* const, double>& rm : t.active_preview_mileage_by_region)
 			t_total_mi += rm.second;
 		sprintf(fstr, "%.2f", t_total_mi);
-		allfile << t->traveler_name << ',' << fstr;
+		allfile << t.traveler_name << ',' << fstr;
 		for (Region *region : regions)
-		  try {	sprintf(fstr, "%.2f", t->active_preview_mileage_by_region.at(region));
+		  try {	sprintf(fstr, "%.2f", t.active_preview_mileage_by_region.at(region));
 			allfile << ',' << fstr;
 		      }
 		  catch (const std::out_of_range& oor)

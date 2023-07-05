@@ -61,7 +61,7 @@ std::string HighwaySegment::segment_name()
 	return "";
 }//*/
 
-const char* HighwaySegment::clinchedby_code(std::list<TravelerList*> *traveler_lists, char* code, unsigned int threadnum)
+const char* HighwaySegment::clinchedby_code(char* code, unsigned int threadnum)
 {	// Compute a hexadecimal string encoding which travelers
 	// have clinched this segment, for use in "traveled" graph files.
 	// Each character stores info for traveler #n thru traveler #n+3.
@@ -69,7 +69,6 @@ const char* HighwaySegment::clinchedby_code(std::list<TravelerList*> *traveler_l
 	// The second character stores traveler 4 thru traveler 7, etc.
 	// For each character, the low-order bit stores traveler n, and the high bit traveler n+3.
 
-	if (traveler_lists->empty()) return "0";
 	for (TravelerList* t : clinched_by)
 		code[t->traveler_num[threadnum]/4] += 1 << t->traveler_num[threadnum]%4;
 	for (char* nibble = code; *nibble; ++nibble) if (*nibble > '9') *nibble += 7;

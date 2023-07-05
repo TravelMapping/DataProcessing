@@ -20,7 +20,7 @@ else {	list<Region*> *regions;
 	list<HighwaySystem*> *systems;
 	GraphListEntry::entries.emplace_back('s', graph_data.vertices.size(), graph_data.se, 0);
 	GraphListEntry::entries.emplace_back('c', graph_data.cv, graph_data.ce, 0);
-	GraphListEntry::entries.emplace_back('t', graph_data.tv, graph_data.te, TravelerList::allusers.size());
+	GraphListEntry::entries.emplace_back('t', graph_data.tv, graph_data.te, TravelerList::allusers.size);
 	graph_types.push_back({"master", "All Travel Mapping Data",
 				"These graphs contain all routes currently plotted in the Travel Mapping project."});
 	GraphListEntry::num = 3;

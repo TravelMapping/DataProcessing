@@ -4,6 +4,7 @@ class HighwaySegment;
 class HighwaySystem;
 class Region;
 class Route;
+#include "../../templates/TMArray.cpp"
 #include <list>
 #include <mutex>
 #include <unordered_map>
@@ -40,16 +41,16 @@ class TravelerList
 	std::vector<std::pair<ConnectedRoute*,double>> ccr_values;	// for the clinchedConnectedRoutes DB table
 	bool* in_subgraph;
 	unsigned int *traveler_num;
-	// for locking the allusers list when reading .lists from disk
-	// and avoiding data races when creating userlog timestamps
-	static std::mutex mtx;
+	static std::mutex mtx;	// for avoiding data races when creating userlog timestamps
 	static std::list<std::string> ids;
 	static std::list<std::string>::iterator id_it;
-	static std::list<TravelerList*> allusers;
-	static std::list<TravelerList*>::iterator tl_it;
+	static TMArray<TravelerList> allusers;
+	static TravelerList* tl_it;
 	static bool file_not_found;
 
-	TravelerList(std::string, ErrorList*);
+	TravelerList(std::string&, ErrorList*);
+	~TravelerList();
+
 	double active_only_miles();
 	double active_preview_miles();
 	double system_miles(HighwaySystem *);

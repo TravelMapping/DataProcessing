@@ -12,11 +12,12 @@
 #include "../../templates/contains.cpp"
 #include <cstring>
 
-TravelerList::TravelerList(std::string travname, ErrorList* el)
+TravelerList::TravelerList(std::string& travname, ErrorList* el)
 {	// initialize object variables
 	in_subgraph = new bool[Args::numthreads];
 	traveler_num = new unsigned int[Args::numthreads];
-		       // deleted on termination of program
+		       // deleted by ~TravelerList
+	traveler_num[0] = this - allusers.data; // init for master traveled graph
 	for (size_t i = 0; i < Args::numthreads; i++) in_subgraph[i] = 0;
 	traveler_name.assign(travname, 0, travname.size()-5); // strip ".list" from end of travname
 	if (traveler_name.size() > DBFieldLength::traveler)
@@ -150,6 +151,8 @@ TravelerList::TravelerList(std::string travname, ErrorList* el)
 	splist.close();
 }
 
+TravelerList::~TravelerList() {delete[] traveler_num;}
+
 /* Return active mileage across all regions */
 double TravelerList::active_only_miles()
 {	double mi = 0;
@@ -174,8 +177,8 @@ double TravelerList::system_miles(HighwaySystem *h)
 std::mutex TravelerList::mtx;
 std::list<std::string> TravelerList::ids;
 std::list<std::string>::iterator TravelerList::id_it;
-std::list<TravelerList*> TravelerList::allusers;
-std::list<TravelerList*>::iterator TravelerList::tl_it;
+TMArray<TravelerList> TravelerList::allusers;
+TravelerList* TravelerList::tl_it;
 bool TravelerList::file_not_found = 0;
 
 bool sort_travelers_by_name(const TravelerList *t1, const TravelerList *t2)

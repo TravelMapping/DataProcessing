@@ -1,16 +1,12 @@
-void ConcAugThread(unsigned int id, std::mutex* tl_mtx, std::vector<std::string>* augment_list)
+void ConcAugThread(unsigned int id, std::mutex* mtx, std::vector<std::string>* augment_list)
 {	//printf("Starting ConcAugThread %02i\n", id); fflush(stdout);
 	while (TravelerList::tl_it != TravelerList::allusers.end())
-	{	tl_mtx->lock();
+	{	mtx->lock();
 		if (TravelerList::tl_it == TravelerList::allusers.end())
-		{	tl_mtx->unlock();
-			return;
-		}
-		TravelerList* t(*TravelerList::tl_it);
-		//printf("ConcAugThread %02i assigned %s\n", id, t->traveler_name.data()); fflush(stdout);
-		TravelerList::tl_it++;
-		//printf("ConcAugThread %02i TravelerList::tl_it++\n", id); fflush(stdout);
-		tl_mtx->unlock();
+			return mtx->unlock();
+		TravelerList* t = TravelerList::tl_it++;
+		mtx->unlock();
+
 		std::cout << '.' << std::flush;
 		for (HighwaySegment *s : t->clinched_segments)
 		  if (s->concurrent)
