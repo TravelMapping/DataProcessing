@@ -5,21 +5,21 @@
 #include "../Waypoint/Waypoint.h"
 #include "../../templates/contains.cpp"
 
-HighwaySegment::HighwaySegment(Waypoint *w1, Waypoint *w2, Route *rte)
-{	waypoint1 = w1;
-	waypoint2 = w2;
-	route = rte;
-	length = waypoint1->distance_to(waypoint2);
-	concurrent = 0;
-}
+HighwaySegment::HighwaySegment(Waypoint *w1, Waypoint *w2, Route *rte):
+	waypoint1(w1),
+	waypoint2(w2),
+	route(rte),
+	length(w1->distance_to(w2)),
+	concurrent(0),
+	clinched_by(TravelerList::allusers.data, TravelerList::allusers.size) {}
 
 std::string HighwaySegment::str()
 {	return route->readable_name() + " " + waypoint1->label + " " + waypoint2->label;
 }
 
-bool HighwaySegment::add_clinched_by(TravelerList *traveler)
+bool HighwaySegment::add_clinched_by(size_t t)
 {	clin_mtx.lock();
-	bool result = clinched_by.insert(traveler).second;
+	bool result = clinched_by.add_index(t);
 	clin_mtx.unlock();
 	return result;
 }
@@ -61,7 +61,7 @@ std::string HighwaySegment::segment_name()
 	return "";
 }//*/
 
-const char* HighwaySegment::clinchedby_code(std::list<TravelerList*> *traveler_lists, char* code, unsigned int threadnum)
+const char* HighwaySegment::clinchedby_code(char* code, unsigned int threadnum)
 {	// Compute a hexadecimal string encoding which travelers
 	// have clinched this segment, for use in "traveled" graph files.
 	// Each character stores info for traveler #n thru traveler #n+3.
@@ -69,7 +69,6 @@ const char* HighwaySegment::clinchedby_code(std::list<TravelerList*> *traveler_l
 	// The second character stores traveler 4 thru traveler 7, etc.
 	// For each character, the low-order bit stores traveler n, and the high bit traveler n+3.
 
-	if (traveler_lists->empty()) return "0";
 	for (TravelerList* t : clinched_by)
 		code[t->traveler_num[threadnum]/4] += 1 << t->traveler_num[threadnum]%4;
 	for (char* nibble = code; *nibble; ++nibble) if (*nibble > '9') *nibble += 7;
@@ -105,4 +104,17 @@ void HighwaySegment::write_label(std::ofstream& file, std::list<HighwaySystem*> 
 		file << route->banner;
 		file << route->abbrev;
 	     }
+}
+
+// find canonical segment for HGEdge construction, just in case a devel system is listed earlier in systems.csv
+HighwaySegment* HighwaySegment::canonical_edge_segment()
+{	if (!concurrent) return this;
+	for (auto& s : *concurrent)
+	  if (s->route->system->active_or_preview())
+	    return s;
+	// We should never reach this point, because this function will
+	// only be called on active/preview segments and a concurrent
+	// segment should always be in its own concurrency list.
+	// Nonetheless, let's stop the compiler from complaining.
+	throw 0xBAD;
 }

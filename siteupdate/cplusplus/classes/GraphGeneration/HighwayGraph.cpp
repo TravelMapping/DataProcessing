@@ -14,7 +14,6 @@
 #include "../Waypoint/Waypoint.h"
 #include "../WaypointQuadtree/WaypointQuadtree.h"
 #include "../../templates/contains.cpp"
-#include <cmath>
 #include <fstream>
 #include <thread>
 
@@ -62,7 +61,7 @@ HighwayGraph::HighwayGraph(WaypointQuadtree &all_waypoints, ElapsedTime &et)
 		counter++;
 		for (Route *r : h->route_list)
 		  for (HighwaySegment *s : r->segment_list)
-		    if (!s->concurrent || s == s->concurrent->front())
+		    if (s == s->canonical_edge_segment())
 		    { ++se; 
 		      new HGEdge(s);
 		      // deleted by HGEdge::detach via ~HGVertex via HighwayGraph::clear
@@ -91,29 +90,21 @@ HighwayGraph::HighwayGraph(WaypointQuadtree &all_waypoints, ElapsedTime &et)
 				w->vertex->visibility = 2;
 				continue;
 			}
-			// if edge clinched_by sets mismatch, set visibility to 1
-			// (visible in traveled graph; hidden in collapsed graph)
-			// first, the easy check, for whether set sizes mismatch
-			if (w->vertex->incident_t_edges.front()->segment->clinched_by.size()
-			 != w->vertex->incident_t_edges.back()->segment->clinched_by.size())
-				w->vertex->visibility = 1;
-			// next, compare clinched_by sets; look for any element in the 1st not in the 2nd
-			else for (TravelerList *t : w->vertex->incident_t_edges.front()->segment->clinched_by)
-				if (!w->vertex->incident_t_edges.back()->segment->clinched_by.count(t))
-				{	w->vertex->visibility = 1;
-					break;
-				}
 			// construct from vertex this time
 			--ce; --cv;
-			if (w->vertex->visibility == 1)
-			{	new HGEdge(w->vertex, HGEdge::collapsed);
+			// if edge clinched_by sets mismatch, set visibility to 1
+			// (visible in traveled graph; hidden in collapsed graph)
+			if (w->vertex->incident_t_edges.front()->segment->clinched_by
+			 != w->vertex->incident_t_edges.back()->segment->clinched_by)
+			{	w->vertex->visibility = 1;
+				new HGEdge(w->vertex, HGEdge::collapsed);
 				continue;
 			}
-			else if ((w->vertex->incident_c_edges.front() == w->vertex->incident_t_edges.front()
+			if   (	 (w->vertex->incident_c_edges.front() == w->vertex->incident_t_edges.front()
 			       && w->vertex->incident_c_edges.back()  == w->vertex->incident_t_edges.back())
 			      || (w->vertex->incident_c_edges.front() == w->vertex->incident_t_edges.back()
-			       && w->vertex->incident_c_edges.back()  == w->vertex->incident_t_edges.front()))
-				new HGEdge(w->vertex, HGEdge::collapsed | HGEdge::traveled);
+			       && w->vertex->incident_c_edges.back()  == w->vertex->incident_t_edges.front())
+			     )	new HGEdge(w->vertex, HGEdge::collapsed | HGEdge::traveled);
 			else {	new HGEdge(w->vertex, HGEdge::collapsed);
 				new HGEdge(w->vertex, HGEdge::traveled);
 				// Final collapsed edges are deleted by HGEdge::detach via ~HGVertex via HighwayGraph::clear.
@@ -203,90 +194,6 @@ void HighwayGraph::clear_vbit(HGVertex* v, const int threadnum)
 	vbits[threadnum*vbytes+index/8] &= ~(1 << index%8);
 }
 
-inline void HighwayGraph::matching_vertices_and_edges
-(	GraphListEntry &g, WaypointQuadtree *qt,
-	std::list<TravelerList*> &traveler_lists,
-	std::vector<HGVertex*> &mvvec,	// final vector of vertices matching all criteria
-	std::vector<HGEdge*> &mse,	// matching    simple edges
-	std::vector<HGEdge*> &mce,	// matching collapsed edges
-	std::vector<HGEdge*> &mte,	// matching  traveled edges
-	int threadnum, unsigned int &cv_count, unsigned int &tv_count
-)
-{	// Find a set of vertices from the graph, optionally
-	// restricted by region or system or placeradius area.
-	if (g.placeradius)
-		g.placeradius->vertices(mvvec, qt, this, g, threadnum);
-	else	if (g.regions)
-		{ if (g.systems)
-		  {	// iterate via region & check for a system_match
-			for (Region *r : *g.regions)
-			  for (auto& vw : r->vertices)
-			    if (!subgraph_contains(vw.first, threadnum) && vw.second->system_match(g.systems))
-			    {	mvvec.push_back(vw.first);
-				add_to_subgraph(vw.first, threadnum);
-			    }
-		  }
-		  else	for (Region *r : *g.regions)
-			  for (auto& vw : r->vertices)
-			    if (!subgraph_contains(vw.first, threadnum))
-			    {	mvvec.push_back(vw.first);
-				add_to_subgraph(vw.first, threadnum);
-			    }
-		} else	for (HighwaySystem *h : *g.systems)
-			  for (HGVertex* v : h->vertices)
-			    if (!subgraph_contains(v, threadnum))
-			    {	mvvec.push_back(v);
-				add_to_subgraph(v, threadnum);
-			    }
-
-	// initialize written booleans
-	for (HGVertex *v : mvvec)
-	{	for (HGEdge* e : v->incident_s_edges) e->written[threadnum] = 0;
-		for (HGEdge* e : v->incident_c_edges) e->written[threadnum] = 0;
-		for (HGEdge* e : v->incident_t_edges) e->written[threadnum] = 0;
-	}
-
-	// Compute sets of edges for subgraphs, optionally
-	// restricted by region or system or placeradius.
-	// Keep a count of collapsed & traveled vertices as we go.
-	#define AREA (!g.placeradius || subgraph_contains(e->vertex1, threadnum) && subgraph_contains(e->vertex2, threadnum))
-	#define REGION (!g.regions || contains(*g.regions, e->segment->route->region))
-	for (HGVertex *v : mvvec)
-	{	switch (v->visibility) // fall-thru is a Good Thing!
-		{   case 2:
-			cv_count++;
-			for (HGEdge *e : v->incident_c_edges)
-			  if (!(e->written[threadnum] & HGEdge::collapsed) && AREA && REGION && e->segment->system_match(g.systems))
-			  {	mce.push_back(e);
-				e->written[threadnum] |= HGEdge::collapsed;
-			  }
-		    case 1:
-			tv_count++;
-			for (HGEdge *e : v->incident_t_edges)
-			  if (!(e->written[threadnum] & HGEdge::traveled) && AREA && REGION && e->segment->system_match(g.systems))
-			  {	mte.push_back(e);
-				e->written[threadnum] |= HGEdge::traveled;
-
-				for (TravelerList *t : e->segment->clinched_by)
-				  if (!t->in_subgraph[threadnum])
-				  {	traveler_lists.push_back(t);
-					t->in_subgraph[threadnum] = 1;
-				  }
-			  }
-		    default:
-			for (HGEdge *e : v->incident_s_edges)
-			  if (!(e->written[threadnum] & HGEdge::simple) && AREA && REGION && e->segment->system_match(g.systems))
-			  {	mse.push_back(e);
-				e->written[threadnum] |= HGEdge::simple;
-			  }
-		}   clear_vbit(v, threadnum);
-	}
-	#undef AREA
-	#undef REGION
-	for (TravelerList* t : traveler_lists) t->in_subgraph[threadnum] = 0;
-	traveler_lists.sort(sort_travelers_by_name);
-}
-
 // write the entire set of highway data in .tmg format.
 // The first line is a header specifying the format and version number,
 // The second line specifies the number of waypoints, w, the number of connections, c,
@@ -306,7 +213,7 @@ void HighwayGraph::write_master_graphs_tmg()
 	travelfile << "TMG 2.0 traveled\n";
 	simplefile << vertices.size() << ' ' << se << '\n';
 	collapfile << cv << ' ' << ce << '\n';
-	travelfile << tv << ' ' << te << ' ' << TravelerList::allusers.size() << '\n';
+	travelfile << tv << ' ' << te << ' ' << TravelerList::allusers.size << '\n';
 
 	// write vertices
 	unsigned int sv = 0;
@@ -322,7 +229,7 @@ void HighwayGraph::write_master_graphs_tmg()
 		}
 	}
 	// now edges, only write if not already written
-	size_t nibbles = ceil(double(TravelerList::allusers.size())/4);
+	size_t nibbles = ceil(double(TravelerList::allusers.size)/4);
 	char* cbycode = new char[nibbles+1];
 			// deleted after writing edges
 	cbycode[nibbles] = 0;
@@ -337,7 +244,7 @@ void HighwayGraph::write_master_graphs_tmg()
 			  if (!(e->written[0] &  HGEdge::traveled))
 			  {	e->written[0] |= HGEdge::traveled;
 				for (char*n=cbycode; n<cbycode+nibbles; ++n) *n = '0';
-				e->traveled_tmg_line(travelfile, fstr, 0, 0, &TravelerList::allusers, cbycode);
+				e->traveled_tmg_line(travelfile, fstr, 0, 0, TravelerList::allusers.size, cbycode);
 			  }
 	    default:	for (HGEdge *e : v.incident_s_edges)
 			  if (!(e->written[0] &  HGEdge::simple))
@@ -350,8 +257,8 @@ void HighwayGraph::write_master_graphs_tmg()
 	  }
 	delete[] cbycode;
 	// traveler names
-	for (TravelerList *t : TravelerList::allusers)
-		travelfile << t->traveler_name << ' ';
+	for (TravelerList& t : TravelerList::allusers)
+		travelfile << t.traveler_name << ' ';
 	travelfile << '\n';
 	simplefile.close();
 	collapfile.close();
@@ -372,15 +279,16 @@ void HighwayGraph::write_subgraphs_tmg
 	std::ofstream simplefile(Args::graphfilepath+'/'+g -> filename());
 	std::ofstream collapfile(Args::graphfilepath+'/'+g[1].filename());
 	std::ofstream travelfile(Args::graphfilepath+'/'+g[2].filename());
-	std::vector<HGVertex*> mv;
-	std::vector<HGEdge*> mse, mce, mte;
-	std::list<TravelerList*> traveler_lists;
-	matching_vertices_and_edges(*g, qt, traveler_lists, mv, mse, mce, mte, threadnum, cv_count, tv_count);
+	std::vector<HGVertex*> mv;		// vertices matching all criteria
+	std::vector<HGEdge*> mse, mce, mte;	// matching simple/collapsed/traveled edges
+	std::vector<TravelerList*> traveler_lists;
+	TMBitset<TravelerList*, uint32_t> traveler_set(TravelerList::allusers.data, TravelerList::allusers.size);
+	#include "get_subgraph_data.cpp"
 	// assign traveler numbers
 	unsigned int travnum = 0;
-	for (TravelerList *t : traveler_lists)
-	{	t->traveler_num[threadnum] = travnum;
-		travnum++;
+	for (TravelerList *t : traveler_set)
+	{	t->traveler_num[threadnum] = travnum++;
+		traveler_lists.push_back(t);
 	}
       #ifdef threading_enabled
 	term->lock();
@@ -399,7 +307,7 @@ void HighwayGraph::write_subgraphs_tmg
 	travelfile << "TMG 2.0 traveled\n";
 	simplefile << mv.size() << ' ' << mse.size() << '\n';
 	collapfile << cv_count << ' ' << mce.size() << '\n';
-	travelfile << tv_count << ' ' << mte.size() << ' ' << traveler_lists.size() << '\n';
+	travelfile << tv_count << ' ' << mte.size() << ' ' << travnum << '\n';
 
 	// write vertices
 	unsigned int sv = 0;
@@ -423,13 +331,13 @@ void HighwayGraph::write_subgraphs_tmg
 	}
 	for (HGEdge *e : mce)
 		e->collapsed_tmg_line(collapfile, fstr, threadnum, g->systems);
-	size_t nibbles = ceil(double(traveler_lists.size())/4);
+	size_t nibbles = ceil(double(travnum)/4);
 	char* cbycode = new char[nibbles+1];
 			// deleted after writing edges
 	cbycode[nibbles] = 0;
 	for (HGEdge *e : mte)
 	{	for (char*n=cbycode; n<cbycode+nibbles; ++n) *n = '0';
-		e->traveled_tmg_line (travelfile, fstr, threadnum, g->systems, &traveler_lists, cbycode);
+		e->traveled_tmg_line (travelfile, fstr, threadnum, g->systems, travnum, cbycode);
 	}
 	delete[] cbycode;
 	// traveler names
@@ -445,5 +353,5 @@ void HighwayGraph::write_subgraphs_tmg
 
 	g -> vertices = mv.size(); g -> edges = mse.size(); g -> travelers = 0;
 	g[1].vertices = cv_count;  g[1].edges = mce.size(); g[1].travelers = 0;
-	g[2].vertices = tv_count;  g[2].edges = mte.size(); g[2].travelers = traveler_lists.size();
+	g[2].vertices = tv_count;  g[2].edges = mte.size(); g[2].travelers = travnum;
 }

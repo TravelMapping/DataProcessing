@@ -43,17 +43,6 @@ class HighwayGraph
 	bool subgraph_contains(HGVertex*, const int);
 	void add_to_subgraph(HGVertex*, const int);
 	void clear_vbit(HGVertex*, const int);
-
-	inline void matching_vertices_and_edges
-	(	GraphListEntry&, WaypointQuadtree*,
-		std::list<TravelerList*> &,
-		std::vector<HGVertex*>&,	// final set of vertices matching all criteria
-		std::vector<HGEdge*>&,		// matching    simple edges
-		std::vector<HGEdge*>&,		// matching collapsed edges
-		std::vector<HGEdge*>&,		// matching  traveled edges
-		int, unsigned int&, unsigned int&
-	);
-
 	void write_master_graphs_tmg();
 	void write_subgraphs_tmg(size_t, unsigned int, WaypointQuadtree*, ElapsedTime*, std::mutex*);
 };

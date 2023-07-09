@@ -14,19 +14,19 @@ void Region::compute_stats()
 		r->mileage += s->length;
 
 		// but we do need to check for concurrencies for others
-		unsigned int system_concurrency_count = 1;
-		unsigned int active_only_concurrency_count = 1;
-		unsigned int active_preview_concurrency_count = 1;
-		unsigned int overall_concurrency_count = 1;
+		unsigned int sys_concurrency_count = 1; // system
+		unsigned int act_concurrency_count = 1; // active only
+		unsigned int a_p_concurrency_count = 1; // active or preview
+		unsigned int all_concurrency_count = 1; // overall
 		if (s->concurrent)
 		  for (HighwaySegment *other : *s->concurrent)
 		    if (other != s)
 		      switch (other->route->system->level) // fall-thru is a Good Thing!
-		      {	case 'a': active_only_concurrency_count++;
-			case 'p': active_preview_concurrency_count++;
-			default : overall_concurrency_count++;
+		      {	case 'a': ++act_concurrency_count;
+			case 'p': ++a_p_concurrency_count;
+			default : ++all_concurrency_count;
 				  if (other->route->system == r->system)
-				    system_concurrency_count++;
+				    sys_concurrency_count++;
 		      }
 		// we know how many times this segment will be encountered
 		// in both the system and overall/active+preview/active-only
@@ -34,24 +34,17 @@ void Region::compute_stats()
 		// mileage to the overall totals and to the system categorized
 		// by its region
 		switch (r->system->level) // fall-thru is a Good Thing!
-		{   case 'a':	 active_only_mileage += s->length/active_only_concurrency_count;
-		    case 'p': active_preview_mileage += s->length/active_preview_concurrency_count;
-		    default :	      system_mileage += s->length/system_concurrency_count;
-				     overall_mileage += s->length/overall_concurrency_count;
-		}
-		// that's it for overall stats, now credit all travelers
-		// who have clinched this segment in their stats
-		for (TravelerList *t : s->clinched_by)
-		{	// credit active+preview for this region, which it must be
-			// if this segment is clinched by anyone
-			t->active_preview_mileage_by_region[this] += s->length/active_preview_concurrency_count;
-
-			// credit active only for this region
-			if (r->system->active())
-				t->active_only_mileage_by_region[this] += s->length/active_only_concurrency_count;
-
-			// credit this system in this region in the messy unordered_map of unordered_maps
-			t->system_region_mileages[r->system][this] += s->length/system_concurrency_count;
+		{   case 'a':	active_only_mileage    += s->length/act_concurrency_count;
+		    case 'p':	active_preview_mileage += s->length/a_p_concurrency_count;
+				// credit all travelers who've clinched this segment in their stats
+				for (TravelerList *t : s->clinched_by)
+				{	if (r->system->active())
+					   t->active_only_mileage_by_region[this]  += s->length/act_concurrency_count;
+					t->active_preview_mileage_by_region[this]  += s->length/a_p_concurrency_count;
+					t->system_region_mileages[r->system][this] += s->length/sys_concurrency_count;
+				}
+		    default :	system_mileage  += s->length/sys_concurrency_count;
+				overall_mileage += s->length/all_concurrency_count;
 		}
 	}
     }

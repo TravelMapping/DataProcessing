@@ -6,9 +6,10 @@
 
 void Route::store_traveled_segments(TravelerList* t, std::ofstream& log, std::string& update, unsigned int beg, unsigned int end)
 {	// store clinched segments with traveler and traveler with segments
+	size_t index = t-TravelerList::allusers.data;
 	for (unsigned int pos = beg; pos < end; pos++)
 	{	HighwaySegment *hs = segment_list[pos];
-		if (hs->add_clinched_by(t))
+		if (hs->add_clinched_by(index))
 		  t->clinched_segments.push_back(hs);
 	}
       #ifdef threading_enabled

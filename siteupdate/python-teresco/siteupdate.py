@@ -955,6 +955,19 @@ class HighwaySegment:
             code += "0123456789ABCDEF"[c]
         return code
 
+    def canonical_edge_segment(self):
+        """find canonical segment for HGEdge construction, just in
+        case a devel system is listed earlier in systems.csv"""
+        if self.concurrent is None:
+            return self
+        for s in self.concurrent:
+            if s.route.system.active_or_preview():
+                return s
+        # We should never reach this point, because this function will
+        # only be called on active/preview segments and a concurrent
+        # segment should always be in its own concurrency list.
+        raise Exception
+
 class Route:
     """This class encapsulates the contents of one .csv file line
     that represents a highway within a system and the corresponding
@@ -1415,14 +1428,26 @@ class TravelerList:
     start_region start_route start_point end_region end_route end_point
     """
 
+    file_not_found = False
+
     def __init__(self,travelername,el,path="../../UserData/list_files"):
         list_entries = 0
         self.clinched_segments = []
         self.traveler_name = travelername[:-5]
         if len(self.traveler_name.encode('utf-8')) > DBFieldLength.traveler:
             el.add_error("Traveler name " + self.traveler_name + " > " + str(DBFieldLength.traveler) + "bytes")
-        with open(path+"/"+travelername,"rt", encoding='UTF-8') as file:
-            lines = file.readlines()
+        try:
+            with open(path+"/"+travelername,"rt", encoding='UTF-8') as file:
+                lines = file.readlines()
+        except FileNotFoundError:
+            print("\nERROR: " + travelername + " not found.", end="")
+            TravelerList.file_not_found = True
+        if TravelerList.file_not_found:
+            # We're going to abort, so no point in continuing to fully build out TravelerList objects.
+            # Future constructors will proceed only this far, to get a complete list of invalid names.
+            return
+        else:
+            print(self.traveler_name + " ",end="",flush=True)
         # strip UTF-8 byte order mark if present
         if len(lines):
             lines[0] = lines[0].encode('utf-8').decode("utf-8-sig")
@@ -1708,14 +1733,13 @@ class TravelerList:
                 else:
                     # user log warning for DISCONNECTED_ROUTE errors
                     if r1.con_route.disconnected:
-                        region_set = set()
+                        regions = []
                         for r in r1.con_route.roots:
-                          if r.is_disconnected():
-                            region_set.add(r.region)
-                        region_list = sorted(region_set)
+                          if r.is_disconnected() and r.region not in regions:
+                            regions.append(r.region)
                         log_entry = ''
-                        for r in region_list:
-                          log_entry += r + (':' if r == region_list[-1] else '/')
+                        for r in regions:
+                          log_entry += r + (':' if r == regions[-1] else '/')
                         log_entry += " DISCONNECTED_ROUTE error in " + r1.con_route.readable_name() \
                                   +  ".\n  Please report this error in the Travel Mapping forum" \
                                   +  ".\n  Travels may potentially be shown incorrectly for line: " + line
@@ -2296,7 +2320,7 @@ class HighwayGraph:
             counter += 1;
             for r in h.route_list:
                 for s in r.segment_list:
-                    if s.concurrent is None or s == s.concurrent[0]:
+                    if s == s.canonical_edge_segment():
                         self.se += 1
                         HGEdge(s, self)
         self.ce = self.se
@@ -2691,6 +2715,7 @@ args = parser.parse_args()
 
 #
 # Get list of travelers in the system
+print(et.et() + "Making list of travelers.")
 traveler_ids = args.userlist
 traveler_ids = os.listdir(args.userlistfilepath) if traveler_ids is None else (id + ".list" for id in traveler_ids)
 
@@ -3245,13 +3270,14 @@ for line in lines:
 traveler_lists = []
 
 print(et.et() + "Processing traveler list files:",flush=True)
-for t in traveler_ids:
+for t in sorted(traveler_ids):
     if t.endswith('.list'):
-        print(t + " ",end="",flush=True)
         traveler_lists.append(TravelerList(t,el,args.userlistfilepath))
 del traveler_ids
-print('\n' + et.et() + "Processed " + str(len(traveler_lists)) + " traveler list files. Sorting and numbering.")
-traveler_lists.sort(key=lambda TravelerList: TravelerList.traveler_name)
+if TravelerList.file_not_found:
+    print("\nCheck for typos in your -U or --userlist arguments, and make sure .list files for all specified users exist.\nAborting.")
+    exit(1)
+print('\n' + et.et() + "Processed " + str(len(traveler_lists)) + " traveler list files.")
 # assign traveler numbers
 travnum = 0
 for t in traveler_lists:

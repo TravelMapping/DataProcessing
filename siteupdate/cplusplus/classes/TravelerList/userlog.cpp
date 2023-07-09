@@ -32,6 +32,7 @@ void TravelerList::userlog(const double total_active_only_miles, const double to
 	unsigned int active_systems_clinched = 0;
 	unsigned int preview_systems_traveled = 0;
 	unsigned int preview_systems_clinched = 0;
+	size_t index = this - allusers.data;
 
 	// stats by system
 	for (HighwaySystem *h : HighwaySystem::syslist)
@@ -75,7 +76,7 @@ void TravelerList::userlog(const double total_active_only_miles, const double to
 				auto& roots = cr->roots;
 				for (Route *r : roots)
 				{	// find traveled mileage on this by this user
-					double miles = r->clinched_by_traveler(this);
+					double miles = r->clinched_by_traveler_index(index);
 					if (miles)
 					{	cr_values.emplace_back(r, miles);
 						con_clinched_miles += miles;

@@ -1,20 +1,14 @@
-void ReadListThread(unsigned int id, std::mutex* tl_mtx, ErrorList* el)
-{	//printf("Starting ReadListThread %02i\n", id); fflush(stdout);
+void ReadListThread(unsigned int num, std::mutex* mtx, ErrorList* el)
+{	//printf("Starting ReadListThread %02i\n", num); fflush(stdout);
 	while (TravelerList::id_it != TravelerList::ids.end())
-	{	tl_mtx->lock();
+	{	mtx->lock();
 		if (TravelerList::id_it == TravelerList::ids.end())
-		{	tl_mtx->unlock();
-			return;
-		}
-		std::string& tl(*TravelerList::id_it);
-		//printf("ReadListThread %02i assigned %s\n", id, tl.data()); fflush(stdout);
-		TravelerList::id_it++;
-		//printf("ReadListThread %02i (*it)++\n", id); fflush(stdout);
-		tl_mtx->unlock();
-		TravelerList *t = new TravelerList(tl, el);
-				  // deleted on termination of program
-		TravelerList::mtx.lock();
-		TravelerList::allusers.push_back(t);
-		TravelerList::mtx.unlock();
+			return mtx->unlock();
+		std::string& id = *TravelerList::id_it++;
+		TravelerList* tl = TravelerList::tl_it++;
+		mtx->unlock();
+
+		new(tl) TravelerList(id, el);
+		// placement new
 	}
 }

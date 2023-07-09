@@ -4,7 +4,6 @@ class Region;
 class Waypoint;
 #include <list>
 #include <string>
-#include <unordered_set>
 
 class HGVertex
 {   /* This class encapsulates information needed for a highway graph

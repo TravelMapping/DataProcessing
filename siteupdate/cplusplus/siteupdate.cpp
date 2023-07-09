@@ -49,6 +49,7 @@ int main(int argc, char *argv[])
 {	ifstream file;
 	string line;
 	mutex list_mtx, term_mtx;
+	ErrorList el;
 
 	// argument parsing
 	if (Args::init(argc, argv)) return 1;
@@ -61,10 +62,8 @@ int main(int argc, char *argv[])
 	time_t timestamp = time(0);
 	cout << "Start: " << ctime(&timestamp);
 
-	// create ErrorList
-	ErrorList el;
-
 	// Get list of travelers in the system
+	cout << et.et() << "Making list of travelers." << endl;
 	TravelerList::ids = move(Args::userlist);
 	if (TravelerList::ids.empty())
 	{	DIR *dir;
@@ -80,6 +79,8 @@ int main(int argc, char *argv[])
 		else	el.add_error("Error opening user list file path \""+Args::userlistfilepath+"\". (Not found?)");
 	}
 	else for (string &id : TravelerList::ids) id += ".list";
+	TravelerList::ids.sort();
+	TravelerList::tl_it = TravelerList::allusers.alloc(TravelerList::ids.size());
 
 	// read region, country, continent descriptions
 	cout << et.et() << "Reading region, country, and continent descriptions." << endl;
@@ -322,24 +323,23 @@ int main(int argc, char *argv[])
 
 	#include "tasks/read_updates.cpp"
 
-	// Create a list of TravelerList objects, one per person
+	// Create an array (must be stored sequentially!) of TravelerList objects, one per person
 	cout << et.et() << "Processing traveler list files:" << endl;
-      #ifdef threading_enabled
 	TravelerList::id_it = TravelerList::ids.begin();
+      #ifdef threading_enabled
 	THREADLOOP thr[t] = thread(ReadListThread, t, &list_mtx, &el);
 	THREADLOOP thr[t].join();
       #else
-	for (string &t : TravelerList::ids) TravelerList::allusers.push_back(new TravelerList(t, &el));
+	while (TravelerList::tl_it < TravelerList::allusers.end())
+		new(TravelerList::tl_it++) TravelerList(*TravelerList::id_it++, &el);
+		// placement new
       #endif
-	TravelerList::ids.clear();
-	cout << endl << et.et() << "Processed " << TravelerList::allusers.size() << " traveler list files. Sorting and numbering." << endl;
-	TravelerList::allusers.sort(sort_travelers_by_name);
-	// assign traveler numbers for master traveled graph
-	unsigned int travnum = 0;
-	for (TravelerList *t : TravelerList::allusers)
-	{	t->traveler_num[0] = travnum;
-		travnum++;
+	if (TravelerList::file_not_found)
+	{	cout << "\nCheck for typos in your -U or --userlist arguments, and make sure .list files for all specified users exist.\nAborting." << endl;
+		return 1;
 	}
+	TravelerList::ids.clear();
+	cout << endl << et.et() << "Processed " << TravelerList::allusers.size << " traveler list files." << endl;
 
 	cout << et.et() << "Clearing route & label hash tables." << endl;
 	Route::root_hash.clear();
@@ -436,12 +436,13 @@ int main(int argc, char *argv[])
 	THREADLOOP for (std::string& entry : augment_lists[t]) concurrencyfile << entry << '\n';
 	delete[] augment_lists;
       #else
-	for (TravelerList *t : TravelerList::allusers)
+	for (TravelerList *t = TravelerList::allusers.data, *end = TravelerList::allusers.end(); t != end; t++)
 	{	cout << '.' << flush;
+		size_t index = t-TravelerList::allusers.data;
 		for (HighwaySegment *s : t->clinched_segments)
 		  if (s->concurrent)
 		    for (HighwaySegment *hs : *(s->concurrent))
-		      if (hs != s && hs->route->system->active_or_preview() && hs->add_clinched_by(t))
+		      if (hs != s && hs->route->system->active_or_preview() && hs->add_clinched_by(index))
 		       	concurrencyfile << "Concurrency augment for traveler " << t->traveler_name << ": [" << hs->str() << "] based on [" << s->str() << "]\n";
 	}
 	cout << '!' << endl;
@@ -540,8 +541,8 @@ int main(int argc, char *argv[])
 	THREADLOOP thr[t] = thread(UserLogThread, t, &list_mtx, active_only_miles, active_preview_miles);
 	THREADLOOP thr[t].join();
       #else
-	for (TravelerList *t : TravelerList::allusers)
-		t->userlog(active_only_miles, active_preview_miles);
+	for (TravelerList& t : TravelerList::allusers)
+		t.userlog(active_only_miles, active_preview_miles);
       #endif
 	cout << "!" << endl;
 

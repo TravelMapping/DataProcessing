@@ -310,16 +310,14 @@ void sqlfile1
 		<< "), activeMileage DOUBLE, activePreviewMileage DOUBLE);\n";
 	sqlfile << "INSERT INTO clinchedOverallMileageByRegion VALUES\n";
 	first = 1;
-	for (TravelerList *t : TravelerList::allusers)
-	  for (std::pair<Region* const,double>& rm : t->active_preview_mileage_by_region)
+	for (TravelerList& t : TravelerList::allusers)
+	  for (std::pair<Region* const,double>& rm : t.active_preview_mileage_by_region)
 	  {	if (!first) sqlfile << ',';
 		first = 0;
-		double active_miles = 0;
-		auto it = t->active_only_mileage_by_region.find(rm.first);
-		if (it != t->active_only_mileage_by_region.end())
-		  active_miles = it->second;
+		auto it = t.active_only_mileage_by_region.find(rm.first);
+		double active_miles = (it != t.active_only_mileage_by_region.end()) ? it->second : 0;
 		sprintf(fstr, "','%.17g','%.17g')\n", active_miles, rm.second);
-		sqlfile << "('" << rm.first->code << "','" << t->traveler_name << fstr;
+		sqlfile << "('" << rm.first->code << "','" << t.traveler_name << fstr;
 	  }
 	sqlfile << ";\n";
 
@@ -334,18 +332,16 @@ void sqlfile1
 		<< "), mileage DOUBLE, FOREIGN KEY (systemName) REFERENCES systems(systemName));\n";
 	sqlfile << "INSERT INTO clinchedSystemMileageByRegion VALUES\n";
 	first = 1;
-	for (TravelerList* t : TravelerList::allusers)
-	{	auto& traveler_name = t->traveler_name;
-		for (auto& csmbr : t->system_region_mileages)
-		{	auto& systemname = csmbr.first->systemname;
-			for (auto& rm : csmbr.second)
-			{	if (!first) sqlfile << ',';
-				first = 0;
-				sprintf(fstr, "%.17g", rm.second);
-				sqlfile << "('" << systemname << "','" << rm.first->code << "','" << traveler_name << "','" << fstr << "')\n";
-			}
+	for (TravelerList& t : TravelerList::allusers)
+	  for (auto& csmbr : t.system_region_mileages)
+	  {	auto& systemname = csmbr.first->systemname;
+		for (auto& rm : csmbr.second)
+		{	if (!first) sqlfile << ',';
+			first = 0;
+			sprintf(fstr, "%.17g", rm.second);
+			sqlfile << "('" << systemname << "','" << rm.first->code << "','" << t.traveler_name << "','" << fstr << "')\n";
 		}
-	}
+	  }
 	sqlfile << ";\n";
 
 	// clinched mileage by connected route, active systems and preview
@@ -356,16 +352,15 @@ void sqlfile1
 	sqlfile << "CREATE TABLE clinchedConnectedRoutes (route VARCHAR(" << DBFieldLength::root
 		<< "), traveler VARCHAR(" << DBFieldLength::traveler
 		<< "), mileage FLOAT, clinched BOOLEAN, FOREIGN KEY (route) REFERENCES connectedRoutes(firstRoot));\n";
-	for (TravelerList *t : TravelerList::allusers)
-	{	if (t->ccr_values.empty()) continue;
+	for (TravelerList& t : TravelerList::allusers)
+	{	if (t.ccr_values.empty()) continue;
 		sqlfile << "INSERT INTO clinchedConnectedRoutes VALUES\n";
-		auto& traveler_name = t->traveler_name;
 		first = 1;
-		for (auto& rm : t->ccr_values)
+		for (auto& rm : t.ccr_values)
 		{	if (!first) sqlfile << ',';
 			first = 0;
 			sprintf(fstr, "%.17g", rm.second);
-			sqlfile << "('" << rm.first->roots[0]->root << "','" << traveler_name << "','"
+			sqlfile << "('" << rm.first->roots[0]->root << "','" << t.traveler_name << "','"
 				<< fstr << "','" << (rm.second == rm.first->mileage) << "')\n";
 		}
 		sqlfile << ";\n";
@@ -378,16 +373,15 @@ void sqlfile1
 	sqlfile << "CREATE TABLE clinchedRoutes (route VARCHAR(" << DBFieldLength::root
 		<< "), traveler VARCHAR(" << DBFieldLength::traveler
 		<< "), mileage FLOAT, clinched BOOLEAN, FOREIGN KEY (route) REFERENCES routes(root));\n";
-	for (TravelerList *t : TravelerList::allusers)
-	{	if (t->cr_values.empty()) continue;
+	for (TravelerList& t : TravelerList::allusers)
+	{	if (t.cr_values.empty()) continue;
 		sqlfile << "INSERT INTO clinchedRoutes VALUES\n";
-		auto& traveler_name = t->traveler_name;
 		first = 1;
-		for (std::pair<Route*,double>& rm : t->cr_values)
+		for (std::pair<Route*,double>& rm : t.cr_values)
 		{	if (!first) sqlfile << ',';
 			first = 0;
 			sprintf(fstr, "%.17g", rm.second);
-			sqlfile << "('" << rm.first->root << "','" << traveler_name << "','"
+			sqlfile << "('" << rm.first->root << "','" << t.traveler_name << "','"
 				<< fstr << "','" << (rm.second >= rm.first->mileage) << "')\n";
 		}
 		sqlfile << ";\n";

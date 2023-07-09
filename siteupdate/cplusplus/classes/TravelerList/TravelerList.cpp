@@ -9,16 +9,15 @@
 #include "../Route/Route.h"
 #include "../Waypoint/Waypoint.h"
 #include "../../functions/upper.h"
+#include "../../templates/contains.cpp"
 #include <cstring>
 
-TravelerList::TravelerList(std::string travname, ErrorList* el)
+TravelerList::TravelerList(std::string& travname, ErrorList* el)
 {	// initialize object variables
-	in_subgraph = new bool[Args::numthreads];
 	traveler_num = new unsigned int[Args::numthreads];
-		       // deleted on termination of program
-	for (size_t i = 0; i < Args::numthreads; i++) in_subgraph[i] = 0;
-	traveler_name = travname.substr(0, travname.size()-5); // strip ".list" from end of travname
-	std::cout << traveler_name << ' ' << std::flush;
+		       // deleted by ~TravelerList
+	traveler_num[0] = this - allusers.data; // init for master traveled graph
+	traveler_name.assign(travname, 0, travname.size()-5); // strip ".list" from end of travname
 	if (traveler_name.size() > DBFieldLength::traveler)
 	  el->add_error("Traveler name " + traveler_name + " > " + std::to_string(DBFieldLength::traveler) + "bytes");
 
@@ -51,6 +50,15 @@ TravelerList::TravelerList(std::string travname, ErrorList* el)
 	  // at least one .list file contains newlines using only '\r' (0x0D):
 	  // https://github.com/TravelMapping/UserData/blob/6309036c44102eb3325d49515b32c5eef3b3cb1e/list_files/whopperman.list
 	file.open(Args::userlistfilepath+"/"+travname);
+	if (!file.is_open())
+	{	std::cout << "\nERROR: " << travname << " not found.";
+		file_not_found = 1;
+	}
+	if (file_not_found)
+		// We're going to abort, so no point in continuing to fully build out TravelerList objects.
+		// Future constructors will proceed only this far, to get a complete list of invalid names.
+		return;
+	else	std::cout << traveler_name << ' ' << std::flush;
 	file.seekg(0, std::ios::end);
 	unsigned long listdatasize = file.tellg();
 	file.seekg(0, std::ios::beg);
@@ -141,6 +149,8 @@ TravelerList::TravelerList(std::string travname, ErrorList* el)
 	splist.close();
 }
 
+TravelerList::~TravelerList() {delete[] traveler_num;}
+
 /* Return active mileage across all regions */
 double TravelerList::active_only_miles()
 {	double mi = 0;
@@ -165,9 +175,6 @@ double TravelerList::system_miles(HighwaySystem *h)
 std::mutex TravelerList::mtx;
 std::list<std::string> TravelerList::ids;
 std::list<std::string>::iterator TravelerList::id_it;
-std::list<TravelerList*> TravelerList::allusers;
-std::list<TravelerList*>::iterator TravelerList::tl_it;
-
-bool sort_travelers_by_name(const TravelerList *t1, const TravelerList *t2)
-{	return t1->traveler_name < t2->traveler_name;
-}
+TMArray<TravelerList> TravelerList::allusers;
+TravelerList* TravelerList::tl_it;
+bool TravelerList::file_not_found = 0;

@@ -89,7 +89,7 @@ class Route
 	std::string readable_name();
 	std::string list_entry_name();
 	std::string name_no_abbrev();
-	double clinched_by_traveler(TravelerList *);
+	double clinched_by_traveler_index(size_t);
 	//std::string list_line(int, int);
 	void write_nmp_merged();
 	void store_traveled_segments(TravelerList*, std::ofstream&, std::string&, unsigned int, unsigned int);

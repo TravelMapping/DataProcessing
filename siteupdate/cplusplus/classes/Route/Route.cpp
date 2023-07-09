@@ -7,6 +7,7 @@
 #include "../HighwaySegment/HighwaySegment.h"
 #include "../HighwaySystem/HighwaySystem.h"
 #include "../Region/Region.h"
+#include "../TravelerList/TravelerList.h"
 #include "../Waypoint/Waypoint.h"
 #include "../../functions/lower.h"
 #include "../../functions/split.h"
@@ -157,10 +158,10 @@ std::string Route::name_no_abbrev()
 	return route + banner;
 }
 
-double Route::clinched_by_traveler(TravelerList *t)
+double Route::clinched_by_traveler_index(size_t t)
 {	double miles = 0;
 	for (HighwaySegment *s : segment_list)
-		if (s->clinched_by.count(t)) miles += s->length;
+		if (s->clinched_by[t]) miles += s->length;
 	return miles;
 }
 
