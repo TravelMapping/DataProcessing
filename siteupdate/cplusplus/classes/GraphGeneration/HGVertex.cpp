@@ -31,7 +31,7 @@ void HGVertex::setup(Waypoint *wpt, const std::string *n)
 	{	// will consider hidden iff all colocated waypoints are hidden
 		if (!w->is_hidden) visibility = 2;
 		w->route->region->add_vertex(this, wpt);// Yes, a region/system can get the same vertex multiple times
-		w->route->system->add_vertex(this);	// from different routes. But HighwayGraph::matching_vertices_and_edges
+		w->route->system->add_vertex(this);	// from different routes. But HighwayGraph::write_subgraphs_tmg
 	}						// gets rid of any redundancy when making the final set.
 }
 
