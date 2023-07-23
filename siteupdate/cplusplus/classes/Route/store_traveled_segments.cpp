@@ -14,9 +14,9 @@ void Route::store_traveled_segments(TravelerList* t, std::ofstream& log, std::st
 	}
       #ifdef threading_enabled
 	// create key/value pairs in regional tables, to be computed in a threadsafe manner later
-	t->active_preview_mileage_by_region[region];
 	if (system->active())
-		t->active_only_mileage_by_region[region];
+	   t->active_only_mileage_by_region[region];
+	t->active_preview_mileage_by_region[region];
 	t->system_region_mileages[system][region];
       #endif
 	// userlog notification for routes updated more recently than .list file
