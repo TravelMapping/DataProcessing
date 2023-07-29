@@ -70,53 +70,51 @@ TravelerList::TravelerList(std::string& travname, ErrorList* el)
 
 	// get canonical newline for writing splitregion .list files
 	std::string newline;
-	unsigned long c = 0;
-	while (listdata[c] != '\r' && listdata[c] != '\n' && c < listdatasize) c++;
-	if (listdata[c] == '\r')
-		if (listdata[c+1] == '\n')	newline = "\r\n";
-		else				newline = "\r";
-	else	if (listdata[c] == '\n')	newline = "\n";
+	char* c = listdata;
+	while (*c != '\r' && *c != '\n' && *c) c++;
+	if (*c == '\r')
+		if (c[1] == '\n')	newline = "\r\n";
+		else			newline = "\r";
+	else	if (c[0] == '\n')	newline = "\n";
 	// Use CRLF as failsafe if .list file contains no newlines.
-		else				newline = "\r\n";
+		else			newline = "\r\n";
+
+	// skip UTF-8 byte order mark if present
+	if (strncmp(listdata, "\xEF\xBB\xBF", 3))
+		c = listdata;
+	else {	c = listdata+3;
+		splist << "\xEF\xBB\xBF";
+	     }
 
 	// separate listdata into series of lines & newlines
+	while (*c == '\r' || *c == '\n') splist << *c++; // skip leading blank lines
 	std::vector<char*> lines;
 	std::vector<std::string> endlines;
-	size_t spn = 0;
-	for (char *c = listdata; *c; c += spn)
-	{	endlines.push_back("");
+	for (size_t spn = 0; *c; c += spn)
+	{	endlines.emplace_back();
 		for (spn = strcspn(c, "\n\r"); c[spn] == '\n' || c[spn] == '\r'; spn++)
 		{	endlines.back().push_back(c[spn]);
 			c[spn] = 0;
 		}
 		lines.push_back(c);
 	}
-	lines.push_back(listdata+listdatasize+1); // add a dummy "past-the-end" element to make lines[l+1]-2 work
-
-	// strip UTF-8 byte order mark if present
-	if (!strncmp(lines[0], "\xEF\xBB\xBF", 3))
-	{	lines[0] += 3;
-		splist << "\xEF\xBB\xBF";
-	}
+	lines.push_back(listdata+listdatasize+1);	// add a dummy "past-the-end" element to make lines[l+1]-2 work
 
 	// process lines
 	for (unsigned int l = 0; l < lines.size()-1; l++)
 	{	std::string orig_line(lines[l]);
-		// strip whitespace
+		// strip whitespace from beginning
 		while (lines[l][0] == ' ' || lines[l][0] == '\t') lines[l]++;
-		char * endchar = lines[l+1]-2; // -2 skips over the 0 inserted while separating listdata into lines
-		while (endchar > lines[l] && *endchar == 0) endchar--;  // skip back more for CRLF cases, and lines followed by blank lines
-		if (endchar > lines[l])
-		  while (*endchar == ' ' || *endchar == '\t')
-		  {	*endchar = 0;
-			endchar--;
-		  }
-		std::string trim_line(lines[l]);
-		// ignore empty or "comment" lines
+		// ignore whitespace or "comment" lines
 		if (lines[l][0] == 0 || lines[l][0] == '#')
 		{	splist << orig_line << endlines[l];
 			continue;
 		}
+		// strip whitespace from end		// first, seek to end of this line from beginning of next
+		char * endchar = lines[l+1]-2;		// -2 skips over the 0 inserted while separating listdata into lines
+		while (*endchar == 0) endchar--;	// skip back more for CRLF cases, and lines followed by blank lines
+		while (*endchar == ' ' || *endchar == '\t') *endchar-- = 0;
+		std::string trim_line(lines[l]);
 		// process fields in line
 		std::vector<char*> fields;
 		size_t spn = 0;
