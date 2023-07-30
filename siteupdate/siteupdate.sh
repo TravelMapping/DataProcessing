@@ -8,7 +8,7 @@
 #
 
 function usage {
-    echo "Usage: $0 [--help] [--nographs] [--nmpmerged] [--noinstall] [--nopull] [--mail] [--use-python] [--remote server] [--numthreads nt] [--tmbasedir dir] [--workdir dir] [--webdir dir]"
+    echo "Usage: $0 [--help] [--rail] [--nographs] [--nmpmerged] [--noinstall] [--nopull] [--mail] [--use-python] [--remote server] [--numthreads nt] [--tmbasedir dir] [--workdir dir] [--webdir dir]"
 }
 
 set -e
@@ -29,6 +29,11 @@ chcon=0
 makesiteupdate=0
 compress=0
 compressflag=
+repo=HighwayData
+listdir=list_files
+timedir=time_files
+dbname=TravelMapping
+datatype=Highways
 
 # If running as datacheck, we change some defaults.
 # Running from the common install?
@@ -131,6 +136,16 @@ for arg in "$@"; do
     elif [[ "$arg" == --help ]]; then
 	usage
 	exit 0
+    elif [[ "$arg" == --rail ]]; then
+	tmwebdir=/home/www/tmrail
+	logdir=rlogs
+	statdir=rstats
+	graphdir=rgraphdata
+	grapharchives=rgrapharchives
+	repo=RailwayData
+	listdir=rlist_files
+	timedir=rtime_files
+	dbname=TravelMappingRail
     elif [[ "$arg" == --graphs ]]; then
 	graphflag=
     elif [[ "$arg" == --nmpmerged ]]; then
@@ -203,11 +218,11 @@ if [[ ! -d $tmbasedir ]]; then
     echo "TravelMapping repository base directory $tmbasedir not found"
     exit 1
 else
-    if [[ ! -d $tmbasedir/HighwayData ]]; then
-	echo "TravelMapping/HighwayData repository not found in $tmbasedir"
+    if [[ ! -d $tmbasedir/$repo ]]; then
+	echo "TravelMapping/$repo repository not found in $tmbasedir"
 	exit 1
-    elif [[ ! -d $tmbasedir/HighwayData/.git ]]; then
-	echo "TravelMapping/HighwayData in $tmbasedir does not appear to be a git repository"
+    elif [[ ! -d $tmbasedir/$repo/.git ]]; then
+	echo "TravelMapping/$repo in $tmbasedir does not appear to be a git repository"
 	exit 1
     fi
     if [[ ! -d $tmbasedir/UserData ]]; then
@@ -287,7 +302,7 @@ fi
 # Update repositories unless not updating
 if [[ "$pull" == "1" ]]; then
       echo "$0: updating TM repositories"
-      (cd $tmbasedir/HighwayData; git pull)
+      (cd $tmbasedir/$repo; git pull)
       (cd $tmbasedir/UserData; git pull)
 fi
 
@@ -301,20 +316,21 @@ if [[ "$graphflag" != "-k" ]]; then
 fi
 
 echo "$0: gathering repo head info"
-echo HighwayData '@' `(cd $tmbasedir/HighwayData; git show -s | head -n 1 | cut -f2 -d' ')` | tee $indir/$logdir/siteupdate.log
+echo $repo '@' `(cd $tmbasedir/$repo; git show -s | head -n 1 | cut -f2 -d' ')` | tee $indir/$logdir/siteupdate.log
 echo UserData '@' `(cd $tmbasedir/UserData; git show -s | head -n 1 | cut -f2 -d' ')` | tee -a $indir/$logdir/siteupdate.log
 echo DataProcessing '@' `git show -s | head -n 1 | cut -f2 -d' '` | tee -a $indir/$logdir/siteupdate.log
 
 echo "$0: creating .time files"
-cd $tmbasedir/UserData/time_files
-for t in `ls ../list_files/*.list | sed -r 's~../list_files/(.*).list~\1.time~'`; do $make -s $t; done
+mkdir -p $tmbasedir/UserData/$timedir
+cd $tmbasedir/UserData/$timedir
+for t in `ls ../$listdir/*.list | sed -r 's~../$listdir/(.*).list~\1.time~'`; do $make -s $t; done
 cd - > /dev/null
   
 if [[ "$nmpmdir" != "" ]]; then
     nmpmflags="-n $indir/$nmpmdir"
 fi
 echo "$0: launching $siteupdate"
-$siteupdate $errorcheck -d TravelMapping-$datestr $graphflag -l $indir/$logdir -c $indir/$statdir -g $indir/$graphdir $nmpmflags -w $tmbasedir/HighwayData -u $tmbasedir/UserData/list_files | tee -a $indir/$logdir/siteupdate.log 2>&1 || exit 1
+$siteupdate $errorcheck -d $dbname-$datestr $graphflag -l $indir/$logdir -c $indir/$statdir -g $indir/$graphdir $nmpmflags -w $tmbasedir/$repo -u $tmbasedir/UserData/$listdir | tee -a $indir/$logdir/siteupdate.log 2>&1 || exit 1
 date
 
 if [[ -x ../nmpfilter/nmpbyregion ]]; then
@@ -341,20 +357,20 @@ if [[ "$graphflag" != "-k" ]]; then
     cd - > /dev/null
 fi
 
-echo "$0: switching to DB copy"
+echo "$0: switching to $dbname DB copy"
 ln -sf $tmwebdir/lib/tm.conf.updating $tmwebdir/lib/tm.conf
 touch $tmwebdir/dbupdating
 
-echo "$0: loading primary DB"
+echo "$0: loading primary $dbname DB"
 date
-mysql --defaults-group-suffix=tmapadmin -u travmapadmin TravelMapping < TravelMapping-$datestr.sql
+mysql --defaults-group-suffix=tmapadmin -u travmapadmin $dbname < $dbname-$datestr.sql
 if [[ -d $tmwebdir/$grapharchives ]]; then
     for archive in $tmwebdir/$grapharchives/*/*.sql; do
-	mysql --defaults-group-suffix=tmapadmin -u travmapadmin TravelMapping < $archive
+	mysql --defaults-group-suffix=tmapadmin -u travmapadmin $dbname < $archive
     done
 fi
 /bin/rm $tmwebdir/dbupdating
-echo "$0: switching to primary DB"
+echo "$0: switching to primary $dbname DB"
 date
 ln -sf $tmwebdir/lib/tm.conf.standard $tmwebdir/lib/tm.conf
 
@@ -384,24 +400,24 @@ rm -f current
 ln -sf updates/$datestr current
 cd - > /dev/null
 
-echo "$0: loading DB copy"
-mysql --defaults-group-suffix=tmapadmin -u travmapadmin TravelMappingCopy < TravelMapping-$datestr.sql
+echo "$0: loading $dbname DB copy"
+mysql --defaults-group-suffix=tmapadmin -u travmapadmin ${dbname}Copy < $dbname-$datestr.sql
 if [[ -d $tmwebdir/$grapharchives ]]; then
     for archive in $tmwebdir/$grapharchives/*/*.sql; do
-	mysql --defaults-group-suffix=tmapadmin -u travmapadmin TravelMappingCopy < $archive
+	mysql --defaults-group-suffix=tmapadmin -u travmapadmin ${dbname}Copy < $archive
     done
 fi
 echo "$0: moving sql file to $instdir"
-mv TravelMapping-$datestr.sql $instdir
+mv $dbname-$datestr.sql $instdir
 
 if [[ "$compress" != "0" ]]; then
-    echo "$0: Compressing TravelMapping-$datestr.sql with $compress $compressflag (backgrounded)"
-    $compress $compressflag $instdir/TravelMapping-$datestr.sql &
+    echo "$0: Compressing $dbname-$datestr.sql with $compress $compressflag (backgrounded)"
+    $compress $compressflag $instdir/$dbname-$datestr.sql &
 fi
 
 if [[ "$mail" == "1" ]]; then
     echo "$0: sending email notification"
-    mailx -s "Travel Mapping Site Update Complete" travelmapping-siteupdates@teresco.org <<EOF
+    mailx -s "Travel Mapping $datatype Site Update Complete" travelmapping-siteupdates@teresco.org <<EOF
 A Travel Mapping site update has just successfully completed.
 The complete log is available at https://travelmapping.net/logs/siteupdate.log .
 Please report any problems to travmap@teresco.org .
