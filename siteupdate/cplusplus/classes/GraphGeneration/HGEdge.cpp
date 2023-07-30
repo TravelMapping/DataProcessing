@@ -1,6 +1,5 @@
 #include "HGEdge.h"
 #include "HGVertex.h"
-#include "HighwayGraph.h"
 #include "../Args/Args.h"
 #include "../HighwaySegment/HighwaySegment.h"
 #include "../HighwaySystem/HighwaySystem.h"
