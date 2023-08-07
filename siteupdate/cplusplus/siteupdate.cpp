@@ -108,54 +108,14 @@ int main(int argc, char *argv[])
 	else	cout << "All .wpt files in " << Args::datapath << "/data processed." << endl;
 
       #ifdef threading_enabled
-	// create NMP lists
 	cout << et.et() << "Searching for near-miss points." << endl;
 	HighwaySystem::it = HighwaySystem::syslist.begin();
 	THREADLOOP thr[t] = thread(NmpSearchThread, t, &list_mtx, &all_waypoints);
 	THREADLOOP thr[t].join();
       #endif
 
-	// Near-miss point log
 	cout << et.et() << "Near-miss point log and tm-master.nmp file." << endl;
-
-	// read in fp file
-	unordered_set<string> nmpfps;
-	file.open(Args::datapath+"/nmpfps.log");
-	while (getline(file, line))
-	{	while (line.size() && (line.back() == ' ' || line.back() == '\r'))
-			line.pop_back(); // trim DOS newlines & whitespace
-		if (line.size())
-		    if (line.size() >= 51)
-			if (!strcmp(line.data()+line.size()-20, " [LOOKS INTENTIONAL]"))
-				nmpfps.emplace(line, 0, line.size()-20);
-			else if (line.size() >= 55 && !strcmp(line.data()+line.size()-24, " [SOME LOOK INTENTIONAL]"))
-				nmpfps.emplace(line, 0, line.size()-24);
-			else	nmpfps.emplace(std::move(line));
-		    else	nmpfps.emplace(std::move(line));
-	}
-	file.close();
-
-	list<string> nmploglines;
-	ofstream nmplog(Args::logfilepath+"/nearmisspoints.log");
-	ofstream nmpnmp(Args::logfilepath+"/tm-master.nmp");
-	for (Waypoint *w : all_waypoints.point_list()) w->nmplogs(nmpfps, nmpnmp, nmploglines);
-	nmpnmp.close();
-
-	// sort and write actual lines to nearmisspoints.log
-	nmploglines.sort();
-	for (string &n : nmploglines) nmplog << n << '\n';
-	nmploglines.clear();
-	nmplog.close();
-
-	// report any unmatched nmpfps.log entries
-	ofstream nmpfpsunmatchedfile(Args::logfilepath+"/nmpfpsunmatched.log");
-	list<string> nmpfplist(nmpfps.begin(), nmpfps.end());
-	nmpfplist.sort();
-	for (string &line : nmpfplist)
-		nmpfpsunmatchedfile << line << '\n';
-	nmpfpsunmatchedfile.close();
-	nmpfplist.clear();
-	nmpfps.clear();
+	all_waypoints.nmplogs();
 
 	// if requested, rewrite data with near-miss points merged in
 	if (Args::nmpmergepath != "" && !Args::errorcheck)

@@ -124,6 +124,50 @@ void WaypointQuadtree::near_miss_waypoints(Waypoint *w, double tolerance)
 	     }
 }
 
+void WaypointQuadtree::nmplogs()
+{	using namespace std;
+	// read in fp file
+	ifstream file;
+	string line;
+	unordered_set<string> nmpfps;
+	file.open(Args::datapath+"/nmpfps.log");
+	while (getline(file, line))
+	{	while (line.size() && (line.back() == ' ' || line.back() == '\r'))
+			line.pop_back(); // trim DOS newlines & whitespace
+		if (line.size())
+		    if (line.size() >= 51)
+			if (!strcmp(line.data()+line.size()-20, " [LOOKS INTENTIONAL]"))
+				nmpfps.emplace(line, 0, line.size()-20);
+			else if (line.size() >= 55 && !strcmp(line.data()+line.size()-24, " [SOME LOOK INTENTIONAL]"))
+				nmpfps.emplace(line, 0, line.size()-24);
+			else	nmpfps.emplace(move(line));
+		    else	nmpfps.emplace(move(line));
+	}
+	file.close();
+
+	list<string> nmploglines;
+	ofstream nmplog(Args::logfilepath+"/nearmisspoints.log");
+	ofstream nmpnmp(Args::logfilepath+"/tm-master.nmp");
+	for (Waypoint *w : point_list()) w->nmplogs(nmpfps, nmpnmp, nmploglines);
+	nmpnmp.close();
+
+	// sort and write actual lines to nearmisspoints.log
+	nmploglines.sort();
+	for (string &n : nmploglines) nmplog << n << '\n';
+	nmploglines.clear();
+	nmplog.close();
+
+	// report any unmatched nmpfps.log entries
+	ofstream nmpfpsunmatchedfile(Args::logfilepath+"/nmpfpsunmatched.log");
+	list<string> nmpfplist(nmpfps.begin(), nmpfps.end());
+	nmpfplist.sort();
+	for (string &line : nmpfplist)
+		nmpfpsunmatchedfile << line << '\n';
+	nmpfpsunmatchedfile.close();
+	nmpfplist.clear();
+	nmpfps.clear();
+}
+
 std::string WaypointQuadtree::str()
 {	char s[139];
 	sprintf(s, "WaypointQuadtree at (%.15g,%.15g) to (%.15g,%.15g)", min_lat, min_lng, max_lat, max_lng);
