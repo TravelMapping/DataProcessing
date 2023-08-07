@@ -323,7 +323,7 @@ echo DataProcessing '@' `git show -s | head -n 1 | cut -f2 -d' '` | tee -a $indi
 echo "$0: creating .time files"
 mkdir -p $tmbasedir/UserData/$timedir
 cd $tmbasedir/UserData/$timedir
-for t in `ls ../$listdir/*.list | sed -r 's~../$listdir/(.*).list~\1.time~'`; do $make -s $t; done
+for t in `ls ../$listdir/*.list | sed -r "s~../$listdir/(.*).list~\1.time~"`; do $make -s $t; done
 cd - > /dev/null
   
 if [[ "$nmpmdir" != "" ]]; then
