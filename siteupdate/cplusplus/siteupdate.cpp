@@ -198,7 +198,7 @@ int main(int argc, char *argv[])
 	// read into the data
 	cout << et.et() << "Finding all .wpt files. " << flush;
 	unordered_set<string> splitsystems;
-	crawl_hwy_data(Args::highwaydatapath+"/hwy_data", splitsystems, 0);
+	crawl_hwy_data(Args::highwaydatapath+"/data", splitsystems, 0);
 	cout << Route::all_wpt_files.size() << " files found." << endl;
 
 	// For finding colocated Waypoints and concurrent segments, we have
@@ -232,14 +232,14 @@ int main(int argc, char *argv[])
 	cout << et.et() << "Finding unprocessed wpt files." << endl;
 	if (Route::all_wpt_files.size())
 	{	ofstream unprocessedfile(Args::logfilepath+"/unprocessedwpts.log");
-		cout << Route::all_wpt_files.size() << " .wpt files in " << Args::highwaydatapath << "/hwy_data not processed, see unprocessedwpts.log." << endl;
+		cout << Route::all_wpt_files.size() << " .wpt files in " << Args::highwaydatapath << "/data not processed, see unprocessedwpts.log." << endl;
 		list<string> all_wpts_list(Route::all_wpt_files.begin(), Route::all_wpt_files.end());
 		all_wpts_list.sort();
-		for (const string &f : all_wpts_list) unprocessedfile << strstr(f.data(), "hwy_data") << '\n';
+		for (const string &f : all_wpts_list) unprocessedfile << strstr(f.data(), "data") << '\n';
 		unprocessedfile.close();
 		Route::all_wpt_files.clear();
 	}
-	else	cout << "All .wpt files in " << Args::highwaydatapath << "/hwy_data processed." << endl;
+	else	cout << "All .wpt files in " << Args::highwaydatapath << "/data processed." << endl;
 
       #ifdef threading_enabled
 	// create NMP lists
