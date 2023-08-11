@@ -10,7 +10,7 @@
 #include "../Waypoint/Waypoint.h"
 #include "../../functions/tmstring.h"
 #include "../../templates/contains.cpp"
-#include <cstring>
+#include <dirent.h>
 
 TravelerList::TravelerList(std::string& travname, ErrorList* el)
 {	// initialize object variables
@@ -148,6 +148,26 @@ TravelerList::TravelerList(std::string& travname, ErrorList* el)
 }
 
 TravelerList::~TravelerList() {delete[] traveler_num;}
+
+void TravelerList::get_ids(ErrorList& el)
+{	ids = move(Args::userlist);
+	if (ids.empty())
+	{	DIR *dir;
+		dirent *ent;
+		if ((dir = opendir (Args::userlistfilepath.data())) != NULL)
+		{	while ((ent = readdir (dir)) != NULL)
+			{	std::string trav(ent->d_name);
+				if (trav.size() > 5 && !strcmp(trav.data()+trav.size()-5, ".list"))
+					ids.push_back(trav);
+			}
+			closedir(dir);
+		}
+		else	el.add_error("Error opening user list file path \""+Args::userlistfilepath+"\". (Not found?)");
+	}
+	else for (std::string& id : ids) id += ".list";
+	ids.sort();
+	tl_it = allusers.alloc(ids.size());
+}
 
 /* Return active mileage across all regions */
 double TravelerList::active_only_miles()

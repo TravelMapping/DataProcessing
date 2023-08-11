@@ -13,16 +13,12 @@ This module defines classes to represent the contents of a
 .wpt file that lists the waypoints for a given highway.
 */
 
-#include <cstring>
-#include <dirent.h>
 #include "classes/Args/Args.h"
 #include "classes/DBFieldLength/DBFieldLength.h"
-#include "classes/ConnectedRoute/ConnectedRoute.h"
 #include "classes/Datacheck/Datacheck.h"
 #include "classes/ElapsedTime/ElapsedTime.h"
 #include "classes/ErrorList/ErrorList.h"
 #include "classes/GraphGeneration/GraphListEntry.h"
-#include "classes/GraphGeneration/HGEdge.h"
 #include "classes/GraphGeneration/HGVertex.h"
 #include "classes/GraphGeneration/HighwayGraph.h"
 #include "classes/GraphGeneration/PlaceRadius.h"
@@ -38,7 +34,6 @@ This module defines classes to represent the contents of a
 #include "functions/route_and_label_logs.h"
 #include "functions/tmstring.h"
 #include "functions/sql_file.h"
-#include "templates/contains.cpp"
 #ifdef threading_enabled
 #include <thread>
 #include "threads/threads.h"
@@ -71,23 +66,7 @@ int main(int argc, char *argv[])
 
 	// Get list of travelers in the system
 	cout << et.et() << "Making list of travelers." << endl;
-	TravelerList::ids = move(Args::userlist);
-	if (TravelerList::ids.empty())
-	{	DIR *dir;
-		dirent *ent;
-		if ((dir = opendir (Args::userlistfilepath.data())) != NULL)
-		{	while ((ent = readdir (dir)) != NULL)
-			{	string trav = ent->d_name;
-				if (trav.size() > 5 && trav.substr(trav.size()-5, string::npos) == ".list")
-					TravelerList::ids.push_back(trav);
-			}
-			closedir(dir);
-		}
-		else	el.add_error("Error opening user list file path \""+Args::userlistfilepath+"\". (Not found?)");
-	}
-	else for (string &id : TravelerList::ids) id += ".list";
-	TravelerList::ids.sort();
-	TravelerList::tl_it = TravelerList::allusers.alloc(TravelerList::ids.size());
+	TravelerList::get_ids(el);
 
 	cout << et.et() << "Reading region, country, and continent descriptions." << endl;
 	Region::read_csvs(el);
