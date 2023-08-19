@@ -638,7 +638,13 @@ int main(int argc, char *argv[])
 	vector<unsigned int> colocate_counts(2,0);
 	if (!Args::errorcheck)
 	{	// compute colocation of waypoints stats
-		cout << et.et() << "Computing waypoint colocation stats, reporting all with 9 or more colocations:" << endl;
+	        cout << et.et() << "Computing waypoint colocation stats";
+	        if (Args::colocationlimit)
+		  {   cout << ", reporting all with " << Args::colocationlimit << " or more colocations:" << endl;
+		  }
+		else
+		  {   cout << "." << endl;
+		  }
 		all_waypoints.final_report(colocate_counts);
 		cout << "Waypoint colocation counts:" << endl;
 		unsigned int unique_locations = 0;

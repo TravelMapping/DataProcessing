@@ -18,6 +18,7 @@
 /* p */ std::string Args::splitregionpath = "";
 /* p */ std::string Args::splitregion, Args::splitregionapp;
 /* U */ std::list<std::string> Args::userlist;
+/*   */ int Args::colocationlimit = 0; /* disabled by default */
 const char* Args::exec;
 
 bool Args::init(int argc, char *argv[])
@@ -40,6 +41,10 @@ bool Args::init(int argc, char *argv[])
 		else if ARG(1, "-c", "--csvstatfilepath")	{csvstatfilepath  = argv[++n];}
 		else if ARG(1, "-g", "--graphfilepath")		{graphfilepath    = argv[++n];}
 		else if ARG(1, "-n", "--nmpmergepath")		{nmpmergepath     = argv[++n];}
+		else if ARG(1, "", "--colocationlimit")
+		{	colocationlimit = strtol(argv[++n], 0, 10);
+			if (colocationlimit<0) colocationlimit=0;
+		}
 		else if ARG(1, "-t", "--numthreads")
 		{	numthreads = strtol(argv[++n], 0, 10);
 			if (numthreads<1) numthreads=1;
@@ -72,6 +77,7 @@ void Args::show_help()
 	std::cout  <<  indent << "        [-n NMPMERGEPATH] [-p SPLITREGIONPATH SPLITREGION]\n";
 	std::cout  <<  indent << "        [-U USERLIST [USERLIST ...]] [-t NUMTHREADS] [-e]\n";
 	std::cout  <<  indent << "        [-T TIMEPRECISION] [-v] [-C]\n";
+	std::cout  <<  indent << "        [--colocationlimit COLOCATIONLIMIT]\n";
 	std::cout  <<  "\n";
 	std::cout  <<  "Create SQL, stats, graphs, and log files from highway and user data for the\n";
 	std::cout  <<  "Travel Mapping project.\n";
@@ -114,4 +120,6 @@ void Args::show_help()
 	std::cout  <<  "		        timestamp readouts\n";
 	std::cout  <<  "  -v, --mt-vertices     Multi-threaded vertex construction\n";
 	std::cout  <<  "  -C, --mt-csvs         Multi-threaded stats csv files\n";
+	std::cout  <<  "  --colocationlimit COLOCATIONLIMIT\n";
+	std::cout  <<  "		        Threshold to report colocation counts\n";
 }
