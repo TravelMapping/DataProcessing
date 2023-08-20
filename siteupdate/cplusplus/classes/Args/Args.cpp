@@ -27,7 +27,7 @@ bool Args::init(int argc, char *argv[])
 
 	// parsing
 	for (unsigned int n = 1; n < argc; n++)
-	#define ARG(N,S,L) ( n+N < argc && !strcmp(argv[n],S) || !strcmp(argv[n],L) )
+	#define ARG(N,S,L) ( n+N < argc && (!strcmp(argv[n],S) || !strcmp(argv[n],L)) )
 	{	     if ARG(0, "-e", "--errorcheck")		 errorcheck = 1;
 		else if ARG(0, "-k", "--skipgraphs")		 skipgraphs = 1;
 		else if ARG(0, "-v", "--mt-vertices")		 mtvertices = 1;
