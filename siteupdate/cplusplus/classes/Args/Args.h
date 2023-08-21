@@ -19,7 +19,7 @@ class Args
 	/* T */ static int timeprecision;
 	/* v */ static bool mtvertices;
 	/* C */ static bool mtcsvfiles;
-	/*   */ static int colocationlimit;
+	/* L */ static int colocationlimit;
 		static const char* exec;
 
 	static bool init(int argc, char *argv[]);
