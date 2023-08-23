@@ -7,7 +7,7 @@
 /* k */ bool Args::skipgraphs = 0;
 /* v */ bool Args::mtvertices = 0;
 /* C */ bool Args::mtcsvfiles = 0;
-/* w */ std::string Args::highwaydatapath = "../../HighwayData";
+/* w */ std::string Args::datapath = "../../HighwayData";
 /* s */ std::string Args::systemsfile = "systems.csv";
 /* u */ std::string Args::userlistfilepath = "../../UserData/list_files";
 /* d */ std::string Args::databasename = "TravelMapping";
@@ -33,7 +33,7 @@ bool Args::init(int argc, char *argv[])
 		else if ARG(0, "-v", "--mt-vertices")		 mtvertices = 1;
 		else if ARG(0, "-C", "--mt-csvs")		 mtcsvfiles = 1;
 		else if ARG(0, "-h", "--help")			{show_help(); return 1;}
-		else if ARG(1, "-w", "--highwaydatapath")	{highwaydatapath  = argv[++n];}
+		else if ARG(1, "-w", "--datapath")		{datapath	  = argv[++n];}
 		else if ARG(1, "-s", "--systemsfile")		{systemsfile      = argv[++n];}
 		else if ARG(1, "-u", "--userlistfilepath")	{userlistfilepath = argv[++n];}
 		else if ARG(1, "-d", "--databasename")		{databasename     = argv[++n];}
@@ -71,7 +71,7 @@ bool Args::init(int argc, char *argv[])
 
 void Args::show_help()
 {	std::string indent(strlen(exec), ' ');
-	std::cout  <<  "usage: " << exec << " [-h] [-w HIGHWAYDATAPATH] [-s SYSTEMSFILE]\n";
+	std::cout  <<  "usage: " << exec << " [-h] [-w DATAPATH] [-s SYSTEMSFILE]\n";
 	std::cout  <<  indent << "        [-u USERLISTFILEPATH] [-d DATABASENAME] [-l LOGFILEPATH]\n";
 	std::cout  <<  indent << "        [-c CSVSTATFILEPATH] [-g GRAPHFILEPATH] [-k]\n";
 	std::cout  <<  indent << "        [-n NMPMERGEPATH] [-p SPLITREGIONPATH SPLITREGION]\n";
@@ -84,9 +84,8 @@ void Args::show_help()
 	std::cout  <<  "\n";
 	std::cout  <<  "optional arguments:\n";
 	std::cout  <<  "  -h, --help            show this help message and exit\n";
-	std::cout  <<  "  -w HIGHWAYDATAPATH, --highwaydatapath HIGHWAYDATAPATH\n";
-	std::cout  <<  "		        path to the root of the highway data directory\n";
-	std::cout  <<  "		        structure\n";
+	std::cout  <<  "  -w DATAPATH, --datapath DATAPATH\n";
+	std::cout  <<  "		        path to the route data repository\n";
 	std::cout  <<  "  -s SYSTEMSFILE, --systemsfile SYSTEMSFILE\n";
 	std::cout  <<  "		        file of highway systems to include\n";
 	std::cout  <<  "  -u USERLISTFILEPATH, --userlistfilepath USERLISTFILEPATH\n";

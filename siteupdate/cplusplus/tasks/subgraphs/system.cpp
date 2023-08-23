@@ -5,7 +5,7 @@ cout << et.et() << "Creating system data graphs." << endl;
 // We will create graph data and a graph file for only a few interesting
 // systems, as many are not useful on their own
 HighwaySystem *h;
-file.open(Args::highwaydatapath+"/graphs/systemgraphs.csv");
+file.open(Args::datapath+"/graphs/systemgraphs.csv");
 getline(file, line);  // ignore header line
 
 // add entries to graph vector

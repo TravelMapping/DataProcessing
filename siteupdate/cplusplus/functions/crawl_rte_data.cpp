@@ -1,11 +1,11 @@
-#include "crawl_hwy_data.h"
+#include "crawl_rte_data.h"
 #include "../classes/Args/Args.h"
 #include "../classes/Route/Route.h"
 #include <cstring>
 #include <dirent.h>
 #include <sys/stat.h>
 
-void crawl_hwy_data(std::string path, std::unordered_set<std::string> &splitsystems, bool get_ss)
+void crawl_rte_data(std::string path, std::unordered_set<std::string> &splitsystems, bool get_ss)
 {	DIR *dir;
 	dirent *ent;
 	struct stat buf;
@@ -19,7 +19,7 @@ void crawl_hwy_data(std::string path, std::unordered_set<std::string> &splitsyst
 				{	splitsystems.insert(ent->d_name);
 					splitsystems.insert(ent->d_name+Args::splitregionapp);
 				}
-				crawl_hwy_data(entry, splitsystems, Args::splitregion==ent->d_name);
+				crawl_rte_data(entry, splitsystems, Args::splitregion==ent->d_name);
 			    }
 			}
 			else if (entry.substr(entry.size()-4) == ".wpt")

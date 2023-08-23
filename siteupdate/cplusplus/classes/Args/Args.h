@@ -3,7 +3,7 @@
 
 class Args
 {	public:
-	/* w */ static std::string highwaydatapath;
+	/* w */ static std::string datapath;
 	/* s */ static std::string systemsfile;
 	/* u */ static std::string userlistfilepath;
 	/* d */ static std::string databasename;

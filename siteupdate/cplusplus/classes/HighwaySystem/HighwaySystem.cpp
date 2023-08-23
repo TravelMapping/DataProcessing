@@ -63,8 +63,8 @@ HighwaySystem::HighwaySystem(std::string &line, ErrorList &el, std::vector<std::
 	std::cout /*<< systemname*/ << '.' << std::flush;
 
 	// read chopped routes CSV
-	file.open(Args::highwaydatapath+"/data/_systems"+"/"+systemname+".csv");
-	if (!file) el.add_error("Could not open "+Args::highwaydatapath+"/data/_systems"+"/"+systemname+".csv");
+	file.open(Args::datapath+"/data/_systems/"+systemname+".csv");
+	if (!file) el.add_error("Could not open "+Args::datapath+"/data/_systems/"+systemname+".csv");
 	else {	getline(file, line); // ignore header line
 		while(getline(file, line))
 		{	// trim DOS newlines & trailing whitespace
@@ -84,8 +84,8 @@ HighwaySystem::HighwaySystem(std::string &line, ErrorList &el, std::vector<std::
 	file.close();
 
 	// read connected routes CSV
-	file.open(Args::highwaydatapath+"/data/_systems"+"/"+systemname+"_con.csv");
-	if (!file) el.add_error("Could not open "+Args::highwaydatapath+"/data/_systems"+"/"+systemname+"_con.csv");
+	file.open(Args::datapath+"/data/_systems/"+systemname+"_con.csv");
+	if (!file) el.add_error("Could not open "+Args::datapath+"/data/_systems/"+systemname+"_con.csv");
 	else {	getline(file, line); // ignore header line
 		while(getline(file, line))
 		{	// trim DOS newlines & trailing whitespace

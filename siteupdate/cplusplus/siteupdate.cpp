@@ -33,7 +33,7 @@ This module defines classes to represent the contents of a
 #include "classes/TravelerList/TravelerList.h"
 #include "classes/Waypoint/Waypoint.h"
 #include "classes/WaypointQuadtree/WaypointQuadtree.h"
-#include "functions/crawl_hwy_data.h"
+#include "functions/crawl_rte_data.h"
 #include "functions/split.h"
 #include "functions/sql_file.h"
 #include "templates/contains.cpp"
@@ -87,8 +87,8 @@ int main(int argc, char *argv[])
 
 	// continents
 	vector<pair<string, string>> continents;
-	file.open(Args::highwaydatapath+"/continents.csv");
-	if (!file) el.add_error("Could not open "+Args::highwaydatapath+"/continents.csv");
+	file.open(Args::datapath+"/continents.csv");
+	if (!file) el.add_error("Could not open "+Args::datapath+"/continents.csv");
 	else {	getline(file, line); // ignore header line
 		while(getline(file, line))
 		{	if (line.size() && line.back() == 0x0D) line.pop_back();	// trim DOS newlines
@@ -122,8 +122,8 @@ int main(int argc, char *argv[])
 
 	// countries
 	vector<pair<string, string>> countries;
-	file.open(Args::highwaydatapath+"/countries.csv");
-	if (!file) el.add_error("Could not open "+Args::highwaydatapath+"/countries.csv");
+	file.open(Args::datapath+"/countries.csv");
+	if (!file) el.add_error("Could not open "+Args::datapath+"/countries.csv");
 	else {	getline(file, line); // ignore header line
 		while(getline(file, line))
 		{	if (line.size() && line.back() == 0x0D) line.pop_back();	// trim DOS newlines
@@ -156,8 +156,8 @@ int main(int argc, char *argv[])
 	countries.emplace_back(pair<string, string>("error", "unrecognized country code"));
 
 	//regions
-	file.open(Args::highwaydatapath+"/regions.csv");
-	if (!file) el.add_error("Could not open "+Args::highwaydatapath+"/regions.csv");
+	file.open(Args::datapath+"/regions.csv");
+	if (!file) el.add_error("Could not open "+Args::datapath+"/regions.csv");
 	else {	getline(file, line); // ignore header line
 		while(getline(file, line))
 		{	if (line.size() && line.back() == 0x0D) line.pop_back();	// trim DOS newlines
@@ -176,9 +176,9 @@ int main(int argc, char *argv[])
 	Region::code_hash[Region::allregions.back()->code] = Region::allregions.back();
 
 	// Create a list of HighwaySystem objects, one per system in systems.csv file
-	cout << et.et() << "Reading systems list in " << Args::highwaydatapath << "/" << Args::systemsfile << "." /*<< endl*/;
-	file.open(Args::highwaydatapath+"/"+Args::systemsfile);
-	if (!file) el.add_error("Could not open "+Args::highwaydatapath+"/"+Args::systemsfile);
+	cout << et.et() << "Reading systems list in " << Args::datapath << "/" << Args::systemsfile << "." /*<< endl*/;
+	file.open(Args::datapath+"/"+Args::systemsfile);
+	if (!file) el.add_error("Could not open "+Args::datapath+"/"+Args::systemsfile);
 	else {	getline(file, line); // ignore header line
 		while(getline(file, line))
 		{	if (line.size() && line.back() == 0x0D) line.pop_back();	// trim DOS newlines
@@ -198,7 +198,7 @@ int main(int argc, char *argv[])
 	// read into the data
 	cout << et.et() << "Finding all .wpt files. " << flush;
 	unordered_set<string> splitsystems;
-	crawl_hwy_data(Args::highwaydatapath+"/data", splitsystems, 0);
+	crawl_rte_data(Args::datapath+"/data", splitsystems, 0);
 	cout << Route::all_wpt_files.size() << " files found." << endl;
 
 	// For finding colocated Waypoints and concurrent segments, we have
@@ -232,14 +232,14 @@ int main(int argc, char *argv[])
 	cout << et.et() << "Finding unprocessed wpt files." << endl;
 	if (Route::all_wpt_files.size())
 	{	ofstream unprocessedfile(Args::logfilepath+"/unprocessedwpts.log");
-		cout << Route::all_wpt_files.size() << " .wpt files in " << Args::highwaydatapath << "/data not processed, see unprocessedwpts.log." << endl;
+		cout << Route::all_wpt_files.size() << " .wpt files in " << Args::datapath << "/data not processed, see unprocessedwpts.log." << endl;
 		list<string> all_wpts_list(Route::all_wpt_files.begin(), Route::all_wpt_files.end());
 		all_wpts_list.sort();
 		for (const string &f : all_wpts_list) unprocessedfile << strstr(f.data(), "data") << '\n';
 		unprocessedfile.close();
 		Route::all_wpt_files.clear();
 	}
-	else	cout << "All .wpt files in " << Args::highwaydatapath << "/data processed." << endl;
+	else	cout << "All .wpt files in " << Args::datapath << "/data processed." << endl;
 
       #ifdef threading_enabled
 	// create NMP lists
@@ -254,7 +254,7 @@ int main(int argc, char *argv[])
 
 	// read in fp file
 	unordered_set<string> nmpfps;
-	file.open(Args::highwaydatapath+"/nmpfps.log");
+	file.open(Args::datapath+"/nmpfps.log");
 	while (getline(file, line))
 	{	while (line.size() && (line.back() == ' ' || line.back() == '\r'))
 			line.pop_back(); // trim DOS newlines & whitespace
@@ -578,7 +578,7 @@ int main(int argc, char *argv[])
       #endif
 
 	cout << et.et() << "Reading datacheckfps.csv." << endl;
-	Datacheck::read_fps(Args::highwaydatapath, el);
+	Datacheck::read_fps(Args::datapath, el);
 
       #ifdef threading_enabled
 	thread sqlthread;

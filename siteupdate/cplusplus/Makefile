@@ -35,7 +35,7 @@ CommonObjects = \
   classes/TravelerList/userlog.o \
   classes/Waypoint/Waypoint.o \
   classes/Waypoint/canonical_waypoint_name/canonical_waypoint_name.o \
-  functions/crawl_hwy_data.o \
+  functions/crawl_rte_data.o \
   functions/double_quotes.o \
   functions/format_clinched_mi.o \
   functions/lower.o \

@@ -11,7 +11,7 @@
 
 void Route::read_wpt(WaypointQuadtree *all_waypoints, ErrorList *el, bool usa_flag)
 {	/* read data into the Route's waypoint list from a .wpt file */
-	std::string filename = Args::highwaydatapath + "/data" + "/" + rg_str + "/" + system->systemname + "/" + root + ".wpt";
+	std::string filename = Args::datapath + "/data/" + rg_str + "/" + system->systemname + "/" + root + ".wpt";
 	Waypoint *last_visible;
 	double vis_dist = 0;
 	char fstr[112];

@@ -1,5 +1,5 @@
 // fully customizable graphs using any combination of PlaceRadius, region(s) & system(s)
-file.open(Args::highwaydatapath+"/graphs/fullcustom.csv");
+file.open(Args::datapath+"/graphs/fullcustom.csv");
 if (file.is_open())
 {	getline(file, line);  // ignore header line
 	#ifndef threading_enabled
