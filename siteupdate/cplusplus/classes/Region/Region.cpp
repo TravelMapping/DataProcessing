@@ -1,7 +1,7 @@
 #include "Region.h"
 #include "../DBFieldLength/DBFieldLength.h"
 #include "../ErrorList/ErrorList.h"
-#include "../../functions/split.h"
+#include "../../functions/tmstring.h"
 
 std::pair<std::string, std::string> *country_or_continent_by_code(std::string code, std::vector<std::pair<std::string, std::string>> &pair_vector)
 {	for (std::pair<std::string, std::string>& c : pair_vector)
@@ -9,14 +9,13 @@ std::pair<std::string, std::string> *country_or_continent_by_code(std::string co
 	return 0;
 }
 
-std::vector<Region*> Region::allregions;
-std::vector<Region*>::iterator Region::rg_it;
+TMArray<Region> Region::allregions;
+Region* Region::it;
 std::unordered_map<std::string, Region*> Region::code_hash;
+std::vector<std::pair<std::string, std::string>> Region::continents;
+std::vector<std::pair<std::string, std::string>> Region::countries;
 
-Region::Region (const std::string &line,
-		std::vector<std::pair<std::string, std::string>> &countries,
-		std::vector<std::pair<std::string, std::string>> &continents,
-		ErrorList &el)
+Region::Region (const std::string &line, ErrorList &el)
 {	active_only_mileage = 0;
 	active_preview_mileage = 0;
 	overall_mileage = 0;
@@ -29,10 +28,8 @@ Region::Region (const std::string &line,
 	{	el.add_error("Could not parse regions.csv line: [" + line + "], expected 5 fields, found " + std::to_string(NumFields));
 		continent = country_or_continent_by_code("error", continents);
 		country   = country_or_continent_by_code("error", countries);
-		is_valid = 0;
-		return;
+		throw 0xBAD;
 	}
-	is_valid = 1;
 	// code
 	if (code.size() > DBFieldLength::regionCode)
 		el.add_error("Region code > " + std::to_string(DBFieldLength::regionCode)
@@ -71,8 +68,4 @@ void Region::add_vertex(HGVertex* v, Waypoint* w)
 {	mtx.lock();
 	vertices.emplace_back(v,w);
 	mtx.unlock();
-}
-
-bool sort_regions_by_code(const Region *r1, const Region *r2)
-{	return r1->code < r2->code;
 }

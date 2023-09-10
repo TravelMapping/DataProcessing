@@ -2,6 +2,7 @@ class ErrorList;
 class HGVertex;
 class Route;
 class Waypoint;
+#include "../../templates/TMArray.cpp"
 #include <mutex>
 #include <string>
 #include <unordered_map>
@@ -47,21 +48,19 @@ class Region
 	std::mutex mtx;
 	std::vector<Route*> routes;
 	std::vector<std::pair<HGVertex*,Waypoint*>> vertices;
-	bool is_valid;
 
-	static std::vector<Region*> allregions;
-	static std::vector<Region*>::iterator rg_it;
+	static TMArray<Region> allregions;
+	static Region* it;
 	static std::unordered_map<std::string, Region*> code_hash;
+	static std::vector<std::pair<std::string, std::string>> continents;
+	static std::vector<std::pair<std::string, std::string>> countries;
 
-	Region (const std::string&,
-		std::vector<std::pair<std::string, std::string>>&,
-		std::vector<std::pair<std::string, std::string>>&,
-		ErrorList&);
+	Region (const std::string&, ErrorList&);
 
 	void compute_stats();
 	std::string &country_code();
 	std::string &continent_code();
 	void add_vertex(HGVertex*, Waypoint*);
+	static void read_csvs(ErrorList&);
+	static void cccsv(ErrorList&, std::string, std::string, size_t, size_t, std::vector<std::pair<std::string, std::string>>&);
 };
-
-bool sort_regions_by_code(const Region*, const Region*);

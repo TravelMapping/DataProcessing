@@ -9,12 +9,11 @@ void allbyregionactiveonly(std::mutex* mtx, double total_mi)
 	std::ofstream allfile(Args::csvstatfilepath + "/allbyregionactiveonly.csv");
 	allfile << "Traveler,Total";
 	std::list<Region*> regions;
-	for (Region* r : Region::allregions)
-	  if (r->active_only_mileage)
-	    regions.push_back(r);
-	regions.sort(sort_regions_by_code);
-	for (Region *region : regions)
-		allfile << ',' << region->code;
+	for (Region& r : Region::allregions)
+	  if (r.active_only_mileage)
+	  {	regions.push_back(&r);
+		allfile << ',' << r.code;
+	  }
 	allfile << '\n';
 	for (TravelerList& t : TravelerList::allusers)
 	{	double t_total_mi = 0;

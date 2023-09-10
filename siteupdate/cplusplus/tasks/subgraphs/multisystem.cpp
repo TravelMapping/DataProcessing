@@ -28,12 +28,16 @@ while (getline(file, line))
 	systems = new list<HighwaySystem*>;
 		  // deleted @ end of HighwayGraph::write_subgraphs_tmg
 	for(char* s = strtok(fields[2], ","); s; s = strtok(0, ","))
-	  for (HighwaySystem *h : HighwaySystem::syslist)
-	    if (s == h->systemname)
-	    {	systems->push_back(h);
-		break;
-	    }
-	GraphListEntry::add_group(fields[1], fields[0], 'S', nullptr, systems, nullptr);
+	{	for (h = HighwaySystem::syslist.data; h < sys_end; h++)
+		  if (s == h->systemname)
+		  {	systems->push_back(h);
+			break;
+		  }
+		if (h == sys_end)
+			el.add_error("unrecognized system code "+string(s)+" in multisystem.csv line: "+line);
+	}
+	if (systems->size()) GraphListEntry::add_group(fields[1], fields[0], 'S', nullptr, systems, nullptr);
+	else delete systems;
 	delete[] cline;
 }
 file.close();

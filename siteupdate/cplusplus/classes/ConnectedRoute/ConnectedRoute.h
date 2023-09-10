@@ -22,5 +22,6 @@ class ConnectedRoute
 
 	std::string connected_rtes_line();
 	std::string readable_name();
+	size_t index();
 	//std::string list_lines(int, int, std::string, size_t);
 };

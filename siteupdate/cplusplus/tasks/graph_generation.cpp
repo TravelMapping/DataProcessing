@@ -36,6 +36,7 @@ else {	list<Region*> *regions;
       #else
 	cout << et.et() << "Setting up subgraphs." << endl;
       #endif
+	HighwaySystem *h, *const sys_end = HighwaySystem::syslist.end();
 	#include "subgraphs/continent.cpp"
 	#include "subgraphs/multisystem.cpp"
 	#include "subgraphs/system.cpp"

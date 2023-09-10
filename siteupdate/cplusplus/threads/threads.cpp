@@ -6,6 +6,7 @@
 #include "../classes/Region/Region.h"
 #include "../classes/Route/Route.h"
 #include "../classes/TravelerList/TravelerList.h"
+#include "../classes/Waypoint/Waypoint.h"
 #include "../classes/WaypointQuadtree/WaypointQuadtree.h"
 #include <iostream>
 

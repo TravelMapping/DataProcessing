@@ -4,8 +4,7 @@
 #include "../HighwaySystem/HighwaySystem.h"
 #include "../Region/Region.h"
 #include "../Route/Route.h"
-#include "../../functions/format_clinched_mi.h"
-#include <cstring>
+#include "../../functions/tmstring.h"
 #include <fstream>
 
 void TravelerList::userlog(const double total_active_only_miles, const double total_active_preview_miles)
@@ -20,7 +19,7 @@ void TravelerList::userlog(const double total_active_only_miles, const double to
 	std::list<Region*> travregions;
 	for (std::pair<Region* const, double> &rm : active_preview_mileage_by_region)
 		travregions.push_back(rm.first);
-	travregions.sort(sort_regions_by_code);
+	travregions.sort();
 	for (Region *region : travregions)
 	{	double t_active_miles = 0;
 		if (active_only_mileage_by_region.count(region))
@@ -35,7 +34,7 @@ void TravelerList::userlog(const double total_active_only_miles, const double to
 	size_t index = this - allusers.data;
 
 	// stats by system
-	for (HighwaySystem *h : HighwaySystem::syslist)
+	for (HighwaySystem *h = HighwaySystem::syslist.data, *end = HighwaySystem::syslist.end(); h != end; h++)
 	  if (h->active_or_preview())
 	  {	if (system_region_mileages.count(h))
 		{	double t_system_overall = system_miles(h);
@@ -46,16 +45,15 @@ void TravelerList::userlog(const double total_active_only_miles, const double to
 			// stats by region covered by system, always in csmbr for
 			// the DB, but add to logs only if it's been traveled at
 			// all and it covers multiple regions
-			auto& systemname = h->systemname;
 			auto& sysmbr = h->mileage_by_region;
-			log << "System " << systemname << " (" << h->level_name() << ") overall: "
+			log << "System " << h->systemname << " (" << h->level_name() << ") overall: "
 			    << format_clinched_mi(fstr, t_system_overall, h->total_mileage()) << '\n';
 			if (sysmbr.size() > 1)
-			{	log << "System " << systemname << " by region:\n";
+			{	log << "System " << h->systemname << " by region:\n";
 				std::list<Region*> sysregions;
 				for (std::pair<Region* const, double> &rm : sysmbr)
 					sysregions.push_back(rm.first);
-				sysregions.sort(sort_regions_by_code);
+				sysregions.sort();
 				for (Region *region : sysregions)
 				{	double system_region_mileage = 0;
 					auto it = system_region_mileages.at(h).find(region);
@@ -69,11 +67,11 @@ void TravelerList::userlog(const double total_active_only_miles, const double to
 			// by each segment crossing region boundaries if applicable
 			unsigned int num_con_rtes_traveled = 0;
 			unsigned int num_con_rtes_clinched = 0;
-			log << "System " << systemname << " by route (traveled routes only):\n";
-			for (ConnectedRoute *cr : h->con_route_list)
+			log << "System " << h->systemname << " by route (traveled routes only):\n";
+			for (ConnectedRoute& cr : h->con_routes)
 			{	double con_clinched_miles = 0;
 				std::vector<std::pair<Route*, double>> chop_mi;
-				auto& roots = cr->roots;
+				auto& roots = cr.roots;
 				for (Route *r : roots)
 				{	// find traveled mileage on this by this user
 					double miles = r->clinched_by_traveler_index(index);
@@ -85,9 +83,9 @@ void TravelerList::userlog(const double total_active_only_miles, const double to
 				}
 				if (con_clinched_miles)
 				{	num_con_rtes_traveled += 1;
-					num_con_rtes_clinched += (con_clinched_miles == cr->mileage);
-					ccr_values.emplace_back(cr, con_clinched_miles);
-					log << cr->readable_name() << ": " << format_clinched_mi(fstr, con_clinched_miles, cr->mileage) << '\n';
+					num_con_rtes_clinched += (con_clinched_miles == cr.mileage);
+					ccr_values.emplace_back(&cr, con_clinched_miles);
+					log << cr.readable_name() << ": " << format_clinched_mi(fstr, con_clinched_miles, cr.mileage) << '\n';
 					if (roots.size() == 1)
 						log << " (" << roots[0]->readable_name() << " only)\n";
 					else {	for (auto& rm : chop_mi)
@@ -97,14 +95,14 @@ void TravelerList::userlog(const double total_active_only_miles, const double to
 					     }
 				}
 			}
-			if (num_con_rtes_clinched == h->con_route_list.size())
+			if (num_con_rtes_clinched == h->con_routes.size)
 			  if (h->active())
 				active_systems_clinched++;
 			  else	preview_systems_clinched++;
 			sprintf(fstr, " connected routes traveled: %i of %i (%.1f%%), clinched: %i of %i (%.1f%%).",
-				num_con_rtes_traveled, (int)h->con_route_list.size(), 100*(double)num_con_rtes_traveled/h->con_route_list.size(),
-				num_con_rtes_clinched, (int)h->con_route_list.size(), 100*(double)num_con_rtes_clinched/h->con_route_list.size());
-			log << "System " << systemname << fstr << '\n';
+				num_con_rtes_traveled, (int)h->con_routes.size, 100*(double)num_con_rtes_traveled/h->con_routes.size,
+				num_con_rtes_clinched, (int)h->con_routes.size, 100*(double)num_con_rtes_clinched/h->con_routes.size);
+			log << "System " << h->systemname << fstr << '\n';
 		}
 	  }
 

@@ -37,7 +37,7 @@ class Waypoint
 	bool same_coords(Waypoint *);
 	bool nearby(Waypoint *, double);
 	double distance_to(Waypoint *);
-	double angle(Waypoint *, Waypoint *);
+	double angle();
 	std::string canonical_waypoint_name(HighwayGraph*);
 	std::string simple_waypoint_name();
 	bool is_or_colocated_with_active_or_preview();
@@ -54,7 +54,7 @@ class Waypoint
 	Route* coloc_banner_matches_abbrev();
 
 	// Datacheck
-	void distance_update(char *, double &, Waypoint *);
+	void invalid_url(const char* const, const char* const);
 	void label_invalid_char();
 	void out_of_bounds(char *);
 	// checks for visible points

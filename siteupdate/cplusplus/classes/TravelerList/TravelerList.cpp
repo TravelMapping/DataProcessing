@@ -8,7 +8,7 @@
 #include "../Region/Region.h"
 #include "../Route/Route.h"
 #include "../Waypoint/Waypoint.h"
-#include "../../functions/upper.h"
+#include "../../functions/tmstring.h"
 #include "../../templates/contains.cpp"
 #include <cstring>
 

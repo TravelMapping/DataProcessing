@@ -1,16 +1,12 @@
-void StatsCsvThread(unsigned int id, std::mutex* hs_mtx)
+void StatsCsvThread(unsigned int id, std::mutex* mtx)
 {	//printf("Starting StatsCsvThread %02i\n", id); fflush(stdout);
 	while (HighwaySystem::it != HighwaySystem::syslist.end())
-	{	hs_mtx->lock();
+	{	mtx->lock();
 		if (HighwaySystem::it == HighwaySystem::syslist.end())
-		{	hs_mtx->unlock();
-			return;
-		}
-		HighwaySystem *h(*HighwaySystem::it);
-		//printf("StatsCsvThread %02i assigned %s\n", id, h->systemname.data()); fflush(stdout);
-		(HighwaySystem::it)++;
-		//printf("StatsCsvThread %02i (HighwaySystem::it)++\n", id); fflush(stdout);
-		hs_mtx->unlock();
+			return mtx->unlock();
+		HighwaySystem *h = HighwaySystem::it++;
+		mtx->unlock();
+
 		h->stats_csv();
 	}
 }

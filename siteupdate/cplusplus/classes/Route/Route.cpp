@@ -9,10 +9,7 @@
 #include "../Region/Region.h"
 #include "../TravelerList/TravelerList.h"
 #include "../Waypoint/Waypoint.h"
-#include "../../functions/lower.h"
-#include "../../functions/split.h"
-#include "../../functions/upper.h"
-#include <cstring>
+#include "../../functions/tmstring.h"
 #include <sys/stat.h>
 
 std::unordered_map<std::string, Route*> Route::root_hash, Route::pri_list_hash, Route::alt_list_hash;
@@ -25,7 +22,6 @@ Route::Route(std::string &line, HighwaySystem *sys, ErrorList &el)
 	con_route = 0;
 	mileage = 0;
 	rootOrder = -1; // order within connected route
-	region = 0;	// if this stays 0, setup has failed due to bad .csv data
 	bools = 0;
 	last_update = 0;
 
@@ -37,8 +33,11 @@ Route::Route(std::string &line, HighwaySystem *sys, ErrorList &el)
 	if (NumFields != 8)
 	{	el.add_error("Could not parse " + sys->systemname
 			   + ".csv line: [" + line + "], expected 8 fields, found " + std::to_string(NumFields));
-		root.clear(); // in case it was filled by a line with 7 or 9+ fields
-		return;
+		throw 0xBAD;
+	}
+	if (root.empty())
+	{	el.add_error("Unable to find root in " + sys->systemname +".csv line: ["+line+"]");
+		throw 0xBAD;
 	}
 	// system
 	system = sys;
@@ -113,19 +112,12 @@ Route::Route(std::string &line, HighwaySystem *sys, ErrorList &el)
 
 std::string Route::str()
 {	/* printable version of the object */
-	return root + " (" + std::to_string(point_list.size()) + " total points)";
+	return root + " (" + std::to_string(points.size) + " total points)";
 }
 
 void Route::print_route()
-{	for (Waypoint *point : point_list)
-		std::cout << point->str() << std::endl;
-}
-
-HighwaySegment* Route::find_segment_by_waypoints(Waypoint *w1, Waypoint *w2)
-{	for (HighwaySegment *s : segment_list)
-	  if (s->waypoint1 == w1 && s->waypoint2 == w2 || s->waypoint1 == w2 && s->waypoint2 == w1)
-	    return s;
-	return 0;
+{	for (Waypoint& point : points)
+		std::cout << point.str() << std::endl;
 }
 
 std::string Route::chopped_rtes_line()
@@ -160,20 +152,20 @@ std::string Route::name_no_abbrev()
 
 double Route::clinched_by_traveler_index(size_t t)
 {	double miles = 0;
-	for (HighwaySegment *s : segment_list)
-		if (s->clinched_by[t]) miles += s->length;
+	for (HighwaySegment& s : segments)
+		if (s.clinched_by[t]) miles += s.length;
 	return miles;
 }
 
 /*std::string Route::list_line(int beg, int end)
 {	/* Return a .list file line from (beg) to (end),
-	these being indices to the point_list vector.
+	these being indices to the points array.
 	These values can be "out-of-bounds" when getting lines
 	for connected routes. If so, truncate or return "". */
-/*	if (beg >= int(point_list.size()) || end <= 0) return "";
-	if (end >= int(point_list.size())) end = point_list.size()-1;
+/*	if (beg >= int(points.size) || end <= 0) return "";
+	if (end >= int(points.size)) end = points.size-1;
 	if (beg < 0) beg = 0;
-	return readable_name() + " " + point_list[beg]->label + " " + point_list[end]->label;
+	return readable_name() + " " + points[beg].label + " " + points[end].label;
 }//*/
 
 void Route::write_nmp_merged()
@@ -184,22 +176,22 @@ void Route::write_nmp_merged()
 	filename += "/" + root + ".wpt";
 	std::ofstream wptfile(filename);
 	char fstr[12];
-	for (Waypoint *w : point_list)
-	{	wptfile << w->label << ' ';
-		for (std::string &a : w->alt_labels) wptfile << a << ' ';
-		if (w->near_miss_points.empty())
+	for (Waypoint& w : points)
+	{	wptfile << w.label << ' ';
+		for (std::string &a : w.alt_labels) wptfile << a << ' ';
+		if (w.near_miss_points.empty())
 		     {	wptfile << "http://www.openstreetmap.org/?lat=";
-			sprintf(fstr, "%.6f", w->lat);
+			sprintf(fstr, "%.6f", w.lat);
 			wptfile << fstr << "&lon=";
-			sprintf(fstr, "%.6f", w->lng);
+			sprintf(fstr, "%.6f", w.lng);
 			wptfile << fstr << '\n';
 		     }
 		else {	// for now, arbitrarily choose the northernmost
 			// latitude and easternmost longitude values in the
 			// list and denote a "merged" point with the https
-			double lat = w->lat;
-			double lng = w->lng;
-			for (Waypoint *other_w : w->near_miss_points)
+			double lat = w.lat;
+			double lng = w.lng;
+			for (Waypoint *other_w : w.near_miss_points)
 			{	if (other_w->lat > lat)	lat = other_w->lat;
 				if (other_w->lng > lng)	lng = other_w->lng;
 			}
@@ -208,18 +200,22 @@ void Route::write_nmp_merged()
 			wptfile << fstr << "&lon=";
 			sprintf(fstr, "%.6f", lng);
 			wptfile << fstr << '\n';
-			w->near_miss_points.clear();
+			w.near_miss_points.clear();
 		     }
 	}
 	wptfile.close();
 }
 
+size_t Route::index()
+{	return this - system->routes.data;
+}
+
 Waypoint* Route::con_beg()
-{	return is_reversed() ? point_list.back() : point_list.front();
+{	return is_reversed() ? &points.back() : points.data;
 }
 
 Waypoint* Route::con_end()
-{	return is_reversed() ? point_list.front() : point_list.back();
+{	return is_reversed() ? points.data : &points.back();
 }
 
 void Route::set_reversed()
@@ -246,8 +242,8 @@ void Route::con_mismatch()
 	if (banner != con_route->banner)
 	  if (abbrev.size() && abbrev == con_route->banner)
 		Datacheck::add(this, "", "", "", "ABBREV_AS_CON_BANNER", system->systemname + "," +
-			       std::to_string(system->route_index(this)+2) + ',' + 
-			       std::to_string(system->con_route_index(con_route)+2));
+			       std::to_string(index()+2) + ',' + 
+			       std::to_string(con_route->index()+2));
 	  else	Datacheck::add(this, "", "", "", "CON_BANNER_MISMATCH",
 			       (banner.size() ? banner : "(blank)") + " <-> " +
 			       (con_route->banner.size() ? con_route->banner : "(blank)"));

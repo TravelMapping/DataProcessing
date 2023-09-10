@@ -1,3 +1,6 @@
+#ifndef TMARRAY
+#define TMARRAY
+
 #include <cstdlib>
 
 template <class item>
@@ -20,4 +23,6 @@ struct TMArray
 			const {return data[i];}
 	item* begin()	const {return data;}
 	item* end()	const {return data+size;}
+	item& back()	const {return data[size-1];}
 };
+#endif

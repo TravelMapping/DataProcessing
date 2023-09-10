@@ -1,20 +1,20 @@
-// continent graphs -- any continent with data will be created
+// continent graphs -- any continent with active or preview mileage will be created
 #ifndef threading_enabled
 cout << et.et() << "Creating continent graphs." << endl;
 #endif
 // add entries to graph vector
-for (size_t c = 0; c < continents.size()-1; c++)
+for (auto c = Region::continents.data(), dummy = c+Region::continents.size()-1; c < dummy; c++)
 {	regions = new list<Region*>;
 		  // deleted @ end of HighwayGraph::write_subgraphs_tmg
-	for (Region* r : Region::allregions)
+	for (Region& r : Region::allregions)
 	  // does it match this continent and have routes?
-	  if (&continents[c] == r->continent && r->active_preview_mileage)
-	    regions->push_back(r);
+	  if (c == r.continent && r.active_preview_mileage)
+	    regions->push_back(&r);
 	// generate for any continent with at least 1 region with mileage
 	if (regions->size() < 1) delete regions;
 	else {	GraphListEntry::add_group(
-			continents[c].first + "-continent",
-			continents[c].second + " All Routes on Continent",
+			c->first + "-continent",
+			c->second + " All Routes on Continent",
 			'C', regions, nullptr, nullptr);
 	     }
 }

@@ -2372,7 +2372,7 @@ class HighwayGraph:
                         HGEdge(vertex=v, fmt_mask=2)
         print("!")
 
-    def matching_vertices_and_edges(self, qt, regions, systems, placeradius, rg_vlist_hash):
+    def matching_vertices_and_edges(self, qt, regions, systems, placeradius):
         # return seven items:
         # mvset		 # a set of vertices, optionally restricted by region or system or placeradius area
         cv_count = 0	 # the number of collapsed vertices in this set
@@ -2387,8 +2387,11 @@ class HighwayGraph:
         svset = set()	# union of all sets in systems
         if regions is not None:
             for r in regions:
-                for v in rg_vlist_hash[r]:
-                  rvset.add(v)
+                  try:
+                    for v in self.rg_vlist_hash[r]:
+                      rvset.add(v)
+                  except KeyError:
+                      pass
         if systems is not None:
             for h in systems:
                 for v in h.vertices:
@@ -2564,7 +2567,7 @@ class HighwayGraph:
         simplefile = open(path+root+"-simple.tmg","w",encoding='utf-8')
         collapfile = open(path+root+".tmg","w",encoding='utf-8')
         travelfile = open(path+root+"-traveled.tmg","w",encoding='utf-8')
-        (mv, cv_count, tv_count, mse, mce, mte, traveler_lists) = self.matching_vertices_and_edges(qt, regions, systems, placeradius, self.rg_vlist_hash)
+        (mv, cv_count, tv_count, mse, mce, mte, traveler_lists) = self.matching_vertices_and_edges(qt, regions, systems, placeradius)
         """if len(traveler_lists) == 0:
             print("\n\nNo travelers in " + root + "\n", flush=True)#"""
         # assign traveler numbers
@@ -3918,15 +3921,15 @@ else:
         for hs in highway_systems:
             if hs.systemname == hname.strip():
                 h = hs
+                print(h.systemname + ' ', end="",flush=True)
+                graph_data.write_subgraphs_tmg(graph_list, args.graphfilepath + "/", h.systemname+"-system",
+                                               h.systemname + " (" + h.fullname + ")", "system",
+                                               None, [ h ], None, all_waypoints)
                 break
-        if h is not None:
-            print(h.systemname + ' ', end="",flush=True)
-            graph_data.write_subgraphs_tmg(graph_list, args.graphfilepath + "/", h.systemname+"-system",
-                                           h.systemname + " (" + h.fullname + ")", "system",
-                                           None, [ h ], None, all_waypoints)
-    if h is not None:
-        graph_types.append(['system', 'Routes Within a Single Highway System',
-                            'These graphs contain the routes within a single highway system and are not restricted by region.'])
+        if h is None:
+            el.add_error("unrecognized system code "+hname.strip()+" in systemgraphs.csv")
+    graph_types.append(['system', 'Routes Within a Single Highway System',
+                        'These graphs contain the routes within a single highway system and are not restricted by region.'])
     print("!")
 
 
@@ -3952,15 +3955,20 @@ else:
         if len(fields[1].encode('utf-8')) > DBFieldLength.graphFilename-14:
             el.add_error("title > " + str(DBFieldLength.graphFilename-14) +
                          " bytes in multisystem.csv line: " + line)
-        print(fields[1] + ' ', end="", flush=True)
         systems = []
-        selected_systems = fields[2].split(",")
-        for h in highway_systems:
-            if h.systemname in selected_systems:
-                systems.append(h)
-        graph_data.write_subgraphs_tmg(graph_list, args.graphfilepath + "/", fields[1],
-                                       fields[0], "multisystem",
-                                       None, systems, None, all_waypoints)
+        for hname in fields[2].split(","):
+            h = None
+            for hs in highway_systems:
+                if hs.systemname == hname:
+                    h = hs
+                    systems.append(h)
+            if h is None:
+                el.add_error("unrecognized system code "+hname+" in multisystem.csv line: "+line)
+        if len(systems):
+            print(fields[1] + ' ', end="", flush=True)
+            graph_data.write_subgraphs_tmg(graph_list, args.graphfilepath + "/", fields[1],
+                                           fields[0], "multisystem",
+                                           None, systems, None, all_waypoints)
     graph_types.append(['multisystem', 'Routes Within Multiple Highway Systems',
                         'These graphs contain the routes within a set of highway systems.'])
     print("!")
@@ -3990,13 +3998,15 @@ else:
                          " bytes in multiregion.csv line: " + line)
         print(fields[1] + ' ', end="", flush=True)
         region_list = []
-        selected_regions = fields[2].split(",")
-        for r in all_regions:
-            if r in selected_regions and r in active_preview_mileage_by_region:
+        for r in fields[2].split(","):
+            if r in all_regions:
                 region_list.append(r)
-        graph_data.write_subgraphs_tmg(graph_list, args.graphfilepath + "/", fields[1],
-                                       fields[0], "multiregion",
-                                       region_list, None, None, all_waypoints)
+            else:
+                el.add_error("unrecognized region code "+r+" in multiregion.csv line: "+line)
+        if len(region_list):
+            graph_data.write_subgraphs_tmg(graph_list, args.graphfilepath + "/", fields[1],
+                                           fields[0], "multiregion",
+                                           region_list, None, None, all_waypoints)
     graph_types.append(['multiregion', 'Routes Within Multiple Regions',
                         'These graphs contain the routes within a set of regions.'])
     print("!")
@@ -4067,6 +4077,7 @@ else:
             if len(fields[1].encode('utf-8')) > DBFieldLength.graphFilename-14:
                 el.add_error("title > " + str(DBFieldLength.graphFilename-14) +
                              " bytes in fullcustom.csv line: " + line)
+            ok = True
 
             # 3 columns of PlaceRadius data
             placeradius = None
@@ -4077,17 +4088,17 @@ else:
                     fields[2] = float(fields[2])
                 except ValueError:
                     el.add_error("invalid lat in fullcustom.csv line: " + line)
-                    fields[2] = 0.0
+                    ok = False
                 try:
                     fields[3] = float(fields[3])
                 except ValueError:
                     el.add_error("invalid lng in fullcustom.csv line: " + line)
-                    fields[3] = 0.0
+                    ok = False
                 try:
                     fields[4] = float(fields[4])
                 except ValueError:
                     el.add_error("invalid radius in fullcustom.csv line: " + line)
-                    fields[4] = 1
+                    ok = False
                 else:
                     if fields[4] <= 0:
                         el.add_error("invalid radius in fullcustom.csv line: " + line)
@@ -4099,7 +4110,7 @@ else:
             elif blanks != 3:
                 el.add_error("lat/lng/radius error in fullcustom.csv line: [" + \
                              line + "], either all or none must be populated");
-                continue
+                ok = False
             elif fields[5] == "" and fields[6] == "":
                 el.add_error("Disallowed full custom graph in line: [" + \
                              line + "], functionally identical to tm-master");
@@ -4110,23 +4121,34 @@ else:
                 region_list = None
             else:
                 region_list = []
-                for r in all_regions:
-                    if r in fields[5].split(","):
+                for r in fields[5].split(","):
+                    if r in all_regions:
                         region_list.append(r)
+                    else:
+                        el.add_error("unrecognized region code "+r+" in fullcustom.csv line: "+line)
+                        ok = False
 
             # systemlist
             if fields[6] == "":
                 systems = None
             else:
                 systems = []
-                for h in highway_systems:
-                    if h.systemname in fields[6].split(","):
-                        systems.append(h)
+                for hname in fields[6].split(","):
+                    h = None
+                    for hs in highway_systems:
+                        if hs.systemname == hname:
+                            h = hs
+                            systems.append(h)
+                            break
+                    if h is None:
+                        el.add_error("unrecognized system code "+hname+" in fullcustom.csv line: "+line)
+                        ok = False
 
-            print(fields[1] + ' ', end="", flush=True)
-            graph_data.write_subgraphs_tmg(graph_list, args.graphfilepath + "/", fields[1],
-                                           fields[0], "fullcustom", region_list,
-                                           systems, placeradius, all_waypoints)
+            if ok:
+                print(fields[1] + ' ', end="", flush=True)
+                graph_data.write_subgraphs_tmg(graph_list, args.graphfilepath + "/", fields[1],
+                                               fields[0], "fullcustom", region_list,
+                                               systems, placeradius, all_waypoints)
         graph_types.append(['fullcustom', 'Full Custom Graphs',
                         'These graphs can be restricted by any combination of one more more regions and one or more highway systems, and optionally within the given distance radius of a given place.'])
         print("!")

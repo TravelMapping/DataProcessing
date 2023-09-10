@@ -3,7 +3,7 @@ class ErrorList;
 class HGVertex;
 class Region;
 class Route;
-#include <list>
+#include "../../templates/TMArray.cpp"
 #include <mutex>
 #include <unordered_map>
 #include <unordered_set>
@@ -34,20 +34,29 @@ class HighwaySystem
 	short tier;
 	char level; // 'a' for active, 'p' for preview, 'd' for devel
 
-	std::vector<Route*> route_list;
-	std::vector<ConnectedRoute*> con_route_list;
+	TMArray<Route> routes;
+	TMArray<ConnectedRoute> con_routes;
+      #ifdef Ubuntu_16_04_7_LTS
+	// If this padding is omitted, compute_stats runs about 76% as fast,
+	// (69% on siteupdateST) with both clang and gcc. ~74-82% the speed
+	// of 79fbeb3 *before* the TMArray conversion. It's not clear why --
+	// while this does pad objects out to 384 bytes, exactly 6 cache lines,
+	// 1. No attempt to over-align the data has been made.
+	// 2. Dropping below 384 B hurts performance, but not going above.
+	// Nonetheless, the benchmarks are clear & consistent.
+	size_t padding;
+      #endif
 	std::vector<HGVertex*> vertices;
 	std::unordered_map<Region*, double> mileage_by_region;
 	std::unordered_set<std::string>listnamesinuse, unusedaltroutenames;
 	std::mutex mtx;
-	bool is_valid;
 
-	static std::list<HighwaySystem*> syslist;
-	static std::list<HighwaySystem*>::iterator it;
+	static TMArray<HighwaySystem> syslist;
+	static HighwaySystem* it;
 	static unsigned int num_active;
 	static unsigned int num_preview;
 
-	HighwaySystem(std::string &, ErrorList &, std::vector<std::pair<std::string,std::string>> &);
+	HighwaySystem(std::string &, ErrorList &);
 
 	bool active();			// Return whether this is an active system
 	bool preview();			// Return whether this is a preview system
@@ -55,11 +64,11 @@ class HighwaySystem
 	bool devel();			// Return whether this is a development system
 	double total_mileage();		// Return total system mileage across all regions
 	std::string level_name();	// Return full "active" / "preview" / "devel" string
-	size_t route_index(Route*);	// Return index of a specified Route* within route_list
-	size_t con_route_index(ConnectedRoute*); // same thing for ConnectedRoutes
 	void route_integrity(ErrorList& el);
 	void add_vertex(HGVertex*);
 	void stats_csv();
 	void mark_route_in_use(std::string&);
 	void mark_routes_in_use(std::string&, std::string&);
+
+	static void systems_csv(ErrorList&);
 };

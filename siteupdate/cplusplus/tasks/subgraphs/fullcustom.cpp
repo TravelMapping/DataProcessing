@@ -24,6 +24,7 @@ if (file.is_open())
 		if (root.size() > DBFieldLength::graphFilename-14)
 		  el.add_error("title > " + std::to_string(DBFieldLength::graphFilename-14)
 			     + " bytes in fullcustom.csv line: " + line);
+		bool ok = 1;
 
 		// 3 columns of PlaceRadius data
 		PlaceRadius* a = 0;
@@ -32,17 +33,17 @@ if (file.is_open())
 		{	// convert numeric fields
 			char* endptr;
 			double lat = strtod(lat_s.data(), &endptr);
-			if (*endptr)		el.add_error("invalid lat in fullcustom.csv line: " + line);
+			if (*endptr)		{el.add_error("invalid lat in fullcustom.csv line: " + line); ok = 0;}
 			double lng = strtod(lng_s.data(), &endptr);
-			if (*endptr)		el.add_error("invalid lng in fullcustom.csv line: " + line);
+			if (*endptr)		{el.add_error("invalid lng in fullcustom.csv line: " + line); ok = 0;}
 			double r = strtod(radius.data(), &endptr);
-			if (*endptr || r <= 0) {el.add_error("invalid radius in fullcustom.csv line: " + line); r=1;}
+			if (*endptr || r <= 0)	{el.add_error("invalid radius in fullcustom.csv line: " + line); ok = 0;}
 			a = new PlaceRadius(descr.data(), root.data(), lat, lng, r);
 		}	    // deleted @ end of HighwayGraph::write_subgraphs_tmg
 		else if (blanks != 3)
 		{	el.add_error("lat/lng/radius error in fullcustom.csv line: [" + line
 				   + "], either all or none must be populated");
-			continue;
+			ok = 0;
 		}
 		else if (regionlist.empty() && systemlist.empty())
 		{	el.add_error("Disallowed full custom graph in line: [" + line
@@ -53,18 +54,16 @@ if (file.is_open())
 		// regionlist
 		if (regionlist.empty()) regions = 0;
 		else {	regions = new list<Region*>;
-				  // deleted @ end of HighwayGraph::write_subgraphs_tmg or if a token is unrecognized
+				  // deleted @ end of HighwayGraph::write_subgraphs_tmg
 			char* field = new char[regionlist.size()+1];
-				      // deleted once region tokens are processed or if a token is unrecognized
+				      // deleted once region tokens are processed
 			strcpy(field, regionlist.data());
 			for(char* rg = strtok(field, ","); rg; rg = strtok(0, ","))
 			  try {	regions->push_back(Region::code_hash.at(rg));
 			      }
 			  catch (const std::out_of_range& oor)
-			      {	el.add_error("unrecognized region code "+std::string(rg)+" in fullcustom.csv line: ["+line+"], skipping this entry");
-				delete[] field;
-				delete regions;
-				continue;
+			      {	el.add_error("unrecognized region code "+string(rg)+" in fullcustom.csv line: "+line);
+				ok = 0;
 			      }
 			delete[] field;
 		     }
@@ -77,14 +76,23 @@ if (file.is_open())
 				      // deleted once system tokens are processed
 			strcpy(field, systemlist.data());
 			for(char* s = strtok(field, ","); s; s = strtok(0, ","))
-			  for (HighwaySystem *h : HighwaySystem::syslist)
-			    if (s == h->systemname)
-			    {	systems->push_back(h);
-				break;
-			    }
+			{	for (h = HighwaySystem::syslist.data; h < sys_end; h++)
+				  if (s == h->systemname)
+				  {	systems->push_back(h);
+					break;
+				  }
+				if (h == sys_end)
+				{	el.add_error("unrecognized system code "+string(s)+" in fullcustom.csv line: "+line);
+					ok = 0;
+				}
+			}
 			delete[] field;
 		     }
-		GraphListEntry::add_group(std::move(root), std::move(descr), 'f', regions, systems, a);
+		if (ok)	GraphListEntry::add_group(move(root), move(descr), 'f', regions, systems, a);
+		else {	delete regions;
+			delete systems;
+			delete a;
+		     }
 	}
 	file.close();
 	#ifndef threading_enabled

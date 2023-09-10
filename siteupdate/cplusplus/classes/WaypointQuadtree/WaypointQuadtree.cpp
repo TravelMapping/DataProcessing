@@ -249,8 +249,8 @@ void WaypointQuadtree::write_qt_tmg(std::string filename)
 }
 
 void WaypointQuadtree::final_report(std::vector<unsigned int>& colocate_counts)
-{	// gather & print info for final colocation stats report,
-	// in the process deleting nodes, waypoints & coloc lists
+{	// gather & optionally print info for final colocation stats
+	// report, in the process deleting child nodes & coloc lists
 	if (refined())
 	     {	ne_child->final_report(colocate_counts); delete ne_child;
 		nw_child->final_report(colocate_counts); delete nw_child;
@@ -272,7 +272,6 @@ void WaypointQuadtree::final_report(std::vector<unsigned int>& colocate_counts)
 		    }
 		}
 		else if (w == w->colocated->back()) delete w->colocated;
-		delete w;
 	     }
 }
 
