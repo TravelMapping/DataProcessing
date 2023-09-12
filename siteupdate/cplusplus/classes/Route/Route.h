@@ -6,6 +6,7 @@ class Region;
 class TravelerList;
 class Waypoint;
 class WaypointQuadtree;
+#include "../../templates/TMArray.cpp"
 #include <mutex>
 #include <unordered_map>
 #include <unordered_set>
@@ -61,13 +62,13 @@ class Route
 	std::vector<std::string> alt_route_names;
 	ConnectedRoute *con_route;
 
-	std::vector<Waypoint*> point_list;
+	TMArray<Waypoint> points;
 	std::unordered_set<std::string> labels_in_use;
 	std::unordered_set<std::string> unused_alt_labels;
 	std::unordered_set<std::string> duplicate_labels;
 	std::unordered_map<std::string, unsigned int> pri_label_hash, alt_label_hash;
 	std::mutex usage_mtx;	// for locking labels_in_use & unused_alt_labels during TravelerList processing
-	std::vector<HighwaySegment*> segment_list;
+	TMArray<HighwaySegment> segments;
 	std::string* last_update;
 	double mileage;
 	int rootOrder;
@@ -84,7 +85,6 @@ class Route
 	std::string str();
 	void read_wpt(WaypointQuadtree *, ErrorList *, bool);
 	void print_route();
-	HighwaySegment* find_segment_by_waypoints(Waypoint*, Waypoint*);
 	std::string chopped_rtes_line();
 	std::string readable_name();
 	std::string list_entry_name();
@@ -96,6 +96,7 @@ class Route
 	void mark_label_in_use(char*);
 	void mark_labels_in_use(char*, char*);
 	void con_mismatch();
+	size_t index();
 	Waypoint* con_beg();
 	Waypoint* con_end();
 	void set_reversed();

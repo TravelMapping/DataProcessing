@@ -1,3 +1,8 @@
+OS := $(shell uname)
+ifeq ($(OS), Linux)
+	OS := $(shell hostnamectl | grep 'Operating System:' | sed -e 's~.*: ~~' -e 's~[ \.]~_~g' -e 's~[^A-Za-z0-9_]~~g')
+endif
+
 CXX = clang++
 CXXFLAGS = -O3 -std=c++11 -Wno-comment -Wno-dangling-else -Wno-logical-op-parentheses
 
@@ -30,19 +35,16 @@ CommonObjects = \
   classes/HighwaySystem/route_integrity.o \
   classes/Region/Region.o \
   classes/Region/compute_stats.o \
+  classes/Region/read_csvs.o \
   classes/Route/Route.o \
   classes/TravelerList/TravelerList.o \
   classes/TravelerList/userlog.o \
   classes/Waypoint/Waypoint.o \
   classes/Waypoint/canonical_waypoint_name/canonical_waypoint_name.o \
-  functions/crawl_hwy_data.o \
-  functions/double_quotes.o \
-  functions/format_clinched_mi.o \
-  functions/lower.o \
-  functions/split.o \
-  functions/strd.o \
-  functions/upper.o \
-  functions/valid_num_str.o
+  functions/crawl_rte_data.o \
+  functions/rdstats.o \
+  functions/route_and_label_logs.o \
+  functions/tmstring.o
 
 .PHONY: all clean
 all: siteupdate siteupdateST
@@ -63,20 +65,20 @@ all: siteupdate siteupdateST
 
 %MT.o:
 	@echo $@
-	@$(CXX) $(CXXFLAGS) -o $@ -D threading_enabled -c $<
+	@$(CXX) $(CXXFLAGS) -D $(OS) -o $@ -D threading_enabled -c $<
 %ST.o:
 	@echo $@
-	@$(CXX) $(CXXFLAGS) -o $@ -c $<
+	@$(CXX) $(CXXFLAGS) -D $(OS) -o $@ -c $<
 %.o:
 	@echo $@
-	@$(CXX) $(CXXFLAGS) -o $@ -c $<
+	@$(CXX) $(CXXFLAGS) -D $(OS) -o $@ -c $<
 
 siteupdate: $(MTObjects) $(CommonObjects)
 	@echo $@
-	@$(CXX) $(CXXFLAGS) -pthread -o siteupdate $(MTObjects) $(CommonObjects)
+	@$(CXX) $(CXXFLAGS) -D $(OS) -pthread -o siteupdate $(MTObjects) $(CommonObjects)
 siteupdateST: $(STObjects) $(CommonObjects)
 	@echo $@
-	@$(CXX) $(CXXFLAGS) -o siteupdateST $(STObjects) $(CommonObjects)
+	@$(CXX) $(CXXFLAGS) -D $(OS) -o siteupdateST $(STObjects) $(CommonObjects)
 
 clean:
 	@rm -f siteupdate siteupdateST `find . -name \*.d` `find . -name \*.o`

@@ -55,15 +55,15 @@ HighwayGraph::HighwayGraph(WaypointQuadtree &all_waypoints, ElapsedTime &et)
 	// create edges
 	counter = 0;
 	std::cout << et.et() << "Creating edges" << std::flush;
-	for (HighwaySystem *h : HighwaySystem::syslist)
-	{	if (!h->active_or_preview()) continue;
+	for (HighwaySystem& h : HighwaySystem::syslist)
+	{	if (!h.active_or_preview()) continue;
 		if (counter % 6 == 0) std::cout << '.' << std::flush;
 		counter++;
-		for (Route *r : h->route_list)
-		  for (HighwaySegment *s : r->segment_list)
-		    if (s == s->canonical_edge_segment())
+		for (Route& r : h.routes)
+		  for (HighwaySegment& s : r.segments)
+		    if (&s == s.canonical_edge_segment())
 		    { ++se; 
-		      new HGEdge(s);
+		      new HGEdge(&s);
 		      // deleted by HGEdge::detach via ~HGVertex via HighwayGraph::clear
 		    }
 	}

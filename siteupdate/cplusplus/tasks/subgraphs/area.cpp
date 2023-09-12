@@ -2,7 +2,7 @@
 #ifndef threading_enabled
 cout << et.et() << "Creating area data graphs." << endl;
 #endif
-file.open(Args::highwaydatapath+"/graphs/areagraphs.csv");
+file.open(Args::datapath+"/graphs/areagraphs.csv");
 getline(file, line);  // ignore header line
 
 // add entries to graph vector

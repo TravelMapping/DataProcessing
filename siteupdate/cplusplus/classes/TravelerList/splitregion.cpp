@@ -5,8 +5,8 @@ splist << "##### " << orig_line << newline << "  ";
 // 1st waypoint
 if (Args::splitregion != r1->region->code)
 	// if not in splitregion, just use canonical .list name and waypoint label
-	w1 = r1->point_list[index1];
-else {	HighwaySegment *orig_hs = r1->segment_list[index1 == r1->segment_list.size() ? index1-1 : index1];
+	w1 = r1->points.data+index1;
+else {	HighwaySegment *orig_hs = r1->segments.data+(index1 == r1->segments.size ? index1-1 : index1);
 	HighwaySegment *new_hs = 0;
 	if (!orig_hs->concurrent)
 		std::cout << "ERROR: " << orig_hs->str() << " not concurrent" << std::endl;
@@ -23,8 +23,8 @@ else {	HighwaySegment *orig_hs = r1->segment_list[index1 == r1->segment_list.siz
 			// index within old chopped route = index within new connected route.
 			// convert to index within new chopped route
 			for (long int r = new_hs->route->rootOrder; r > 0; r--)
-				index1 -= new_hs->route->con_route->roots[r-1]->segment_list.size();
-			w1 = new_hs->route->point_list[index1];
+				index1 -= new_hs->route->con_route->roots[r-1]->segments.size;
+			w1 = new_hs->route->points.data+index1;
 		     }
 	     }
      }
@@ -32,8 +32,8 @@ else {	HighwaySegment *orig_hs = r1->segment_list[index1 == r1->segment_list.siz
 // 2nd waypoint
 if (Args::splitregion != r2->region->code)
 	// if not in splitregion, just use canonical .list name and waypoint label
-	w2 = r2->point_list[index2];
-else {	HighwaySegment *orig_hs = r2->segment_list[index2 ? index2-1 : 0];
+	w2 = r2->points.data+index2;
+else {	HighwaySegment *orig_hs = r2->segments.data+(index2 ? index2-1 : 0);
 	HighwaySegment *new_hs = 0;
 	if (!orig_hs->concurrent)
 		std::cout << "ERROR: " << orig_hs->str() << " not concurrent" << std::endl;
@@ -50,8 +50,8 @@ else {	HighwaySegment *orig_hs = r2->segment_list[index2 ? index2-1 : 0];
 			// index within old chopped route = index within new connected route.
 			// convert to index within new chopped route
 			for (long int r = new_hs->route->rootOrder; r > 0; r--)
-				index2 -= new_hs->route->con_route->roots[r-1]->segment_list.size();
-			w2 = new_hs->route->point_list[index2];
+				index2 -= new_hs->route->con_route->roots[r-1]->segments.size;
+			w2 = new_hs->route->points.data+index2;
 		     }
 	     }
      }

@@ -8,15 +8,15 @@ void Route::store_traveled_segments(TravelerList* t, std::ofstream& log, std::st
 {	// store clinched segments with traveler and traveler with segments
 	size_t index = t-TravelerList::allusers.data;
 	for (unsigned int pos = beg; pos < end; pos++)
-	{	HighwaySegment *hs = segment_list[pos];
+	{	HighwaySegment *hs = segments.data+pos;
 		if (hs->add_clinched_by(index))
 		  t->clinched_segments.push_back(hs);
 	}
       #ifdef threading_enabled
 	// create key/value pairs in regional tables, to be computed in a threadsafe manner later
-	t->active_preview_mileage_by_region[region];
 	if (system->active())
-		t->active_only_mileage_by_region[region];
+	   t->active_only_mileage_by_region[region];
+	t->active_preview_mileage_by_region[region];
 	t->system_region_mileages[system][region];
       #endif
 	// userlog notification for routes updated more recently than .list file

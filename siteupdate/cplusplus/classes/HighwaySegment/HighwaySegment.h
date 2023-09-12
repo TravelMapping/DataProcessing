@@ -19,13 +19,17 @@ class HighwaySegment
 	TMBitset<TravelerList*, uint32_t> clinched_by;
 	std::mutex clin_mtx;
 
-	HighwaySegment(Waypoint *, Waypoint *, Route *);
+	HighwaySegment(Waypoint*, Route*);
+	~HighwaySegment();
 
 	std::string str();
 	bool add_clinched_by(size_t);
+	void add_concurrency(std::ofstream&, Waypoint*);
 	std::string csv_line(unsigned int);
-	std::string segment_name();
 	//std::string concurrent_travelers_sanity_check();
+
+	// graph generation functions
+	std::string segment_name();
 	const char* clinchedby_code(char*, unsigned int);
 	bool system_match(std::list<HighwaySystem*>*);
 	void write_label(std::ofstream&, std::list<HighwaySystem*> *);

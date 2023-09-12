@@ -2,7 +2,7 @@
 // just going to drop this into the DB later anyway
 list<string*> updates;
 cout << et.et() << "Reading updates file." << endl;
-file.open(Args::highwaydatapath+"/updates.csv");
+file.open(Args::datapath+"/updates.csv");
 getline(file, line); // ignore header line
 while (getline(file, line))
 {	// trim DOS newlines & trailing whitespace
@@ -66,7 +66,7 @@ file.close();
 // anyway
 list<string*> systemupdates;
 cout << et.et() << "Reading systemupdates file." << endl;
-file.open(Args::highwaydatapath+"/systemupdates.csv");
+file.open(Args::datapath+"/systemupdates.csv");
 getline(file, line);  // ignore header line
 while (getline(file, line))
 {	if (line.size() && line.back() == 0x0D) line.erase(line.end()-1);	// trim DOS newlines

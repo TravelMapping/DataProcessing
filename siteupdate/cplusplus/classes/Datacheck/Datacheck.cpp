@@ -2,7 +2,7 @@
 #include "../ElapsedTime/ElapsedTime.h"
 #include "../ErrorList/ErrorList.h"
 #include "../Route/Route.h"
-#include "../../functions/split.h"
+#include "../../functions/tmstring.h"
 #include <fstream>
 
 std::mutex Datacheck::mtx;

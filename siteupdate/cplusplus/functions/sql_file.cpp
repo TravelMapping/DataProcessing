@@ -1,5 +1,5 @@
 #include "sql_file.h"
-#include "double_quotes.h"
+#include "tmstring.h"
 #include "../classes/Args/Args.h"
 #include "../classes/ConnectedRoute/ConnectedRoute.h"
 #include "../classes/Datacheck/Datacheck.h"
@@ -12,13 +12,10 @@
 #include "../classes/Route/Route.h"
 #include "../classes/TravelerList/TravelerList.h"
 #include "../classes/Waypoint/Waypoint.h"
-#include <cstring>
 #include <fstream>
 
 void sqlfile1
     (	ElapsedTime *et,
-	std::vector<std::pair<std::string,std::string>> *continents,
-	std::vector<std::pair<std::string,std::string>> *countries,
 	std::list<std::string*> *updates,
 	std::list<std::string*> *systemupdates,
 	std::mutex* term_mtx
@@ -58,10 +55,10 @@ void sqlfile1
 		<< "), PRIMARY KEY(code));\n";
 	sqlfile << "INSERT INTO continents VALUES\n";
 	bool first = 1;
-	for (size_t c = 0; c < continents->size()-1; c++)
+	for (size_t c = 0; c < Region::continents.size()-1; c++)
 	{	if (!first) sqlfile << ',';
 		first = 0;
-		sqlfile << "('" << (*continents)[c].first << "','" << (*continents)[c].second << "')\n";
+		sqlfile << "('" << Region::continents[c].first << "','" << Region::continents[c].second << "')\n";
 	}
 	sqlfile << ";\n";
 
@@ -70,10 +67,10 @@ void sqlfile1
 		<< "), PRIMARY KEY(code));\n";
 	sqlfile << "INSERT INTO countries VALUES\n";
 	first = 1;
-	for (size_t c = 0; c < countries->size()-1; c++)
+	for (size_t c = 0; c < Region::countries.size()-1; c++)
 	{	if (!first) sqlfile << ',';
 		first = 0;
-		sqlfile << "('" << (*countries)[c].first << "','" << double_quotes((*countries)[c].second) << "')\n";
+		sqlfile << "('" << Region::countries[c].first << "','" << double_quotes(Region::countries[c].second) << "')\n";
 	}
 	sqlfile << ";\n";
 
@@ -86,12 +83,12 @@ void sqlfile1
 	sqlfile << "PRIMARY KEY(code), FOREIGN KEY (country) REFERENCES countries(code), FOREIGN KEY (continent) REFERENCES continents(code));\n";
 	sqlfile << "INSERT INTO regions VALUES\n";
 	first = 1;
-	for (size_t r = 0; r < Region::allregions.size()-1; r++)
+	for (Region *r = Region::allregions.data, *dummy = Region::allregions.end()-1; r < dummy; r++)
 	{	if (!first) sqlfile << ',';
 		first = 0;
-		sqlfile << "('" << Region::allregions[r]->code << "','" << double_quotes(Region::allregions[r]->name)
-			<< "','" << Region::allregions[r]->country_code() << "','" << Region::allregions[r]->continent_code()
-			<< "','" << Region::allregions[r]->type << "')\n";
+		sqlfile << "('" << r->code << "','" << double_quotes(r->name)
+			<< "','" << r->country_code() << "','" << r->continent_code()
+			<< "','" << r->type << "')\n";
 	}
 	sqlfile << ";\n";
 
@@ -112,12 +109,12 @@ void sqlfile1
 	sqlfile << "INSERT INTO systems VALUES\n";
 	first = 1;
 	unsigned int csvOrder = 0;
-	for (HighwaySystem *h : HighwaySystem::syslist)
+	for (HighwaySystem& h : HighwaySystem::syslist)
 	{	if (!first) sqlfile << ',';
 		first = 0;
-		sqlfile << "('" << h->systemname << "','" << h->country->first << "','"
-			<< double_quotes(h->fullname) << "','" << h->color << "','" << h->level_name()
-			<< "','" << h->tier << "','" << csvOrder << "')\n";
+		sqlfile << "('" << h.systemname << "','" << h.country->first << "','"
+			<< double_quotes(h.fullname) << "','" << h.color << "','" << h.level_name()
+			<< "','" << h.tier << "','" << csvOrder << "')\n";
 		csvOrder += 1;
 	}
 	sqlfile << ";\n";
@@ -137,13 +134,13 @@ void sqlfile1
 	sqlfile << "INSERT INTO routes VALUES\n";
 	first = 1;
 	csvOrder = 0;
-	for (HighwaySystem *h : HighwaySystem::syslist)
-	  for (Route *r : h->route_list)
+	for (HighwaySystem& h : HighwaySystem::syslist)
+	  for (Route& r : h.routes)
 	  {	if (!first) sqlfile << ',';
 		first = 0;
-		sprintf(fstr, "%.17g", r->mileage);
-		sqlfile << "('" << r->system->systemname << "','" << r->region->code << "','" << r->route << "','" << r->banner << "','" << r->abbrev
-			<< "','" << double_quotes(r->city) << "','" << r->root << "','" << fstr << "','" << r->rootOrder << "','" << csvOrder << "')\n";
+		sprintf(fstr, "%.17g", r.mileage);
+		sqlfile << "('" << r.system->systemname << "','" << r.region->code << "','" << r.route << "','" << r.banner << "','" << r.abbrev
+			<< "','" << double_quotes(r.city) << "','" << r.root << "','" << fstr << "','" << r.rootOrder << "','" << csvOrder << "')\n";
 		csvOrder += 1;
 	  }
 	sqlfile << ";\n";
@@ -161,13 +158,13 @@ void sqlfile1
 	sqlfile << "INSERT INTO connectedRoutes VALUES\n";
 	first = 1;
 	csvOrder = 0;
-	for (HighwaySystem *h : HighwaySystem::syslist)
-	  for (ConnectedRoute *cr : h->con_route_list)
+	for (HighwaySystem& h : HighwaySystem::syslist)
+	  for (ConnectedRoute& cr : h.con_routes)
 	  {	if (!first) sqlfile << ',';
 		first = 0;
-		sprintf(fstr, "','%.17g'", cr->mileage);
-		sqlfile << "('" << cr->system->systemname << "','" << cr->route << "','" << cr->banner << "','" << double_quotes(cr->groupname)
-			<< "','" << (cr->roots.size() ? cr->roots[0]->root.data() : "ERROR_NO_ROOTS") << fstr << ",'" << csvOrder << "')\n";
+		sprintf(fstr, "','%.17g'", cr.mileage);
+		sqlfile << "('" << cr.system->systemname << "','" << cr.route << "','" << cr.banner << "','" << double_quotes(cr.groupname)
+			<< "','" << (cr.roots.size() ? cr.roots[0]->root.data() : "ERROR_NO_ROOTS") << fstr << ",'" << csvOrder << "')\n";
 		csvOrder += 1;
 	  }
 	sqlfile << ";\n";
@@ -181,13 +178,13 @@ void sqlfile1
 		<< "), root VARCHAR(" << DBFieldLength::root
 		<< "), FOREIGN KEY (firstRoot) REFERENCES connectedRoutes(firstRoot));\n";
 	first = 1;
-	for (HighwaySystem *h : HighwaySystem::syslist)
-	  for (ConnectedRoute *cr : h->con_route_list)
-	    for (unsigned int i = 1; i < cr->roots.size(); i++)
+	for (HighwaySystem& h : HighwaySystem::syslist)
+	  for (ConnectedRoute& cr : h.con_routes)
+	    for (unsigned int i = 1; i < cr.roots.size(); i++)
 	    {	if (first) sqlfile << "INSERT INTO connectedRouteRoots VALUES\n";
 		else sqlfile << ',';
 		first = 0;
-		sqlfile << "('" << cr->roots[0]->root << "','" << cr->roots[i]->root << "')\n";
+		sqlfile << "('" << cr.roots[0]->root << "','" << cr.roots[i]->root << "')\n";
 	    }
 	sqlfile << ";\n";
 
@@ -199,18 +196,18 @@ void sqlfile1
 		<< "), latitude DOUBLE, longitude DOUBLE, root VARCHAR(" << DBFieldLength::root
 		<< "), PRIMARY KEY(pointId), FOREIGN KEY (root) REFERENCES routes(root));\n";
 	unsigned int point_num = 0;
-	for (HighwaySystem *h : HighwaySystem::syslist)
-	  for (Route *r : h->route_list)
+	for (HighwaySystem& h : HighwaySystem::syslist)
+	  for (Route& r : h.routes)
 	  {	sqlfile << "INSERT INTO waypoints VALUES\n";
 		first = 1;
-		for (Waypoint *w : r->point_list)
+		for (Waypoint& w : r.points)
 		{	if (!first) sqlfile << ',';
 			first = 0;
-			w->point_num = point_num;
-			sqlfile << "('" << point_num << "','" << w->label; int
-			e=sprintf(fstr,"','%.15g",w->lat); if (w->lat==int(w->lat)) strcpy(fstr+e,".0"); sqlfile << fstr;
-			e=sprintf(fstr,"','%.15g",w->lng); if (w->lng==int(w->lng)) strcpy(fstr+e,".0"); sqlfile << fstr;
-			sqlfile << "','" << r->root + "')\n";
+			w.point_num = point_num;
+			sqlfile << "('" << point_num << "','" << w.label; int
+			e=sprintf(fstr,"','%.15g",w.lat); if (w.lat==int(w.lat)) strcpy(fstr+e,".0"); sqlfile << fstr;
+			e=sprintf(fstr,"','%.15g",w.lng); if (w.lng==int(w.lng)) strcpy(fstr+e,".0"); sqlfile << fstr;
+			sqlfile << "','" << r.root + "')\n";
 			point_num+=1;
 		}
 		sqlfile << ";\n";
@@ -229,15 +226,15 @@ void sqlfile1
 		<< "FOREIGN KEY (waypoint2) REFERENCES waypoints(pointId), FOREIGN KEY (root) REFERENCES routes(root));\n";
 	unsigned int segment_num = 0;
 	std::vector<std::string> clinched_list;
-	for (HighwaySystem *h : HighwaySystem::syslist)
-	  for (Route *r : h->route_list)
+	for (HighwaySystem& h : HighwaySystem::syslist)
+	  for (Route& r : h.routes)
 	  {	sqlfile << "INSERT INTO segments VALUES\n";
 		first = 1;
-		for (HighwaySegment *s : r->segment_list)
+		for (HighwaySegment& s : r.segments)
 		{	if (!first) sqlfile << ',';
 			first = 0;
-			sqlfile << '(' << s->csv_line(segment_num) << ")\n";
-			for (TravelerList *t : s->clinched_by)
+			sqlfile << '(' << s.csv_line(segment_num) << ")\n";
+			for (TravelerList *t : s.clinched_by)
 			  clinched_list.push_back("'" + std::to_string(segment_num) + "','" + t->traveler_name + "'");
 			segment_num += 1;
 		}
@@ -271,12 +268,12 @@ void sqlfile1
 		<< "), activeMileage DOUBLE, activePreviewMileage DOUBLE);\n";
 	sqlfile << "INSERT INTO overallMileageByRegion VALUES\n";
 	first = 1;
-	for (Region* region : Region::allregions)
-	{	if (region->active_only_mileage+region->active_preview_mileage == 0) continue;
+	for (Region& region : Region::allregions)
+	{	if (region.active_only_mileage+region.active_preview_mileage == 0) continue;
 		if (!first) sqlfile << ',';
 		first = 0;
-		sprintf(fstr, "','%.17g','%.17g')\n", region->active_only_mileage, region->active_preview_mileage);
-		sqlfile << "('" << region->code << fstr;
+		sprintf(fstr, "','%.17g','%.17g')\n", region.active_only_mileage, region.active_preview_mileage);
+		sqlfile << "('" << region.code << fstr;
 	}
 	sqlfile << ";\n";
 
@@ -290,13 +287,13 @@ void sqlfile1
 		<< "), mileage DOUBLE, FOREIGN KEY (systemName) REFERENCES systems(systemName));\n";
 	sqlfile << "INSERT INTO systemMileageByRegion VALUES\n";
 	first = 1;
-	for (HighwaySystem *h : HighwaySystem::syslist)
-	  if (h->active_or_preview())
-	    for (std::pair<Region* const,double>& rm : h->mileage_by_region)
+	for (HighwaySystem& h : HighwaySystem::syslist)
+	  if (h.active_or_preview())
+	    for (std::pair<Region* const,double>& rm : h.mileage_by_region)
 	    {	if (!first) sqlfile << ',';
 		first = 0;
 		sprintf(fstr, "','%.17g')\n", rm.second);
-		sqlfile << "('" << h->systemname << "','" << rm.first->code << fstr;
+		sqlfile << "('" << h.systemname << "','" << rm.first->code << fstr;
 	    }
 	sqlfile << ";\n";
 

@@ -3,8 +3,7 @@
 #include "../ErrorList/ErrorList.h"
 #include "../HighwaySystem/HighwaySystem.h"
 #include "../Route/Route.h"
-#include "../../functions/lower.h"
-#include "../../functions/split.h"
+#include "../../functions/tmstring.h"
 
 ConnectedRoute::ConnectedRoute(std::string &line, HighwaySystem *sys, ErrorList &el)
 {	mileage = 0;
@@ -82,6 +81,10 @@ std::string ConnectedRoute::readable_name()
 	return ans;
 }
 
+size_t ConnectedRoute::index()
+{	return this - system->con_routes.data;
+}
+
 /*std::string ConnectedRoute::list_lines(int pos, int len, std::string newline, size_t indent)
 {	// return .list file lines marking (len) consecutive
 	// segments, starting at waypoint (pos) segments into route
@@ -91,7 +94,7 @@ std::string ConnectedRoute::readable_name()
 	{	//std::cout << "DEBUG: [" << pos << " + " << len << " = " << pos+len << "] " << r->str() << std::endl;
 		std::string line = std::string(indent, ' ') + r->list_line(pos, pos+len);
 		if (line.size() > indent) lines += line + newline;
-		pos -= r->segment_list.size();
+		pos -= r->segments.size;
 	}
 	// strip final newline
 	while (lines.back() == '\n' || lines.back() == '\r') lines.pop_back();

@@ -5,13 +5,22 @@
 #include "../Waypoint/Waypoint.h"
 #include "../../templates/contains.cpp"
 
-HighwaySegment::HighwaySegment(Waypoint *w1, Waypoint *w2, Route *rte):
-	waypoint1(w1),
-	waypoint2(w2),
+HighwaySegment::HighwaySegment(Waypoint *w, Route *rte):
+	waypoint1(w-1),
+	waypoint2(w),
 	route(rte),
-	length(w1->distance_to(w2)),
+	length(waypoint1->distance_to(w)),
 	concurrent(0),
 	clinched_by(TravelerList::allusers.data, TravelerList::allusers.size) {}
+
+HighwaySegment::~HighwaySegment()
+{	if (concurrent)
+	{	auto conc = concurrent;
+		for (HighwaySegment* cs : *conc)
+			cs->concurrent = 0;
+		delete conc;
+	}
+}
 
 std::string HighwaySegment::str()
 {	return route->readable_name() + " " + waypoint1->label + " " + waypoint2->label;
@@ -22,6 +31,24 @@ bool HighwaySegment::add_clinched_by(size_t t)
 	bool result = clinched_by.add_index(t);
 	clin_mtx.unlock();
 	return result;
+}
+
+void HighwaySegment::add_concurrency(std::ofstream& concurrencyfile, Waypoint* w)
+{	HighwaySegment& other = w->route->segments[w - w->route->points.data];
+	if (!concurrent)
+	     {	concurrent = new std::list<HighwaySegment*>;
+			     // deleted by ~HighwaySegment
+		concurrent->push_back(this);
+		concurrent->push_back(&other);
+		concurrencyfile << "New concurrency [" << str() << "][" << other.str() << "] (2)\n";
+	     }
+	else {	concurrent->push_back(&other);
+		concurrencyfile << "Extended concurrency ";
+		for (HighwaySegment *x : *concurrent)
+			concurrencyfile << '[' << x->str() << ']';
+		concurrencyfile << " (" << concurrent->size() << ")\n";
+	     }
+	other.concurrent = concurrent;
 }
 
 std::string HighwaySegment::csv_line(unsigned int id)

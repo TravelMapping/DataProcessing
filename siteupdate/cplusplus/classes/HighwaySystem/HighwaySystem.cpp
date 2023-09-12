@@ -3,19 +3,20 @@
 #include "../ConnectedRoute/ConnectedRoute.h"
 #include "../DBFieldLength/DBFieldLength.h"
 #include "../ErrorList/ErrorList.h"
+#include "../HighwaySegment/HighwaySegment.h"
 #include "../Region/Region.h"
 #include "../Route/Route.h"
 #include "../TravelerList/TravelerList.h"
-#include "../../functions/split.h"
-#include <cstring>
+#include "../Waypoint/Waypoint.h"
+#include "../../functions/tmstring.h"
 #include <fstream>
 
-std::list<HighwaySystem*> HighwaySystem::syslist;
-std::list<HighwaySystem*>::iterator HighwaySystem::it;
+TMArray<HighwaySystem> HighwaySystem::syslist;
+HighwaySystem* HighwaySystem::it;
 unsigned int HighwaySystem::num_active  = 0;
 unsigned int HighwaySystem::num_preview = 0;
 
-HighwaySystem::HighwaySystem(std::string &line, ErrorList &el, std::vector<std::pair<std::string,std::string>> &countries)
+HighwaySystem::HighwaySystem(std::string &line, ErrorList &el)
 {	std::ifstream file;
 	// parse systems.csv line
 	size_t NumFields = 6;
@@ -25,19 +26,17 @@ HighwaySystem::HighwaySystem(std::string &line, ErrorList &el, std::vector<std::
 	if (NumFields != 6)
 	{	el.add_error("Could not parse " + Args::systemsfile
 			   + " line: [" + line + "], expected 6 fields, found " + std::to_string(NumFields));
-		is_valid = 0;
-		return;
+		throw 0xBAD;
 	}
-	is_valid = 1;
 	// System
 	if (systemname.size() > DBFieldLength::systemName)
 		el.add_error("System code > " + std::to_string(DBFieldLength::systemName)
 			   + " bytes in " + Args::systemsfile + " line " + line);
 	// CountryCode
-	country = country_or_continent_by_code(country_str, countries);
+	country = country_or_continent_by_code(country_str, Region::countries);
 	if (!country)
 	{	el.add_error("Could not find country matching " + Args::systemsfile + " line: " + line);
-		country = country_or_continent_by_code("error", countries);
+		country = country_or_continent_by_code("error", Region::countries);
 	}
 	// Name
 	if (fullname.size() > DBFieldLength::systemFullName)
@@ -63,37 +62,66 @@ HighwaySystem::HighwaySystem(std::string &line, ErrorList &el, std::vector<std::
 	std::cout /*<< systemname*/ << '.' << std::flush;
 
 	// read chopped routes CSV
-	file.open(Args::highwaydatapath+"/data/_systems"+"/"+systemname+".csv");
-	if (!file) el.add_error("Could not open "+Args::highwaydatapath+"/data/_systems"+"/"+systemname+".csv");
+	file.open(Args::datapath+"/data/_systems/"+systemname+".csv");
+	if (!file) el.add_error("Could not open "+Args::datapath+"/data/_systems/"+systemname+".csv");
 	else {	getline(file, line); // ignore header line
+		std::vector<std::string> lines;
 		while(getline(file, line))
 		{	// trim DOS newlines & trailing whitespace
 			while ( line.size() && strchr("\r\t ", line.back()) ) line.pop_back();
-			if (line.empty()) continue;
-			Route* r = new Route(line, this, el);
-				   // deleted on termination of program
-			if (r->root.size())
-			     {	route_list.push_back(r);
-				r->region->routes.push_back(r);
-			     }
-			else {	el.add_error("Unable to find root in " + systemname +".csv line: ["+line+"]");
-				delete r;
-			     }
+			if (line.size()) lines.emplace_back(std::move(line));
 		}
+		Route* r = routes.alloc(lines.size());
+		for (std::string& l : lines)
+		  try {	new(r) Route(l, this, el);
+			// placement new
+			r->region->routes.push_back(r);
+			r++;
+		      }
+		  catch (const int) {--routes.size;}
 	     }
 	file.close();
 
 	// read connected routes CSV
-	file.open(Args::highwaydatapath+"/data/_systems"+"/"+systemname+"_con.csv");
-	if (!file) el.add_error("Could not open "+Args::highwaydatapath+"/data/_systems"+"/"+systemname+"_con.csv");
+	file.open(Args::datapath+"/data/_systems/"+systemname+"_con.csv");
+	if (!file) el.add_error("Could not open "+Args::datapath+"/data/_systems/"+systemname+"_con.csv");
 	else {	getline(file, line); // ignore header line
+		std::vector<std::string> lines;
 		while(getline(file, line))
 		{	// trim DOS newlines & trailing whitespace
 			while ( line.size() && strchr("\r\t ", line.back()) ) line.pop_back();
-			if (line.empty()) continue;
-			con_route_list.push_back(new ConnectedRoute(line, this, el));
-						 // deleted on termination of program
+			if (line.size()) lines.emplace_back(std::move(line));
 		}
+		ConnectedRoute* cr = con_routes.alloc(lines.size());
+		for (std::string& l : lines)
+			new(cr++) ConnectedRoute(l, this, el);
+			// placement new
+	     }
+	file.close();
+}
+
+void HighwaySystem::systems_csv(ErrorList& el)
+{	std::ifstream file;
+	std::string line;
+	file.open(Args::datapath+"/"+Args::systemsfile);
+	if (!file) el.add_error("Could not open "+Args::datapath+"/"+Args::systemsfile);
+	else {	getline(file, line); // ignore header line
+		std::vector<std::string> lines;
+		while(getline(file, line)) if (line.size())
+		{	if (line.back() == 0x0D) line.pop_back();	// trim DOS newlines
+			if (line[0] == '#') continue;
+			if (strchr(line.data(), '"'))
+				el.add_error("Double quotes in systems.csv line: "+line);
+			lines.emplace_back(move(line));
+		}
+		it = syslist.alloc(lines.size());
+		for (std::string& l : lines)
+		  try {	new(it) HighwaySystem(l, el);
+			// placement new
+			++it;
+		      }
+		  catch (const int) {--syslist.size;}
+		std::cout << '!' << std::endl;
 	     }
 	file.close();
 }
@@ -135,20 +163,6 @@ std::string HighwaySystem::level_name()
 	}
 }
 
-/* Return index of a specified Route within route_list */
-size_t HighwaySystem::route_index(Route* r)
-{	for (size_t i = 0; i < route_list.size(); i++)
-	  if (route_list[i] == r) return i;
-	return -1; // error, Route not found
-}
-
-/* Return index of a specified ConnectedRoute within con_route_list */
-size_t HighwaySystem::con_route_index(ConnectedRoute* cr)
-{	for (size_t i = 0; i < con_route_list.size(); i++)
-	  if (con_route_list[i] == cr) return i;
-	return -1; // error, ConnectedRoute not found
-}
-
 void HighwaySystem::add_vertex(HGVertex* v)
 {	mtx.lock();
 	vertices.push_back(v);
@@ -166,7 +180,7 @@ void HighwaySystem::stats_csv()
 	{	regions.push_back(rm.first);
 		total_mi += rm.second;
 	}
-	regions.sort(sort_regions_by_code);
+	regions.sort();
 	for (Region *region : regions)
 		sysfile << ',' << region->code;
 	sysfile << '\n';

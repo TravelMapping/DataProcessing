@@ -54,4 +54,5 @@ class TravelerList
 	double active_preview_miles();
 	double system_miles(HighwaySystem *);
 	void userlog(const double, const double);
+	static void get_ids(ErrorList&);
 };

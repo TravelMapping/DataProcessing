@@ -4,26 +4,22 @@ cout << et.et() << "Creating system data graphs." << endl;
 #endif
 // We will create graph data and a graph file for only a few interesting
 // systems, as many are not useful on their own
-HighwaySystem *h;
-file.open(Args::highwaydatapath+"/graphs/systemgraphs.csv");
+file.open(Args::datapath+"/graphs/systemgraphs.csv");
 getline(file, line);  // ignore header line
 
 // add entries to graph vector
 while (getline(file, line))
-{	h = 0;
-	for (HighwaySystem *hs : HighwaySystem::syslist)
-	  if (hs->systemname == line)
-	  {	h = hs;
-		break;
-	  }
-	if (h)
-	{	systems = new list<HighwaySystem*>(1, h);
-			  // deleted @ end of HighwayGraph::write_subgraphs_tmg
-		GraphListEntry::add_group(
+{	for (h = HighwaySystem::syslist.data; h < sys_end; h++)
+	  if (h->systemname == line)
+	  {	GraphListEntry::add_group(
 			h->systemname + "-system",
 			h->systemname + " (" + h->fullname + ")",
-			's', nullptr, systems, nullptr);
-	}
+			's', nullptr, new list<HighwaySystem*>(1, h), nullptr);
+				      // deleted @ end of HighwayGraph::write_subgraphs_tmg
+		break;
+	  }
+	if (h == sys_end)
+		el.add_error("unrecognized system code "+line+" in systemgraphs.csv");
 }
 file.close();
 #ifndef threading_enabled
@@ -34,5 +30,5 @@ while (GraphListEntry::num < GraphListEntry::entries.size())
 }
 cout << "!" << endl;
 #endif
-if (h)	graph_types.push_back({"system", "Routes Within a Single Highway System",
-			       "These graphs contain the routes within a single highway system and are not restricted by region."});
+graph_types.push_back({"system", "Routes Within a Single Highway System",
+		       "These graphs contain the routes within a single highway system and are not restricted by region."});

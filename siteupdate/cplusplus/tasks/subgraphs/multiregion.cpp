@@ -2,7 +2,7 @@
 #ifndef threading_enabled
 cout << et.et() << "Creating multiregion graphs." << endl;
 #endif
-file.open(Args::highwaydatapath+"/graphs/multiregion.csv");
+file.open(Args::datapath+"/graphs/multiregion.csv");
 getline(file, line);  // ignore header line
 
 // add entries to graph vector
@@ -28,12 +28,13 @@ while (getline(file, line))
 	regions = new list<Region*>;
 		  // deleted @ end of HighwayGraph::write_subgraphs_tmg
 	for(char* rg = strtok(fields[2], ","); rg; rg = strtok(0, ","))
-	  for (Region* r : Region::allregions)
-	    if (rg == r->code)
-	    {	regions->push_back(r);
-		break;
-	    }
-	GraphListEntry::add_group(fields[1], fields[0], 'R', regions, nullptr, nullptr);
+	  try {	regions->push_back(Region::code_hash.at(rg));
+	      }
+	  catch (const out_of_range&)
+	      {	el.add_error("unrecognized region code "+string(rg)+" in multiregion.csv line: "+line);
+	      }
+	if (regions->size()) GraphListEntry::add_group(fields[1], fields[0], 'R', regions, nullptr, nullptr);
+	else delete regions;
 	delete[] cline;
 }
 file.close();

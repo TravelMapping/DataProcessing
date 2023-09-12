@@ -3,8 +3,7 @@
 #include "../DBFieldLength/DBFieldLength.h"
 #include "../HighwaySystem/HighwaySystem.h"
 #include "../Route/Route.h"
-#include "../../functions/strd.h"
-#include "../../functions/valid_num_str.h"
+#include "../../functions/tmstring.h"
 #include "../../templates/contains.cpp"
 #include <cmath>
 #include <cstring>
@@ -21,83 +20,57 @@ Waypoint::Waypoint(char *line, Route *rte)
 	// split line into fields
 	char* c = strchr(line, ' ');
 	if (c){	do *c = 0; while (*++c == ' ');
-		// alt labels & URL
-		for (size_t spn = 0; *c; c += spn)
-		{	for (spn = strcspn(c, " "); c[spn] == ' '; spn++) c[spn] = 0;
+		while (char*d = strchr(c, ' '))
+		{	do *d = 0; while (*++d == ' ');
 			alt_labels.emplace_back(c);
+			c = d;
 		}
 	      }
 	label = line;
 
 	// datachecks
-	bool valid_line = 1;
+	int invalid_line = 0;
 	if (label.size() > DBFieldLength::label)
 	{	// SINGLE_FIELD_LINE, looks like a URL
-		if (alt_labels.empty() && !strncmp(label.data(), "http", 4))		// If the "label" is a URL, and the only field...
+		if (!c && !strncmp(label.data(), "http", 4))				// If the "label" is a URL, and the only field...
 		{	label = "..."+label.substr(label.size()-DBFieldLength::label+3);// the end is more useful than "http://www.openstreetma..."
 			while (label.front() < 0)	label.erase(label.begin());	// Strip any partial multi-byte characters off the beginning
 			Datacheck::add(route, label, "", "", "SINGLE_FIELD_LINE", "");
-			lat = 0;	lng = 0;	return;
+			throw 1;
 		}
 		// LABEL_TOO_LONG
 		size_t slicepoint = DBFieldLength::label-3;				// Prepare a truncated label that will fit in the DB
 		while (label[slicepoint-1] < 0) slicepoint--;				// Avoid slicing within a multi-byte character
 		std::string excess = label.data()+slicepoint;				// Save excess beyond what fits in DB, to put in info field
 		if (excess.size() > DBFieldLength::dcErrValue-3)			// If it's too long for the info field,
-		{	excess = excess.substr(0, DBFieldLength::dcErrValue-6);		// cut it down to what will fit,
-			while (excess.back() < 0)	excess.erase(excess.end()-1);	// strip any partial multi-byte characters off the end,
+		{	excess.assign(excess, 0, DBFieldLength::dcErrValue-6);		// cut it down to what will fit,
+			while (excess.back() < 0)	excess.pop_back();		// strip any partial multi-byte characters off the end,
 			excess += "...";						// and append "..."
 		}
 		label.assign(label, 0, slicepoint);					// Now truncate the label itself
 		Datacheck::add(route, label+"...", "", "", "LABEL_TOO_LONG", "..."+excess);
-		valid_line = 0;
+		invalid_line = 2;
 	}
 	// SINGLE_FIELD_LINE, looks like a label
-	if (alt_labels.empty())
+	if (!c)
 	{	Datacheck::add(route, label, "", "", "SINGLE_FIELD_LINE", "");
-		lat = 0;	lng = 0;	return;
+		throw invalid_line | 4;
 	}
 
 	// parse URL
-	std::string& URL = alt_labels.back();	// last field is actually the URL, not a label.
-	size_t latBeg = URL.find("lat=")+4;
-	size_t lonBeg = URL.find("lon=")+4;
-	if (latBeg == 3 || lonBeg == 3)
+	char* latBeg = strstr(c, "lat=")+4;
+	char* lonBeg = strstr(c, "lon=")+4;
+	if (latBeg == (char*)4 || lonBeg == (char*)4)
 	{	Datacheck::add(route, label, "", "", "MALFORMED_URL", "MISSING_ARG(S)");
-		lat = 0;	lng = 0;	return;
+		throw invalid_line | 8;
 	}
-	if (!valid_num_str(URL.data()+latBeg, '&'))
-	{	size_t ampersand = URL.find('&', latBeg);
-		std::string lat_string = (ampersand == -1) ? URL.data()+latBeg : URL.substr(latBeg, ampersand-latBeg);
-		if (lat_string.size() > DBFieldLength::dcErrValue)
-		{	lat_string = lat_string.substr(0, DBFieldLength::dcErrValue-3);
-			while (lat_string.back() < 0)	lat_string.erase(lat_string.end()-1);
-			lat_string += "...";
-		}
-		Datacheck::add(route, label, "", "", "MALFORMED_LAT", lat_string);
-		valid_line = 0;
-	}
-	if (!valid_num_str(URL.data()+lonBeg, '&'))
-	{	size_t ampersand = URL.find('&', lonBeg);
-		std::string lng_string = (ampersand == -1) ? URL.data()+lonBeg : URL.substr(lonBeg, ampersand-lonBeg);
-		if (lng_string.size() > DBFieldLength::dcErrValue)
-		{	lng_string = lng_string.substr(0, DBFieldLength::dcErrValue-3);
-			while (lng_string.back() < 0)	lng_string.erase(lng_string.end()-1);
-			lng_string += "...";
-		}
-		Datacheck::add(route, label, "", "", "MALFORMED_LON", lng_string);
-		valid_line = 0;
-	}
-	if (valid_line)
-	     {	lat = strtod(&URL[latBeg], 0);
-		lng = strtod(&URL[lonBeg], 0);
-		alt_labels.pop_back(); // remove URL
-		is_hidden = label[0] == '+';
-		colocated = 0;
-	     }
-	else {	lat = 0;
-		lng = 0;
-	     }
+	if (!valid_num_str(latBeg, '&')) {invalid_url(latBeg, "MALFORMED_LAT"); invalid_line |= 16;}
+	if (!valid_num_str(lonBeg, '&')) {invalid_url(lonBeg, "MALFORMED_LON"); invalid_line |= 32;}
+	if (invalid_line) throw invalid_line;
+	lat = atof(latBeg);
+	lng = atof(lonBeg);
+	is_hidden = label[0] == '+';
+	colocated = 0;
 }
 
 std::string Waypoint::str()
@@ -151,16 +124,16 @@ double Waypoint::distance_to(Waypoint *other)
 	return ans * 1.02112; // CHM/TM distance fudge factor to compensate for imprecision of mapping
 }
 
-double Waypoint::angle(Waypoint *pred, Waypoint *succ)
+double Waypoint::angle()
 {	/* return the angle in degrees formed by the waypoints between the
 	line from pred to self and self to succ */
 	// convert to radians
 	double rlatself = lat * (pi/180);
 	double rlngself = lng * (pi/180);
-	double rlatpred = pred->lat * (pi/180);
-	double rlngpred = pred->lng * (pi/180);
-	double rlatsucc = succ->lat * (pi/180);
-	double rlngsucc = succ->lng * (pi/180);
+	double rlatpred = this[-1].lat * (pi/180);
+	double rlngpred = this[-1].lng * (pi/180);
+	double rlatsucc = this[1].lat * (pi/180);
+	double rlngsucc = this[1].lng * (pi/180);
 
 	double x0 = cos(rlngpred)*cos(rlatpred);
 	double x1 = cos(rlngself)*cos(rlatself);
@@ -362,14 +335,14 @@ Route* Waypoint::coloc_banner_matches_abbrev()
 
 /* Datacheck */
 
-void Waypoint::distance_update(char *fstr, double &vis_dist, Waypoint *prev_w)
-{	// visible distance update, and last segment length check
-	double last_distance = distance_to(prev_w);
-	vis_dist += last_distance;
-	if (last_distance > 20)
-	{	sprintf(fstr, "%.2f", last_distance);
-		Datacheck::add(route, prev_w->label, label, "", "LONG_SEGMENT", fstr);
+void Waypoint::invalid_url(const char* const cstr, const char* const errcode)
+{	std::string str(cstr, strcspn(cstr, "&"));
+	if (str.size() > DBFieldLength::dcErrValue)
+	{	str.assign(str, 0, DBFieldLength::dcErrValue-3);
+		while (str.back() < 0)	str.pop_back();
+		str += "...";
 	}
+	Datacheck::add(route, label, "", "", errcode, str);
 }
 
 void Waypoint::label_invalid_char()
