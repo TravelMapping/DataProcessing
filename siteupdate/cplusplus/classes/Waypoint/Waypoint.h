@@ -47,13 +47,17 @@ class Waypoint
 	bool region_match(std::list<Region*>*);
 	bool system_match(std::list<HighwaySystem*>*);
 	bool label_references_route(Route *);
+
+	// Datacheck helpers
 	Route* coloc_same_number(const char*);
 	Route* coloc_same_designation(const std::string&);
 	Route* self_intersection();
 	bool banner_after_slash(const char*);
 	Route* coloc_banner_matches_abbrev();
+	void add_to_adjacent(std::vector<void*>&);
 
 	// Datacheck
+	void hidden_junction();
 	void invalid_url(const char* const, const char* const);
 	void label_invalid_char();
 	void out_of_bounds(char *);

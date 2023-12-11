@@ -333,7 +333,34 @@ Route* Waypoint::coloc_banner_matches_abbrev()
 	return 0;
 }
 
+inline void Waypoint::add_to_adjacent(std::vector<void*>& adjacent)
+{	// Store a unique-location identifier.
+	// Let's use the address of singleton waypoints, and the address of the colocation list
+	// for colocated points, as it's shared by all of them. No need to waste instructions
+	// and memory bandwidth going into the colocation list itself to find the 1st waypoint.
+	void* a = colocated ? (void*)colocated : this;
+	if (!contains(adjacent, a))
+		adjacent.push_back(a);
+}
+
 /* Datacheck */
+
+void Waypoint::hidden_junction()
+{	// we will have already checked for visibility before calling this function
+	if (!colocated || this != colocated->front()) return;
+	std::vector<void*> adjacent;	// Make a list of unique adjacent locations
+	for (Waypoint* w : *colocated)	// before & after every point on this colocation list
+	{
+		if (!w->is_hidden)
+			return;
+		if (w != w->route->points.data) // unless the 1st point in route, add prev point
+			w[-1].add_to_adjacent(adjacent);
+		if (w != &w->route->points.back()) // unless last point in route, add next point
+			w[1].add_to_adjacent(adjacent);
+	}
+	if (adjacent.size() > 2)
+		Datacheck::add( route, label, "", "", "HIDDEN_JUNCTION", std::to_string(adjacent.size()) );
+}
 
 void Waypoint::invalid_url(const char* const cstr, const char* const errcode)
 {	std::string str(cstr, strcspn(cstr, "&"));

@@ -13,7 +13,7 @@ void HighwaySystem::route_integrity(ErrorList& el)
 		if (!r.con_route)
 			el.add_error(systemname + ".csv: root " + r.root + " not matched by any connected route root.");
 
-		// datachecks
+		// per-route CSV datachecks
 		#define CSV_LINE r.system->systemname + ".csv#L" + std::to_string(r.index()+2)
 		if (r.abbrev.empty())
 		{	if ( r.banner.size() && !strncmp(r.banner.data(), r.city.data(), r.banner.size()) )
@@ -21,12 +21,18 @@ void HighwaySystem::route_integrity(ErrorList& el)
 		} else	if (r.city.empty())
 			  Datacheck::add(&r, "", "", "", "ABBREV_NO_CITY", CSV_LINE);
 		#undef CSV_LINE
+
+		// per-waypoint colocation-based datachecks
 		for (Waypoint& w : r.points)
 		{	if (!w.is_hidden)
 			{	w.label_selfref();
 			}
+			else	w.hidden_junction();
 			//#include "unexpected_designation.cpp"
 		}
+
+		// Yes, these two loops could be combined into one.
+		// But that performs worse, probably due to increased cache evictions.
 
 		// create label hashes and check for duplicates
 		for (unsigned int index = 0; index < r.points.size; index++)

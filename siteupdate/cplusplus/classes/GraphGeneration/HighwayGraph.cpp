@@ -77,17 +77,11 @@ HighwayGraph::HighwayGraph(WaypointQuadtree &all_waypoints, ElapsedTime &et)
 	{	if (counter % 10000 == 0) std::cout << '.' << std::flush;
 		counter++;
 		if (!w->vertex->visibility)
-		{	// cases with only one edge are flagged as HIDDEN_TERMINUS
-			if (w->vertex->incident_c_edges.size() < 2)
+		{	// <2 edges = HIDDEN_TERMINUS
+			// >2 edges = HIDDEN_JUNCTION
+			// datachecks have been flagged earlier in the program; mark as visible and do not compress
+			if (w->vertex->incident_c_edges.size() != 2)
 			{	w->vertex->visibility = 2;
-				continue;
-			}
-			// if >2 edges, flag HIDDEN_JUNCTION, mark as visible, and do not compress
-			if (w->vertex->incident_c_edges.size() > 2)
-			{	Datacheck::add(w->colocated->front()->route,
-					       w->colocated->front()->label,
-					       "", "", "HIDDEN_JUNCTION", std::to_string(w->vertex->incident_c_edges.size()));
-				w->vertex->visibility = 2;
 				continue;
 			}
 			// construct from vertex this time

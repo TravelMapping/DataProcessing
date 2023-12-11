@@ -28,7 +28,7 @@ class Datacheck
     DISCONNECTED_ROUTE     | adjacent root's expected connection point
     DUPLICATE_COORDS       | coordinate pair
     DUPLICATE_LABEL        |
-    HIDDEN_JUNCTION        | number of incident edges in TM master graph
+    HIDDEN_JUNCTION        | number of unique adjacent point locations
     HIDDEN_TERMINUS        |
     INTERSTATE_NO_HYPHEN   |
     INVALID_FINAL_CHAR     | final character in label
@@ -37,7 +37,7 @@ class Datacheck
     LABEL_LOOKS_HIDDEN     |
     LABEL_LOWERCASE        |
     LABEL_PARENS           |
-    LABEL_SELFREF          |
+    LABEL_SELFREF          | subtype / cause of error (see syserr.php)
     LABEL_SLASHES          |
     LABEL_TOO_LONG         | excess label that can't fit in DB
     LABEL_UNDERSCORES      |
