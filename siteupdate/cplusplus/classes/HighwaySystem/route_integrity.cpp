@@ -21,7 +21,12 @@ void HighwaySystem::route_integrity(ErrorList& el)
 		} else	if (r.city.empty())
 			  Datacheck::add(&r, "", "", "", "ABBREV_NO_CITY", CSV_LINE);
 		#undef CSV_LINE
-		for (Waypoint& w : r.points) if (!w.is_hidden) w.label_selfref();
+		for (Waypoint& w : r.points)
+		{	if (!w.is_hidden)
+			{	w.label_selfref();
+			}
+			//#include "unexpected_designation.cpp"
+		}
 
 		// create label hashes and check for duplicates
 		for (unsigned int index = 0; index < r.points.size; index++)
