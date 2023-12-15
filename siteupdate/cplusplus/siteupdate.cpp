@@ -175,7 +175,24 @@ int main(int argc, char *argv[])
 	#include "tasks/threaded/StatsCsv.cpp"
 
 	cout << et.et() << "Reading datacheckfps.csv." << endl;
-	Datacheck::read_fps(Args::datapath, el);
+	Datacheck::read_fps(el);
+	cout << et.et() << "Marking datacheck false positives." << flush;
+	Datacheck::mark_fps(et);
+	cout << et.et() << "Writing log of unmatched datacheck FP entries." << endl;
+	Datacheck::unmatchedfps_log();
+	cout << et.et() << "Writing datacheck.log" << endl;
+	Datacheck::datacheck_log();
+
+	cout << et.et() << "Reading subgraph descriptions and checking for errors." << endl;
+	#include "tasks/graph_setup.cpp"
+
+	// See if we have any errors that should be fatal to the site update process
+	if (el.error_list.size())
+	{	cout << et.et() << "ABORTING due to " << el.error_list.size() << " errors:" << endl;
+		for (unsigned int i = 0; i < el.error_list.size(); i++)
+			cout << i+1 << ": " << el.error_list[i] << endl;
+		return 1;
+	}
 
       #ifdef threading_enabled
 	thread sqlthread;
@@ -185,14 +202,10 @@ int main(int argc, char *argv[])
 	}
       #endif
 
-	#include "tasks/graph_generation.cpp"
-
-	cout << et.et() << "Marking datacheck false positives." << flush;
-	Datacheck::mark_fps(Args::logfilepath, et);
-	cout << et.et() << "Writing log of unmatched datacheck FP entries." << endl;
-	Datacheck::unmatchedfps_log(Args::logfilepath);
-	cout << et.et() << "Writing datacheck.log" << endl;
-	Datacheck::datacheck_log(Args::logfilepath);
+	if (!Args::skipgraphs && !Args::errorcheck)
+	{	// Build a graph structure out of all highway data in active and preview systems
+		#include "tasks/graph_generation.cpp"
+	} else	cout << et.et() << "SKIPPING generation of graphs." << endl;
 
 	if   (Args::errorcheck)
 		cout << et.et() << "SKIPPING database file." << endl;
@@ -206,14 +219,6 @@ int main(int argc, char *argv[])
 	      #endif
 		sqlfile2(&et, &graph_types);
 	     }
-
-	// See if we have any errors that should be fatal to the site update process
-	if (el.error_list.size())
-	{	cout << et.et() << "ABORTING due to " << el.error_list.size() << " errors:" << endl;
-		for (unsigned int i = 0; i < el.error_list.size(); i++)
-			cout << i+1 << ": " << el.error_list[i] << endl;
-		return 1;
-	}
 
 	// print some statistics
 	cout << et.et() << "Processed " << HighwaySystem::syslist.size << " highway systems." << endl;

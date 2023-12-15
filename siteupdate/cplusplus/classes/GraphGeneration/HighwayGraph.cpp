@@ -257,6 +257,10 @@ void HighwayGraph::write_master_graphs_tmg()
 	simplefile.close();
 	collapfile.close();
 	travelfile.close();
+	GraphListEntry* g = GraphListEntry::entries.data();
+	g[0].vertices = vertices.size(); g[0].edges = se; g[0].travelers = 0;
+	g[1].vertices = cv;		 g[1].edges = ce; g[1].travelers = 0;
+	g[2].vertices = tv;		 g[2].edges = te; g[2].travelers = TravelerList::allusers.size;
 }
 
 // write a subset of the data,
@@ -286,9 +290,9 @@ void HighwayGraph::write_subgraphs_tmg
 	}
       #ifdef threading_enabled
 	term->lock();
+      #endif
 	if (g->cat != g[-1].cat)
 		std::cout << '\n' << et->et() << "Writing " << g->category() << " graphs.\n";
-      #endif
 	std::cout << g->tag()
 		  << '(' << mv.size() << ',' << mse.size() << ") "
 		  << '(' << cv_count << ',' << mce.size() << ") "

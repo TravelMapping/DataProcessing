@@ -425,16 +425,6 @@ void sqlfile1
 		delete[] systemupdate;
 	}
 	sqlfile << ";\n";
-	sqlfile.close();
-      #ifdef threading_enabled
-	term_mtx->lock();
-	std::cout << '\n' << et->et() << "Pause writing database file " << Args::databasename << ".sql.\n" << std::flush;
-	term_mtx->unlock();
-      #endif
-     }
-
-void sqlfile2(ElapsedTime *et, std::list<std::array<std::string,3>> *graph_types)
-{	std::ofstream sqlfile(Args::databasename+".sql", std::ios::app);
 
 	// datacheck errors into the db
       #ifndef threading_enabled
@@ -459,6 +449,16 @@ void sqlfile2(ElapsedTime *et, std::list<std::array<std::string,3>> *graph_types
 		}
 	}
 	sqlfile << ";\n";
+	sqlfile.close();
+      #ifdef threading_enabled
+	term_mtx->lock();
+	std::cout << '\n' << et->et() << "Pause writing database file " << Args::databasename << ".sql.\n" << std::flush;
+	term_mtx->unlock();
+      #endif
+     }
+
+void sqlfile2(ElapsedTime *et, std::list<std::array<std::string,3>> *graph_types)
+{	std::ofstream sqlfile(Args::databasename+".sql", std::ios::app);
 
 	// update graph info in DB if graphs were generated
 	if (!Args::skipgraphs)

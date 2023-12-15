@@ -74,10 +74,10 @@ class Datacheck
 
 	static std::list<Datacheck> errors;
 	static void add(Route*, std::string, std::string, std::string, std::string, std::string);
-	static void read_fps(std::string&, ErrorList &);
-	static void mark_fps(std::string&, ElapsedTime &);
-	static void unmatchedfps_log(std::string&);
-	static void datacheck_log(std::string&);
+	static void read_fps(ErrorList &);
+	static void mark_fps(ElapsedTime &);
+	static void unmatchedfps_log();
+	static void datacheck_log();
 
 	Datacheck(Route*, std::string, std::string, std::string, std::string, std::string);
 

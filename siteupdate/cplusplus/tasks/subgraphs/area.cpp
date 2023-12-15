@@ -1,11 +1,7 @@
 // graphs restricted by place/area - from areagraphs.csv file
-#ifndef threading_enabled
-cout << et.et() << "Creating area data graphs." << endl;
-#endif
 file.open(Args::datapath+"/graphs/areagraphs.csv");
 getline(file, line);  // ignore header line
 
-// add entries to graph vector
 while (getline(file, line))
 {	if (line.empty()) continue;
 	vector<char*> fields;
@@ -44,13 +40,5 @@ while (getline(file, line))
 	delete[] cline;
 }
 file.close();
-#ifndef threading_enabled
-// write new graph vector entries to disk
-while (GraphListEntry::num < GraphListEntry::entries.size())
-{	graph_data.write_subgraphs_tmg(GraphListEntry::num, 0, &all_waypoints, &et, &term_mtx);
-	GraphListEntry::num += 3;
-}
-cout << '!' << endl;
-#endif
 graph_types.push_back({"area", "Routes Within a Given Radius of a Place",
 		       "These graphs contain all routes currently plotted within the given distance radius of the given place."});
