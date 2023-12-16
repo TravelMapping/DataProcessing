@@ -26,7 +26,14 @@ void HighwaySystem::route_integrity(ErrorList& el)
 		for (Waypoint& w : r.points)
 		{	if (!w.is_hidden)
 			{	w.label_selfref();
-			}
+				// "visible front" flavored VISIBLE_HIDDEN_COLOC check
+				if (w.colocated && &w == w.colocated->front())
+				  for (auto p = ++w.colocated->begin(), end = w.colocated->end(); p != end; p++)
+				    if ((*p)->is_hidden)
+				    {	Datacheck::add(w.route, w.label, "", "", "VISIBLE_HIDDEN_COLOC", (*p)->root_at_label());
+					break;
+				    }
+			}	// "hidden front" flavored VHC is handled via Waypoint::hidden_junction below
 			else	w.hidden_junction();
 			//#include "unexpected_designation.cpp"
 		}

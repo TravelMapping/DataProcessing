@@ -54,7 +54,7 @@ class Datacheck
     SINGLE_FIELD_LINE      |
     US_LETTER              |
     VISIBLE_DISTANCE       | distance in miles
-    VISIBLE_HIDDEN_COLOC   | hidden point at same coordinates
+    VISIBLE_HIDDEN_COLOC   | 1st hidden point at same coordinates
 
     fp is a boolean indicating whether this has been reported as a
     false positive (would be set to true later)

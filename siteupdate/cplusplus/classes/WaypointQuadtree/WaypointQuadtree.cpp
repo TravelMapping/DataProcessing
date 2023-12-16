@@ -205,20 +205,8 @@ void WaypointQuadtree::graph_points(std::vector<Waypoint*>& hi_priority_points, 
 		sw_child->graph_points(hi_priority_points, lo_priority_points);
 	     }
 	else for (Waypoint *w : points)
-	     {	if (w->colocated)
-		{	// skip if not at front of list
-			if (w != w->colocated->front()) continue;
-			// VISIBLE_HIDDEN_COLOC datacheck
-			for (auto p = ++w->colocated->begin(); p != w->colocated->end(); p++)
-			  if ((*p)->is_hidden != w->colocated->front()->is_hidden)
-			  {	if ((*p)->is_hidden)
-					Datacheck::add(w->route, w->label, "", "", "VISIBLE_HIDDEN_COLOC",
-						       (*p)->route->root+"@"+(*p)->label);
-				else	Datacheck::add((*p)->route, (*p)->label, "", "", "VISIBLE_HIDDEN_COLOC",
-						       w->route->root+"@"+w->label);
-				break;
-			  }
-		}
+	     {	// skip if not at front of colocation list
+		if (w->colocated && w != w->colocated->front()) continue;
 		// skip if this point is occupied by only waypoints in devel systems
 		if (!w->is_or_colocated_with_active_or_preview()) continue;
 		// store a colocated list with any devel system entries removed

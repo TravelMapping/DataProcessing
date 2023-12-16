@@ -350,9 +350,13 @@ void Waypoint::hidden_junction()
 	if (!colocated || this != colocated->front()) return;
 	std::vector<void*> adjacent;	// Make a list of unique adjacent locations
 	for (Waypoint* w : *colocated)	// before & after every point on this colocation list
-	{
+	{	// Kill 2 birds with 1 stone:
+		// 1.	As with graph vertices where it originated, all colocated points must be
+		//	hidden for the junction to count as hidden for purposes of this datacheck.
+		//	If we find a visible point, return.
+		// 2.	If we do find one, there's our VISIBLE_HIDDEN_COLOC error, so return that.
 		if (!w->is_hidden)
-			return;
+			return Datacheck::add(w->route, w->label, "", "", "VISIBLE_HIDDEN_COLOC", root_at_label());
 		if (w != w->route->points.data) // unless the 1st point in route, add prev point
 			w[-1].add_to_adjacent(adjacent);
 		if (w != &w->route->points.back()) // unless last point in route, add next point
