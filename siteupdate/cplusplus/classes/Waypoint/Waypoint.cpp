@@ -268,17 +268,17 @@ bool Waypoint::label_references_route(Route *r)
 {	std::string no_abbrev = r->name_no_abbrev();
 	if ( strncmp(label.data(), no_abbrev.data(), no_abbrev.size()) )
 		return 0;
-	if (label[no_abbrev.size()] == 0 || label[no_abbrev.size()] == '_')
+	const char* c = label.data() + no_abbrev.size();
+	if (*c == 0 || *c == '_')
 		return 1;
-	if ( strncmp(label.data()+no_abbrev.size(), r->abbrev.data(), r->abbrev.size()) )
-	{	/*if (label[no_abbrev.size()] == '/')
-			Datacheck::add(route, label, "", "", "UNEXPECTED_DESIGNATION", label.data()+no_abbrev.size()+1);//*/
+	if ( strncmp(c, r->abbrev.data(), r->abbrev.size()) )
+	{	//if (*c == '/') Datacheck::add(route, label, "", "", "UNEXPECTED_DESIGNATION", c+1);
 		return 0;
 	}
-	if (label[no_abbrev.size() + r->abbrev.size()] == 0 || label[no_abbrev.size() + r->abbrev.size()] == '_')
+	c += r->abbrev.size();
+	if (*c == 0 || *c == '_')
 		return 1;
-	/*if (label[no_abbrev.size() + r->abbrev.size()] == '/')
-		Datacheck::add(route, label, "", "", "UNEXPECTED_DESIGNATION", label.data()+no_abbrev.size()+r->abbrev.size()+1);//*/
+	//if (*c == '/') Datacheck::add(route, label, "", "", "UNEXPECTED_DESIGNATION", c+1);
 	return 0;
 }
 
