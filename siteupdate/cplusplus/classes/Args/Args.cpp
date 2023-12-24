@@ -19,6 +19,7 @@
 /* p */ std::string Args::splitregion, Args::splitregionapp;
 /* U */ std::list<std::string> Args::userlist;
 /* L */ int Args::colocationlimit = 0; /* disabled by default */
+/* N */ double Args::nmpthreshold = 0.0005;
 const char* Args::exec;
 
 bool Args::init(int argc, char *argv[])
@@ -54,6 +55,10 @@ bool Args::init(int argc, char *argv[])
 			if (timeprecision<1) timeprecision=1;
 			if (timeprecision>9) timeprecision=9;
 		}
+		else if ARG(1, "-N", "--nmp-threshold")
+		{	nmpthreshold = strtod(argv[++n], 0);
+			if (nmpthreshold<0) nmpthreshold=0.0005;  /* default */
+		}
 		else if ARG(1, "-U", "--userlist")
 			while (n+1 < argc && argv[n+1][0] != '-')
 			{	userlist.push_back(argv[n+1]);
@@ -77,7 +82,7 @@ void Args::show_help()
 	std::cout  <<  indent << "        [-n NMPMERGEPATH] [-p SPLITREGIONPATH SPLITREGION]\n";
 	std::cout  <<  indent << "        [-U USERLIST [USERLIST ...]] [-t NUMTHREADS] [-e]\n";
 	std::cout  <<  indent << "        [-T TIMEPRECISION] [-v] [-C]\n";
-	std::cout  <<  indent << "        [-L COLOCATIONLIMIT]\n";
+	std::cout  <<  indent << "        [-L COLOCATIONLIMIT] [-N NMPTHRESHOLD]\n";
 	std::cout  <<  "\n";
 	std::cout  <<  "Create SQL, stats, graphs, and log files from highway and user data for the\n";
 	std::cout  <<  "Travel Mapping project.\n";
@@ -121,4 +126,6 @@ void Args::show_help()
 	std::cout  <<  "  -C, --mt-csvs         Multi-threaded stats csv files\n";
 	std::cout  <<  "  -L, --colocationlimit COLOCATIONLIMIT\n";
 	std::cout  <<  "		        Threshold to report colocation counts\n";
+	std::cout  <<  "  -N, --nmp-threshold NMPTHRESHOLD\n";
+	std::cout  <<  "		        Threshold to report near-miss points\n";
 }

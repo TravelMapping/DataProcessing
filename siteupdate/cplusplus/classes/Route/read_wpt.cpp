@@ -66,7 +66,7 @@ void Route::read_wpt(WaypointQuadtree *all_waypoints, ErrorList *el, bool usa_fl
 
 	      #ifndef threading_enabled
 		// look for near-miss points (before we add this one in)
-		all_waypoints->near_miss_waypoints(w, 0.0005);
+		all_waypoints->near_miss_waypoints(w, Args::nmpthreshold);
 		for (Waypoint *other_w : w->near_miss_points) other_w->near_miss_points.push_front(w);
 	      #endif
 

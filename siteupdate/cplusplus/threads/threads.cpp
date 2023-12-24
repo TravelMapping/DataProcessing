@@ -5,6 +5,7 @@
 #include "../classes/HighwaySystem/HighwaySystem.h"
 #include "../classes/Region/Region.h"
 #include "../classes/Route/Route.h"
+#include "../classes/Args/Args.h"
 #include "../classes/TravelerList/TravelerList.h"
 #include "../classes/Waypoint/Waypoint.h"
 #include "../classes/WaypointQuadtree/WaypointQuadtree.h"
