@@ -20,6 +20,7 @@ class Args
 	/* v */ static bool mtvertices;
 	/* C */ static bool mtcsvfiles;
 	/* L */ static int colocationlimit;
+	/* N */ static double nmpthreshold; 
 		static const char* exec;
 
 	static bool init(int argc, char *argv[]);
