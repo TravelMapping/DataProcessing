@@ -1,5 +1,5 @@
 void NmpSearchThread(unsigned int id, std::mutex* mtx, WaypointQuadtree* all_waypoints)
-{	printf("Starting NmpSearchThread %02i\n", id); fflush(stdout);
+{	//printf("Starting NmpSearchThread %02i\n", id); fflush(stdout);
 	while (HighwaySystem::it != HighwaySystem::syslist.end())
 	{	mtx->lock();
 		if (HighwaySystem::it == HighwaySystem::syslist.end())
