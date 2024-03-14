@@ -1,10 +1,10 @@
 // Tab Width = 8
 
-// Travel Mapping Project, Jim Teresco and Eric Bryant, 2015-2023
+// Travel Mapping Project, Jim Teresco and Eric Bryant, 2015-2024
 /* Code to read .csv and .wpt files and prepare for
 adding to the Travel Mapping Project database.
 
-(c) 2015-2023, Jim Teresco and Eric Bryant
+(c) 2015-2024, Jim Teresco and Eric Bryant
 Original Python version by Jim Teresco, with contributions from Eric Bryant and the TravelMapping team
 C++ translation by Eric Bryant
 
