@@ -7,7 +7,6 @@
 #include "../HighwaySegment/HighwaySegment.h"
 #include "../HighwaySystem/HighwaySystem.h"
 #include "../Region/Region.h"
-#include "../TravelerList/TravelerList.h"
 #include "../Waypoint/Waypoint.h"
 #include "../../functions/tmstring.h"
 #include <sys/stat.h>
