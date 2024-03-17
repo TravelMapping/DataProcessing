@@ -249,19 +249,15 @@ void Route::con_mismatch()
 }
 
 void Route::mark_label_in_use(char* label)
-{	usage_mtx.lock();
-	unused_alt_labels.erase(label);
+{	unused_alt_labels.erase(label);
 	labels_in_use.insert(label);
-	usage_mtx.unlock();
 }
 
 void Route::mark_labels_in_use(char* label1, char* label2)
-{	usage_mtx.lock();
-	unused_alt_labels.erase(label1);
+{	unused_alt_labels.erase(label1);
 	unused_alt_labels.erase(label2);
 	labels_in_use.insert(label1);
 	labels_in_use.insert(label2);
-	usage_mtx.unlock();
 }
 
 // sort routes by most recent update for use at end of user logs

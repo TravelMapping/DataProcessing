@@ -105,8 +105,8 @@ if (duplicate)
 	log << "  Please report this error in the Travel Mapping forum.\n"
 	    << "  Unable to parse line: " << trim_line << '\n';
 	r1->system->mark_routes_in_use(lookup1, lookup2);
-	r1->mark_label_in_use(fields[2]);
-	r2->mark_label_in_use(fields[5]);
+	r1->mtx.lock(); r1->mark_label_in_use(fields[2]); r1->mtx.unlock();
+	r2->mtx.lock(); r2->mark_label_in_use(fields[5]); r2->mtx.unlock();
 	continue;
 }
 bool reverse = 0;
@@ -121,10 +121,12 @@ if (r1 == r2)
 		UPDATE_NOTE(r1)
 		continue;
 	}
+	r1->mtx.lock();
 	if (index1 <= index2)
 		r1->store_traveled_segments(this, log, update, index1, index2);
 	else	r1->store_traveled_segments(this, log, update, index2, index1);
 	r1->mark_labels_in_use(fields[2], fields[5]);
+	r1->mtx.unlock();
      }
 else {	// user log warning for DISCONNECTED_ROUTE errors
 	if (r1->con_route->disconnected)
@@ -144,23 +146,31 @@ else {	// user log warning for DISCONNECTED_ROUTE errors
 		index1 = lit2->second;
 		index2 = lit1->second;
 		reverse = 1;
-		r1->mark_label_in_use(fields[5]);
-		r2->mark_label_in_use(fields[2]);
 	     }
-	else {	r1->mark_label_in_use(fields[2]);
-		r2->mark_label_in_use(fields[5]);
-	     }
+
 	// mark the beginning chopped route from index1 to its end
+	r1->mtx.lock();
+	r1->mark_label_in_use(reverse ? fields[5] : fields[2]);
 	if (r1->is_reversed())
 		r1->store_traveled_segments(this, log, update, 0, index1);
 	else	r1->store_traveled_segments(this, log, update, index1, r1->segments.size);
+	r1->mtx.unlock();
+
 	// mark the ending chopped route from its beginning to index2
+	r2->mtx.lock();
+	r2->mark_label_in_use(reverse ? fields[2] : fields[5]);
 	if (r2->is_reversed())
 		r2->store_traveled_segments(this, log, update, index2, r2->segments.size);
 	else	r2->store_traveled_segments(this, log, update, 0, index2);
+	r2->mtx.unlock();
+
 	// mark any intermediate chopped routes in their entirety.
 	for (size_t r = r1->rootOrder+1; r < r2->rootOrder; r++)
-	  r1->con_route->roots[r]->store_traveled_segments(this, log, update, 0, r1->con_route->roots[r]->segments.size);
+	{	auto& cr = r1->con_route->roots[r];
+		cr->mtx.lock();
+		cr->store_traveled_segments(this, log, update, 0, cr->segments.size);
+		cr->mtx.unlock();
+	}
      }
 r1->system->mark_routes_in_use(lookup1, lookup2);
 list_entries++;

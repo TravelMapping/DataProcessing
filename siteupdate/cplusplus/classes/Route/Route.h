@@ -67,7 +67,7 @@ class Route
 	std::unordered_set<std::string> unused_alt_labels;
 	std::unordered_set<std::string> duplicate_labels;
 	std::unordered_map<std::string, unsigned int> pri_label_hash, alt_label_hash;
-	std::mutex usage_mtx;	// for locking labels_in_use & unused_alt_labels during TravelerList processing
+	std::mutex mtx;
 	TMArray<HighwaySegment> segments;
 	std::string* last_update;
 	double mileage;

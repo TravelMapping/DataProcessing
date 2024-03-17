@@ -4,14 +4,12 @@
 #include "../TravelerList/TravelerList.h"
 #include <fstream>
 
-void Route::store_traveled_segments(TravelerList* t, std::ofstream& log, std::string& update, unsigned int beg, unsigned int end)
+void Route::store_traveled_segments(TravelerList* t, std::ofstream& log, std::string& update, unsigned int beg, unsigned int endex)
 {	// store clinched segments with traveler and traveler with segments
 	size_t index = t-TravelerList::allusers.data;
-	for (unsigned int pos = beg; pos < end; pos++)
-	{	HighwaySegment *hs = segments.data+pos;
-		if (hs->add_clinched_by(index))
+	for (HighwaySegment *hs = segments.data+beg, *end = segments.data+endex; hs < end; hs++)
+		if (hs->clinched_by.add_index(index))
 		  t->clinched_segments.push_back(hs);
-	}
       #ifdef threading_enabled
 	// create key/value pairs in regional tables, to be computed in a threadsafe manner later
 	if (system->active())

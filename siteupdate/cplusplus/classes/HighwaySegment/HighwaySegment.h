@@ -17,13 +17,11 @@ class HighwaySegment
 	double length;
 	std::list<HighwaySegment*> *concurrent;
 	TMBitset<TravelerList*, uint32_t> clinched_by;
-	std::mutex clin_mtx;
 
 	HighwaySegment(Waypoint*, Route*);
 	~HighwaySegment();
 
 	std::string str();
-	bool add_clinched_by(size_t);
 	void add_concurrency(std::ofstream&, Waypoint*);
 	std::string csv_line(unsigned int);
 	//std::string concurrent_travelers_sanity_check();

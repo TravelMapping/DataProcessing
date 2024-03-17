@@ -79,7 +79,9 @@ if (duplicate)
 	log << "  Please report this error in the Travel Mapping forum.\n  Unable to parse line: "
 	    << trim_line << '\n';
 	r->system->mark_route_in_use(lookup);
+	r->mtx.lock();
 	r->mark_labels_in_use(fields[2], fields[3]);
+	r->mtx.unlock();
 	continue;
 }
 // if both labels reference the same waypoint...
@@ -89,10 +91,7 @@ if (lit1->second == lit2->second)
 	UPDATE_NOTE(r)
 }
 // otherwise both labels are valid; mark in use & proceed
-else {	r->system->mark_route_in_use(lookup);
-	r->mark_labels_in_use(fields[2], fields[3]);
-
-	list_entries++;
+else {	list_entries++;
 	bool reverse = 0;
 	if (lit1->second <= lit2->second)
 	     {	index1 = lit1->second;
@@ -102,7 +101,12 @@ else {	r->system->mark_route_in_use(lookup);
 		index2 = lit1->second;
 		reverse = 1;
 	     }
+	r->mtx.lock();
 	r->store_traveled_segments(this, log, update, index1, index2);
+	r->mark_labels_in_use(fields[2], fields[3]);
+	r->mtx.unlock();
+	r->system->mark_route_in_use(lookup);
+
 	// new .list lines for region split-ups
 	if (Args::splitregion == r->region->code)
 	{
