@@ -1,11 +1,7 @@
 // Some additional interesting graphs, the "multiregion" graphs
-#ifndef threading_enabled
-cout << et.et() << "Creating multiregion graphs." << endl;
-#endif
 file.open(Args::datapath+"/graphs/multiregion.csv");
 getline(file, line);  // ignore header line
 
-// add entries to graph vector
 while (getline(file, line))
 {	if (line.empty()) continue;
 	vector<char*> fields;
@@ -38,12 +34,4 @@ while (getline(file, line))
 	delete[] cline;
 }
 file.close();
-#ifndef threading_enabled
-// write new graph vector entries to disk
-while (GraphListEntry::num < GraphListEntry::entries.size())
-{	graph_data.write_subgraphs_tmg(GraphListEntry::num, 0, &all_waypoints, &et, &term_mtx);
-	GraphListEntry::num += 3;
-}
-cout << "!" << endl;
-#endif
 graph_types.push_back({"multiregion", "Routes Within Multiple Regions", "These graphs contain the routes within a set of regions."});

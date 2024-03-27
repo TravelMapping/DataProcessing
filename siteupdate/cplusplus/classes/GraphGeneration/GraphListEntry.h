@@ -29,7 +29,6 @@ class GraphListEntry
 	static size_t num; // iterator for entries
 	std::string tag();
 
-	GraphListEntry(char, unsigned int, unsigned int, unsigned int); // < master graph ctor | v----- subgraph ctor -----v 
 	GraphListEntry(std::string, std::string, char, char, std::list<Region*>*, std::list<HighwaySystem*>*, PlaceRadius*);
 	static void add_group(std::string&&,  std::string&&,  char, std::list<Region*>*, std::list<HighwaySystem*>*, PlaceRadius*);
 };

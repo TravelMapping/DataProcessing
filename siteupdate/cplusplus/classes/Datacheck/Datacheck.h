@@ -28,7 +28,7 @@ class Datacheck
     DISCONNECTED_ROUTE     | adjacent root's expected connection point
     DUPLICATE_COORDS       | coordinate pair
     DUPLICATE_LABEL        |
-    HIDDEN_JUNCTION        | number of incident edges in TM master graph
+    HIDDEN_JUNCTION        | number of unique adjacent point locations
     HIDDEN_TERMINUS        |
     INTERSTATE_NO_HYPHEN   |
     INVALID_FINAL_CHAR     | final character in label
@@ -37,7 +37,7 @@ class Datacheck
     LABEL_LOOKS_HIDDEN     |
     LABEL_LOWERCASE        |
     LABEL_PARENS           |
-    LABEL_SELFREF          |
+    LABEL_SELFREF          | subtype / cause of error (see syserr.php)
     LABEL_SLASHES          |
     LABEL_TOO_LONG         | excess label that can't fit in DB
     LABEL_UNDERSCORES      |
@@ -54,7 +54,7 @@ class Datacheck
     SINGLE_FIELD_LINE      |
     US_LETTER              |
     VISIBLE_DISTANCE       | distance in miles
-    VISIBLE_HIDDEN_COLOC   | hidden point at same coordinates
+    VISIBLE_HIDDEN_COLOC   | 1st hidden point at same coordinates
 
     fp is a boolean indicating whether this has been reported as a
     false positive (would be set to true later)
@@ -74,10 +74,10 @@ class Datacheck
 
 	static std::list<Datacheck> errors;
 	static void add(Route*, std::string, std::string, std::string, std::string, std::string);
-	static void read_fps(std::string&, ErrorList &);
-	static void mark_fps(std::string&, ElapsedTime &);
-	static void unmatchedfps_log(std::string&);
-	static void datacheck_log(std::string&);
+	static void read_fps(ErrorList &);
+	static void mark_fps(ElapsedTime &);
+	static void unmatchedfps_log();
+	static void datacheck_log();
 
 	Datacheck(Route*, std::string, std::string, std::string, std::string, std::string);
 

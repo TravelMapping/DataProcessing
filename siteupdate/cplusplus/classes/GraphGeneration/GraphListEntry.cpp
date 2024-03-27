@@ -6,13 +6,6 @@
 std::vector<GraphListEntry> GraphListEntry::entries;
 size_t GraphListEntry::num; // iterator for entries
 
-// master graph constructor
-GraphListEntry::GraphListEntry(char f, unsigned int v, unsigned int e, unsigned int t):
-	root("tm-master"), descr("All Travel Mapping Data"),
-	vertices(v), edges(e), travelers(t),
-	form(f), cat('M') {}
-
-// subgraph constructor
 GraphListEntry::GraphListEntry(std::string r, std::string d, char f, char c, std::list<Region*> *rg, std::list<HighwaySystem*> *sys, PlaceRadius *pr):
 	regions(rg), systems(sys), placeradius(pr),
 	root(r), descr(d), form(f), cat(c) {}

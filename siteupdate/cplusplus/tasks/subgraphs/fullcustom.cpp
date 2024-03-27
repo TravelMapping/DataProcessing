@@ -2,10 +2,6 @@
 file.open(Args::datapath+"/graphs/fullcustom.csv");
 if (file.is_open())
 {	getline(file, line);  // ignore header line
-	#ifndef threading_enabled
-	cout << et.et() << "Creating full custom graphs." << endl;
-	#endif
-	// add entries to graph vector
 	while (getline(file, line))
 	{	// parse fullcustom.csv line
 		if (line.empty()) continue;
@@ -95,14 +91,6 @@ if (file.is_open())
 		     }
 	}
 	file.close();
-	#ifndef threading_enabled
-	// write new graph vector entries to disk
-	while (GraphListEntry::num < GraphListEntry::entries.size())
-	{	graph_data.write_subgraphs_tmg(GraphListEntry::num, 0, &all_waypoints, &et, &term_mtx);
-		GraphListEntry::num += 3;
-	}
-	cout << "!" << endl;
-	#endif
 	graph_types.push_back({"fullcustom", "Full Custom Graphs",
 	"These graphs can be restricted by any combination of one more more regions and one or more highway systems, and optionally within the given distance radius of a given place."});
 }

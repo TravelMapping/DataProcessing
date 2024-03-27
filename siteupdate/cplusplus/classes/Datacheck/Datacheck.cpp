@@ -1,4 +1,5 @@
 #include "Datacheck.h"
+#include "../Args/Args.h"
 #include "../ElapsedTime/ElapsedTime.h"
 #include "../ErrorList/ErrorList.h"
 #include "../Route/Route.h"
@@ -40,9 +41,9 @@ std::string Datacheck::str() const
 {	return route->root + ";" + label1 + ";" + label2 + ";" + label3 + ";" + code + ";" + info;
 }
 
-void Datacheck::read_fps(std::string& path, ErrorList &el)
+void Datacheck::read_fps(ErrorList &el)
 {	// read in the datacheck false positives list
-	std::ifstream file(path+"/datacheckfps.csv");
+	std::ifstream file(Args::datapath+"/datacheckfps.csv");
 	std::string line;
 	getline(file, line); // ignore header line
 	while (getline(file, line))
@@ -71,9 +72,9 @@ void Datacheck::read_fps(std::string& path, ErrorList &el)
 	file.close();
 }
 
-void Datacheck::mark_fps(std::string& path, ElapsedTime &et)
+void Datacheck::mark_fps(ElapsedTime &et)
 {	errors.sort();
-	std::ofstream fpfile(path+"/nearmatchfps.log");
+	std::ofstream fpfile(Args::logfilepath+"/nearmatchfps.log");
 	time_t timestamp = time(0);
 	fpfile << "Log file created at: " << ctime(&timestamp);
 	unsigned int counter = 0;
@@ -102,9 +103,9 @@ void Datacheck::mark_fps(std::string& path, ElapsedTime &et)
 	std::cout << et.et() << "Found " << Datacheck::errors.size() << " datacheck errors and matched " << fpcount << " FP entries." << std::endl;
 }
 
-void Datacheck::unmatchedfps_log(std::string& path)
+void Datacheck::unmatchedfps_log()
 {	// write log of unmatched false positives from datacheckfps.csv
-	std::ofstream fpfile(path+"/unmatchedfps.log");
+	std::ofstream fpfile(Args::logfilepath+"/unmatchedfps.log");
 	time_t timestamp = time(0);
 	fpfile << "Log file created at: " << ctime(&timestamp);
 	if (fps.empty()) fpfile << "No unmatched FP entries.\n";
@@ -115,8 +116,8 @@ void Datacheck::unmatchedfps_log(std::string& path)
 	fpfile.close();
 }
 
-void Datacheck::datacheck_log(std::string& path)
-{	std::ofstream logfile(path+"/datacheck.log");
+void Datacheck::datacheck_log()
+{	std::ofstream logfile(Args::logfilepath+"/datacheck.log");
 	time_t timestamp = time(0);
 	logfile << "Log file created at: " << ctime(&timestamp);
 	logfile << "Datacheck errors that have been flagged as false positives are not included.\n";

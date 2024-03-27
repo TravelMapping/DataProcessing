@@ -268,17 +268,17 @@ bool Waypoint::label_references_route(Route *r)
 {	std::string no_abbrev = r->name_no_abbrev();
 	if ( strncmp(label.data(), no_abbrev.data(), no_abbrev.size()) )
 		return 0;
-	if (label[no_abbrev.size()] == 0 || label[no_abbrev.size()] == '_')
+	const char* c = label.data() + no_abbrev.size();
+	if (*c == 0 || *c == '_')
 		return 1;
-	if ( strncmp(label.data()+no_abbrev.size(), r->abbrev.data(), r->abbrev.size()) )
-	{	/*if (label[no_abbrev.size()] == '/')
-			Datacheck::add(route, label, "", "", "UNEXPECTED_DESIGNATION", label.data()+no_abbrev.size()+1);//*/
+	if ( strncmp(c, r->abbrev.data(), r->abbrev.size()) )
+	{	//if (*c == '/') Datacheck::add(route, label, "", "", "UNEXPECTED_DESIGNATION", c+1);
 		return 0;
 	}
-	if (label[no_abbrev.size() + r->abbrev.size()] == 0 || label[no_abbrev.size() + r->abbrev.size()] == '_')
+	c += r->abbrev.size();
+	if (*c == 0 || *c == '_')
 		return 1;
-	/*if (label[no_abbrev.size() + r->abbrev.size()] == '/')
-		Datacheck::add(route, label, "", "", "UNEXPECTED_DESIGNATION", label.data()+no_abbrev.size()+r->abbrev.size()+1);//*/
+	//if (*c == '/') Datacheck::add(route, label, "", "", "UNEXPECTED_DESIGNATION", c+1);
 	return 0;
 }
 
@@ -333,7 +333,38 @@ Route* Waypoint::coloc_banner_matches_abbrev()
 	return 0;
 }
 
+inline void Waypoint::add_to_adjacent(std::vector<void*>& adjacent)
+{	// Store a unique-location identifier.
+	// Let's use the address of singleton waypoints, and the address of the colocation list
+	// for colocated points, as it's shared by all of them. No need to waste instructions
+	// and memory bandwidth going into the colocation list itself to find the 1st waypoint.
+	void* a = colocated ? (void*)colocated : this;
+	if (!contains(adjacent, a))
+		adjacent.push_back(a);
+}
+
 /* Datacheck */
+
+void Waypoint::hidden_junction()
+{	// we will have already checked for visibility before calling this function
+	if (!colocated || this != colocated->front()) return;
+	std::vector<void*> adjacent;	// Make a list of unique adjacent locations
+	for (Waypoint* w : *colocated)	// before & after every point on this colocation list
+	{	// Kill 2 birds with 1 stone:
+		// 1.	As with graph vertices where it originated, all colocated points must be
+		//	hidden for the junction to count as hidden for purposes of this datacheck.
+		//	If we find a visible point, return.
+		// 2.	If we do find one, there's our VISIBLE_HIDDEN_COLOC error, so return that.
+		if (!w->is_hidden)
+			return Datacheck::add(w->route, w->label, "", "", "VISIBLE_HIDDEN_COLOC", root_at_label());
+		if (w != w->route->points.data) // unless the 1st point in route, add prev point
+			w[-1].add_to_adjacent(adjacent);
+		if (w != &w->route->points.back()) // unless last point in route, add next point
+			w[1].add_to_adjacent(adjacent);
+	}
+	if (adjacent.size() > 2)
+		Datacheck::add( route, label, "", "", "HIDDEN_JUNCTION", std::to_string(adjacent.size()) );
+}
 
 void Waypoint::invalid_url(const char* const cstr, const char* const errcode)
 {	std::string str(cstr, strcspn(cstr, "&"));
