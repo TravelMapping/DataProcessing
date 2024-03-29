@@ -248,16 +248,16 @@ void Route::con_mismatch()
 			       (con_route->banner.size() ? con_route->banner : "(blank)"));
 }
 
-void Route::mark_label_in_use(char* label)
+void Route::mark_label_in_use(std::string& label)
 {	unused_alt_labels.erase(label);
-	labels_in_use.insert(label);
+	labels_in_use.insert(move(label));
 }
 
-void Route::mark_labels_in_use(char* label1, char* label2)
+void Route::mark_labels_in_use(std::string& label1, std::string& label2)
 {	unused_alt_labels.erase(label1);
 	unused_alt_labels.erase(label2);
-	labels_in_use.insert(label1);
-	labels_in_use.insert(label2);
+	labels_in_use.insert(move(label1));
+	labels_in_use.insert(move(label2));
 }
 
 // sort routes by most recent update for use at end of user logs

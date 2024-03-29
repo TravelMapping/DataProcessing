@@ -102,27 +102,41 @@ TravelerList::TravelerList(std::string& travname, ErrorList* el)
 
 	// process lines
 	for (unsigned int l = 0; l < lines.size()-1; l++)
-	{	std::string orig_line(lines[l]);
-		// strip whitespace from beginning
-		while (lines[l][0] == ' ' || lines[l][0] == '\t') lines[l]++;
+	{	// strip whitespace from beginning
+		char *c = lines[l];
+		while (*c == ' ' || *c == '\t') c++;
+		char* beg = c;
 		// ignore whitespace or "comment" lines
-		if (lines[l][0] == 0 || lines[l][0] == '#')
-		{	splist << orig_line << endlines[l];
+		if (*c == 0 || *c == '#')
+		{	splist << lines[l] << endlines[l];
 			continue;
 		}
-		// strip whitespace from end		// first, seek to end of this line from beginning of next
-		char * endchar = lines[l+1]-2;		// -2 skips over the 0 inserted while separating listdata into lines
-		while (*endchar == 0) endchar--;	// skip back more for CRLF cases, and lines followed by blank lines
-		while (*endchar == ' ' || *endchar == '\t') *endchar-- = 0;
-		std::string trim_line(lines[l]);
-		// process fields in line
-		std::vector<char*> fields;
-		size_t spn = 0;
-		for (char* c = lines[l]; *c; c += spn)
-		{	for (spn = strcspn(c, " \t"); c[spn] == ' ' || c[spn] == '\t'; spn++) c[spn] = 0;
-			if (*c == '#') break;
-			else fields.push_back(c);
+		// split line into fields
+		std::vector<std::string> fields;
+		for (size_t spn; *c; c += spn)
+		{	if (*c == '#') break;
+			spn = strcspn(c, " \t");
+			fields.emplace_back(c,spn);
+			while (c[spn] == ' ' || c[spn] == '\t') spn++;
 		}
+		// strip whitespace from end
+		while ( strchr(" \t", fields.back().back()) ) fields.back().pop_back();
+
+		// lambda for whitespace-trimmed .list line used in userlog error reports & warnings
+		// calculate once, then it's available for re-use
+		char* trim_line = 0;
+		auto get_trim_line = [&]()
+		{	if (!trim_line)
+			{	char* end = lines[l+1]-2;	// -2 skips over 0 inserted while separating listdata into lines
+				while (*end == 0) end--;	// skip back more for CRLF cases & lines followed by blank lines
+				while (*end == ' ' || *end == '\t') end--;		  // strip whitespace @ end
+				size_t size = end-beg+1;		// +1 because end points to final good char
+				trim_line = (char*)malloc(size+1);	// +1 because need room for null terminator
+				strncpy(trim_line, beg, size);
+				trim_line[size] = 0;
+			}
+			return trim_line;
+		};
 		#define UPDATE_NOTE(R) if (R->last_update) \
 		{	updated_routes.insert(R); \
 			log << "  Route updated " << R->last_update[0] << ": " << R->readable_name() << '\n'; \
@@ -136,10 +150,11 @@ TravelerList::TravelerList(std::string& travname, ErrorList* el)
 			#include "mark_connected_route_segments.cpp"
 		     }
 		else {	log << "Incorrect format line (4 or 6 fields expected, found "
-			    << fields.size() << "): " << trim_line << '\n';
-			splist << orig_line << endlines[l];
+			    << fields.size() << "): " << get_trim_line() << '\n';
+			splist << lines[l] << endlines[l];
 		     }
 		#undef UPDATE_NOTE
+		free(trim_line);
 	}
 	delete[] listdata;
 	log << "Processed " << list_entries << " good lines marking " << clinched_segments.size() << " segments traveled.\n";
