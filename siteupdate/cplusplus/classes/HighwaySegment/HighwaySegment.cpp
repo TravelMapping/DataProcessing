@@ -44,11 +44,6 @@ void HighwaySegment::add_concurrency(std::ofstream& concurrencyfile, Waypoint* w
 	other.concurrent = concurrent;
 }
 
-std::string HighwaySegment::csv_line(unsigned int id)
-{	/* return csv line to insert into a table */
-	return "'" + std::to_string(id) + "','" + std::to_string(waypoint1->point_num) + "','" + std::to_string(waypoint2->point_num) + "','" + route->root + "'";
-}
-
 std::string HighwaySegment::segment_name()
 {	/* compute a segment name based on names of all
 	concurrent routes, used for graph edge labels */

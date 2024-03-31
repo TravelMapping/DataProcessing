@@ -23,7 +23,6 @@ class HighwaySegment
 
 	std::string str();
 	void add_concurrency(std::ofstream&, Waypoint*);
-	std::string csv_line(unsigned int);
 	//std::string concurrent_travelers_sanity_check();
 
 	// graph generation functions
