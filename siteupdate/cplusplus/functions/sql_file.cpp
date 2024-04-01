@@ -203,7 +203,6 @@ void sqlfile1
 		for (Waypoint& w : r.points)
 		{	if (!first) sqlfile << ',';
 			first = 0;
-			w.point_num = point_num;
 			sqlfile << "('" << point_num << "','" << w.label; int
 			e=sprintf(fstr,"','%.15g",w.lat); if (w.lat==int(w.lat)) strcpy(fstr+e,".0"); sqlfile << fstr;
 			e=sprintf(fstr,"','%.15g",w.lng); if (w.lng==int(w.lng)) strcpy(fstr+e,".0"); sqlfile << fstr;
@@ -224,8 +223,8 @@ void sqlfile1
 	sqlfile << "CREATE TABLE segments (segmentId INTEGER, waypoint1 INTEGER, waypoint2 INTEGER, root VARCHAR(" << DBFieldLength::root
 		<< "), PRIMARY KEY (segmentId), FOREIGN KEY (waypoint1) REFERENCES waypoints(pointId), "
 		<< "FOREIGN KEY (waypoint2) REFERENCES waypoints(pointId), FOREIGN KEY (root) REFERENCES routes(root));\n";
-	unsigned int segment_num = 0;
-	std::vector<std::string> clinched_list;
+	unsigned int segment_num = point_num = 0;
+	std::vector<std::pair<unsigned int, const char*>> clinched_list;
 	for (HighwaySystem& h : HighwaySystem::syslist)
 	  for (Route& r : h.routes)
 	  {	sqlfile << "INSERT INTO segments VALUES\n";
@@ -233,12 +232,16 @@ void sqlfile1
 		for (HighwaySegment& s : r.segments)
 		{	if (!first) sqlfile << ',';
 			first = 0;
-			sqlfile << '(' << s.csv_line(segment_num) << ")\n";
+			sqlfile << "('" << segment_num;
+			sqlfile	<< "','" << point_num++;
+			sqlfile	<< "','" << point_num;
+			sqlfile	<< "','" << r.root << "')\n";
 			for (TravelerList *t : s.clinched_by)
-			  clinched_list.push_back("'" + std::to_string(segment_num) + "','" + t->traveler_name + "'");
+			  clinched_list.emplace_back(segment_num, t->traveler_name.data());
 			segment_num += 1;
 		}
 		sqlfile << ";\n";
+		point_num++;
 	  }
 
 	// maybe a separate traveler table will make sense but for now, I'll just use
@@ -254,7 +257,7 @@ void sqlfile1
 		for (size_t c = start; c < start+10000 && c < clinched_list.size(); c++)
 		{	if (!first) sqlfile << ',';
 			first = 0;
-			sqlfile << '(' << clinched_list[c] << ")\n";
+			sqlfile << "('" << clinched_list[c].first << "','" << clinched_list[c].second << "')\n";
 		}
 		sqlfile << ";\n";
 	}

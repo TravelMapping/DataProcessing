@@ -26,13 +26,6 @@ std::string HighwaySegment::str()
 {	return route->readable_name() + " " + waypoint1->label + " " + waypoint2->label;
 }
 
-bool HighwaySegment::add_clinched_by(size_t t)
-{	clin_mtx.lock();
-	bool result = clinched_by.add_index(t);
-	clin_mtx.unlock();
-	return result;
-}
-
 void HighwaySegment::add_concurrency(std::ofstream& concurrencyfile, Waypoint* w)
 {	HighwaySegment& other = w->route->segments[w - w->route->points.data];
 	if (!concurrent)
@@ -49,11 +42,6 @@ void HighwaySegment::add_concurrency(std::ofstream& concurrencyfile, Waypoint* w
 		concurrencyfile << " (" << concurrent->size() << ")\n";
 	     }
 	other.concurrent = concurrent;
-}
-
-std::string HighwaySegment::csv_line(unsigned int id)
-{	/* return csv line to insert into a table */
-	return "'" + std::to_string(id) + "','" + std::to_string(waypoint1->point_num) + "','" + std::to_string(waypoint2->point_num) + "','" + route->root + "'";
 }
 
 std::string HighwaySegment::segment_name()

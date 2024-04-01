@@ -14,7 +14,7 @@
 		for (HighwaySegment *s : t->clinched_segments)
 		  if (s->concurrent)
 		    for (HighwaySegment *hs : *(s->concurrent))
-		      if (hs != s && hs->route->system->active_or_preview() && hs->add_clinched_by(index))
+		      if (hs != s && hs->route->system->active_or_preview() && hs->clinched_by.add_index(index))
 		       	concurrencyfile << "Concurrency augment for traveler " << t->traveler_name << ": [" << hs->str() << "] based on [" << s->str() << "]\n";
 	}
 	cout << '!' << endl;

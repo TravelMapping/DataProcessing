@@ -28,7 +28,6 @@ class Waypoint
 	std::vector<std::string> alt_labels;
 	std::vector<Waypoint*> ap_coloc;
 	std::forward_list<Waypoint*> near_miss_points;
-	unsigned int point_num;
 	bool is_hidden;
 
 	Waypoint(char *, Route *);

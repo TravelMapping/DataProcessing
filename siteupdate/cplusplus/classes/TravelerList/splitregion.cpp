@@ -1,6 +1,6 @@
 Waypoint *w1, *w2;
 // comment out original line and indent new line below
-splist << "##### " << orig_line << newline << "  ";
+splist << "##### " << lines[l] << newline << "  ";
 
 // 1st waypoint
 if (Args::splitregion != r1->region->code)
