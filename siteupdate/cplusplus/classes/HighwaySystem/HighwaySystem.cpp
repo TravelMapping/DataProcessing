@@ -13,6 +13,7 @@
 
 TMArray<HighwaySystem> HighwaySystem::syslist;
 HighwaySystem* HighwaySystem::it;
+std::unordered_map<std::string, HighwaySystem*> HighwaySystem::sysname_hash;
 unsigned int HighwaySystem::num_active  = 0;
 unsigned int HighwaySystem::num_preview = 0;
 
@@ -26,12 +27,17 @@ HighwaySystem::HighwaySystem(std::string &line, ErrorList &el)
 	if (NumFields != 6)
 	{	el.add_error("Could not parse " + Args::systemsfile
 			   + " line: [" + line + "], expected 6 fields, found " + std::to_string(NumFields));
-		throw 0xBAD;
+		throw 0xf1e1d5;
 	}
 	// System
 	if (systemname.size() > DBFieldLength::systemName)
 		el.add_error("System code > " + std::to_string(DBFieldLength::systemName)
 			   + " bytes in " + Args::systemsfile + " line " + line);
+	if (!sysname_hash.emplace(systemname, this).second)
+	{	el.add_error("Duplicate system code " + systemname
+			   + " in " + Args::systemsfile + " line " + line);
+		throw 0xc0de;
+	}
 	// CountryCode
 	country = country_or_continent_by_code(country_str, Region::countries);
 	if (!country)

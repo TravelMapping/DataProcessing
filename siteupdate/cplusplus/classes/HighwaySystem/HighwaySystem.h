@@ -53,6 +53,7 @@ class HighwaySystem
 
 	static TMArray<HighwaySystem> syslist;
 	static HighwaySystem* it;
+	static std::unordered_map<std::string, HighwaySystem*> sysname_hash;
 	static unsigned int num_active;
 	static unsigned int num_preview;
 
