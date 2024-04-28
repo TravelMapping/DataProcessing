@@ -34,6 +34,7 @@ class HighwaySystem
 	short tier;
 	char level; // 'a' for active, 'p' for preview, 'd' for devel
 
+	bool is_subgraph_system;
 	TMArray<Route> routes;
 	TMArray<ConnectedRoute> con_routes;
       #ifdef Ubuntu_16_04_7_LTS

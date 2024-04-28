@@ -65,6 +65,7 @@ HighwaySystem::HighwaySystem(std::string &line, ErrorList &el)
 	{	case 'a': num_active++; break;
 		case 'p': num_preview++;
 	}
+	is_subgraph_system = 0;
 	std::cout /*<< systemname*/ << '.' << std::flush;
 
 	// read chopped routes CSV
