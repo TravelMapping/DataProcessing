@@ -3,6 +3,7 @@ class HighwaySegment;
 class HighwaySystem;
 #include <iostream>
 #include <list>
+#include <vector>
 
 class HGEdge
 {   /* This class encapsulates information needed for a highway graph
@@ -26,9 +27,9 @@ class HGEdge
 
 	void detach();
 	void detach(unsigned char);
-	void collapsed_tmg_line(std::ofstream&, char*, unsigned int, std::list<HighwaySystem*>*);
-	void traveled_tmg_line (std::ofstream&, char*, unsigned int, std::list<HighwaySystem*>*, bool, char*);
-	std::string debug_tmg_line(std::list<HighwaySystem*> *, unsigned int);
+	void collapsed_tmg_line(std::ofstream&, char*, unsigned int, std::vector<HighwaySystem*>*);
+	void traveled_tmg_line (std::ofstream&, char*, unsigned int, std::vector<HighwaySystem*>*, bool, char*);
+	std::string debug_tmg_line(std::vector<HighwaySystem*> *, unsigned int);
 	std::string str();
 	std::string intermediate_point_string();
 };

@@ -248,7 +248,7 @@ Waypoint* Waypoint::hashpoint()
 	return colocated->front();
 }
 
-bool Waypoint::region_match(std::list<Region*>* regions)
+bool Waypoint::region_match(std::vector<Region*>* regions)
 {	if (!regions) return 1;
 	if (!colocated) return contains(*regions, route->region);
 	for (Waypoint* w : *colocated)
@@ -256,7 +256,7 @@ bool Waypoint::region_match(std::list<Region*>* regions)
 	return 0;
 }
 
-bool Waypoint::system_match(std::list<HighwaySystem*>* systems)
+bool Waypoint::system_match(std::vector<HighwaySystem*>* systems)
 {	if (!systems) return 1;
 	if (!colocated) return contains(*systems, route->system);
 	for (Waypoint* w : *colocated)

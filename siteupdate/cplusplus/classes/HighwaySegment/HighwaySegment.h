@@ -5,6 +5,7 @@ class Waypoint;
 #include "../../templates/TMBitset.cpp"
 #include <list>
 #include <mutex>
+#include <vector>
 
 class HighwaySegment
 {   /* This class represents one highway segment: the connection between two
@@ -28,7 +29,7 @@ class HighwaySegment
 	// graph generation functions
 	std::string segment_name();
 	const char* clinchedby_code(char*, unsigned int);
-	bool system_match(std::list<HighwaySystem*>*);
-	void write_label(std::ofstream&, std::list<HighwaySystem*> *);
+	bool system_match(std::vector<HighwaySystem*>*);
+	void write_label(std::ofstream&, std::vector<HighwaySystem*> *);
 	HighwaySegment* canonical_edge_segment();
 };

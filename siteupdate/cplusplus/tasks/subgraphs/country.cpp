@@ -1,6 +1,6 @@
 // country graphs - we find countries that have regions with active or preview mileage
 for (auto c = Region::countries.data(), dummy = c+Region::countries.size()-1; c < dummy; c++)
-{	regions = new list<Region*>;
+{	regions = new vector<Region*>;
 		  // deleted @ end of HighwayGraph::write_subgraphs_tmg
 	for (Region& r : Region::allregions)
 	  // does it match this country and have routes?

@@ -6,11 +6,11 @@
 std::vector<GraphListEntry> GraphListEntry::entries;
 size_t GraphListEntry::num; // iterator for entries
 
-GraphListEntry::GraphListEntry(std::string r, std::string d, char f, char c, std::list<Region*> *rg, std::list<HighwaySystem*> *sys, PlaceRadius *pr):
+GraphListEntry::GraphListEntry(std::string r, std::string d, char f, char c, std::vector<Region*> *rg, std::vector<HighwaySystem*> *sys, PlaceRadius *pr):
 	regions(rg), systems(sys), placeradius(pr),
 	root(r), descr(d), form(f), cat(c) {}
 
-void GraphListEntry::add_group(std::string&& r, std::string&& d, char c, std::list<Region*> *rg, std::list<HighwaySystem*> *sys, PlaceRadius *pr)
+void GraphListEntry::add_group(std::string&& r, std::string&& d, char c, std::vector<Region*> *rg, std::vector<HighwaySystem*> *sys, PlaceRadius *pr)
 {	GraphListEntry::entries.emplace_back(r, d, 's', c, rg, sys, pr);
 	GraphListEntry::entries.emplace_back(r, d, 'c', c, rg, sys, pr);
 	GraphListEntry::entries.emplace_back(r, d, 't', c, rg, sys, pr);

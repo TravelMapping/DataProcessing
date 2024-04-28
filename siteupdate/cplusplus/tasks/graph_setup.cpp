@@ -1,5 +1,5 @@
-list<Region*> *regions;
-list<HighwaySystem*> *systems;
+vector<Region*> *regions;
+vector<HighwaySystem*> *systems;
 list<array<string,3>> graph_types; // create list of graph information for the DB
 graph_types.push_back({"master", "All Travel Mapping Data",
 			"These graphs contain all routes currently plotted in the Travel Mapping project."});
