@@ -22,8 +22,9 @@ HighwayGraph::HighwayGraph(WaypointQuadtree &all_waypoints, ElapsedTime &et)
 	se = 0;
 	// create lists of graph points in or colocated with active/preview
 	// systems, either singleton at at the front of their colocation lists
-	std::vector<Waypoint*> hi_priority_points, lo_priority_points;
-	all_waypoints.graph_points(hi_priority_points, lo_priority_points);
+	size_t v_idx = 0;
+	VInfoVec hi_priority_points, lo_priority_points;
+	all_waypoints.graph_points(hi_priority_points, lo_priority_points, v_idx);
 
 	// allocate vertices
 	vertices.resize(hi_priority_points.size()+lo_priority_points.size());
@@ -33,14 +34,12 @@ HighwayGraph::HighwayGraph(WaypointQuadtree &all_waypoints, ElapsedTime &et)
 	#define THRLP for (int t=0; t<Args::numthreads; t++) thr[t]
 	std::vector<std::thread> thr(Args::numthreads);
 	if (Args::mtvertices)
-	{	THRLP = std::thread(&HighwayGraph::simplify, this, t, &hi_priority_points, &counter, 0);
-		THRLP.join();
-		THRLP = std::thread(&HighwayGraph::simplify, this, t, &lo_priority_points, &counter, hi_priority_points.size());
-		THRLP.join();
+	{	THRLP = std::thread(&HighwayGraph::simplify, this, t, &hi_priority_points, &counter); THRLP.join();
+		THRLP = std::thread(&HighwayGraph::simplify, this, t, &lo_priority_points, &counter); THRLP.join();
 	} else
       #endif
-	{	simplify(0, &hi_priority_points, &counter, 0);
-		simplify(0, &lo_priority_points, &counter, hi_priority_points.size());
+	{	simplify(0, &hi_priority_points, &counter);
+		simplify(0, &lo_priority_points, &counter);
 	}
 	std::cout << '!' << std::endl;
 	cv=tv=vertices.size();
@@ -175,11 +174,11 @@ void HighwayGraph::namelog(std::string&& msg)
 	log_mtx.unlock();
 }
 
-void HighwayGraph::simplify(int t, std::vector<Waypoint*>* points, unsigned int *counter, const size_t offset)
+void HighwayGraph::simplify(int t, VInfoVec* points, unsigned int *counter)
 {	// create unique names and vertices
 	int numthreads = Args::mtvertices ? Args::numthreads : 1;
-	int e = (t+1)*points->size()/numthreads;
-	for (int w = t*points->size()/numthreads; w < e; w++)
+	auto end = (t+1)*points->size()/numthreads+points->data();
+	for (auto vi = t*points->size()/numthreads+points->data(); vi < end; vi++)
 	{	// progress indicator
 		if (!t)
 		{	if (*counter % (10000/numthreads) == 0) std::cout << '.' << std::flush;
@@ -187,19 +186,19 @@ void HighwayGraph::simplify(int t, std::vector<Waypoint*>* points, unsigned int 
 		}
 
 		// start with the canonical name and attempt to insert into vertex_names set
-		std::string point_name = (*points)[w]->canonical_waypoint_name(this);
+		std::string point_name = vi->first->canonical_waypoint_name(this);
 		std::pair<std::unordered_set<std::string>::iterator,bool> insertion = vertex_name(point_name);
 
 		// if that's taken, append the region code
 		if (!insertion.second)
-		{	point_name += "|" + (*points)[w]->route->region->code;
+		{	point_name += "|" + vi->first->route->region->code;
 			namelog("Appended region: " + point_name);
 			insertion = vertex_name(point_name);
 		}
 
 		// if that's taken, see if the simple name is available
 		if (!insertion.second)
-		{	std::string simple_name = (*points)[w]->simple_waypoint_name();
+		{	std::string simple_name = vi->first->simple_waypoint_name();
 			insertion = vertex_name(simple_name);
 			if (insertion.second)
 				namelog("Revert to simple: " + simple_name + " from (taken) " + point_name);
@@ -211,10 +210,10 @@ void HighwayGraph::simplify(int t, std::vector<Waypoint*>* points, unsigned int 
 		}
 
 		// we're good; now set up a vertex
-		vertices[offset+w].setup((*points)[w], &*(insertion.first));
+		vertices[vi->second].setup(vi->first, &*(insertion.first));
 
 		// active/preview colocation lists are no longer needed; clear them
-		(*points)[w]->ap_coloc.clear();
+		vi->first->ap_coloc.clear();
 	}
 }
 
