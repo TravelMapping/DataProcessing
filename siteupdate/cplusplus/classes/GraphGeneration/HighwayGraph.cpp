@@ -109,6 +109,8 @@ HighwayGraph::HighwayGraph(WaypointQuadtree &all_waypoints, ElapsedTime &et)
 		}
 	}
 	std::cout << '!' << std::endl;
+
+	std::cout << et.et() << "Master graph construction complete. Destroying temporary variables." << std::endl;
 } // end ctor
 
 void HighwayGraph::clear()
