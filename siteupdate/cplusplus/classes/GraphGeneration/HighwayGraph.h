@@ -41,6 +41,7 @@ class HighwayGraph
 
 	void namelog(std::string&&);
 	void simplify(int, std::vector<Waypoint*>*, unsigned int*, const size_t);
+	void bitsetlogs(HGVertex*);
 	inline std::pair<std::unordered_set<std::string>::iterator,bool> vertex_name(std::string&);
 	void write_master_graphs_tmg();
 	void write_subgraphs_tmg(size_t, unsigned int, WaypointQuadtree*, ElapsedTime*, std::mutex*);

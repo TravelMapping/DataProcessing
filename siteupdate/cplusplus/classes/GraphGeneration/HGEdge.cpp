@@ -7,6 +7,8 @@
 #include "../Waypoint/Waypoint.h"
 #include "../../templates/contains.cpp"
 
+HGVertex* HGEdge::v_array;
+
 HGEdge::HGEdge(HighwaySegment *s)
 {	// initial construction is based on a HighwaySegment
 	vertex1 = s->waypoint1->hashpoint()->vertex;
@@ -26,6 +28,7 @@ HGEdge::HGEdge(HighwaySegment *s)
 
 HGEdge::HGEdge(HGVertex *vertex, unsigned char fmt_mask, HGEdge *e1, HGEdge *e2)
 {	// build by collapsing two existing edges around a common hidden vertex
+	c_idx = vertex - v_array;
 	format = fmt_mask;
 	HGEdge *edge1 = e1;
 	HGEdge *edge2 = e2;

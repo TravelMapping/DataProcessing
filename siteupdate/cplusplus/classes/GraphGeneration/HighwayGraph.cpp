@@ -75,6 +75,7 @@ HighwayGraph::HighwayGraph(WaypointQuadtree &all_waypoints, ElapsedTime &et)
 	// compress edges adjacent to hidden vertices
 	counter = 0;
 	std::cout << et.et() << "Compressing collapsed edges" << std::flush;
+	HGEdge::v_array = vertices.data();
 	for (HGVertex& v : vertices)
 	{	if (counter % 10000 == 0) std::cout << '.' << std::flush;
 		counter++;
@@ -152,6 +153,12 @@ HighwayGraph::HighwayGraph(WaypointQuadtree &all_waypoints, ElapsedTime &et)
 	HighwaySystem::ve_thread(&log_mtx, &vertices, &edges);
       #endif
 
+	if (Args::bitsetlogs)
+	{	std::cout << et.et() << "Writing TMBitset logs. " << hi_priority_points.size()
+			  << " hi_priority_points / " << vertices.size() << " total vertices" << std::endl;
+		bitsetlogs(vertices.data() + hi_priority_points.size());
+	}
+
 	std::cout << et.et() << "Master graph construction complete. Destroying temporary variables." << std::endl;
 } // end ctor
 
@@ -208,6 +215,124 @@ void HighwayGraph::simplify(int t, std::vector<Waypoint*>* points, unsigned int 
 
 		// active/preview colocation lists are no longer needed; clear them
 		(*points)[w]->ap_coloc.clear();
+	}
+}
+
+void HighwayGraph::bitsetlogs(HGVertex* hp_end)
+{	size_t oldvheap = sizeof(uint64_t) * ceil(double(vertices.size()+1)/(sizeof(uint64_t)*8));
+	size_t oldeheap = sizeof(uint64_t) * ceil(double(edges.size+1)/(sizeof(uint64_t)*8));
+
+	size_t final_s, first_c=0, low_pri=0;
+	for (size_t i = 0; i < edges.size; ++i)
+	{	if (edges[i].format & HGEdge::simple)
+			final_s = i;
+		else if (!first_c)
+			first_c = i;
+		else if (&vertices[edges[i].c_idx] == hp_end)
+		{	low_pri = i;
+			break;
+		}
+	}
+	std::cout << "final_s = " << final_s << ": " << edges[final_s].str() << std::endl;
+	std::cout << "first_c = " << first_c << ": " << edges[first_c].str() << std::endl;
+	std::cout << "low_pri = " << low_pri << ": " << edges[low_pri].str() << " ~~ " << *hp_end->unique_name << std::endl;
+	std::cout << "total_e = " << edges.size << std::endl;
+
+	std::ofstream vramlog(Args::logfilepath+"/tmb-region-vram.csv");
+	std::ofstream eramlog(Args::logfilepath+"/tmb-region-eram.csv");
+	std::ofstream vgaplog(Args::logfilepath+"/tmb-region-vgap.csv");
+	std::ofstream egaplog(Args::logfilepath+"/tmb-region-egap.csv");
+	using x = TMBitset<void*,uint64_t>*;
+	auto ramlogline=[](x tmb, std::string& code, std::ofstream& log, size_t old_heap)
+	{	log << code << ';' << tmb->count() << ';' << old_heap << ';'<< tmb->vec_cap() 
+		    << ';' << tmb->vec_size() << ';' << tmb->heap() << std::endl;
+	};
+	auto vgaplogline=[&](TMBitset<HGVertex*,uint64_t>& tmb, std::string& code, HGVertex* start)
+	{	HGVertex *lo_v, *hi_v, *lo_g, *hi_g, *prev;
+		lo_v = *tmb.begin();
+		prev = lo_v;
+		size_t gap = 0;
+		for (auto v : tmb)
+		{	hi_v = v;
+			if (gap < v-prev)
+			{	gap = v-prev;
+				hi_g = v;
+				lo_g = prev;
+			}
+			prev = v;
+		}
+		vgaplog << code
+			<< ';' << lo_v-start << ';' << *lo_v->unique_name << ';' << gap
+			<< ';' << lo_g-start << ';' << *lo_g->unique_name << ';' << (lo_g < hp_end ? "hi" : "lo")
+			<< ';' << hi_g-start << ';' << *hi_g->unique_name << ';' << (hi_g < hp_end ? "hi" : "lo")
+			<< ';' << hi_v-start << ';' << *hi_v->unique_name << std::endl;
+	};
+	auto egaplogline=[&](TMBitset<HGEdge*,uint64_t>& tmb, std::string& code, HGEdge* start)
+	{	HGEdge *lo_e, *hi_e, *lo_g1, *hi_g1, *lo_g2, *hi_g2, *prev;
+		lo_e = *tmb.begin();
+		prev = lo_e;
+		size_t gap_1=0, gap_2=0;
+		for (auto e : tmb)
+		{	hi_e = e;
+			if (gap_2 < e-prev)
+			  if (gap_1 < e-prev)
+			      {	gap_2 = gap_1;	hi_g2 = hi_g1;	lo_g2 = lo_g1;
+				gap_1 = e-prev;	hi_g1 = e;	lo_g1 = prev;
+			      }
+			  else{	gap_2 = e-prev;	hi_g2 = e;	lo_g2 = prev;
+			      }
+			prev = e;
+		}
+		auto info = [&](size_t gap, HGEdge* e){return gap ? e->str() : "NO GAP";};
+		auto pri  = [&](size_t gap, HGEdge* e)
+		{	return gap ? e->format & HGEdge::simple ? "s" : &vertices[e->c_idx] < hp_end ? "hi" : "lo" : "NOPE";
+		};
+		egaplog << code << std::flush
+			<< ';' << lo_e -start << ';' <<    lo_e->str()    << ';' << gap_1
+			<< ';' << lo_g1-start << ';' << info(gap_1,lo_g1) << ';' << pri(gap_1,lo_g1)
+			<< ';' << hi_g1-start << ';' << info(gap_1,hi_g1) << ';' << pri(gap_1,hi_g1) << ';' << gap_2
+			<< ';' << lo_g2-start << ';' << info(gap_2,lo_g2) << ';' << pri(gap_2,lo_g2)
+			<< ';' << hi_g2-start << ';' << info(gap_2,hi_g2) << ';' << pri(gap_2,hi_g2)
+			<< ';' << hi_e -start << ';' <<    hi_e->str()    << std::endl;
+	};
+
+	vramlog << "Region" << ";Count;OldHeap;VecCap;VecSize;NewHeap\n";
+	eramlog << "Region" << ";Count;OldHeap;VecCap;VecSize;NewHeap\n";
+	vgaplog << "Region" << ";LoIndex;LoName;gap;Beg;BegPt;BegPri;End;EndPt;EndPri;HiIndex;HiName\n";
+	egaplog << "Region" << ";LoIndex;LoInfo"
+			    << ";gap1;Beg1;BegInfo1;BegPri1;End1;EndInfo1;EndPri1"
+			    << ";gap2;Beg2;BegInfo2;BegPri2;End2;EndInfo2;EndPri2;HiIndex;HiInfo\n";
+	for (Region& rg : Region::allregions)
+	{ if (!rg.vertices.is_null_set())
+	  {	ramlogline(x(&rg.vertices), rg.code, vramlog, oldvheap);
+		vgaplogline ( rg.vertices,  rg.code, vertices.data() );
+	  }
+	  if (!rg.edges.is_null_set())
+	  {	   ramlogline(x(&rg.edges), rg.code, eramlog, oldeheap);
+		   egaplogline ( rg.edges,  rg.code, edges.data );
+	  }
+	}
+
+	vramlog.close(); vramlog.open(Args::logfilepath+"/tmb-system-vram.csv");
+	eramlog.close(); eramlog.open(Args::logfilepath+"/tmb-system-eram.csv");
+	vgaplog.close(); vgaplog.open(Args::logfilepath+"/tmb-system-vgap.csv");
+	egaplog.close(); egaplog.open(Args::logfilepath+"/tmb-system-egap.csv");
+
+	vramlog << "System" << ";Count;OldHeap;VecCap;VecSize;NewHeap\n";
+	eramlog << "System" << ";Count;OldHeap;VecCap;VecSize;NewHeap\n";
+	vgaplog << "System" << ";LoIndex;LoName;gap;Beg;BegPt;BegPri;End;EndPt;EndPri;HiIndex;HiName\n";
+	egaplog << "System" << ";LoIndex;LoInfo"
+			    << ";gap1;Beg1;BegInfo1;BegPri1;End1;EndInfo1;EndPri1"
+			    << ";gap2;Beg2;BegInfo2;BegPri2;End2;EndInfo2;EndPri2;HiIndex;HiInfo\n";
+	for (HighwaySystem& h : HighwaySystem::syslist)
+	{ if (!h.vertices.is_null_set())
+	  {	ramlogline(x(&h.vertices), h.systemname, vramlog, oldvheap);
+		vgaplogline ( h.vertices,  h.systemname, vertices.data() );
+	  }
+	  if (!h.edges.is_null_set())
+	  {	   ramlogline(x(&h.edges), h.systemname, eramlog, oldeheap);
+		   egaplogline ( h.edges,  h.systemname, edges.data );
+	  }
 	}
 }
 

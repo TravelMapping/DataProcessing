@@ -20,6 +20,7 @@ class Args
 	/* v */ static bool mtvertices;
 	/* C */ static bool mtcsvfiles;
 	/* E */ static bool edgecounts;
+	/* b */ static bool bitsetlogs;
 	/* L */ static int colocationlimit;
 	/* N */ static double nmpthreshold; 
 		static const char* exec;
