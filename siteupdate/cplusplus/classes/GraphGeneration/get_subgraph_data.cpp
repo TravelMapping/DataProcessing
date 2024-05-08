@@ -52,7 +52,7 @@ for (HGVertex *v : mv)
 		  if (!(e->written[threadnum] & HGEdge::traveled) && AREA && REGION && e->segment->system_match(g->systems))
 		  {	mte.push_back(e);
 			e->written[threadnum] |= HGEdge::traveled;
-			traveler_set |= e->segment->clinched_by;
+			traveler_set.fast_union(e->segment->clinched_by);
 		  }
 	    default:
 		for (HGEdge *e : v->incident_s_edges)
