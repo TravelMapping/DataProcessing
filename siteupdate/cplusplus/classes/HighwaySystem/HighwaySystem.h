@@ -1,9 +1,11 @@
 class ConnectedRoute;
 class ErrorList;
+class HGEdge;
 class HGVertex;
 class Region;
 class Route;
 #include "../../templates/TMArray.cpp"
+#include "../../templates/TMBitset.cpp"
 #include <mutex>
 #include <unordered_map>
 #include <unordered_set>
@@ -37,17 +39,8 @@ class HighwaySystem
 	bool is_subgraph_system;
 	TMArray<Route> routes;
 	TMArray<ConnectedRoute> con_routes;
-      #ifdef Ubuntu_16_04_7_LTS
-	// If this padding is omitted, compute_stats runs about 76% as fast,
-	// (69% on siteupdateST) with both clang and gcc. ~74-82% the speed
-	// of 79fbeb3 *before* the TMArray conversion. It's not clear why --
-	// while this does pad objects out to 384 bytes, exactly 6 cache lines,
-	// 1. No attempt to over-align the data has been made.
-	// 2. Dropping below 384 B hurts performance, but not going above.
-	// Nonetheless, the benchmarks are clear & consistent.
-	size_t padding;
-      #endif
-	std::vector<HGVertex*> vertices;
+	TMBitset<HGVertex*, uint64_t> vertices;
+	TMBitset<HGEdge*,   uint64_t> edges;
 	std::unordered_map<Region*, double> mileage_by_region;
 	std::unordered_set<std::string>listnamesinuse, unusedaltroutenames;
 	std::mutex mtx;
@@ -67,10 +60,10 @@ class HighwaySystem
 	double total_mileage();		// Return total system mileage across all regions
 	std::string level_name();	// Return full "active" / "preview" / "devel" string
 	void route_integrity(ErrorList& el);
-	void add_vertex(HGVertex*);
 	void stats_csv();
 	void mark_route_in_use(std::string&);
 	void mark_routes_in_use(std::string&, std::string&);
 
 	static void systems_csv(ErrorList&);
+	static void ve_thread(std::mutex* mtx, std::vector<HGVertex>*, TMArray<HGEdge>*);
 };

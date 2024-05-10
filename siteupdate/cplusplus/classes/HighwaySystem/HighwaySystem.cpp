@@ -3,6 +3,8 @@
 #include "../ConnectedRoute/ConnectedRoute.h"
 #include "../DBFieldLength/DBFieldLength.h"
 #include "../ErrorList/ErrorList.h"
+#include "../GraphGeneration/HGEdge.h"
+#include "../GraphGeneration/HGVertex.h"
 #include "../HighwaySegment/HighwaySegment.h"
 #include "../Region/Region.h"
 #include "../Route/Route.h"
@@ -133,6 +135,36 @@ void HighwaySystem::systems_csv(ErrorList& el)
 	file.close();
 }
 
+void HighwaySystem::ve_thread(std::mutex* mtx, std::vector<HGVertex>* vertices, TMArray<HGEdge>* edges)
+{	while (it != syslist.end())
+	{	for (mtx->lock(); it != syslist.end(); it++)
+		  if (it->is_subgraph_system) break;
+		if (it == syslist.end()) return mtx->unlock();
+		HighwaySystem& h = *it++;
+		mtx->unlock();
+
+		h.vertices.alloc(vertices->data(), vertices->size());
+		h.edges.alloc(edges->data, edges->size);
+		for (Route& r : h.routes)
+		  for (Waypoint& w : r.points)
+		  { HGVertex* v = w.hashpoint()->vertex;
+		    if (h.vertices.add_value(v))
+		      for (HGEdge* e : v->incident_edges)
+			if (e->segment->concurrent)
+			{ for (HighwaySegment* s : *e->segment->concurrent)
+			    if (s->route->system == &h)
+			    {	h.edges.add_value(e);
+				break;
+			    }
+			}
+			else if (e->segment->route->system == &h)
+				h.edges.add_value(e);
+		  }
+		h.vertices.shrink_to_fit();
+		h.edges.shrink_to_fit();
+	}
+}
+
 /* Return whether this is an active system */
 bool HighwaySystem::active()
 {	return level == 'a';
@@ -168,12 +200,6 @@ std::string HighwaySystem::level_name()
 		case 'd': return "devel";
 		default:  return "ERROR";
 	}
-}
-
-void HighwaySystem::add_vertex(HGVertex* v)
-{	mtx.lock();
-	vertices.push_back(v);
-	mtx.unlock();
 }
 
 void HighwaySystem::stats_csv()

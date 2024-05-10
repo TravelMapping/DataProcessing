@@ -29,7 +29,6 @@ class HighwaySegment
 	// graph generation functions
 	std::string segment_name();
 	const char* clinchedby_code(char*, unsigned int);
-	bool system_match(std::vector<HighwaySystem*>*);
 	void write_label(std::ofstream&, std::vector<HighwaySystem*> *);
 	HighwaySegment* canonical_edge_segment();
 };

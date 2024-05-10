@@ -1,6 +1,12 @@
 #include "Region.h"
 #include "../DBFieldLength/DBFieldLength.h"
 #include "../ErrorList/ErrorList.h"
+#include "../GraphGeneration/HGEdge.h"
+#include "../GraphGeneration/HGVertex.h"
+#include "../HighwaySegment/HighwaySegment.h"
+#include "../HighwaySystem/HighwaySystem.h"
+#include "../Route/Route.h"
+#include "../Waypoint/Waypoint.h"
 #include "../../functions/tmstring.h"
 
 std::pair<std::string, std::string> *country_or_continent_by_code(std::string code, std::vector<std::pair<std::string, std::string>> &pair_vector)
@@ -64,8 +70,26 @@ std::string& Region::continent_code()
 {	return continent->first;
 }
 
-void Region::add_vertex(HGVertex* v, Waypoint* w)
-{	mtx.lock();
-	vertices.emplace_back(v,w);
-	mtx.unlock();
+void Region::ve_thread(std::mutex* mtx, std::vector<HGVertex>* vertices, TMArray<HGEdge>* edges)
+{	while (it != allregions.end())
+	{	for (mtx->lock(); it != allregions.end(); it++)
+		  if (it->active_preview_mileage) break;
+		if (it == allregions.end()) return mtx->unlock();
+		Region& rg = *it++;
+		mtx->unlock();
+
+		rg.vertices.alloc(vertices->data(), vertices->size());
+		rg.edges.alloc(edges->data, edges->size);
+		for (Route* r : rg.routes)
+		  if (r->system->active_or_preview())
+		    for (Waypoint& w : r->points)
+		    { HGVertex* v = w.hashpoint()->vertex;
+		      if (rg.vertices.add_value(v))
+			for (HGEdge* e : v->incident_edges)
+			  if (e->segment->route->region == &rg)
+			    rg.edges.add_value(e);
+		    }
+		rg.vertices.shrink_to_fit();
+		rg.edges.shrink_to_fit();
+	}
 }

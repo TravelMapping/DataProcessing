@@ -10,7 +10,6 @@ class HGEdge
     edge that can incorporate intermediate points.
     */
 	public:
-	char *written;
 	std::string segment_name;
 	HGVertex *vertex1, *vertex2;
 	std::list<HGVertex*> intermediate_points; // if more than 1, will go from vertex1 to vertex2
@@ -23,10 +22,9 @@ class HGEdge
 	static constexpr unsigned char traveled = 4;
 
 	HGEdge(HighwaySegment *);
-	HGEdge(HGVertex *, unsigned char);
+	HGEdge(HGVertex *, unsigned char, HGEdge*, HGEdge*);
 
 	void detach();
-	void detach(unsigned char);
 	void collapsed_tmg_line(std::ofstream&, char*, unsigned int, std::vector<HighwaySystem*>*);
 	void traveled_tmg_line (std::ofstream&, char*, unsigned int, std::vector<HighwaySystem*>*, bool, char*);
 	std::string debug_tmg_line(std::vector<HighwaySystem*> *, unsigned int);

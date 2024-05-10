@@ -19,6 +19,7 @@ class Args
 	/* T */ static int timeprecision;
 	/* v */ static bool mtvertices;
 	/* C */ static bool mtcsvfiles;
+	/* E */ static bool edgecounts;
 	/* L */ static int colocationlimit;
 	/* N */ static double nmpthreshold; 
 		static const char* exec;
