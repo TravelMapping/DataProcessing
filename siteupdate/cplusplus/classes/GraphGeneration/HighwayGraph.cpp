@@ -199,9 +199,9 @@ void HighwayGraph::clear_vbit(HGVertex* v, const int threadnum)
 //     for intermediate "shaping points" along the edge, ordered from endpoint 1 to endpoint 2.
 //
 void HighwayGraph::write_master_graphs_tmg()
-{	std::ofstream simplefile(Args::graphfilepath + "/tm-master-simple.tmg");
-	std::ofstream collapfile(Args::graphfilepath + "/tm-master.tmg");
-	std::ofstream travelfile(Args::graphfilepath + "/tm-master-traveled.tmg");
+{	std::ofstream simplefile(Args::graphfilepath + "/tm-master-simple.tmg");   simplefile.precision(15);
+	std::ofstream collapfile(Args::graphfilepath + "/tm-master.tmg");	   collapfile.precision(15);
+	std::ofstream travelfile(Args::graphfilepath + "/tm-master-traveled.tmg"); travelfile.precision(15);
 	simplefile << "TMG 1.0 simple\n";
 	collapfile << "TMG 1.0 collapsed\n";
 	travelfile << "TMG 2.0 traveled\n";
@@ -213,13 +213,14 @@ void HighwayGraph::write_master_graphs_tmg()
 	unsigned int sv = 0;
 	unsigned int cv = 0;
 	unsigned int tv = 0;
-	char fstr[57];
 	for (HGVertex& v : vertices)
-	{	sprintf(fstr, " %.15g %.15g", v.lat, v.lng);
+	{	auto write_vertex = [&](std::ofstream& tmg)
+		{	tmg << *(v.unique_name) << ' ' << v.lat << ' ' << v.lng << '\n';
+		};
 		switch (v.visibility) // fall-thru is a Good Thing!
-		{ case 2:  collapfile << *(v.unique_name) << fstr << '\n'; v.c_vertex_num[0] = cv++;
-		  case 1:  travelfile << *(v.unique_name) << fstr << '\n'; v.t_vertex_num[0] = tv++;
-		  default: simplefile << *(v.unique_name) << fstr << '\n'; v.s_vertex_num[0] = sv++;
+		{ case 2:  write_vertex(collapfile); v.c_vertex_num[0] = cv++;
+		  case 1:  write_vertex(travelfile); v.t_vertex_num[0] = tv++;
+		  default: write_vertex(simplefile); v.s_vertex_num[0] = sv++;
 		}
 	}
 	// now edges, only write if not already written
@@ -232,13 +233,13 @@ void HighwayGraph::write_master_graphs_tmg()
 	  { case 2:	for (HGEdge *e : v.incident_c_edges)
 			  if (!(e->written[0] &  HGEdge::collapsed))
 			  {	e->written[0] |= HGEdge::collapsed;
-				e->collapsed_tmg_line(collapfile, fstr, 0, 0);
+				e->collapsed_tmg_line(collapfile, 0, 0);
 			  }
 	    case 1:	for (HGEdge *e : v.incident_t_edges)
 			  if (!(e->written[0] &  HGEdge::traveled))
 			  {	e->written[0] |= HGEdge::traveled;
 				for (char*n=cbycode; n<cbycode+nibbles; ++n) *n = '0';
-				e->traveled_tmg_line(travelfile, fstr, 0, 0, TravelerList::allusers.size, cbycode);
+				e->traveled_tmg_line(travelfile, 0, 0, TravelerList::allusers.size, cbycode);
 			  }
 	    default:	for (HGEdge *e : v.incident_s_edges)
 			  if (!(e->written[0] &  HGEdge::simple))
@@ -274,9 +275,9 @@ void HighwayGraph::write_subgraphs_tmg
 {	unsigned int cv_count = 0;
 	unsigned int tv_count = 0;
 	GraphListEntry* g = GraphListEntry::entries.data()+graphnum;
-	std::ofstream simplefile(Args::graphfilepath+'/'+g -> filename());
-	std::ofstream collapfile(Args::graphfilepath+'/'+g[1].filename());
-	std::ofstream travelfile(Args::graphfilepath+'/'+g[2].filename());
+	std::ofstream simplefile(Args::graphfilepath+'/'+g -> filename()); simplefile.precision(15);
+	std::ofstream collapfile(Args::graphfilepath+'/'+g[1].filename()); collapfile.precision(15);
+	std::ofstream travelfile(Args::graphfilepath+'/'+g[2].filename()); travelfile.precision(15);
 	std::vector<HGVertex*> mv;		// vertices matching all criteria
 	std::vector<HGEdge*> mse, mce, mte;	// matching simple/collapsed/traveled edges
 	std::vector<TravelerList*> traveler_lists;
@@ -311,13 +312,14 @@ void HighwayGraph::write_subgraphs_tmg
 	unsigned int sv = 0;
 	unsigned int cv = 0;
 	unsigned int tv = 0;
-	char fstr[57];
 	for (HGVertex *v : mv)
-	{	sprintf(fstr, " %.15g %.15g", v->lat, v->lng);
+	{	auto write_vertex = [&](std::ofstream& tmg)
+		{	tmg << *(v->unique_name) << ' ' << v->lat << ' ' << v->lng << '\n';
+		};
 		switch(v->visibility) // fall-thru is a Good Thing!
-		{ case 2:  collapfile << *(v->unique_name) << fstr << '\n'; v->c_vertex_num[threadnum] = cv++;
-		  case 1:  travelfile << *(v->unique_name) << fstr << '\n'; v->t_vertex_num[threadnum] = tv++;
-		  default: simplefile << *(v->unique_name) << fstr << '\n'; v->s_vertex_num[threadnum] = sv++;
+		{ case 2:  write_vertex(collapfile); v->c_vertex_num[threadnum] = cv++;
+		  case 1:  write_vertex(travelfile); v->t_vertex_num[threadnum] = tv++;
+		  default: write_vertex(simplefile); v->s_vertex_num[threadnum] = sv++;
 		}
 	}
 	// write edges
@@ -328,14 +330,14 @@ void HighwayGraph::write_subgraphs_tmg
 		simplefile << '\n';
 	}
 	for (HGEdge *e : mce)
-		e->collapsed_tmg_line(collapfile, fstr, threadnum, g->systems);
+		e->collapsed_tmg_line(collapfile, threadnum, g->systems);
 	size_t nibbles = ceil(double(travnum)/4);
 	char* cbycode = new char[nibbles+1];
 			// deleted after writing edges
 	cbycode[nibbles] = 0;
 	for (HGEdge *e : mte)
 	{	for (char*n=cbycode; n<cbycode+nibbles; ++n) *n = '0';
-		e->traveled_tmg_line (travelfile, fstr, threadnum, g->systems, travnum, cbycode);
+		e->traveled_tmg_line (travelfile, threadnum, g->systems, travnum, cbycode);
 	}
 	delete[] cbycode;
 	// traveler names

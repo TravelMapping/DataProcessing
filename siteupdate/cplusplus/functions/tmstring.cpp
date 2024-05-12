@@ -65,15 +65,6 @@ const char* strdstr(const char* h, const char* n, const char d)
 	return 0;
 }
 
-char* format_clinched_mi(char* str, double clinched, double total)
-{	/* return a nicely-formatted string for a given number of miles
-	clinched and total miles, including percentage */
-	if (total)
-		sprintf(str, "%0.2f of %0.2f mi (%0.2f%%)", clinched, total, 100*clinched/total);
-	else	sprintf(str, "%0.2f of %0.2f mi -.--%%", clinched, total);
-	return str;
-}
-
 std::string double_quotes(std::string str)
 {	for (size_t i = 0; i < str.size(); i++)
 	  if (str[i] == '\'')

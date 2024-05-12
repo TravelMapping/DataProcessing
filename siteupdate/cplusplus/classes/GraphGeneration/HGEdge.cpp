@@ -146,25 +146,21 @@ void HGEdge::detach(unsigned char fmt_mask)
 }
 
 // write line to tmg collapsed edge file
-void HGEdge::collapsed_tmg_line(std::ofstream& file, char* fstr, unsigned int threadnum, std::list<HighwaySystem*> *systems)
+void HGEdge::collapsed_tmg_line(std::ofstream& file, unsigned int threadnum, std::list<HighwaySystem*> *systems)
 {	file << vertex1->c_vertex_num[threadnum] << ' ' << vertex2->c_vertex_num[threadnum] << ' ';
 	segment->write_label(file, systems);
 	for (HGVertex *intermediate : intermediate_points)
-	{	sprintf(fstr, " %.15g %.15g", intermediate->lat, intermediate->lng);
-		file << fstr;
-	}
+		file << ' ' << intermediate->lat << ' ' << intermediate->lng;
 	file << '\n';
 }
 
 // write line to tmg traveled edge file
-void HGEdge::traveled_tmg_line(std::ofstream& file, char* fstr, unsigned int threadnum, std::list<HighwaySystem*> *systems, bool trav, char* code)
+void HGEdge::traveled_tmg_line(std::ofstream& file, unsigned int threadnum, std::list<HighwaySystem*> *systems, bool trav, char* code)
 {	file << vertex1->t_vertex_num[threadnum] << ' ' << vertex2->t_vertex_num[threadnum] << ' ';
 	segment->write_label(file, systems);
 	file << ' ' << (trav ? segment->clinchedby_code(code, threadnum) : "0");
 	for (HGVertex *intermediate : intermediate_points)
-	{	sprintf(fstr, " %.15g %.15g", intermediate->lat, intermediate->lng);
-		file << fstr;
-	}
+		file << ' ' << intermediate->lat << ' ' << intermediate->lng;
 	file << '\n';
 }
 
