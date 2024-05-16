@@ -3,6 +3,8 @@
 #include "../ConnectedRoute/ConnectedRoute.h"
 #include "../DBFieldLength/DBFieldLength.h"
 #include "../ErrorList/ErrorList.h"
+#include "../GraphGeneration/HGEdge.h"
+#include "../GraphGeneration/HGVertex.h"
 #include "../HighwaySegment/HighwaySegment.h"
 #include "../Region/Region.h"
 #include "../Route/Route.h"
@@ -13,6 +15,7 @@
 
 TMArray<HighwaySystem> HighwaySystem::syslist;
 HighwaySystem* HighwaySystem::it;
+std::unordered_map<std::string, HighwaySystem*> HighwaySystem::sysname_hash;
 unsigned int HighwaySystem::num_active  = 0;
 unsigned int HighwaySystem::num_preview = 0;
 
@@ -26,12 +29,17 @@ HighwaySystem::HighwaySystem(std::string &line, ErrorList &el)
 	if (NumFields != 6)
 	{	el.add_error("Could not parse " + Args::systemsfile
 			   + " line: [" + line + "], expected 6 fields, found " + std::to_string(NumFields));
-		throw 0xBAD;
+		throw 0xf1e1d5;
 	}
 	// System
 	if (systemname.size() > DBFieldLength::systemName)
 		el.add_error("System code > " + std::to_string(DBFieldLength::systemName)
 			   + " bytes in " + Args::systemsfile + " line " + line);
+	if (!sysname_hash.emplace(systemname, this).second)
+	{	el.add_error("Duplicate system code " + systemname
+			   + " in " + Args::systemsfile + " line " + line);
+		throw 0xc0de;
+	}
 	// CountryCode
 	country = country_or_continent_by_code(country_str, Region::countries);
 	if (!country)
@@ -59,6 +67,7 @@ HighwaySystem::HighwaySystem(std::string &line, ErrorList &el)
 	{	case 'a': num_active++; break;
 		case 'p': num_preview++;
 	}
+	is_subgraph_system = 0;
 	std::cout /*<< systemname*/ << '.' << std::flush;
 
 	// read chopped routes CSV
@@ -126,6 +135,36 @@ void HighwaySystem::systems_csv(ErrorList& el)
 	file.close();
 }
 
+void HighwaySystem::ve_thread(std::mutex* mtx, std::vector<HGVertex>* vertices, TMArray<HGEdge>* edges)
+{	while (it != syslist.end())
+	{	for (mtx->lock(); it != syslist.end(); it++)
+		  if (it->is_subgraph_system) break;
+		if (it == syslist.end()) return mtx->unlock();
+		HighwaySystem& h = *it++;
+		mtx->unlock();
+
+		h.vertices.alloc(vertices->data(), vertices->size());
+		h.edges.alloc(edges->data, edges->size);
+		for (Route& r : h.routes)
+		  for (Waypoint& w : r.points)
+		  { HGVertex* v = w.hashpoint()->vertex;
+		    if (h.vertices.add_value(v))
+		      for (HGEdge* e : v->incident_edges)
+			if (e->segment->concurrent)
+			{ for (HighwaySegment* s : *e->segment->concurrent)
+			    if (s->route->system == &h)
+			    {	h.edges.add_value(e);
+				break;
+			    }
+			}
+			else if (e->segment->route->system == &h)
+				h.edges.add_value(e);
+		  }
+		h.vertices.shrink_to_fit();
+		h.edges.shrink_to_fit();
+	}
+}
+
 /* Return whether this is an active system */
 bool HighwaySystem::active()
 {	return level == 'a';
@@ -161,12 +200,6 @@ std::string HighwaySystem::level_name()
 		case 'd': return "devel";
 		default:  return "ERROR";
 	}
-}
-
-void HighwaySystem::add_vertex(HGVertex* v)
-{	mtx.lock();
-	vertices.push_back(v);
-	mtx.unlock();
 }
 
 void HighwaySystem::stats_csv()

@@ -6,6 +6,7 @@ class Waypoint;
 #include <mutex>
 #include <vector>
 
+using VInfoVec = std::vector<std::pair<Waypoint*,size_t>>;
 class WaypointQuadtree
 {	// This class defines a recursive quadtree structure to store
 	// Waypoint objects for efficient geometric searching.
@@ -26,7 +27,7 @@ class WaypointQuadtree
 	std::string str();
 	unsigned int size();
 	std::list<Waypoint*> point_list();
-	void graph_points(std::vector<Waypoint*>&, std::vector<Waypoint*>&);
+	void graph_points(VInfoVec&, VInfoVec&, size_t&);
 	bool is_valid(ErrorList &);
 	unsigned int total_nodes();
 	void get_tmg_lines(std::list<std::string> &, std::list<std::string> &, std::string);

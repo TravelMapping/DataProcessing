@@ -43,8 +43,6 @@ class Waypoint
 	std::string root_at_label();
 	void nmplogs(std::unordered_set<std::string> &, std::ofstream &, std::list<std::string> &);
 	Waypoint* hashpoint();
-	bool region_match(std::list<Region*>*);
-	bool system_match(std::list<HighwaySystem*>*);
 	bool label_references_route(Route *);
 
 	// Datacheck helpers

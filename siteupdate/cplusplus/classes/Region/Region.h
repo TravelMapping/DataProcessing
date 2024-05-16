@@ -1,8 +1,10 @@
 class ErrorList;
+class HGEdge;
 class HGVertex;
 class Route;
 class Waypoint;
 #include "../../templates/TMArray.cpp"
+#include "../../templates/TMBitset.cpp"
 #include <mutex>
 #include <string>
 #include <unordered_map>
@@ -45,9 +47,9 @@ class Region
 	double active_only_mileage;
 	double active_preview_mileage;
 	double overall_mileage;
-	std::mutex mtx;
 	std::vector<Route*> routes;
-	std::vector<std::pair<HGVertex*,Waypoint*>> vertices;
+	TMBitset<HGVertex*, uint64_t> vertices;
+	TMBitset<HGEdge*,   uint64_t> edges;
 
 	static TMArray<Region> allregions;
 	static Region* it;
@@ -60,7 +62,7 @@ class Region
 	void compute_stats();
 	std::string &country_code();
 	std::string &continent_code();
-	void add_vertex(HGVertex*, Waypoint*);
 	static void read_csvs(ErrorList&);
 	static void cccsv(ErrorList&, std::string, std::string, size_t, size_t, std::vector<std::pair<std::string, std::string>>&);
+	static void ve_thread(std::mutex* mtx, std::vector<HGVertex>*, TMArray<HGEdge>*);
 };

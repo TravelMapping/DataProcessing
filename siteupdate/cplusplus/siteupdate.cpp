@@ -19,6 +19,7 @@ This module defines classes to represent the contents of a
 #include "classes/ElapsedTime/ElapsedTime.h"
 #include "classes/ErrorList/ErrorList.h"
 #include "classes/GraphGeneration/GraphListEntry.h"
+#include "classes/GraphGeneration/HGEdge.h"
 #include "classes/GraphGeneration/HGVertex.h"
 #include "classes/GraphGeneration/HighwayGraph.h"
 #include "classes/GraphGeneration/PlaceRadius.h"

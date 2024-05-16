@@ -49,7 +49,7 @@ if (file.is_open())
 
 		// regionlist
 		if (regionlist.empty()) regions = 0;
-		else {	regions = new list<Region*>;
+		else {	regions = new vector<Region*>;
 				  // deleted @ end of HighwayGraph::write_subgraphs_tmg
 			char* field = new char[regionlist.size()+1];
 				      // deleted once region tokens are processed
@@ -66,22 +66,22 @@ if (file.is_open())
 
 		// systemlist
 		if (systemlist.empty()) systems = 0;
-		else {	systems = new list<HighwaySystem*>;
+		else {	systems = new vector<HighwaySystem*>;
 				  // deleted @ end of HighwayGraph::write_subgraphs_tmg
 			char* field = new char[systemlist.size()+1];
 				      // deleted once system tokens are processed
 			strcpy(field, systemlist.data());
 			for(char* s = strtok(field, ","); s; s = strtok(0, ","))
-			{	for (h = HighwaySystem::syslist.data; h < sys_end; h++)
-				  if (s == h->systemname)
-				  {	systems->push_back(h);
-					break;
-				  }
-				if (h == sys_end)
-				{	el.add_error("unrecognized system code "+string(s)+" in fullcustom.csv line: "+line);
-					ok = 0;
-				}
-			}
+			  try {	HighwaySystem* const h = HighwaySystem::sysname_hash.at(s);
+				if (h->active_or_preview())
+				{	systems->push_back(h);
+					h->is_subgraph_system = 1;
+				} else	el.add_error("devel system "+h->systemname+" in fullcustom.csv line: "+line);
+			      }
+			  catch (const std::out_of_range&)
+			      {	el.add_error("unrecognized system code "+string(s)+" in fullcustom.csv line: "+line);
+				ok = 0;
+			      }
 			delete[] field;
 		     }
 		if (ok)	GraphListEntry::add_group(move(root), move(descr), 'f', regions, systems, a);

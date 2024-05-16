@@ -35,4 +35,3 @@ graph_data.waypoint_naming_log.clear();
 } //*/
 
 cout << et.et() << "Clearing HighwayGraph contents from memory." << endl;
-graph_data.clear();

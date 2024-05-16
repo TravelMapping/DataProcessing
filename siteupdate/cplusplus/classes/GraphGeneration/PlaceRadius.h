@@ -3,6 +3,7 @@ class HGEdge;
 class HGVertex;
 class HighwayGraph;
 class WaypointQuadtree;
+#include "../../templates/TMBitset.cpp"
 #include <iostream>
 #include <vector>
 
@@ -20,8 +21,7 @@ class PlaceRadius
 
 	PlaceRadius(const char *, const char *, double &, double &, double &);
 
-	bool contains_vertex(HGVertex *);
 	bool contains_vertex(double, double);
-	void vertices(std::vector<HGVertex*>&, WaypointQuadtree *, HighwayGraph *, GraphListEntry&, const int);
-	void v_search(std::vector<HGVertex*>&, WaypointQuadtree *, HighwayGraph *, GraphListEntry&, const int, double, double);
+	void matching_ve(TMBitset<HGVertex*,uint64_t>&, TMBitset<HGEdge*,uint64_t>&, WaypointQuadtree*);
+	void   ve_search(TMBitset<HGVertex*,uint64_t>&, TMBitset<HGEdge*,uint64_t>&, WaypointQuadtree*, double, double);
 };

@@ -90,20 +90,8 @@ const char* HighwaySegment::clinchedby_code(char* code, unsigned int threadnum)
 	return code;
 }
 
-bool HighwaySegment::system_match(std::list<HighwaySystem*>* systems)
-{	if (!systems) return 1;
-	// devel routes are already excluded from graphs,
-	// so no need to check on non-concurrent segments
-	if (!concurrent) return contains(*systems, route->system);
-	for (HighwaySegment *cs : *(concurrent))
-	  // no devel systems should be listed
-	  // in CSVs, so no need for that check
-	  if (contains(*systems, cs->route->system)) return 1;
-	return 0;
-}
-
 // compute an edge label, optionally restricted by systems
-void HighwaySegment::write_label(std::ofstream& file, std::list<HighwaySystem*> *systems)
+void HighwaySegment::write_label(std::ofstream& file, std::vector<HighwaySystem*> *systems)
 {	if (concurrent)
 	     {	bool write_comma = 0;
 		for (HighwaySegment* cs : *concurrent)

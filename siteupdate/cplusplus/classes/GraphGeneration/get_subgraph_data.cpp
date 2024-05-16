@@ -1,66 +1,71 @@
-// Find a set of vertices from the graph, optionally
+// Find sets of vertices & edges from the graph, optionally
 // restricted by region or system or placeradius area.
-if (g->placeradius)
-	g->placeradius->vertices(mv, qt, this, *g, threadnum);
-else	if (g->regions)
-	{ if (g->systems)
-	  {	// iterate via region & check for a system_match
-		for (Region *r : *g->regions)
-		  for (auto& vw : r->vertices)
-		    if (!subgraph_contains(vw.first, threadnum) && vw.second->system_match(g->systems))
-		    {	mv.push_back(vw.first);
-			add_to_subgraph(vw.first, threadnum);
-		    }
-	  }
-	  else	for (Region *r : *g->regions)
-		  for (auto& vw : r->vertices)
-		    if (!subgraph_contains(vw.first, threadnum))
-		    {	mv.push_back(vw.first);
-			add_to_subgraph(vw.first, threadnum);
-		    }
-	} else	for (HighwaySystem *h : *g->systems)
-		  for (HGVertex* v : h->vertices)
-		    if (!subgraph_contains(v, threadnum))
-		    {	mv.push_back(v);
-			add_to_subgraph(v, threadnum);
-		    }
+auto pr = [&]()
+{	TMBitset<HGVertex*, uint64_t> pr_mv(vertices.data(), vertices.size());
+	TMBitset<HGEdge*,   uint64_t> pr_me(edges.data, edges.size);
+	g->placeradius->matching_ve(pr_mv, pr_me, qt);
+	pr_mv.shrink_to_fit();
+	pr_me.shrink_to_fit();
+	mv &= pr_mv;
+	me &= pr_me;
+};
+if (g->regions)
+     {	auto &r = *g->regions;
+	mv = r[0]->vertices;
+	me = r[0]->edges;
+	for (size_t i = 1; i < r.size(); ++i)
+	{	mv |= r[i]->vertices;
+		me |= r[i]->edges;
+	}
+	if (g->systems)
+	{	auto &h = *g->systems;
+		auto sys_mv(h[0]->vertices);
+		auto sys_me(h[0]->edges);
+		for (size_t i = 1; i < h.size(); ++i)
+		{	sys_mv |= h[i]->vertices;
+			sys_me |= h[i]->edges;
+		}
+		mv &= sys_mv;
+		me &= sys_me;
+	}
+	if (g->placeradius) pr();
+     }
+else if (g->systems)
+     {	auto &h = *g->systems;
+	mv = h[0]->vertices;
+	me = h[0]->edges;
+	for (size_t i = 1; i < h.size(); ++i)
+	{	mv |= h[i]->vertices;
+		me |= h[i]->edges;
+	}
+	if (g->placeradius) pr();
+     }
+else {	// We know there's a PlaceRadius, as no GraphListEntry
+	// is created for invalid fullcustom.csv data
+	mv.alloc(vertices.data(), vertices.size());
+	me.alloc(edges.data, edges.size);
+	g->placeradius->matching_ve(mv, me, qt);
+	mv.shrink_to_fit();
+	me.shrink_to_fit();
+     }
 
-// initialize written booleans
-for (HGVertex *v : mv)
-{	for (HGEdge* e : v->incident_s_edges) e->written[threadnum] = 0;
-	for (HGEdge* e : v->incident_c_edges) e->written[threadnum] = 0;
-	for (HGEdge* e : v->incident_t_edges) e->written[threadnum] = 0;
-}
-
-// Compute sets of edges for subgraphs, optionally
-// restricted by region or system or placeradius.
-// Keep a count of collapsed & traveled vertices as we go.
-#define AREA (!g->placeradius || subgraph_contains(e->vertex1, threadnum) && subgraph_contains(e->vertex2, threadnum))
-#define REGION (!g->regions || contains(*g->regions, e->segment->route->region))
-for (HGVertex *v : mv)
+// count vertices
+for (HGVertex* v : mv)
 {	switch (v->visibility) // fall-thru is a Good Thing!
-	{   case 2:
-		cv_count++;
-		for (HGEdge *e : v->incident_c_edges)
-		  if (!(e->written[threadnum] & HGEdge::collapsed) && AREA && REGION && e->segment->system_match(g->systems))
-		  {	mce.push_back(e);
-			e->written[threadnum] |= HGEdge::collapsed;
-		  }
-	    case 1:
-		tv_count++;
-		for (HGEdge *e : v->incident_t_edges)
-		  if (!(e->written[threadnum] & HGEdge::traveled) && AREA && REGION && e->segment->system_match(g->systems))
-		  {	mte.push_back(e);
-			e->written[threadnum] |= HGEdge::traveled;
-			traveler_set |= e->segment->clinched_by;
-		  }
-	    default:
-		for (HGEdge *e : v->incident_s_edges)
-		  if (!(e->written[threadnum] & HGEdge::simple) && AREA && REGION && e->segment->system_match(g->systems))
-		  {	mse.push_back(e);
-			e->written[threadnum] |= HGEdge::simple;
-		  }
-	}   clear_vbit(v, threadnum);
+	{	case 2:	 cv_count++;
+		case 1:	 tv_count++;
+		default: sv_count++;
+	}
 }
-#undef AREA
-#undef REGION
+
+// count edges & create traveler set
+for (HGEdge* e : me)
+{	if (e->format & HGEdge::simple)
+		se_count++;
+	if (e->format & HGEdge::collapsed)
+		ce_count++;
+	if (e->format & HGEdge::traveled)
+	{	te_count++;
+		traveler_set.fast_union(e->segment->clinched_by);
+	}
+}

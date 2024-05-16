@@ -7,23 +7,18 @@
 #include "../Waypoint/Waypoint.h"
 #include "../../templates/contains.cpp"
 
+HGVertex* HGEdge::v_array;
+
 HGEdge::HGEdge(HighwaySegment *s)
 {	// initial construction is based on a HighwaySegment
-	written = new char[Args::numthreads];
-		  // deleted by HGEdge::detach
-	// we only need to initialize the first element, for master graphs.
-	// the rest will get zeroed out for each subgraph set.
-	written[0] = 0;
 	vertex1 = s->waypoint1->hashpoint()->vertex;
 	vertex2 = s->waypoint2->hashpoint()->vertex;
 	format = simple | collapsed | traveled;
 	segment_name = s->segment_name();
-	vertex1->incident_s_edges.push_back(this);
-	vertex2->incident_s_edges.push_back(this);
-	vertex1->incident_c_edges.push_back(this);
-	vertex2->incident_c_edges.push_back(this);
-	vertex1->incident_t_edges.push_back(this);
-	vertex2->incident_t_edges.push_back(this);
+	vertex1->incident_edges.push_back(this);
+	vertex2->incident_edges.push_back(this);
+	vertex1->edge_count++;
+	vertex2->edge_count++;
 	// canonical segment, used to reference region and list of travelers
 	// assumption: each edge/segment lives within a unique region
 	// and a 'multi-edge' would not be able to span regions as there
@@ -31,27 +26,12 @@ HGEdge::HGEdge(HighwaySegment *s)
 	segment = s;
 }
 
-HGEdge::HGEdge(HGVertex *vertex, unsigned char fmt_mask)
+HGEdge::HGEdge(HGVertex *vertex, unsigned char fmt_mask, HGEdge *e1, HGEdge *e2)
 {	// build by collapsing two existing edges around a common hidden vertex
-	written = new char[Args::numthreads];
-		  // deleted by HGEdge::detach
-	written[0] = 0;
+	c_idx = vertex - v_array;
 	format = fmt_mask;
-	// we know there are exactly 2 incident edges, as we
-	// checked for that, and we will replace these two
-	// with the single edge we are constructing here...
-	HGEdge *edge1 = 0;
-	HGEdge *edge2 = 0;
-	if (fmt_mask & collapsed)
-	{	// ...in the compressed graph, and/or...
-		edge1 = vertex->incident_c_edges.front();
-		edge2 = vertex->incident_c_edges.back();
-	}
-	if (fmt_mask & traveled)
-	{	// ...in the traveled graph, as appropriate
-		edge1 = vertex->incident_t_edges.front();
-		edge2 = vertex->incident_t_edges.back();
-	}
+	HGEdge *edge1 = e1;
+	HGEdge *edge2 = e2;
 	// segment names should match as routes should not start or end
 	// nor should concurrencies begin or end at a hidden point
 	if (edge1->segment_name != edge2->segment_name)
@@ -103,50 +83,31 @@ HGEdge::HGEdge(HGVertex *vertex, unsigned char fmt_mask)
 			intermediate_point_string() << " to " << *(vertex2->unique_name) << std::endl;
 	//std::cout << "DEBUG: new " << str() << std::endl;
 
+	// clear format bits of old edges
+	edge1->format &= ~fmt_mask;
+	edge2->format &= ~fmt_mask;
 	// replace edge references at our endpoints with ourself
-	edge1->detach(fmt_mask);
-	edge2->detach(fmt_mask);
-	if (fmt_mask & collapsed)
-	{	vertex1->incident_c_edges.push_back(this);
-		vertex2->incident_c_edges.push_back(this);
-	}
-	if (fmt_mask & traveled)
-	{	vertex1->incident_t_edges.push_back(this);
-		vertex2->incident_t_edges.push_back(this);
-	}
+	if (!edge1->format) edge1->detach();
+	if (!edge2->format) edge2->detach();
+	vertex1->incident_edges.push_back(this);
+	vertex2->incident_edges.push_back(this);
 }
 
-void HGEdge::detach() {return detach(format);}
-void HGEdge::detach(unsigned char fmt_mask)
+void HGEdge::detach()
 {	// detach edge from vertices in graph(s) specified in fmt_mask
-	#define DETACH(v) \
-	  for (std::list<HGEdge*>::iterator e = v.begin(); e != v.end(); e++) \
+	auto detach = [&](std::vector<HGEdge*>& v) \
+	{ for (std::vector<HGEdge*>::iterator e = v.begin(); e != v.end(); e++) \
 	    if (*e == this) \
 	    {	v.erase(e); \
 		break; \
 	    }
-	if (fmt_mask & simple)
-	{	DETACH(vertex1->incident_s_edges)
-		DETACH(vertex2->incident_s_edges)
-	}
-	if (fmt_mask & collapsed)
-	{	DETACH(vertex1->incident_c_edges)
-		DETACH(vertex2->incident_c_edges)
-	}
-	if (fmt_mask & traveled)
-	{	DETACH(vertex1->incident_t_edges)
-		DETACH(vertex2->incident_t_edges)
-	}
-	#undef DETACH
-	format &= ~fmt_mask;
-	if (!format)
-	{	delete[] written;
-		delete this;
-	}
+	};
+	detach(vertex1->incident_edges);
+	detach(vertex2->incident_edges);
 }
 
 // write line to tmg collapsed edge file
-void HGEdge::collapsed_tmg_line(std::ofstream& file, char* fstr, unsigned int threadnum, std::list<HighwaySystem*> *systems)
+void HGEdge::collapsed_tmg_line(std::ofstream& file, char* fstr, unsigned int threadnum, std::vector<HighwaySystem*> *systems)
 {	file << vertex1->c_vertex_num[threadnum] << ' ' << vertex2->c_vertex_num[threadnum] << ' ';
 	segment->write_label(file, systems);
 	for (HGVertex *intermediate : intermediate_points)
@@ -157,7 +118,7 @@ void HGEdge::collapsed_tmg_line(std::ofstream& file, char* fstr, unsigned int th
 }
 
 // write line to tmg traveled edge file
-void HGEdge::traveled_tmg_line(std::ofstream& file, char* fstr, unsigned int threadnum, std::list<HighwaySystem*> *systems, bool trav, char* code)
+void HGEdge::traveled_tmg_line(std::ofstream& file, char* fstr, unsigned int threadnum, std::vector<HighwaySystem*> *systems, bool trav, char* code)
 {	file << vertex1->t_vertex_num[threadnum] << ' ' << vertex2->t_vertex_num[threadnum] << ' ';
 	segment->write_label(file, systems);
 	file << ' ' << (trav ? segment->clinchedby_code(code, threadnum) : "0");
@@ -169,7 +130,7 @@ void HGEdge::traveled_tmg_line(std::ofstream& file, char* fstr, unsigned int thr
 }
 
 /* line appropriate for a tmg collapsed edge file, with debug info
-std::string HGEdge::debug_tmg_line(std::list<HighwaySystem*> *systems, unsigned int threadnum)
+std::string HGEdge::debug_tmg_line(std::vector<HighwaySystem*> *systems, unsigned int threadnum)
 {	std::string line = std::to_string(vertex1->c_vertex_num[threadnum]) + " [" + *vertex1->unique_name + "] " \
 			 + std::to_string(vertex2->c_vertex_num[threadnum]) + " [" + *vertex2->unique_name + "] " + label(systems);
 	char fstr[58];

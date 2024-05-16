@@ -16,7 +16,6 @@ PlaceRadius::PlaceRadius(const char *D, const char *T, double& Y, double& X, dou
 	r = R;
 }
 
-bool PlaceRadius::contains_vertex(HGVertex *v) {return contains_vertex(v->lat, v->lng);}
 bool PlaceRadius::contains_vertex(double vlat, double vlng)
 {	/* return whether coordinates are within this area */
 	// convert to radians to compute distance
@@ -46,15 +45,14 @@ bool PlaceRadius::contains_vertex(double vlat, double vlng)
 	return ans <= r;
 }
 
-void PlaceRadius::vertices(std::vector<HGVertex*>& vvec, WaypointQuadtree *qt,
-			   HighwayGraph *hg, GraphListEntry& gle, const int threadnum)
-{	// Compute a set of graph vertices within r miles of (lat, lng).
+void PlaceRadius::matching_ve(TMBitset<HGVertex*,uint64_t>& mv, TMBitset<HGEdge*,uint64_t>& me, WaypointQuadtree *qt)
+{	// Compute sets of graph vertices & edges within r miles of (lat, lng).
 	// This function handles setup & sanity checks, passing control over
-	// to the recursive v_search function to do the actual searching.
+	// to the recursive ve_search function to do the actual searching.
 
 	// N/S sanity check: If lat is <= r/2 miles to the N or S pole, lngdelta calculation will fail.
 	// In these cases, our place radius will span the entire "width" of the world, from -180 to +180 degrees.
-	if (90-fabs(lat)*(pi/180) <= r/7926.2) return v_search(vvec, qt, hg, gle, threadnum, -180, +180);
+	if (90-fabs(lat)*(pi/180) <= r/7926.2) return ve_search(mv, me, qt, -180, +180);
 
 	// width, in degrees longitude, of our bounding box for quadtree search
 	double lngdelta = acos((cos(r/3963.1) - pow(sin(lat*(pi/180)),2)) / pow(cos(lat*(pi/180)),2)) / (pi/180);
@@ -62,25 +60,25 @@ void PlaceRadius::vertices(std::vector<HGVertex*>& vvec, WaypointQuadtree *qt,
 	double e_bound = lng+lngdelta;
 
 	// normal operation; search quadtree within calculated bounds
-	v_search(vvec, qt, hg, gle, threadnum, w_bound, e_bound);
+	ve_search(mv, me, qt, w_bound, e_bound);
 
 	// If bounding box spans international date line to west of -180 degrees,
 	// search quadtree within the corresponding range of positive longitudes
 	if (w_bound <= -180)
-	{	while (w_bound <= -180) w_bound += 360;
-		v_search(vvec, qt, hg, gle, threadnum, w_bound, 180);
+	{	do w_bound += 360; while (w_bound <= -180);
+		ve_search(mv, me, qt, w_bound, 180);
 	}
 
 	// If bounding box spans international date line to east of +180 degrees,
 	// search quadtree within the corresponding range of negative longitudes
 	if (e_bound >= 180)
-	{	while (e_bound >= 180) e_bound -= 360;
-		v_search(vvec, qt, hg, gle, threadnum, -180, e_bound);
+	{	do e_bound -= 360; while (e_bound >= 180);
+		ve_search(mv, me, qt, -180, e_bound);
 	}
 }
 
-void PlaceRadius::v_search(std::vector<HGVertex*>& vvec, WaypointQuadtree *qt, HighwayGraph *hg,
-			   GraphListEntry& gle, const int threadnum, double w_bound, double e_bound)
+void PlaceRadius::ve_search(TMBitset<HGVertex*,uint64_t>& mv, TMBitset<HGEdge*,uint64_t>& me,
+			    WaypointQuadtree *qt, double w_bound, double e_bound)
 {	// recursively search quadtree for waypoints within this PlaceRadius
 	// area, and populate a set of their corresponding graph vertices
 
@@ -91,10 +89,13 @@ void PlaceRadius::v_search(std::vector<HGVertex*>& vvec, WaypointQuadtree *qt, H
 		  if (	(!p->colocated || p == p->colocated->front())
 		  &&	p->is_or_colocated_with_active_or_preview()
 		  &&	contains_vertex(p->lat, p->lng)
-		  &&	p->region_match(gle.regions)
-		  &&	p->system_match(gle.systems)
-		     ){	vvec.push_back(p->vertex);
-			hg->add_to_subgraph(p->vertex, threadnum);
+		     ){	HGVertex* v = p->vertex;
+			mv.add_value(v);
+			for (HGEdge* e : v->incident_edges)
+			{	HGVertex* v2 = v == e->vertex1 ? e->vertex2 : e->vertex1;
+				if (contains_vertex(v2->lat, v2->lng))
+				  me.add_value(e);
+			}
 		      }
 	}
 	// if we're not a terminal quadrant, we need to determine which
@@ -106,10 +107,10 @@ void PlaceRadius::v_search(std::vector<HGVertex*>& vvec, WaypointQuadtree *qt, H
 		bool look_w = w_bound <= qt->mid_lng;
 		//std::cout << "DEBUG: recursive case, " << look_n << " " << look_s << " " << look_e << " " << look_w << std::endl;
 		// now look in the appropriate child quadrants
-		if (look_n && look_w)	v_search(vvec, qt->nw_child, hg, gle, threadnum, w_bound, e_bound);
-		if (look_n && look_e)	v_search(vvec, qt->ne_child, hg, gle, threadnum, w_bound, e_bound);
-		if (look_s && look_w)	v_search(vvec, qt->sw_child, hg, gle, threadnum, w_bound, e_bound);
-		if (look_s && look_e)	v_search(vvec, qt->se_child, hg, gle, threadnum, w_bound, e_bound);
+		if (look_n && look_w)	ve_search(mv, me, qt->nw_child, w_bound, e_bound);
+		if (look_n && look_e)	ve_search(mv, me, qt->ne_child, w_bound, e_bound);
+		if (look_s && look_w)	ve_search(mv, me, qt->sw_child, w_bound, e_bound);
+		if (look_s && look_e)	ve_search(mv, me, qt->se_child, w_bound, e_bound);
 	     }
 }
 

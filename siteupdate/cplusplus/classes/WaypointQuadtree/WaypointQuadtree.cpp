@@ -196,13 +196,16 @@ std::list<Waypoint*> WaypointQuadtree::point_list()
 	else	return points;
 }
 
-void WaypointQuadtree::graph_points(std::vector<Waypoint*>& hi_priority_points, std::vector<Waypoint*>& lo_priority_points)
-{	// return a list of points to be used as indices to HighwayGraph vertices
+void WaypointQuadtree::graph_points(VInfoVec& hi_priority_points, VInfoVec& lo_priority_points, size_t& v_idx)
+{	// Populate 2 vectors (hi & lo priority for name simplification) of Waypoint*/index pairs. Elements:
+	// 1st: Waypoint* from which an HGVertex is to be constructed.
+	//	This point receives a pointer to the vertex to enable lookups.
+	// 2nd: The future vertex's index in the HighwayGraph::vertices array.
 	if (refined())
-	     {	ne_child->graph_points(hi_priority_points, lo_priority_points);
-		nw_child->graph_points(hi_priority_points, lo_priority_points);
-		se_child->graph_points(hi_priority_points, lo_priority_points);
-		sw_child->graph_points(hi_priority_points, lo_priority_points);
+	     {	ne_child->graph_points(hi_priority_points, lo_priority_points, v_idx);
+		nw_child->graph_points(hi_priority_points, lo_priority_points, v_idx);
+		se_child->graph_points(hi_priority_points, lo_priority_points, v_idx);
+		sw_child->graph_points(hi_priority_points, lo_priority_points, v_idx);
 	     }
 	else for (Waypoint *w : points)
 	     {	// skip if not at front of colocation list
@@ -218,8 +221,8 @@ void WaypointQuadtree::graph_points(std::vector<Waypoint*>& hi_priority_points, 
 		if (	w->ap_coloc.size() != 2
 		     || w->ap_coloc.front()->route->abbrev.size()
 		     || w->ap_coloc.back()->route->abbrev.size()
-		   )	lo_priority_points.push_back(w);
-		else	hi_priority_points.push_back(w);
+		   )	lo_priority_points.emplace_back(w, v_idx++);
+		else	hi_priority_points.emplace_back(w, v_idx++);
 	     }
 }
 

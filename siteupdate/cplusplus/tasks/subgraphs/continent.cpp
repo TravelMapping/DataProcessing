@@ -1,6 +1,6 @@
 // continent graphs - any continent with active or preview mileage will be created
 for (auto c = Region::continents.data(), dummy = c+Region::continents.size()-1; c < dummy; c++)
-{	regions = new list<Region*>;
+{	regions = new vector<Region*>;
 		  // deleted @ end of HighwayGraph::write_subgraphs_tmg
 	for (Region& r : Region::allregions)
 	  // does it match this continent and have routes?

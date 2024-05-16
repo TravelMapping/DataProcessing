@@ -1,7 +1,6 @@
 class HighwaySystem;
 class PlaceRadius;
 class Region;
-#include <list>
 #include <string>
 #include <vector>
 
@@ -12,8 +11,8 @@ class GraphListEntry
 	match column names in the "graphs" DB table. */
 	public:
 	// Info for use in threaded subgraph generation. Not used in DB.
-	std::list<Region*> *regions;
-	std::list<HighwaySystem*> *systems;
+	std::vector<Region*> *regions;
+	std::vector<HighwaySystem*> *systems;
 	PlaceRadius *placeradius;
 
 	// Info for the "graphs" DB table
@@ -29,6 +28,6 @@ class GraphListEntry
 	static size_t num; // iterator for entries
 	std::string tag();
 
-	GraphListEntry(std::string, std::string, char, char, std::list<Region*>*, std::list<HighwaySystem*>*, PlaceRadius*);
-	static void add_group(std::string&&,  std::string&&,  char, std::list<Region*>*, std::list<HighwaySystem*>*, PlaceRadius*);
+	GraphListEntry(std::string, std::string, char, char, std::vector<Region*>*, std::vector<HighwaySystem*>*, PlaceRadius*);
+	static void add_group(std::string&&,  std::string&&,  char, std::vector<Region*>*, std::vector<HighwaySystem*>*, PlaceRadius*);
 };

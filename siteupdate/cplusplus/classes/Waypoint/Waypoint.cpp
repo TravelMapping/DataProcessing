@@ -248,22 +248,6 @@ Waypoint* Waypoint::hashpoint()
 	return colocated->front();
 }
 
-bool Waypoint::region_match(std::list<Region*>* regions)
-{	if (!regions) return 1;
-	if (!colocated) return contains(*regions, route->region);
-	for (Waypoint* w : *colocated)
-	  if (w->route->system->active_or_preview() && contains(*regions, w->route->region)) return 1;
-	return 0;
-}
-
-bool Waypoint::system_match(std::list<HighwaySystem*>* systems)
-{	if (!systems) return 1;
-	if (!colocated) return contains(*systems, route->system);
-	for (Waypoint* w : *colocated)
-	  if (contains(*systems, w->route->system)) return 1;
-	return 0;
-}
-
 bool Waypoint::label_references_route(Route *r)
 {	std::string no_abbrev = r->name_no_abbrev();
 	if ( strncmp(label.data(), no_abbrev.data(), no_abbrev.size()) )

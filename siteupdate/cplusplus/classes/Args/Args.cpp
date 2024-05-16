@@ -7,6 +7,8 @@
 /* k */ bool Args::skipgraphs = 0;
 /* v */ bool Args::mtvertices = 0;
 /* C */ bool Args::mtcsvfiles = 0;
+/* E */ bool Args::edgecounts = 0;
+/* b */ bool Args::bitsetlogs = 0;
 /* w */ std::string Args::datapath = "../../HighwayData";
 /* s */ std::string Args::systemsfile = "systems.csv";
 /* u */ std::string Args::userlistfilepath = "../../UserData/list_files";
@@ -33,6 +35,8 @@ bool Args::init(int argc, char *argv[])
 		else if ARG(0, "-k", "--skipgraphs")		 skipgraphs = 1;
 		else if ARG(0, "-v", "--mt-vertices")		 mtvertices = 1;
 		else if ARG(0, "-C", "--mt-csvs")		 mtcsvfiles = 1;
+		else if ARG(0, "-E", "--edge-counts")		 edgecounts = 1;
+		else if ARG(0, "-b", "--bitset-logs")		 bitsetlogs = 1;
 		else if ARG(0, "-h", "--help")			{show_help(); return 1;}
 		else if ARG(1, "-w", "--datapath")		{datapath	  = argv[++n];}
 		else if ARG(1, "-s", "--systemsfile")		{systemsfile      = argv[++n];}
@@ -81,7 +85,7 @@ void Args::show_help()
 	std::cout  <<  indent << "        [-c CSVSTATFILEPATH] [-g GRAPHFILEPATH] [-k]\n";
 	std::cout  <<  indent << "        [-n NMPMERGEPATH] [-p SPLITREGIONPATH SPLITREGION]\n";
 	std::cout  <<  indent << "        [-U USERLIST [USERLIST ...]] [-t NUMTHREADS] [-e]\n";
-	std::cout  <<  indent << "        [-T TIMEPRECISION] [-v] [-C]\n";
+	std::cout  <<  indent << "        [-T TIMEPRECISION] [-v] [-C] [-E] [-b]\n";
 	std::cout  <<  indent << "        [-L COLOCATIONLIMIT] [-N NMPTHRESHOLD]\n";
 	std::cout  <<  "\n";
 	std::cout  <<  "Create SQL, stats, graphs, and log files from highway and user data for the\n";
@@ -124,6 +128,9 @@ void Args::show_help()
 	std::cout  <<  "		        timestamp readouts\n";
 	std::cout  <<  "  -v, --mt-vertices     Multi-threaded vertex construction\n";
 	std::cout  <<  "  -C, --mt-csvs         Multi-threaded stats csv files\n";
+	std::cout  <<  "  -E, --edge-counts     Report the quantity of each format graph edge\n";
+	std::cout  <<  "  -b, --bitset-logs     Write TMBitset RAM use logs for region & system\n";
+	std::cout  <<  "		        vertices & edges\n";
 	std::cout  <<  "  -L, --colocationlimit COLOCATIONLIMIT\n";
 	std::cout  <<  "		        Threshold to report colocation counts\n";
 	std::cout  <<  "  -N, --nmp-threshold NMPTHRESHOLD\n";
