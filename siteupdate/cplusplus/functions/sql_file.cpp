@@ -22,8 +22,7 @@ void sqlfile1
     ){	// Once all data is read in and processed, create a .sql file that will
 	// create all of the DB tables to be used by other parts of the project
 	std::ofstream sqlfile(Args::databasename+".sql");
-	sqlfile.setf(std::ios::floatfield);
-	sqlfile.precision(16);
+	sqlfile.precision(17);
 	// Note: removed "USE" line, DB name must be specified on the mysql command line
 
 	// we have to drop tables in the right order to avoid foreign key errors
@@ -191,7 +190,6 @@ void sqlfile1
       #ifndef threading_enabled
 	std::cout << et->et() << "...waypoints" << std::endl;
       #endif
-	sqlfile.unsetf(std::ios::floatfield);
 	sqlfile.precision(15);
 	sqlfile << "CREATE TABLE waypoints (pointId INTEGER, pointName VARCHAR(" << DBFieldLength::label
 		<< "), latitude DOUBLE, longitude DOUBLE, root VARCHAR(" << DBFieldLength::root
@@ -220,8 +218,7 @@ void sqlfile1
       #ifndef threading_enabled
 	std::cout << et->et() << "...segments" << std::endl;
       #endif
-	sqlfile.setf(std::ios::floatfield);
-	sqlfile.precision(16);
+	sqlfile.precision(17);
 	sqlfile << "CREATE TABLE segments (segmentId INTEGER, waypoint1 INTEGER, waypoint2 INTEGER, root VARCHAR(" << DBFieldLength::root
 		<< "), PRIMARY KEY (segmentId), FOREIGN KEY (waypoint1) REFERENCES waypoints(pointId), "
 		<< "FOREIGN KEY (waypoint2) REFERENCES waypoints(pointId), FOREIGN KEY (root) REFERENCES routes(root));\n";
