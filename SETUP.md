@@ -4,7 +4,7 @@ This document is intended to describe how one can set up an environment to run T
 
 Standard tools expected include `bash`, `bzip2`, a GNU version of `make` (often named `gmake`), `ssh`.
 
-There are two versions of the site update program: one written in Python and one in C++.  Both produce the same result.  The Python version requires a Python3 installation (as of this writing, Python 3.9.13).  Below, we will assume that Python can be launched with the command "python3".  The C++ version requires a C++ compiler (as of this writing, FreeBSD clang 13.0.0).
+There are two versions of the site update program: one written in Python and one in C++.  Both produce the same result.  The Python version requires a Python3 installation (as of this writing, Python 3.9.13).  Below, we will assume that Python can be launched with the command "python3".  The C++ version requires a C++ compiler (as of this writing, FreeBSD clang 13.0.0) and the [{fmt}](https://fmt.dev/) library (as of this writing, {fmt} 10.2.0).
 
 ### Cloning Needed Repositories
 
