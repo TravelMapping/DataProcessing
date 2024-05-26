@@ -1,3 +1,4 @@
+#define FMT_HEADER_ONLY
 #include "HGEdge.h"
 #include "HGVertex.h"
 #include "../Args/Args.h"
@@ -6,6 +7,7 @@
 #include "../Route/Route.h"
 #include "../Waypoint/Waypoint.h"
 #include "../../templates/contains.cpp"
+#include <fmt/format.h>
 
 HGEdge::HGEdge(HighwaySegment *s)
 {	// initial construction is based on a HighwaySegment
@@ -150,7 +152,7 @@ void HGEdge::collapsed_tmg_line(std::ofstream& file, char* fstr, unsigned int th
 {	file << vertex1->c_vertex_num[threadnum] << ' ' << vertex2->c_vertex_num[threadnum] << ' ';
 	segment->write_label(file, systems);
 	for (HGVertex *intermediate : intermediate_points)
-	{	sprintf(fstr, " %.15g %.15g", intermediate->lat, intermediate->lng);
+	{	*fmt::format_to(fstr, " {:.15} {:.15}", intermediate->lat, intermediate->lng) = 0;
 		file << fstr;
 	}
 	file << '\n';
@@ -162,7 +164,7 @@ void HGEdge::traveled_tmg_line(std::ofstream& file, char* fstr, unsigned int thr
 	segment->write_label(file, systems);
 	file << ' ' << (trav ? segment->clinchedby_code(code, threadnum) : "0");
 	for (HGVertex *intermediate : intermediate_points)
-	{	sprintf(fstr, " %.15g %.15g", intermediate->lat, intermediate->lng);
+	{	*fmt::format_to(fstr, " {:.15} {:.15}", intermediate->lat, intermediate->lng) = 0;
 		file << fstr;
 	}
 	file << '\n';
@@ -174,7 +176,7 @@ std::string HGEdge::debug_tmg_line(std::list<HighwaySystem*> *systems, unsigned 
 			 + std::to_string(vertex2->c_vertex_num[threadnum]) + " [" + *vertex2->unique_name + "] " + label(systems);
 	char fstr[58];
 	for (HGVertex *intermediate : intermediate_points)
-	{	sprintf(fstr, "] %.15g %.15g", intermediate->lat, intermediate->lng);
+	{	*fmt::format_to(fstr, "] {:.15} {:.15}", intermediate->lat, intermediate->lng) = 0;
 		line += " [" + *intermediate->unique_name + fstr;
 	}
 	return line;
@@ -200,7 +202,7 @@ std::string HGEdge::intermediate_point_string()
 	std::string line = "";
 	char fstr[56];
 	for (HGVertex *i : intermediate_points)
-	{	sprintf(fstr, "%.15g %.15g", i->lat, i->lng);
+	{	*fmt::format_to(fstr, "{:.15} {:.15}", i->lat, i->lng) = 0;
 		line += " [" + *i->unique_name + "] " + fstr;
 	}
 	return line;

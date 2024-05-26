@@ -1,3 +1,4 @@
+#define FMT_HEADER_ONLY
 #include "TravelerList.h"
 #include "../Args/Args.h"
 #include "../ConnectedRoute/ConnectedRoute.h"
@@ -5,6 +6,7 @@
 #include "../Region/Region.h"
 #include "../Route/Route.h"
 #include "../../functions/tmstring.h"
+#include <fmt/format.h>
 #include <fstream>
 
 void TravelerList::userlog(const double total_active_only_miles, const double total_active_preview_miles)
@@ -99,22 +101,22 @@ void TravelerList::userlog(const double total_active_only_miles, const double to
 			  if (h->active())
 				active_systems_clinched++;
 			  else	preview_systems_clinched++;
-			sprintf(fstr, " connected routes traveled: %i of %i (%.1f%%), clinched: %i of %i (%.1f%%).",
+			*fmt::format_to(fstr, " connected routes traveled: {} of {} ({:.1f}%), clinched: {} of {} ({:.1f}%).",
 				num_con_rtes_traveled, (int)h->con_routes.size, 100*(double)num_con_rtes_traveled/h->con_routes.size,
-				num_con_rtes_clinched, (int)h->con_routes.size, 100*(double)num_con_rtes_clinched/h->con_routes.size);
+				num_con_rtes_clinched, (int)h->con_routes.size, 100*(double)num_con_rtes_clinched/h->con_routes.size) = 0;
 			log << "System " << h->systemname << fstr << '\n';
 		}
 	  }
 
 	// grand summary, active only
-	sprintf(fstr,"\nTraveled %i of %i (%.1f%%), Clinched %i of %i (%.1f%%) active systems",
+	*fmt::format_to(fstr,"\nTraveled {} of {} ({:.1f}%), Clinched {} of {} ({:.1f}%) active systems",
 		active_systems_traveled, HighwaySystem::num_active, 100*(double)active_systems_traveled/HighwaySystem::num_active,
-		active_systems_clinched, HighwaySystem::num_active, 100*(double)active_systems_clinched/HighwaySystem::num_active);
+		active_systems_clinched, HighwaySystem::num_active, 100*(double)active_systems_clinched/HighwaySystem::num_active) = 0;
 	log << fstr << '\n';
 	// grand summary, active+preview
-	sprintf(fstr,"Traveled %i of %i (%.1f%%), Clinched %i of %i (%.1f%%) preview systems",
+	*fmt::format_to(fstr,"Traveled {} of {} ({:.1f}%), Clinched {} of {} ({:.1f}%) preview systems",
 		preview_systems_traveled, HighwaySystem::num_preview, 100*(double)preview_systems_traveled/HighwaySystem::num_preview,
-		preview_systems_clinched, HighwaySystem::num_preview, 100*(double)preview_systems_clinched/HighwaySystem::num_preview);
+		preview_systems_clinched, HighwaySystem::num_preview, 100*(double)preview_systems_clinched/HighwaySystem::num_preview) = 0;
 	log << fstr << '\n';
 
 	// updated routes, sorted by date

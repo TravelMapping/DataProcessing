@@ -1,3 +1,4 @@
+#define FMT_HEADER_ONLY
 #include "sql_file.h"
 #include "tmstring.h"
 #include "../classes/Args/Args.h"
@@ -12,6 +13,7 @@
 #include "../classes/Route/Route.h"
 #include "../classes/TravelerList/TravelerList.h"
 #include "../classes/Waypoint/Waypoint.h"
+#include <fmt/format.h>
 #include <fstream>
 
 void sqlfile1
@@ -138,7 +140,7 @@ void sqlfile1
 	  for (Route& r : h.routes)
 	  {	if (!first) sqlfile << ',';
 		first = 0;
-		sprintf(fstr, "%.17g", r.mileage);
+		*fmt::format_to(fstr, "{}", r.mileage) = 0;
 		sqlfile << "('" << r.system->systemname << "','" << r.region->code << "','" << r.route << "','" << r.banner << "','" << r.abbrev
 			<< "','" << double_quotes(r.city) << "','" << r.root << "','" << fstr << "','" << r.rootOrder << "','" << csvOrder << "')\n";
 		csvOrder += 1;
@@ -162,7 +164,7 @@ void sqlfile1
 	  for (ConnectedRoute& cr : h.con_routes)
 	  {	if (!first) sqlfile << ',';
 		first = 0;
-		sprintf(fstr, "','%.17g'", cr.mileage);
+		*fmt::format_to(fstr, "','{}'", cr.mileage) = 0;
 		sqlfile << "('" << cr.system->systemname << "','" << cr.route << "','" << cr.banner << "','" << double_quotes(cr.groupname)
 			<< "','" << (cr.roots.size() ? cr.roots[0]->root.data() : "ERROR_NO_ROOTS") << fstr << ",'" << csvOrder << "')\n";
 		csvOrder += 1;
@@ -203,9 +205,9 @@ void sqlfile1
 		for (Waypoint& w : r.points)
 		{	if (!first) sqlfile << ',';
 			first = 0;
-			sqlfile << "('" << point_num << "','" << w.label; int
-			e=sprintf(fstr,"','%.15g",w.lat); if (w.lat==int(w.lat)) strcpy(fstr+e,".0"); sqlfile << fstr;
-			e=sprintf(fstr,"','%.15g",w.lng); if (w.lng==int(w.lng)) strcpy(fstr+e,".0"); sqlfile << fstr;
+			sqlfile << "('" << point_num << "','" << w.label;
+			*fmt::format_to(fstr,"','{:.15}",w.lat) = 0; sqlfile << fstr; if (w.lat==int(w.lat)) sqlfile << ".0";
+			*fmt::format_to(fstr,"','{:.15}",w.lng) = 0; sqlfile << fstr; if (w.lng==int(w.lng)) sqlfile << ".0";
 			sqlfile << "','" << r.root + "')\n";
 			point_num+=1;
 		}
@@ -275,7 +277,7 @@ void sqlfile1
 	{	if (region.active_only_mileage+region.active_preview_mileage == 0) continue;
 		if (!first) sqlfile << ',';
 		first = 0;
-		sprintf(fstr, "','%.17g','%.17g')\n", region.active_only_mileage, region.active_preview_mileage);
+		*fmt::format_to(fstr, "','{}','{}')\n", region.active_only_mileage, region.active_preview_mileage) = 0;
 		sqlfile << "('" << region.code << fstr;
 	}
 	sqlfile << ";\n";
@@ -295,7 +297,7 @@ void sqlfile1
 	    for (std::pair<Region* const,double>& rm : h.mileage_by_region)
 	    {	if (!first) sqlfile << ',';
 		first = 0;
-		sprintf(fstr, "','%.17g')\n", rm.second);
+		*fmt::format_to(fstr, "','{}')\n", rm.second) = 0;
 		sqlfile << "('" << h.systemname << "','" << rm.first->code << fstr;
 	    }
 	sqlfile << ";\n";
@@ -316,7 +318,7 @@ void sqlfile1
 		first = 0;
 		auto it = t.active_only_mileage_by_region.find(rm.first);
 		double active_miles = (it != t.active_only_mileage_by_region.end()) ? it->second : 0;
-		sprintf(fstr, "','%.17g','%.17g')\n", active_miles, rm.second);
+		*fmt::format_to(fstr, "','{}','{}')\n", active_miles, rm.second) = 0;
 		sqlfile << "('" << rm.first->code << "','" << t.traveler_name << fstr;
 	  }
 	sqlfile << ";\n";
@@ -338,7 +340,7 @@ void sqlfile1
 		for (auto& rm : csmbr.second)
 		{	if (!first) sqlfile << ',';
 			first = 0;
-			sprintf(fstr, "%.17g", rm.second);
+			*fmt::format_to(fstr, "{}", rm.second) = 0;
 			sqlfile << "('" << systemname << "','" << rm.first->code << "','" << t.traveler_name << "','" << fstr << "')\n";
 		}
 	  }
@@ -359,7 +361,7 @@ void sqlfile1
 		for (auto& rm : t.ccr_values)
 		{	if (!first) sqlfile << ',';
 			first = 0;
-			sprintf(fstr, "%.17g", rm.second);
+			*fmt::format_to(fstr, "{}", rm.second) = 0;
 			sqlfile << "('" << rm.first->roots[0]->root << "','" << t.traveler_name << "','"
 				<< fstr << "','" << (rm.second == rm.first->mileage) << "')\n";
 		}
@@ -380,7 +382,7 @@ void sqlfile1
 		for (std::pair<Route*,double>& rm : t.cr_values)
 		{	if (!first) sqlfile << ',';
 			first = 0;
-			sprintf(fstr, "%.17g", rm.second);
+			*fmt::format_to(fstr, "{}", rm.second) = 0;
 			sqlfile << "('" << rm.first->root << "','" << t.traveler_name << "','"
 				<< fstr << "','" << (rm.second >= rm.first->mileage) << "')\n";
 		}

@@ -1,3 +1,4 @@
+#define FMT_HEADER_ONLY
 #include "HighwayGraph.h"
 #include "GraphListEntry.h"
 #include "HGEdge.h"
@@ -14,6 +15,7 @@
 #include "../Waypoint/Waypoint.h"
 #include "../WaypointQuadtree/WaypointQuadtree.h"
 #include "../../templates/contains.cpp"
+#include <fmt/format.h>
 #include <fstream>
 #include <thread>
 
@@ -215,7 +217,7 @@ void HighwayGraph::write_master_graphs_tmg()
 	unsigned int tv = 0;
 	char fstr[57];
 	for (HGVertex& v : vertices)
-	{	sprintf(fstr, " %.15g %.15g", v.lat, v.lng);
+	{	*fmt::format_to(fstr, " {:.15} {:.15}", v.lat, v.lng) = 0;
 		switch (v.visibility) // fall-thru is a Good Thing!
 		{ case 2:  collapfile << *(v.unique_name) << fstr << '\n'; v.c_vertex_num[0] = cv++;
 		  case 1:  travelfile << *(v.unique_name) << fstr << '\n'; v.t_vertex_num[0] = tv++;
@@ -313,7 +315,7 @@ void HighwayGraph::write_subgraphs_tmg
 	unsigned int tv = 0;
 	char fstr[57];
 	for (HGVertex *v : mv)
-	{	sprintf(fstr, " %.15g %.15g", v->lat, v->lng);
+	{	*fmt::format_to(fstr, " {:.15} {:.15}", v->lat, v->lng) = 0;
 		switch(v->visibility) // fall-thru is a Good Thing!
 		{ case 2:  collapfile << *(v->unique_name) << fstr << '\n'; v->c_vertex_num[threadnum] = cv++;
 		  case 1:  travelfile << *(v->unique_name) << fstr << '\n'; v->t_vertex_num[threadnum] = tv++;
