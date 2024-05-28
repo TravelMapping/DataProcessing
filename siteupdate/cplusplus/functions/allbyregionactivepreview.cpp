@@ -1,7 +1,9 @@
+#define FMT_HEADER_ONLY
 #include "../classes/Args/Args.h"
 #include "../classes/Region/Region.h"
 #include "../classes/TravelerList/TravelerList.h"
 #include "../threads/threads.h"
+#include <fmt/format.h>
 #include <fstream>
 
 void allbyregionactivepreview(std::mutex* mtx, double total_mi)
@@ -19,21 +21,22 @@ void allbyregionactivepreview(std::mutex* mtx, double total_mi)
 	{	double t_total_mi = 0;
 		for (std::pair<Region* const, double>& rm : t.active_preview_mileage_by_region)
 			t_total_mi += rm.second;
-		sprintf(fstr, "%.2f", t_total_mi);
+		*fmt::format_to(fstr, "{:.2f}", t_total_mi) = 0;
 		allfile << t.traveler_name << ',' << fstr;
 		for (Region *region : regions)
-		  try {	sprintf(fstr, "%.2f", t.active_preview_mileage_by_region.at(region));
-			allfile << ',' << fstr;
-		      }
-		  catch (const std::out_of_range& oor)
-		      {	allfile << ",0";
-		      }
+		{	auto it = t.active_preview_mileage_by_region.find(region);
+			if (it != t.active_preview_mileage_by_region.end())
+			{	*fmt::format_to(fstr, "{:.2f}", it->second) = 0;
+				allfile << ',' << fstr;
+			}
+			else	allfile << ",0";
+		}
 		allfile << '\n';
 	}
-	sprintf(fstr, "TOTAL,%.2f", total_mi);
+	*fmt::format_to(fstr, "TOTAL,{:.2f}", total_mi) = 0;
 	allfile << fstr;
 	for (Region *region : regions)
-	{	sprintf(fstr, ",%.2f", region->active_preview_mileage);
+	{	*fmt::format_to(fstr, ",{:.2f}", region->active_preview_mileage) = 0;
 		allfile << fstr;
 	}
 	allfile << '\n';

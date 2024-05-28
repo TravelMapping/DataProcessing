@@ -1,3 +1,4 @@
+#define FMT_HEADER_ONLY
 #include "sql_file.h"
 #include "tmstring.h"
 #include "../classes/Args/Args.h"
@@ -12,6 +13,7 @@
 #include "../classes/Route/Route.h"
 #include "../classes/TravelerList/TravelerList.h"
 #include "../classes/Waypoint/Waypoint.h"
+#include <fmt/format.h>
 #include <fstream>
 
 void sqlfile1
@@ -19,10 +21,10 @@ void sqlfile1
 	std::list<std::string*> *updates,
 	std::list<std::string*> *systemupdates,
 	std::mutex* term_mtx
-    ){	// Once all data is read in and processed, create a .sql file that will
+    ){	char fstr[65];
+	// Once all data is read in and processed, create a .sql file that will
 	// create all of the DB tables to be used by other parts of the project
 	std::ofstream sqlfile(Args::databasename+".sql");
-	sqlfile.precision(17);
 	// Note: removed "USE" line, DB name must be specified on the mysql command line
 
 	// we have to drop tables in the right order to avoid foreign key errors
@@ -138,8 +140,9 @@ void sqlfile1
 	  for (Route& r : h.routes)
 	  {	if (!first) sqlfile << ',';
 		first = 0;
+		*fmt::format_to(fstr, "{}", r.mileage) = 0;
 		sqlfile << "('" << r.system->systemname << "','" << r.region->code << "','" << r.route << "','" << r.banner << "','" << r.abbrev
-			<< "','" << double_quotes(r.city) << "','" << r.root << "','" << r.mileage << "','" << r.rootOrder << "','" << csvOrder << "')\n";
+			<< "','" << double_quotes(r.city) << "','" << r.root << "','" << fstr << "','" << r.rootOrder << "','" << csvOrder << "')\n";
 		csvOrder += 1;
 	  }
 	sqlfile << ";\n";
@@ -161,8 +164,9 @@ void sqlfile1
 	  for (ConnectedRoute& cr : h.con_routes)
 	  {	if (!first) sqlfile << ',';
 		first = 0;
-		sqlfile << "('" << cr.system->systemname << "','" << cr.route << "','" << cr.banner << "','" << double_quotes(cr.groupname) << "','"
-			<< (cr.roots.size() ? cr.roots[0]->root.data() : "ERROR_NO_ROOTS") << "','" << cr.mileage << "','" << csvOrder << "')\n";
+		*fmt::format_to(fstr, "','{}'", cr.mileage) = 0;
+		sqlfile << "('" << cr.system->systemname << "','" << cr.route << "','" << cr.banner << "','" << double_quotes(cr.groupname)
+			<< "','" << (cr.roots.size() ? cr.roots[0]->root.data() : "ERROR_NO_ROOTS") << fstr << ",'" << csvOrder << "')\n";
 		csvOrder += 1;
 	  }
 	sqlfile << ";\n";
@@ -190,7 +194,6 @@ void sqlfile1
       #ifndef threading_enabled
 	std::cout << et->et() << "...waypoints" << std::endl;
       #endif
-	sqlfile.precision(15);
 	sqlfile << "CREATE TABLE waypoints (pointId INTEGER, pointName VARCHAR(" << DBFieldLength::label
 		<< "), latitude DOUBLE, longitude DOUBLE, root VARCHAR(" << DBFieldLength::root
 		<< "), PRIMARY KEY(pointId), FOREIGN KEY (root) REFERENCES routes(root));\n";
@@ -203,7 +206,8 @@ void sqlfile1
 		{	if (!first) sqlfile << ',';
 			first = 0;
 			sqlfile << "('" << point_num << "','" << w.label;
-			sqlfile << "','" << w.lat << "','" << w.lng;
+			*fmt::format_to(fstr,"','{:.15}",w.lat) = 0; sqlfile << fstr; if (w.lat==int(w.lat)) sqlfile << ".0";
+			*fmt::format_to(fstr,"','{:.15}",w.lng) = 0; sqlfile << fstr; if (w.lng==int(w.lng)) sqlfile << ".0";
 			sqlfile << "','" << r.root + "')\n";
 			point_num+=1;
 		}
@@ -218,7 +222,6 @@ void sqlfile1
       #ifndef threading_enabled
 	std::cout << et->et() << "...segments" << std::endl;
       #endif
-	sqlfile.precision(17);
 	sqlfile << "CREATE TABLE segments (segmentId INTEGER, waypoint1 INTEGER, waypoint2 INTEGER, root VARCHAR(" << DBFieldLength::root
 		<< "), PRIMARY KEY (segmentId), FOREIGN KEY (waypoint1) REFERENCES waypoints(pointId), "
 		<< "FOREIGN KEY (waypoint2) REFERENCES waypoints(pointId), FOREIGN KEY (root) REFERENCES routes(root));\n";
@@ -274,7 +277,8 @@ void sqlfile1
 	{	if (region.active_only_mileage+region.active_preview_mileage == 0) continue;
 		if (!first) sqlfile << ',';
 		first = 0;
-		sqlfile << "('" << region.code << "','" << region.active_only_mileage << "','" << region.active_preview_mileage << "')\n";
+		*fmt::format_to(fstr, "','{}','{}')\n", region.active_only_mileage, region.active_preview_mileage) = 0;
+		sqlfile << "('" << region.code << fstr;
 	}
 	sqlfile << ";\n";
 
@@ -293,7 +297,8 @@ void sqlfile1
 	    for (std::pair<Region* const,double>& rm : h.mileage_by_region)
 	    {	if (!first) sqlfile << ',';
 		first = 0;
-		sqlfile << "('" << h.systemname << "','" << rm.first->code << "','" << rm.second << "')\n";
+		*fmt::format_to(fstr, "','{}')\n", rm.second) = 0;
+		sqlfile << "('" << h.systemname << "','" << rm.first->code << fstr;
 	    }
 	sqlfile << ";\n";
 
@@ -313,7 +318,8 @@ void sqlfile1
 		first = 0;
 		auto it = t.active_only_mileage_by_region.find(rm.first);
 		double active_miles = (it != t.active_only_mileage_by_region.end()) ? it->second : 0;
-		sqlfile << "('" << rm.first->code << "','" << t.traveler_name << "','" << active_miles << "','" << rm.second << "')\n";
+		*fmt::format_to(fstr, "','{}','{}')\n", active_miles, rm.second) = 0;
+		sqlfile << "('" << rm.first->code << "','" << t.traveler_name << fstr;
 	  }
 	sqlfile << ";\n";
 
@@ -334,7 +340,8 @@ void sqlfile1
 		for (auto& rm : csmbr.second)
 		{	if (!first) sqlfile << ',';
 			first = 0;
-			sqlfile << "('" << systemname << "','" << rm.first->code << "','" << t.traveler_name << "','" << rm.second << "')\n";
+			*fmt::format_to(fstr, "{}", rm.second) = 0;
+			sqlfile << "('" << systemname << "','" << rm.first->code << "','" << t.traveler_name << "','" << fstr << "')\n";
 		}
 	  }
 	sqlfile << ";\n";
@@ -354,8 +361,9 @@ void sqlfile1
 		for (auto& rm : t.ccr_values)
 		{	if (!first) sqlfile << ',';
 			first = 0;
+			*fmt::format_to(fstr, "{}", rm.second) = 0;
 			sqlfile << "('" << rm.first->roots[0]->root << "','" << t.traveler_name << "','"
-				<< rm.second << "','" << (rm.second == rm.first->mileage) << "')\n";
+				<< fstr << "','" << (rm.second == rm.first->mileage) << "')\n";
 		}
 		sqlfile << ";\n";
 	}
@@ -374,8 +382,9 @@ void sqlfile1
 		for (std::pair<Route*,double>& rm : t.cr_values)
 		{	if (!first) sqlfile << ',';
 			first = 0;
+			*fmt::format_to(fstr, "{}", rm.second) = 0;
 			sqlfile << "('" << rm.first->root << "','" << t.traveler_name << "','"
-				<< rm.second << "','" << (rm.second >= rm.first->mileage) << "')\n";
+				<< fstr << "','" << (rm.second >= rm.first->mileage) << "')\n";
 		}
 		sqlfile << ";\n";
 	}

@@ -1,8 +1,10 @@
+#define FMT_HEADER_ONLY
 #include "../classes/Args/Args.h"
 #include "../classes/ConnectedRoute/ConnectedRoute.h"
 #include "../classes/HighwaySystem/HighwaySystem.h"
 #include "../classes/Region/Region.h"
 #include "../classes/Route/Route.h"
+#include <fmt/format.h>
 #include <fstream>
 #include <list>
 
@@ -18,24 +20,24 @@ void rdstats(double& active_only_miles, double& active_preview_miles, time_t* ti
 		active_preview_miles += r.active_preview_mileage;
 		overall_miles += r.overall_mileage;
 	}
-	sprintf(fstr, "Active routes (active): %.2f mi\n", active_only_miles);
+	*fmt::format_to(fstr, "Active routes (active): {:.2f} mi\n", active_only_miles) = 0;
 	rdstatsfile << fstr;
-	sprintf(fstr, "Clinchable routes (active, preview): %.2f mi\n", active_preview_miles);
+	*fmt::format_to(fstr, "Clinchable routes (active, preview): {:.2f} mi\n", active_preview_miles) = 0;
 	rdstatsfile << fstr;
-	sprintf(fstr, "All routes (active, preview, devel): %.2f mi\n", overall_miles);
+	*fmt::format_to(fstr, "All routes (active, preview, devel): {:.2f} mi\n", overall_miles) = 0;
 	rdstatsfile << fstr;
 	rdstatsfile << "Breakdown by region:\n";
 	// a nice enhancement later here might break down by continent, then country,
 	// then region
 	for (Region& region : Region::allregions)
 	  if (region.overall_mileage)
-	  {	sprintf(fstr, ": %.2f (active), %.2f (active, preview) %.2f (active, preview, devel)\n",
-			region.active_only_mileage, region.active_preview_mileage, region.overall_mileage);
+	  {	*fmt::format_to(fstr, ": {:.2f} (active), {:.2f} (active, preview) {:.2f} (active, preview, devel)\n",
+				region.active_only_mileage, region.active_preview_mileage, region.overall_mileage) = 0;
 		rdstatsfile << region.code << fstr;
 	  }
 
 	for (HighwaySystem& h : HighwaySystem::syslist)
-	{	sprintf(fstr, ") total: %.2f mi\n", h.total_mileage());
+	{	*fmt::format_to(fstr, ") total: {:.2f} mi\n", h.total_mileage()) = 0;
 		rdstatsfile << "System " << h.systemname << " (" << h.level_name() << fstr;
 		if (h.mileage_by_region.size() > 1)
 		{	rdstatsfile << "System " << h.systemname << " by region:\n";
@@ -44,7 +46,7 @@ void rdstats(double& active_only_miles, double& active_preview_miles, time_t* ti
 				regions_in_system.push_back(rm.first);
 			regions_in_system.sort();
 			for (Region *r : regions_in_system)
-			{	sprintf(fstr, ": %.2f mi\n", h.mileage_by_region.at(r));
+			{	*fmt::format_to(fstr, ": {:.2f} mi\n", h.mileage_by_region.at(r)) = 0;
 				rdstatsfile << r->code << fstr;
 			}
 		}
@@ -52,11 +54,11 @@ void rdstats(double& active_only_miles, double& active_preview_miles, time_t* ti
 		for (ConnectedRoute& cr : h.con_routes)
 		{	std::string to_write = "";
 			for (Route *r : cr.roots)
-			{	sprintf(fstr, ": %.2f mi\n", r->mileage);
+			{	*fmt::format_to(fstr, ": {:.2f} mi\n", r->mileage) = 0;
 				to_write += "  " + r->readable_name() + fstr;
 				cr.mileage += r->mileage;
 			}
-			sprintf(fstr, ": %.2f mi", cr.mileage);
+			*fmt::format_to(fstr, ": {:.2f} mi", cr.mileage) = 0;
 			rdstatsfile << cr.readable_name() << fstr;
 			if (cr.roots.size() == 1)
 				rdstatsfile << " (" << cr.roots[0]->readable_name() << " only)\n";

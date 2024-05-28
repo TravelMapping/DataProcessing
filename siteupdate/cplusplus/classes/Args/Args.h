@@ -18,7 +18,7 @@ class Args
 	/* e */ static bool errorcheck;
 	/* T */ static int timeprecision;
 	/* v */ static bool mtvertices;
-	/* C */ static bool mtcsvfiles;
+	/* C */ static bool stcsvfiles;
 	/* E */ static bool edgecounts;
 	/* b */ static bool bitsetlogs;
 	/* L */ static int colocationlimit;

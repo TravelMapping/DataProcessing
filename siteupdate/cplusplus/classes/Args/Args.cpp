@@ -6,7 +6,7 @@
 /* e */ bool Args::errorcheck = 0;
 /* k */ bool Args::skipgraphs = 0;
 /* v */ bool Args::mtvertices = 0;
-/* C */ bool Args::mtcsvfiles = 0;
+/* C */ bool Args::stcsvfiles = 0;
 /* E */ bool Args::edgecounts = 0;
 /* b */ bool Args::bitsetlogs = 0;
 /* w */ std::string Args::datapath = "../../HighwayData";
@@ -34,7 +34,7 @@ bool Args::init(int argc, char *argv[])
 	{	     if ARG(0, "-e", "--errorcheck")		 errorcheck = 1;
 		else if ARG(0, "-k", "--skipgraphs")		 skipgraphs = 1;
 		else if ARG(0, "-v", "--mt-vertices")		 mtvertices = 1;
-		else if ARG(0, "-C", "--mt-csvs")		 mtcsvfiles = 1;
+		else if ARG(0, "-C", "--st-csvs")		 stcsvfiles = 1;
 		else if ARG(0, "-E", "--edge-counts")		 edgecounts = 1;
 		else if ARG(0, "-b", "--bitset-logs")		 bitsetlogs = 1;
 		else if ARG(0, "-h", "--help")			{show_help(); return 1;}
@@ -127,7 +127,7 @@ void Args::show_help()
 	std::cout  <<  "		        Number of digits (1-9) after decimal point in\n";
 	std::cout  <<  "		        timestamp readouts\n";
 	std::cout  <<  "  -v, --mt-vertices     Multi-threaded vertex construction\n";
-	std::cout  <<  "  -C, --mt-csvs         Multi-threaded stats csv files\n";
+	std::cout  <<  "  -C, --st-csvs         Single-threaded stats csv files\n";
 	std::cout  <<  "  -E, --edge-counts     Report the quantity of each format graph edge\n";
 	std::cout  <<  "  -b, --bitset-logs     Write TMBitset RAM use logs for region & system\n";
 	std::cout  <<  "		        vertices & edges\n";

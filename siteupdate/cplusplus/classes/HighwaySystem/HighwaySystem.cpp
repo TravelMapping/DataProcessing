@@ -1,3 +1,4 @@
+#define FMT_HEADER_ONLY
 #include "HighwaySystem.h"
 #include "../Args/Args.h"
 #include "../ConnectedRoute/ConnectedRoute.h"
@@ -11,6 +12,7 @@
 #include "../TravelerList/TravelerList.h"
 #include "../Waypoint/Waypoint.h"
 #include "../../functions/tmstring.h"
+#include <fmt/format.h>
 #include <fstream>
 
 TMArray<HighwaySystem> HighwaySystem::syslist;
@@ -219,24 +221,25 @@ void HighwaySystem::stats_csv()
 	sysfile << '\n';
 	for (TravelerList& t : TravelerList::allusers)
 	{	// only include entries for travelers who have any mileage in system
-		auto it = t.system_region_mileages.find(this);
-		if (it != t.system_region_mileages.end())
-		{	sprintf(fstr, ",%.2f", t.system_miles(this));
+		auto srm_it = t.system_region_mileages.find(this);
+		if (srm_it != t.system_region_mileages.end())
+		{	*fmt::format_to(fstr, ",{:.2f}", t.system_miles(this)) = 0;
 			sysfile << t.traveler_name << fstr;
 			for (Region *region : regions)
-			  try {	sprintf(fstr, ",%.2f", it->second.at(region));
-				sysfile << fstr;
-			      }
-			  catch (const std::out_of_range& oor)
-			      {	sysfile << ",0";
-			      }
+			{	auto trm_it = srm_it->second.find(region);
+				if (trm_it != srm_it->second.end())
+				{	*fmt::format_to(fstr, ",{:.2f}", trm_it->second) = 0;
+					sysfile << fstr;
+				}
+				else	sysfile << ",0";
+			}
 			sysfile << '\n';
 		}
 	}
-	sprintf(fstr, "TOTAL,%.2f", total_mileage());
+	*fmt::format_to(fstr, "TOTAL,{:.2f}", total_mileage()) = 0;
 	sysfile << fstr;
 	for (Region *region : regions)
-	{	sprintf(fstr, ",%.2f", mileage_by_region.at(region));
+	{	*fmt::format_to(fstr, ",{:.2f}", mileage_by_region.at(region)) = 0;
 		sysfile << fstr;
 	}
 	sysfile << '\n';
