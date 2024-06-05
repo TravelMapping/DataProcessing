@@ -4,7 +4,7 @@ ifeq ($(OS), Linux)
 endif
 
 CXX = clang++
-CXXFLAGS = -O3 -std=c++11 -Wno-comment -Wno-dangling-else -Wno-logical-op-parentheses
+CXXFLAGS = -O3 -std=c++11 -isystem /usr/local/include -Wno-comment -Wno-dangling-else -Wno-logical-op-parentheses
 
 STObjects = \
   classes/GraphGeneration/HighwayGraphST.o \

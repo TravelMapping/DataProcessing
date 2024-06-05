@@ -1,3 +1,5 @@
+#define FMT_HEADER_ONLY
+#include <fmt/format.h>
 #include "tmstring.h"
 
 bool sort_1st_csv_field(const std::string& a, const std::string& b)
@@ -63,6 +65,15 @@ const char* strdstr(const char* h, const char* n, const char d)
 		  else if (!*b) return h;
 	}
 	return 0;
+}
+
+char* format_clinched_mi(char* str, double clinched, double total)
+{	/* return a nicely-formatted string for a given number of miles
+	clinched and total miles, including percentage */
+	if (total)
+		*fmt::format_to(str, "{:.2f} of {:.2f} mi ({:.2f}%)", clinched, total, 100*clinched/total) = 0;
+	else	*fmt::format_to(str, "{:.2f} of {:.2f} mi -.--%", clinched, total) = 0;
+	return str;
 }
 
 std::string double_quotes(std::string str)
