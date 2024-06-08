@@ -333,6 +333,9 @@ echo "$0: launching $siteupdate"
 $siteupdate $errorcheck -d $dbname-$datestr $graphflag -l $indir/$logdir -c $indir/$statdir -g $indir/$graphdir $nmpmflags -w $tmbasedir/$repo -u $tmbasedir/UserData/$listdir | tee -a $indir/$logdir/siteupdate.log 2>&1 || exit 1
 date
 
+echo "$0: appending rank table creation to SQL file"
+cat addrankstables.sql >> $dbname-$datestr.sql
+
 if [[ -x ../nmpfilter/nmpbyregion ]]; then
     echo "$0: running nmpbyregion"
     ../nmpfilter/nmpbyregion $indir/$logdir/tm-master.nmp $indir/$logdir/nmpbyregion/
