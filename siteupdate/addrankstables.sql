@@ -15,24 +15,35 @@ CREATE TABLE travelerMileageStats (
     activePreviewPercentage DECIMAL(5,2)
 );
 
-INSERT INTO travelerMileageStats (traveler, totalActiveMileage, rankActiveMileage, clinchedActiveMileage, activePercentage, totalActivePreviewMileage, rankActivePreviewMileage, clinchedActivePreviewMileage, activePreviewPercentage)
-WITH RankedMileage AS (
-  SELECT traveler,
-  ROUND(SUM(o.activeMileage), 2) AS totalActiveMileage,
-  RANK() OVER (ORDER BY SUM(o.activeMileage) DESC) AS rankActiveMileage,
-  ROUND(SUM(COALESCE(co.activeMileage, 0)), 2) AS clinchedActiveMileage,
-  ROUND(SUM(COALESCE(co.activeMileage, 0)) / SUM(o.activeMileage) * 100, 2) AS activePercentage,
-  ROUND(SUM(o.activePreviewMileage), 2) AS totalActivePreviewMileage,
-  RANK() OVER (ORDER BY SUM(o.activePreviewMileage) DESC) AS rankActivePreviewMileage,
-  ROUND(SUM(COALESCE(co.activePreviewMileage, 0)), 2) AS clinchedActivePreviewMileage,
-  ROUND(SUM(COALESCE(co.activePreviewMileage, 0)) / SUM(o.activePreviewMileage) * 100, 2) AS activePreviewPercentage
-  FROM overallMileageByRegion o
-  LEFT JOIN clinchedOverallMileageByRegion co ON co.region = o.region
-  WHERE traveler IS NOT NULL
-  GROUP BY traveler
+-- Insert the data into the new table
+INSERT INTO travelerMileageStats (
+    traveler, totalActiveMileage, rankActiveMileage, clinchedActiveMileage, activePercentage,
+    totalActivePreviewMileage, rankActivePreviewMileage, clinchedActivePreviewMileage, activePreviewPercentage
+)
+WITH TotalMileage AS (
+    SELECT 
+        ROUND(SUM(activeMileage), 2) AS totalActiveMileage,
+        ROUND(SUM(activePreviewMileage), 2) AS totalActivePreviewMileage
+    FROM overallMileageByRegion
+),
+RankedMileage AS (
+    SELECT 
+        co.traveler,
+        tm.totalActiveMileage,
+        RANK() OVER (ORDER BY clinchedActiveMileage DESC) AS rankActiveMileage,
+        ROUND(SUM(COALESCE(co.activeMileage, 0)), 2) AS clinchedActiveMileage,
+        ROUND(SUM(COALESCE(co.activeMileage, 0)) / tm.totalActiveMileage * 100, 2) AS activePercentage,
+        tm.totalActivePreviewMileage,
+        RANK() OVER (ORDER BY clinchedActivePreviewMileage DESC) AS rankActivePreviewMileage,
+        ROUND(SUM(COALESCE(co.activePreviewMileage, 0)), 2) AS clinchedActivePreviewMileage,
+        ROUND(SUM(COALESCE(co.activePreviewMileage, 0)) / tm.totalActivePreviewMileage * 100, 2) AS activePreviewPercentage
+    FROM clinchedOverallMileageByRegion co
+    CROSS JOIN TotalMileage tm
+    LEFT JOIN overallMileageByRegion o ON co.region = o.region
+    WHERE co.traveler IS NOT NULL
+    GROUP BY co.traveler, tm.totalActiveMileage, tm.totalActivePreviewMileage
 )
 SELECT * FROM RankedMileage;
-
 
 CREATE TABLE clinchedActiveStats AS
 WITH ActiveRoutes AS (
