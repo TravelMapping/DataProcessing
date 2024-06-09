@@ -32,11 +32,17 @@ RankedMileage AS (
         tm.totalActiveMileage,
         RANK() OVER (ORDER BY clinchedActiveMileage DESC) AS rankActiveMileage,
         ROUND(SUM(COALESCE(co.activeMileage, 0)), 2) AS clinchedActiveMileage,
-        ROUND(SUM(COALESCE(co.activeMileage, 0)) / tm.totalActiveMileage * 100, 2) AS activePercentage,
+        CASE 
+            WHEN tm.totalActiveMileage = 0 THEN 0
+            ELSE ROUND(SUM(COALESCE(co.activeMileage, 0)) / tm.totalActiveMileage * 100, 2)
+        END AS activePercentage,
         tm.totalActivePreviewMileage,
         RANK() OVER (ORDER BY clinchedActivePreviewMileage DESC) AS rankActivePreviewMileage,
         ROUND(SUM(COALESCE(co.activePreviewMileage, 0)), 2) AS clinchedActivePreviewMileage,
-        ROUND(SUM(COALESCE(co.activePreviewMileage, 0)) / tm.totalActivePreviewMileage * 100, 2) AS activePreviewPercentage
+        CASE 
+            WHEN tm.totalActivePreviewMileage = 0 THEN 0
+            ELSE ROUND(SUM(COALESCE(co.activePreviewMileage, 0)) / tm.totalActivePreviewMileage * 100, 2)
+        END AS activePreviewPercentage
     FROM clinchedOverallMileageByRegion co
     CROSS JOIN TotalMileage tm
     LEFT JOIN overallMileageByRegion o ON co.region = o.region
@@ -58,8 +64,14 @@ TravelerStats AS (
         COUNT(ccr.route) AS driven,
         SUM(ccr.clinched) AS clinched,
         (SELECT total FROM ActiveRoutes) AS activeRoutes,
-        ROUND(COUNT(ccr.route) / (SELECT total FROM ActiveRoutes) * 100, 2) AS drivenPercent,
-        ROUND(SUM(ccr.clinched) / (SELECT total FROM ActiveRoutes) * 100, 2) AS clinchedPercent
+	CASE
+	    WHEN (SELECT total FROM ActiveRoutes) = 0 THEN 0
+	    ELSE ROUND(COUNT(ccr.route) / (SELECT total FROM ActiveRoutes) * 100, 2)
+	END AS drivenPercent,
+	CASE
+	    WHEN (SELECT total FROM ActiveRoutes) = 0 THEN 0
+            ELSE ROUND(SUM(ccr.clinched) / (SELECT total FROM ActiveRoutes) * 100, 2)
+	END AS clinchedPercent
     FROM
         connectedRoutes AS cr
     LEFT JOIN
