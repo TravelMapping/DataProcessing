@@ -252,14 +252,14 @@ void Route::con_mismatch()
 
 void Route::mark_label_in_use(std::string& label)
 {	unused_alt_labels.erase(label);
-	labels_in_use.insert(move(label));
+	labels_in_use.insert(std::move(label));
 }
 
 void Route::mark_labels_in_use(std::string& label1, std::string& label2)
 {	unused_alt_labels.erase(label1);
 	unused_alt_labels.erase(label2);
-	labels_in_use.insert(move(label1));
-	labels_in_use.insert(move(label2));
+	labels_in_use.insert(std::move(label1));
+	labels_in_use.insert(std::move(label2));
 }
 
 // sort routes by most recent update for use at end of user logs

@@ -139,8 +139,8 @@ void WaypointQuadtree::nmplogs()
 				nmpfps.emplace(line, 0, line.size()-20);
 			else if (line.size() >= 55 && !strcmp(line.data()+line.size()-24, " [SOME LOOK INTENTIONAL]"))
 				nmpfps.emplace(line, 0, line.size()-24);
-			else	nmpfps.emplace(move(line));
-		    else	nmpfps.emplace(move(line));
+			else	nmpfps.emplace(std::move(line));
+		    else	nmpfps.emplace(std::move(line));
 	}
 	file.close();
 

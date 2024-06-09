@@ -165,7 +165,7 @@ TravelerList::TravelerList(std::string& travname, ErrorList* el)
 TravelerList::~TravelerList() {delete[] traveler_num;}
 
 void TravelerList::get_ids(ErrorList& el)
-{	ids = move(Args::userlist);
+{	ids = std::move(Args::userlist);
 	if (ids.empty())
 	{	DIR *dir;
 		dirent *ent;

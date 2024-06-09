@@ -123,7 +123,7 @@ void HighwaySystem::systems_csv(ErrorList& el)
 			if (line[0] == '#') continue;
 			if (strchr(line.data(), '"'))
 				el.add_error("Double quotes in systems.csv line: "+line);
-			lines.emplace_back(move(line));
+			lines.emplace_back(std::move(line));
 		}
 		it = syslist.alloc(lines.size());
 		for (std::string& l : lines)
