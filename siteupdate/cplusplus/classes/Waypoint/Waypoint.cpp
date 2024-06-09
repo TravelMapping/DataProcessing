@@ -1,3 +1,4 @@
+#define FMT_HEADER_ONLY
 #include "Waypoint.h"
 #include "../Datacheck/Datacheck.h"
 #include "../DBFieldLength/DBFieldLength.h"
@@ -7,6 +8,7 @@
 #include "../../templates/contains.cpp"
 #include <cmath>
 #include <cstring>
+#include <fmt/format.h>
 #define pi 3.141592653589793238
 
 bool sort_root_at_label(Waypoint *w1, Waypoint *w2)
@@ -74,11 +76,7 @@ Waypoint::Waypoint(char *line, Route *rte)
 }
 
 std::string Waypoint::str()
-{	std::string ans = route->root + " " + label + " (";
-	char s[51]; int
-	e=sprintf(s,"%.15g",lat); if (lat==int(lat)) strcpy(s+e,".0"); ans+=s; ans+=',';
-	e=sprintf(s,"%.15g",lng); if (lng==int(lng)) strcpy(s+e,".0"); ans+=s;
-	return ans + ')';
+{	return fmt::format("{} {} ({:.15},{:.15})", route->root, label, lat, lng);
 }
 
 bool Waypoint::same_coords(Waypoint *other)
@@ -200,10 +198,9 @@ void Waypoint::nmplogs(std::unordered_set<std::string> &nmpfps, std::ofstream &n
 			// both ways (other_w in w's list, w in other_w's list)
 			if (sort_root_at_label(this, other_w))
 			{	char s[51];
-				#define PYTHON_STYLE_FLOAT(F) e=sprintf(s," %.15g",F); if (F==int(F)) strcpy(s+e,".0"); nmpnmp<<s;
-				nmpnmp << root_at_label(); int
-				PYTHON_STYLE_FLOAT(lat)
-				PYTHON_STYLE_FLOAT(lng)
+				nmpnmp << root_at_label();
+				*fmt::format_to(s, " {:.15}", lat)=0; nmpnmp<<s;
+				*fmt::format_to(s, " {:.15}", lng)=0; nmpnmp<<s;
 				if (fp || li)
 				{	nmpnmp << ' ';
 					if (fp) nmpnmp << "FP";
@@ -212,15 +209,14 @@ void Waypoint::nmplogs(std::unordered_set<std::string> &nmpfps, std::ofstream &n
 				nmpnmp << '\n';
 
 				nmpnmp << other_w->root_at_label();
-				PYTHON_STYLE_FLOAT(other_w->lat)
-				PYTHON_STYLE_FLOAT(other_w->lng)
+				*fmt::format_to(s, " {:.15}", other_w->lat)=0; nmpnmp<<s;
+				*fmt::format_to(s, " {:.15}", other_w->lng)=0; nmpnmp<<s;
 				if (fp || li)
 				{	nmpnmp << ' ';
 					if (fp) nmpnmp << "FP";
 					if (li) nmpnmp << "LI";
 				}
 				nmpnmp << '\n';
-				#undef PYTHON_STYLE_FLOAT
 			}
 		}
 		// indicate if this was in the FP list or if it's off by exact amt
