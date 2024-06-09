@@ -1,7 +1,9 @@
+#define FMT_HEADER_ONLY
 #include "GraphListEntry.h"
 #include "PlaceRadius.h"
 #include "../HighwaySystem/HighwaySystem.h"
 #include "../Region/Region.h"
+#include <fmt/format.h>
 
 std::vector<GraphListEntry> GraphListEntry::entries;
 size_t GraphListEntry::num; // iterator for entries
@@ -51,9 +53,7 @@ std::string GraphListEntry::category()
 
 std::string GraphListEntry::tag()
 {	switch (cat)
-	{	case 'a': char fstr[51];
-			  sprintf(fstr, "(%.15g) ", placeradius->r);
-			  return placeradius->title + fstr;
+	{	case 'a': return fmt::format("{}({:.15}) ", placeradius->title, placeradius->r);
 		case 'r': return regions->front()->code + ' ';			// must have valid pointer
 		case 's': return systems->front()->systemname + ' ';		// must have valid pointer
 		case 'S':

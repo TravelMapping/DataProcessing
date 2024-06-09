@@ -381,14 +381,10 @@ void Waypoint::label_invalid_char()
 		}
 }
 
-void Waypoint::out_of_bounds(char *s)
+void Waypoint::out_of_bounds()
 {	// out-of-bounds coords
 	if (lat > 90 || lat < -90 || lng > 180 || lng < -180)
-	{	int
-		e=sprintf(s,"(%.15g",lat); if (int(lat)==lat) strcpy(s+e, ".0"); std::string info(s);
-		e=sprintf(s,",%.15g",lng); if (int(lng)==lng) strcpy(s+e, ".0"); info += s;
-		Datacheck::add(route, label, "", "", "OUT_OF_BOUNDS", info+')');
-	}
+	  Datacheck::add(route, label, "", "", "OUT_OF_BOUNDS", fmt::format("({:.15},{:.15})"));
 }
 
 /* checks for visible points */
@@ -561,13 +557,11 @@ void Waypoint::us_letter()
 		Datacheck::add(route, label, "", "", "US_LETTER", "");
 }
 
-void Waypoint::visible_distance(char *fstr, double &vis_dist, Waypoint *&last_visible)
+void Waypoint::visible_distance(double &vis_dist, Waypoint *&last_visible)
 {	// complete visible distance check, omit report for active
 	// systems to reduce clutter
 	if (vis_dist > 10 && !route->system->active())
-	{	sprintf(fstr, "%.2f", vis_dist);
-		Datacheck::add(route, last_visible->label, label, "", "VISIBLE_DISTANCE", fstr);
-	}
+	  Datacheck::add(route, last_visible->label, label, "", "VISIBLE_DISTANCE", fmt::format("{:.2f}", vis_dist));
 	last_visible = this;
 	vis_dist = 0;
 }
