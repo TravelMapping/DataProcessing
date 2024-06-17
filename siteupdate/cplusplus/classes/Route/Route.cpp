@@ -1,3 +1,4 @@
+#define FMT_HEADER_ONLY
 #include "Route.h"
 #include "../Args/Args.h"
 #include "../ConnectedRoute/ConnectedRoute.h"
@@ -9,6 +10,7 @@
 #include "../Region/Region.h"
 #include "../Waypoint/Waypoint.h"
 #include "../../functions/tmstring.h"
+#include <fmt/format.h>
 #include <sys/stat.h>
 
 std::unordered_map<std::string, Route*> Route::root_hash, Route::pri_list_hash, Route::alt_list_hash;
@@ -180,9 +182,9 @@ void Route::write_nmp_merged()
 		for (std::string &a : w.alt_labels) wptfile << a << ' ';
 		if (w.near_miss_points.empty())
 		     {	wptfile << "http://www.openstreetmap.org/?lat=";
-			sprintf(fstr, "%.6f", w.lat);
+			*fmt::format_to(fstr, "{:.6f}", w.lat) = 0;
 			wptfile << fstr << "&lon=";
-			sprintf(fstr, "%.6f", w.lng);
+			*fmt::format_to(fstr, "{:.6f}", w.lng) = 0;
 			wptfile << fstr << '\n';
 		     }
 		else {	// for now, arbitrarily choose the northernmost
@@ -195,9 +197,9 @@ void Route::write_nmp_merged()
 				if (other_w->lng > lng)	lng = other_w->lng;
 			}
 			wptfile << "https://www.openstreetmap.org/?lat=";
-			sprintf(fstr, "%.6f", lat);
+			*fmt::format_to(fstr, "{:.6f}", lat) = 0;
 			wptfile << fstr << "&lon=";
-			sprintf(fstr, "%.6f", lng);
+			*fmt::format_to(fstr, "{:.6f}", lng) = 0;
 			wptfile << fstr << '\n';
 			w.near_miss_points.clear();
 		     }
@@ -250,14 +252,14 @@ void Route::con_mismatch()
 
 void Route::mark_label_in_use(std::string& label)
 {	unused_alt_labels.erase(label);
-	labels_in_use.insert(move(label));
+	labels_in_use.insert(std::move(label));
 }
 
 void Route::mark_labels_in_use(std::string& label1, std::string& label2)
 {	unused_alt_labels.erase(label1);
 	unused_alt_labels.erase(label2);
-	labels_in_use.insert(move(label1));
-	labels_in_use.insert(move(label2));
+	labels_in_use.insert(std::move(label1));
+	labels_in_use.insert(std::move(label2));
 }
 
 // sort routes by most recent update for use at end of user logs

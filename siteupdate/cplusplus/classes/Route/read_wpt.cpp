@@ -1,3 +1,4 @@
+#define FMT_HEADER_ONLY
 #include "Route.h"
 #include "../Args/Args.h"
 #include "../Datacheck/Datacheck.h"
@@ -6,14 +7,13 @@
 #include "../HighwaySystem/HighwaySystem.h"
 #include "../Waypoint/Waypoint.h"
 #include "../WaypointQuadtree/WaypointQuadtree.h"
-#include <fstream>
+#include <fmt/format.h>
 
 void Route::read_wpt(WaypointQuadtree *all_waypoints, ErrorList *el, bool usa_flag)
 {	/* read data into the Route's waypoint list from a .wpt file */
 	std::string filename = Args::datapath + "/data/" + rg_str + "/" + system->systemname + "/" + root + ".wpt";
 	Waypoint *last_visible;
 	double vis_dist = 0;
-	char fstr[112];
 
 	// remove full path from all_wpt_files list
 	awf_mtx.lock();
@@ -73,7 +73,7 @@ void Route::read_wpt(WaypointQuadtree *all_waypoints, ErrorList *el, bool usa_fl
 		all_waypoints->insert(w, 1);
 
 		// single-point Datachecks, and HighwaySegment
-		w->out_of_bounds(fstr);
+		w->out_of_bounds();
 		w->label_invalid_char();
 		if (w > points.data)
 		{	// add HighwaySegment, if not first point
@@ -83,9 +83,7 @@ void Route::read_wpt(WaypointQuadtree *all_waypoints, ErrorList *el, bool usa_fl
 			double last_distance = s->length;
 			vis_dist += last_distance;
 			if (last_distance > 20)
-			{	sprintf(fstr, "%.2f", last_distance);
-				Datacheck::add(this, w[-1].label, w->label, "", "LONG_SEGMENT", fstr);
-			}
+			  Datacheck::add(this, w[-1].label, w->label, "", "LONG_SEGMENT", fmt::format("{:.2f}", last_distance));
 			s++;
 		}
 		else if (w->is_hidden) // look for hidden beginning
@@ -107,7 +105,7 @@ void Route::read_wpt(WaypointQuadtree *all_waypoints, ErrorList *el, bool usa_fl
 			w->label_slashes(slash);
 			w->lacks_generic();
 			w->underscore_datachecks(slash);
-			w->visible_distance(fstr, vis_dist, last_visible);
+			w->visible_distance(vis_dist, last_visible);
 		}
 		++w;
 	}
@@ -120,7 +118,7 @@ void Route::read_wpt(WaypointQuadtree *all_waypoints, ErrorList *el, bool usa_fl
 		{	Datacheck::add(this, points.back().label, "", "", "HIDDEN_TERMINUS", "");
 			// do one last check in case a VISIBLE_DISTANCE error coexists
 			// here, as this was only checked earlier for visible points
-			points.back().visible_distance(fstr, vis_dist, last_visible);
+			points.back().visible_distance(vis_dist, last_visible);
 		}
 		// angle check is easier with a traditional for loop and array indices
 		for (Waypoint* p = points.data+1; p < points.end()-1; p++)
@@ -129,9 +127,7 @@ void Route::read_wpt(WaypointQuadtree *all_waypoints, ErrorList *el, bool usa_fl
 				Datacheck::add(this, p[-1].label, p->label, p[1].label, "BAD_ANGLE", "");
 			else {	double angle = p->angle();
 				if (angle > 135)
-				{	sprintf(fstr, "%.2f", angle);
-					Datacheck::add(this, p[-1].label, p->label, p[1].label, "SHARP_ANGLE", fstr);
-				}
+				  Datacheck::add(this, p[-1].label, p->label, p[1].label, "SHARP_ANGLE", fmt::format("{:.2f}", angle));
 			     }
 		}
 	     }

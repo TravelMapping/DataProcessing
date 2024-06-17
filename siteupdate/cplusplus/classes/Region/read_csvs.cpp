@@ -52,7 +52,7 @@ void Region::read_csvs(ErrorList& el)
 		std::list<std::string> lines;
 		while(getline(file, line))
 		{	if (line.size() && line.back() == 0x0D) line.pop_back();	// trim DOS newlines
-			if (line.size()) lines.emplace_back(move(line));
+			if (line.size()) lines.emplace_back(std::move(line));
 		}
 		lines.sort(sort_1st_csv_field);
 		it = allregions.alloc(lines.size()+1);
