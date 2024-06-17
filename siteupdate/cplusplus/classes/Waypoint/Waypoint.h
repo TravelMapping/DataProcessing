@@ -57,7 +57,7 @@ class Waypoint
 	void hidden_junction();
 	void invalid_url(const char* const, const char* const);
 	void label_invalid_char();
-	void out_of_bounds(char *);
+	void out_of_bounds();
 	// checks for visible points
 	void bus_with_i();
 	void interstate_no_hyphen();
@@ -70,7 +70,7 @@ class Waypoint
 	void lacks_generic();
 	void underscore_datachecks(const char *);
 	void us_letter();
-	void visible_distance(char *, double &, Waypoint *&);
+	void visible_distance(double &, Waypoint *&);
 };
 
 bool sort_root_at_label(Waypoint*, Waypoint*);

@@ -1,3 +1,4 @@
+#define FMT_HEADER_ONLY
 #include "WaypointQuadtree.h"
 #include "../Args/Args.h"
 #include "../Datacheck/Datacheck.h"
@@ -6,6 +7,7 @@
 #include "../Route/Route.h"
 #include "../Waypoint/Waypoint.h"
 #include <cstring>
+#include <fmt/format.h>
 #ifdef threading_enabled
 #include <thread>
 #endif
@@ -63,11 +65,8 @@ void WaypointQuadtree::insert(Waypoint *w, bool init)
 				// DUPLICATE_COORDS datacheck
 				for (Waypoint* p : *other_w->colocated)
 				  if (p->route == w->route)
-				  {	char s[48]; int
-					e=sprintf(s,"(%.15g",w->lat); if (int(w->lat)==w->lat) strcpy(s+e, ".0"); std::string info(s);
-					e=sprintf(s,",%.15g",w->lng); if (int(w->lng)==w->lng) strcpy(s+e, ".0"); info += s;
-					Datacheck::add(w->route, p->label, w->label, "", "DUPLICATE_COORDS", info+')');
-				  }
+				    Datacheck::add(w->route, p->label, w->label, "", "DUPLICATE_COORDS",
+						   fmt::format("({:.15},{:.15})", w->lat, w->lng));
 				other_w->colocated->push_back(w);
 				w->colocated = other_w->colocated;
 			}
@@ -140,8 +139,8 @@ void WaypointQuadtree::nmplogs()
 				nmpfps.emplace(line, 0, line.size()-20);
 			else if (line.size() >= 55 && !strcmp(line.data()+line.size()-24, " [SOME LOOK INTENTIONAL]"))
 				nmpfps.emplace(line, 0, line.size()-24);
-			else	nmpfps.emplace(move(line));
-		    else	nmpfps.emplace(move(line));
+			else	nmpfps.emplace(std::move(line));
+		    else	nmpfps.emplace(std::move(line));
 	}
 	file.close();
 
@@ -169,11 +168,10 @@ void WaypointQuadtree::nmplogs()
 }
 
 std::string WaypointQuadtree::str()
-{	char s[139];
-	sprintf(s, "WaypointQuadtree at (%.15g,%.15g) to (%.15g,%.15g)", min_lat, min_lng, max_lat, max_lng);
+{	std::string s = fmt::format("WaypointQuadtree at ({},{}) to ({},{}", min_lat, min_lng, max_lat, max_lng);
 	if (refined())
-		return std::string(s) + " REFINED";
-	else	return std::string(s) + " contains " + std::to_string(points.size()) + " waypoints";
+		return s + " REFINED";
+	else	return s + " contains " + std::to_string(points.size()) + " waypoints";
 }
 
 unsigned int WaypointQuadtree::size()
