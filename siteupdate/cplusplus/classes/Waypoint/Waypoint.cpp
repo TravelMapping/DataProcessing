@@ -384,7 +384,7 @@ void Waypoint::label_invalid_char()
 void Waypoint::out_of_bounds()
 {	// out-of-bounds coords
 	if (lat > 90 || lat < -90 || lng > 180 || lng < -180)
-	  Datacheck::add(route, label, "", "", "OUT_OF_BOUNDS", fmt::format("({:.15},{:.15})"));
+	  Datacheck::add(route, label, "", "", "OUT_OF_BOUNDS", fmt::format("({:.15},{:.15})", lat, lng));
 }
 
 /* checks for visible points */
