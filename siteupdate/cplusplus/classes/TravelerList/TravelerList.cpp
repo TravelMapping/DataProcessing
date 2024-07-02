@@ -205,11 +205,11 @@ double TravelerList::system_miles(HighwaySystem *h)
 	return mi;
 }
 
-/* Read listinfo.csv file and augment TravelerList entries in allusers */
+/* Read listfileinfo.csv file and augment TravelerList entries in allusers */
 void TravelerList::read_listinfo(ErrorList& el)
-{	std::ifstream file(Args::userlistfilepath+"/listinfo.csv");
+{	std::ifstream file(Args::userlistfilepath+"/listfileinfo.csv");
 	if (!file.is_open())
-	{	el.add_error("Error opening listinfo.csv file.");
+	{	el.add_error("Error opening listfileinfo.csv file.");
 		return;
 	}
 	std::string line;
@@ -239,7 +239,7 @@ void TravelerList::read_listinfo(ErrorList& el)
 	}
 	// check that the number of defaults matches the number of fieldnames
 	if (TravelerList::fieldnames.size() != TravelerList::defaults.size())
-	{	el.add_error("Number of defaults does not match number of fieldnames in listinfo.csv.");
+	{	el.add_error("Number of defaults does not match number of fieldnames in listfileinfo.csv.");
 		return;
 	}
 
@@ -265,7 +265,7 @@ void TravelerList::read_listinfo(ErrorList& el)
 
 		// check that the number of fields matches the number of fieldnames
 		if (fields.size() != TravelerList::fieldnames.size())
-		{	el.add_error("Number of fields does not match number of fieldnames in listinfo.csv for list " + listname);
+		{	el.add_error("Number of fields does not match number of fieldnames in listfileinfo.csv for list " + listname);
 			continue;
 		}
 		// add the fields to the map
@@ -280,7 +280,7 @@ std::list<std::string>::iterator TravelerList::id_it;
 TMArray<TravelerList> TravelerList::allusers;
 TravelerList* TravelerList::tl_it;
 bool TravelerList::file_not_found = 0;
-// for listinfo.csv entries
+// for listfileinfo.csv entries
 std::vector<std::string> TravelerList::fieldnames;
 std::vector<std::string> TravelerList::defaults;
 std::unordered_map<std::string, std::vector<std::string>> TravelerList::listinfo;

@@ -30,33 +30,63 @@ RankedMileage AS (
     SELECT 
         co.traveler,
         tm.totalActiveMileage,
-        RANK() OVER (ORDER BY clinchedActiveMileage DESC) AS rankActiveMileage,
         ROUND(SUM(COALESCE(co.activeMileage, 0)), 2) AS clinchedActiveMileage,
         CASE 
             WHEN tm.totalActiveMileage = 0 THEN 0
             ELSE ROUND(SUM(COALESCE(co.activeMileage, 0)) / tm.totalActiveMileage * 100, 2)
         END AS activePercentage,
         tm.totalActivePreviewMileage,
-        RANK() OVER (ORDER BY clinchedActivePreviewMileage DESC) AS rankActivePreviewMileage,
         ROUND(SUM(COALESCE(co.activePreviewMileage, 0)), 2) AS clinchedActivePreviewMileage,
         CASE 
             WHEN tm.totalActivePreviewMileage = 0 THEN 0
             ELSE ROUND(SUM(COALESCE(co.activePreviewMileage, 0)) / tm.totalActivePreviewMileage * 100, 2)
-        END AS activePreviewPercentage
-    FROM clinchedOverallMileageByRegion co
-    CROSS JOIN TotalMileage tm
-    LEFT JOIN overallMileageByRegion o ON co.region = o.region
-    WHERE co.traveler IS NOT NULL
-    GROUP BY co.traveler, tm.totalActiveMileage, tm.totalActivePreviewMileage
+        END AS activePreviewPercentage,
+        le.includeInRanks
+    FROM 
+        clinchedOverallMileageByRegion co
+    CROSS JOIN 
+        TotalMileage tm
+    LEFT JOIN 
+        overallMileageByRegion o ON co.region = o.region
+    JOIN 
+        listEntries le ON co.traveler = le.traveler
+    WHERE 
+        co.traveler IS NOT NULL
+    GROUP BY 
+        co.traveler, tm.totalActiveMileage, tm.totalActivePreviewMileage, le.includeInRanks
+),
+RankedIncluded AS (
+    SELECT
+        traveler,
+        RANK() OVER (ORDER BY clinchedActiveMileage DESC) AS rankActiveMileage,
+        RANK() OVER (ORDER BY clinchedActivePreviewMileage DESC) AS rankActivePreviewMileage
+    FROM 
+        RankedMileage
+    WHERE 
+        includeInRanks = 1
 )
-SELECT * FROM RankedMileage;
+SELECT 
+    rm.traveler, 
+    rm.totalActiveMileage, 
+    COALESCE(ri.rankActiveMileage, -1) AS rankActiveMileage, 
+    rm.clinchedActiveMileage, 
+    rm.activePercentage,
+    rm.totalActivePreviewMileage, 
+    COALESCE(ri.rankActivePreviewMileage, -1) AS rankActivePreviewMileage, 
+    rm.clinchedActivePreviewMileage, 
+    rm.activePreviewPercentage
+FROM 
+    RankedMileage rm
+LEFT JOIN 
+    RankedIncluded ri ON rm.traveler = ri.traveler;
+
 
 CREATE TABLE clinchedActiveStats AS
 WITH ActiveRoutes AS (
     SELECT COUNT(cr.route) AS total
     FROM connectedRoutes AS cr
     LEFT JOIN systems ON cr.systemName = systems.systemName
-    WHERE systems.level = 'active'
+    WHERE systems.level = 'active' OR systems.level = 'preview'
 ),
 TravelerStats AS (
     SELECT
@@ -64,14 +94,8 @@ TravelerStats AS (
         COUNT(ccr.route) AS driven,
         SUM(ccr.clinched) AS clinched,
         (SELECT total FROM ActiveRoutes) AS activeRoutes,
-	CASE
-	    WHEN (SELECT total FROM ActiveRoutes) = 0 THEN 0
-	    ELSE ROUND(COUNT(ccr.route) / (SELECT total FROM ActiveRoutes) * 100, 2)
-	END AS drivenPercent,
-	CASE
-	    WHEN (SELECT total FROM ActiveRoutes) = 0 THEN 0
-            ELSE ROUND(SUM(ccr.clinched) / (SELECT total FROM ActiveRoutes) * 100, 2)
-	END AS clinchedPercent
+        ROUND(COUNT(ccr.route) / (SELECT total FROM ActiveRoutes) * 100, 2) AS drivenPercent,
+        ROUND(SUM(ccr.clinched) / (SELECT total FROM ActiveRoutes) * 100, 2) AS clinchedPercent
     FROM
         connectedRoutes AS cr
     LEFT JOIN
@@ -81,7 +105,7 @@ TravelerStats AS (
     LEFT JOIN
         systems ON routes.systemName = systems.systemName
     WHERE
-        systems.level = 'active'
+        systems.level = 'active' OR systems.level = 'preview'
     GROUP BY
         ccr.traveler
 )

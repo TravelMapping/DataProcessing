@@ -46,7 +46,7 @@ class TravelerList
 	static TMArray<TravelerList> allusers;
 	static TravelerList* tl_it;
 	static bool file_not_found;
-	// for listinfo.csv entries
+	// for listfileinfo.csv entries
 	static std::vector<std::string> fieldnames;
 	static std::vector<std::string> defaults;
 	static std::unordered_map<std::string, std::vector<std::string>> listinfo;

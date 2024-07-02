@@ -69,8 +69,8 @@ int main(int argc, char *argv[])
 	cout << et.et() << "Making list of travelers." << endl;
 	TravelerList::get_ids(el);
 
-	// read the listinfo.csv file
-	cout << et.et() << "Reading listinfo.csv." << endl;
+	// read the listfileinfo.csv file
+	cout << et.et() << "Reading listfileinfo.csv." << endl;
 	TravelerList::read_listinfo(el);
 
 	cout << et.et() << "Reading region, country, and continent descriptions." << endl;
