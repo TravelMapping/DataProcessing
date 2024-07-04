@@ -46,6 +46,10 @@ class TravelerList
 	static TMArray<TravelerList> allusers;
 	static TravelerList* tl_it;
 	static bool file_not_found;
+	// for listfileinfo.csv entries
+	static std::vector<std::string> fieldnames;
+	static std::vector<std::string> defaults;
+	static std::unordered_map<std::string, std::vector<std::string>> listinfo;
 
 	TravelerList(std::string&, ErrorList*);
 	~TravelerList();
@@ -55,4 +59,5 @@ class TravelerList
 	double system_miles(HighwaySystem *);
 	void userlog(const double, const double);
 	static void get_ids(ErrorList&);
+	static void read_listinfo(ErrorList&);
 };

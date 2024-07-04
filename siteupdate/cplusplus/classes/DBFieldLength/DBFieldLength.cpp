@@ -30,6 +30,7 @@ const size_t DBFieldLength::systemFullName = 60;
 const size_t DBFieldLength::systemName = 10;
 const size_t DBFieldLength::traveler = 48;
 const size_t DBFieldLength::updateText = 1024;
+const size_t DBFieldLength::listDescription = 1024;
 // sums of other constants
 const size_t DBFieldLength::countryRegion = DBFieldLength::countryName + DBFieldLength::regionName + 3;
 const size_t DBFieldLength::dcErrValue = DBFieldLength::root + DBFieldLength::label + 1;;

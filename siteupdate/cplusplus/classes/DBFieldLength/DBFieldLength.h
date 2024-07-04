@@ -32,6 +32,7 @@ class DBFieldLength
 	static const size_t systemName;
 	static const size_t traveler;
 	static const size_t updateText;
+	static const size_t listDescription;
 	// sums of other constants
 	static const size_t countryRegion;
 	static const size_t dcErrValue;
