@@ -86,7 +86,7 @@ WITH ActiveRoutes AS (
     SELECT COUNT(cr.route) AS total
     FROM connectedRoutes AS cr
     LEFT JOIN systems ON cr.systemName = systems.systemName
-    WHERE systems.level = 'active' OR systems.level = 'preview'
+    WHERE systems.level = 'active'
 ),
 TravelerStats AS (
     SELECT
@@ -105,7 +105,7 @@ TravelerStats AS (
     LEFT JOIN
         systems ON routes.systemName = systems.systemName
     WHERE
-        systems.level = 'active' OR systems.level = 'preview'
+        systems.level = 'active'
     GROUP BY
         ccr.traveler
 )
