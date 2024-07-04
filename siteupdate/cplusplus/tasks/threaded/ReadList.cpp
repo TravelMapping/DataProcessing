@@ -8,7 +8,7 @@
 		// placement new
       #endif
 	if (TravelerList::file_not_found)
-	{	cout << "\nCheck for typos in your -U or --userlist arguments, and make sure .list files for all specified users exist.\nAborting." << endl;
+	  {	cout << "\nCheck for typos in your -U or --userlist arguments, and make sure " << Args::userlistextension << " files for all specified users exist.\nAborting." << endl;
 		return 1;
 	}
 	TravelerList::ids.clear();

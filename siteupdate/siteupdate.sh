@@ -31,6 +31,7 @@ compress=0
 compressflag=
 repo=HighwayData
 listdir=list_files
+listext=.list
 timedir=time_files
 dbname=TravelMapping
 datatype=Highways
@@ -144,6 +145,7 @@ for arg in "$@"; do
 	grapharchives=rgrapharchives
 	repo=RailwayData
 	listdir=rlist_files
+	listext=.rlist
 	timedir=rtime_files
 	dbname=TravelMappingRail
     elif [[ "$arg" == --graphs ]]; then
@@ -323,14 +325,14 @@ echo DataProcessing '@' `git show -s | head -n 1 | cut -f2 -d' '` | tee -a $indi
 echo "$0: creating .time files"
 mkdir -p $tmbasedir/UserData/$timedir
 cd $tmbasedir/UserData/$timedir
-for t in `ls ../$listdir/*.list | sed -r "s~../$listdir/(.*).list~\1.time~"`; do $make -s $t; done
+for t in `ls ../$listdir/*$listext | sed -r "s~../$listdir/(.*)$listext~\1.time~"`; do $make -s $t; done
 cd - > /dev/null
   
 if [[ "$nmpmdir" != "" ]]; then
     nmpmflags="-n $indir/$nmpmdir"
 fi
 echo "$0: launching $siteupdate"
-$siteupdate $errorcheck -d $dbname-$datestr $graphflag -l $indir/$logdir -c $indir/$statdir -g $indir/$graphdir $nmpmflags -w $tmbasedir/$repo -u $tmbasedir/UserData/$listdir | tee -a $indir/$logdir/siteupdate.log 2>&1 || exit 1
+$siteupdate $errorcheck -d $dbname-$datestr $graphflag -l $indir/$logdir -c $indir/$statdir -g $indir/$graphdir $nmpmflags -w $tmbasedir/$repo -u $tmbasedir/UserData/$listdir -x $listext | tee -a $indir/$logdir/siteupdate.log 2>&1 || exit 1
 date
 
 echo "$0: appending rank table creation to SQL file"
