@@ -85,6 +85,8 @@ int process_one_graph(tmg_graph *g, char *filename, char *descr,
   tmg_graph_vertex_stats(g, &vs);
 
   /* an aspect ratio, width/height */
+  double aspect_ratio;
+
   tmg_latlng center_west, center_east, center_north, center_south;
   center_west.lat = (g->vertices[vs.north]->w.coords.lat +
 		     g->vertices[vs.south]->w.coords.lat) / 2;
@@ -98,11 +100,18 @@ int process_one_graph(tmg_graph *g, char *filename, char *descr,
   center_south.lat = g->vertices[vs.south]->w.coords.lat;
   center_south.lng = (g->vertices[vs.west]->w.coords.lng +
 		     g->vertices[vs.east]->w.coords.lng) / 2;
-  
-  double aspect_ratio =
-    tmg_distance_latlng(&center_west, &center_east) /
-    tmg_distance_latlng(&center_north, &center_south);
 
+  // need points at different latitudes and longitudes
+  if (center_west.lng != center_east.lng &&
+      center_north.lat != center_south.lat) {
+    aspect_ratio =
+      tmg_distance_latlng(&center_west, &center_east) /
+      tmg_distance_latlng(&center_north, &center_south);
+  }
+  else {
+    aspect_ratio = 1;
+  }
+  
   // connectivity
   int num_parts;
   int *part_sizes;

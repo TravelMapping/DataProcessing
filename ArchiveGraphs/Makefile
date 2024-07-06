@@ -6,7 +6,7 @@ CFILES=$(PROGRAM).c $(OTHERCFILES)
 OFILES=$(CFILES:.c=.o)
 LIBMETALGRAPH=-lmetalgraph
 LIBMETALGRAPHPATH=$(HOME)/travelmapping/TMInstructorTools/CGraphProgram/libmetalgraph
-CC=gcc
+CC=clang
 CFLAGS=-Wall -O -I$(LIBMETALGRAPHPATH)
 
 $(PROGRAM):	$(OFILES) $(LIBMETALGRAPHPATH)/libmetalgraph.a
