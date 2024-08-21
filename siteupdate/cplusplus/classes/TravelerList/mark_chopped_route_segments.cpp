@@ -13,7 +13,7 @@ if (rit == Route::pri_list_hash.end())
 		  {	*c = '?';
 			invalid_char = 1;
 		  }
-		log << "Unknown region/highway combo in line: " << trim_line;
+		log << "Unknown region/route combo in line: " << trim_line;
 		if (invalid_char) log << " [contains invalid character(s)]";
 		log << '\n';
 		splist << lines[l] << endlines[l];
@@ -25,7 +25,7 @@ if (rit == Route::pri_list_hash.end())
 }
 Route* r = rit->second;
 if (r->system->devel())
-{	log << "Ignoring line matching highway in system in development: " << get_trim_line() << '\n';
+{	log << "Ignoring line matching route in system in development: " << get_trim_line() << '\n';
 	splist << lines[l] << endlines[l];
 	free(trim_line);
 	continue;

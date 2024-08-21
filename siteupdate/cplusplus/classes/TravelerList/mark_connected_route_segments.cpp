@@ -28,8 +28,8 @@ if (rit1 == Route::alt_list_hash.end() || rit2 == Route::alt_list_hash.end())
 	for (char& c : lookup1) if (iscntrl(c)) c = '?';
 	for (char& c : lookup2) if (iscntrl(c)) c = '?';
 	if (rit1 == rit2)
-		log << "Unknown region/highway combos " << lookup1 << " and " << lookup2 << " in line: " << trim_line;
-	else {	log << "Unknown region/highway combo ";
+		log << "Unknown region/route combos " << lookup1 << " and " << lookup2 << " in line: " << trim_line;
+	else {	log << "Unknown region/route combo ";
 		log << (rit1 == Route::alt_list_hash.end() ? lookup1 : lookup2);
 		log << " in line: " << trim_line;
 	     }
@@ -41,17 +41,17 @@ if (rit1 == Route::alt_list_hash.end() || rit2 == Route::alt_list_hash.end())
 }
 Route* r1 = rit1->second;
 Route* r2 = rit2->second;
+if (r1->system->devel() || r2->system->devel())
+{	log << "Ignoring line matching route(s) in system in development: " << get_trim_line() << '\n';
+	splist << lines[l] << endlines[l];
+	free(trim_line);
+	continue;
+}
 if (r1->con_route != r2->con_route)
 {	log << lookup1 << " and " << lookup2 << " not in same connected route in line: " << get_trim_line() << '\n';
 	splist << lines[l] << endlines[l];
 	UPDATE_NOTE(r1->con_route->roots.front()) if (r1->con_route->roots.size() > 1) UPDATE_NOTE(r1->con_route->roots.back())
 	UPDATE_NOTE(r2->con_route->roots.front()) if (r2->con_route->roots.size() > 1) UPDATE_NOTE(r2->con_route->roots.back())
-	free(trim_line);
-	continue;
-}
-if (r1->system->devel())
-{	log << "Ignoring line matching highway in system in development: " << get_trim_line() << '\n';
-	splist << lines[l] << endlines[l];
 	free(trim_line);
 	continue;
 }
