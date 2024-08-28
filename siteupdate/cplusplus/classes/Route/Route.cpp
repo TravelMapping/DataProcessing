@@ -98,13 +98,16 @@ Route::Route(std::string &line, HighwaySystem *sys, ErrorList &el)
 			     "' already points to " + pri_list_hash.at(list_name)->root);
 	// insert alt names into alt_list_hash, checking for duplicate .list names
 	for (std::string& a : alt_route_names)
-	{   list_name = rg_str + ' ' + a;
+	{   if (a.find(' ') == -1)
+		(list_name.assign(rg_str) += ' ') += a;
+	    else list_name.assign(a);
+
 	    upper(list_name.data());
 	    if (pri_list_hash.count(list_name))
-		el.add_error("Duplicate alt route name in " + root + ": '" + region->code + ' ' + a +
+		el.add_error("Duplicate alt route name in " + root + ": '" + list_name +
 			     "' already points to " + pri_list_hash.at(list_name)->root);
 	    else if (!alt_list_hash.insert(std::pair<std::string, Route*>(list_name, this)).second)
-		el.add_error("Duplicate alt route name in " + root + ": '" + region->code + ' ' + a +
+		el.add_error("Duplicate alt route name in " + root + ": '" + list_name +
 			     "' already points to " + alt_list_hash.at(list_name)->root);
 	    // populate unused set
 	    system->unusedaltroutenames.insert(list_name);
