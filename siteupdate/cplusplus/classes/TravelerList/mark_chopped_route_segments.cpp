@@ -7,7 +7,7 @@ std::unordered_map<std::string,Route*>::iterator rit = Route::pri_list_hash.find
 if (rit == Route::pri_list_hash.end())
 {	rit = Route::alt_list_hash.find(lookup);
 	if (rit == Route::alt_list_hash.end())
-	{	bool invalid_char = 0;
+	     {	bool invalid_char = 0;
 		for (char* c = get_trim_line(); *c; c++)
 		  if (iscntrl(*c) && *c != '\t')
 		  {	*c = '?';
@@ -19,9 +19,16 @@ if (rit == Route::pri_list_hash.end())
 		splist << lines[l] << endlines[l];
 		free(trim_line);
 		continue;
-	}
-	else	log << "Note: deprecated route name " << fields[1]
-		    << " -> canonical name " << rit->second->list_entry_name() << " in line: " << get_trim_line() << '\n';
+	     }
+	else {	size_t rcodesize = rit->second->region->code.size();
+		bool rmatch = !strncmp(lookup.data(), rit->second->region->code.data(), rcodesize)
+			      && lookup[rcodesize] == ' ';
+		log << "Note: deprecated route name ";
+		if (!rmatch) log << fields[0] << ' ';
+		log << fields[1] << " -> canonical name ";
+		log << (rmatch ? rit->second->list_entry_name() : rit->second->readable_name());
+		log << " in line: " << get_trim_line() << '\n';
+	     }
 }
 Route* r = rit->second;
 if (r->system->devel())
