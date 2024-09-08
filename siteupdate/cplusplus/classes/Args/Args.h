@@ -6,7 +6,7 @@ class Args
 	/* w */ static std::string datapath;
 	/* s */ static std::string systemsfile;
 	/* u */ static std::string userlistfilepath;
-	/* x */ static std::string userlistextension;
+	/* x */ static std::string userlistext;
 	/* d */ static std::string databasename;
 	/* l */ static std::string logfilepath;
 	/* c */ static std::string csvstatfilepath;

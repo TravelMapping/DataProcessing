@@ -17,7 +17,7 @@ TravelerList::TravelerList(std::string& travname, ErrorList* el)
 	traveler_num = new unsigned int[Args::numthreads];
 		       // deleted by ~TravelerList
 	traveler_num[0] = this - allusers.data; // init for master traveled graph
-	traveler_name.assign(travname, 0, travname.size()-Args::userlistextension.length()); // strip ".list" or other extension from end of travname
+	traveler_name.assign(travname, 0, travname.size()-Args::userlistext.size()); // strip extension from end of travname
 	if (traveler_name.size() > DBFieldLength::traveler)
 	  el->add_error("Traveler name " + traveler_name + " > " + std::to_string(DBFieldLength::traveler) + "bytes");
 
@@ -172,14 +172,15 @@ void TravelerList::get_ids(ErrorList& el)
 		if ((dir = opendir (Args::userlistfilepath.data())) != NULL)
 		{	while ((ent = readdir (dir)) != NULL)
 			{	std::string trav(ent->d_name);
-				if (trav.size() > Args::userlistextension.length() && !trav.compare(trav.size() - Args::userlistextension.length(), Args::userlistextension.length(), Args::userlistextension))
-					ids.push_back(trav);
+				if (	trav.size() > Args::userlistext.size()
+				     && trav.data() + trav.size() - Args::userlistext.size() == Args::userlistext
+				   )	ids.push_back(trav);
 			}
 			closedir(dir);
 		}
 		else	el.add_error("Error opening user list file path \""+Args::userlistfilepath+"\". (Not found?)");
 	}
-	else for (std::string& id : ids) id += Args::userlistextension;
+	else for (std::string& id : ids) id += Args::userlistext;
 	ids.sort();
 	tl_it = allusers.alloc(ids.size());
 }
