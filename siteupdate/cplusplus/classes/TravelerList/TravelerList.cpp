@@ -257,7 +257,9 @@ void TravelerList::read_listinfo(ErrorList& el)
 			continue;
 		}
 		// add the fields to the map
-		TravelerList::listinfo[listname] = fields;	
+		if (!listinfo.emplace(std::move(listname), std::move(fields)).second) // C++17: use try_emplace...
+			// C++17: ...and listname won't be stolen; safe to use it instead of line.substr
+			el.add_error("Multiple entries for " + line.substr(0, line.find(';')) + " in listfileinfo.csv");
 	}
 	file.close();
 }
