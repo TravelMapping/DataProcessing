@@ -244,7 +244,11 @@ void TravelerList::read_listinfo(ErrorList& el)
 
 	// read data lines and add entries to the listinfo map
 	while (std::getline(file, line))
-	{	std::vector<std::string> fields;
+	{	while ( !line.empty() && strchr(" \t", line.back()) )	// remove trailing whitespace
+			line.pop_back();				// (don't bother with leading)
+		if (line.empty()) continue;				// skip blank lines
+
+		std::vector<std::string> fields;
 		// read the first field, the listname, save as the map key
 		spn = strcspn(line.data(), ";");
 		std::string listname(line, 0, spn);
