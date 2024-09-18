@@ -1,8 +1,10 @@
 #define FMT_HEADER_ONLY
 #include "Waypoint.h"
 #include "../Datacheck/Datacheck.h"
+#include "../ErrorList/ErrorList.h"
 #include "../DBFieldLength/DBFieldLength.h"
 #include "../HighwaySystem/HighwaySystem.h"
+#include "../Region/Region.h"
 #include "../Route/Route.h"
 #include "../../functions/tmstring.h"
 #include "../../templates/contains.cpp"
@@ -15,15 +17,18 @@ bool sort_root_at_label(Waypoint *w1, Waypoint *w2)
 {	return w1->root_at_label() < w2->root_at_label();
 }
 
-Waypoint::Waypoint(char *line, Route *rte)
+Waypoint::Waypoint(char *line, Route *rte, ErrorList& el, char*const wptdata)
 {	/* initialize object from a .wpt file line */
+	#include "validate_label.cpp"
 	route = rte;
 
 	// split line into fields
 	char* c = strchr(line, ' ');
-	if (c){	do *c = 0; while (*++c == ' ');
+	if (c){	validate_label(line, c);
+		do *c = 0; while (*++c == ' ');
 		while (char*d = strchr(c, ' '))
-		{	do *d = 0; while (*++d == ' ');
+		{	validate_label(c, d);
+			do *d = 0; while (*++d == ' ');
 			alt_labels.emplace_back(c);
 			c = d;
 		}
@@ -63,7 +68,14 @@ Waypoint::Waypoint(char *line, Route *rte)
 	char* latBeg = strstr(c, "lat=")+4;
 	char* lonBeg = strstr(c, "lon=")+4;
 	if (latBeg == (char*)4 || lonBeg == (char*)4)
-	{	Datacheck::add(route, label, "", "", "MALFORMED_URL", "MISSING_ARG(S)");
+	{	bool shortgood = 1;
+		char *d=c, *e=c+DBFieldLength::dcErrCode;
+		do if (d==e || strchr("\\'\"", *d) || iscntrl(*d))
+		   {	shortgood = 0;
+			break;
+		   }
+		while (*++d);
+		Datacheck::add(route, label, "", "", "MALFORMED_URL", shortgood ? c : "MISSING_ARG(S)");
 		throw invalid_line | 8;
 	}
 	if (!valid_num_str(latBeg, '&')) {invalid_url(latBeg, "MALFORMED_LAT"); invalid_line |= 16;}
@@ -354,31 +366,6 @@ void Waypoint::invalid_url(const char* const cstr, const char* const errcode)
 		str += "...";
 	}
 	Datacheck::add(route, label, "", "", errcode, str);
-}
-
-void Waypoint::label_invalid_char()
-{	// look for labels with invalid characters
-	if (label == "*")
-		  Datacheck::add(route, label, "", "", "LABEL_INVALID_CHAR", "");
-	else for (const char *c = label.data(); *c; c++)
-		if ((*c == 42 || *c == 43) && c > label.data()
-		 || (*c < 40)	|| (*c == 44)	|| (*c > 57 && *c < 65)
-		 || (*c == 96)	|| (*c > 122)	|| (*c > 90 && *c < 95))
-		{	if (!strncmp(label.data(), "\xEF\xBB\xBF", 3))
-				Datacheck::add(route, label, "", "", "LABEL_INVALID_CHAR", "UTF-8 BOM");
-			else	Datacheck::add(route, label, "", "", "LABEL_INVALID_CHAR", "");
-			break;
-		}
-	for (std::string& lbl : alt_labels)
-	  if (lbl == "*")
-		  Datacheck::add(route, lbl, "", "", "LABEL_INVALID_CHAR", "");
-	  else for (const char *c = lbl.data(); *c; c++)
-		if (*c == '+' && c > lbl.data() || *c == '*' && (c > lbl.data()+1 || lbl[0] != '+')
-		 || (*c < 40)	|| (*c == 44)	|| (*c > 57 && *c < 65)
-		 || (*c == 96)	|| (*c > 122)	|| (*c > 90 && *c < 95))
-		{	Datacheck::add(route, lbl, "", "", "LABEL_INVALID_CHAR", "");
-			break;
-		}
 }
 
 void Waypoint::out_of_bounds()
