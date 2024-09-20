@@ -1,3 +1,4 @@
+class ErrorList;
 class HGVertex;
 class HighwayGraph;
 class HighwaySystem;
@@ -30,7 +31,7 @@ class Waypoint
 	std::forward_list<Waypoint*> near_miss_points;
 	bool is_hidden;
 
-	Waypoint(char *, Route *);
+	Waypoint(char *, Route *, ErrorList&, char* const);
 
 	std::string str();
 	bool same_coords(Waypoint *);
@@ -56,7 +57,6 @@ class Waypoint
 	// Datacheck
 	void hidden_junction();
 	void invalid_url(const char* const, const char* const);
-	void label_invalid_char();
 	void out_of_bounds();
 	// checks for visible points
 	void bus_with_i();

@@ -59,7 +59,7 @@ void Route::read_wpt(WaypointQuadtree *all_waypoints, ErrorList *el, bool usa_fl
 		char* e = l[1]-2;		// -2 skips over the 0 inserted while splitting wptdata into lines
 		while (*e == 0) e--;		// skip back more for CRLF cases, and lines followed by blank lines
 		while (*e == ' ' || *e == '\t') *e-- = 0;
-		try {new(w) Waypoint(*l, this);}
+		try {new(w) Waypoint(*l, this, *el, wptdata);}
 		     // placement new
 		catch (const int) SKIP
 		#undef SKIP
@@ -74,7 +74,6 @@ void Route::read_wpt(WaypointQuadtree *all_waypoints, ErrorList *el, bool usa_fl
 
 		// single-point Datachecks, and HighwaySegment
 		w->out_of_bounds();
-		w->label_invalid_char();
 		if (w > points.data)
 		{	// add HighwaySegment, if not first point
 			new(s) HighwaySegment(w, this);
