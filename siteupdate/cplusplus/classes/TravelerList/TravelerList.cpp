@@ -209,10 +209,6 @@ double TravelerList::system_miles(HighwaySystem *h)
 /* Read listfileinfo.csv file and augment TravelerList entries in allusers */
 void TravelerList::read_listinfo(ErrorList& el)
 {	std::ifstream file(Args::userlistfilepath+"/listfileinfo.csv");
-	if (!file.is_open())
-	{	el.add_error("Error opening listfileinfo.csv file.");
-		return;
-	}
 	std::string line;
 	size_t spn;
 
@@ -239,8 +235,11 @@ void TravelerList::read_listinfo(ErrorList& el)
 
 	// check that the number of defaults matches the number of fieldnames
 	if (fieldnames.size() != defaults.size())
-	{	el.add_error("Number of defaults does not match number of fieldnames in listfileinfo.csv.");
-		return;
+		el.add_error("Number of defaults does not match number of fieldnames in listfileinfo.csv.");
+	// failsafe defaults if not supplied / malformed listfileinfo.csv
+	switch (defaults.size()) // fall-thru is a Good Thing!
+	{	case 0:	defaults.emplace_back();
+		case 1:	defaults.emplace_back("1");
 	}
 
 	// read data lines and add entries to the listinfo map
