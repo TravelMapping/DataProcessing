@@ -77,8 +77,10 @@ template <class item, class unit> class TMBitset
 
 	void shrink_to_fit()
 	{	if (!len) return;
+		size_t lo_index = *ibegin();
+		if (lo_index == len) return clear();
+		lo_index &= ~(ubits-1);
 		unit* const old_data = data;
-		size_t lo_index = *ibegin() & ~(ubits-1);
 
 		start += lo_index;
 		len = end_index() - lo_index;
