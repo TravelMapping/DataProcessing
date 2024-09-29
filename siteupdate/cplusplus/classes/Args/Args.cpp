@@ -12,7 +12,7 @@
 /* w */ std::string Args::datapath = "../../HighwayData";
 /* s */ std::string Args::systemsfile = "systems.csv";
 /* u */ std::string Args::userlistfilepath = "../../UserData/list_files";
-/* x */ std::string Args::userlistextension = ".list";
+/* x */ std::string Args::userlistext = ".list";
 /* d */ std::string Args::databasename = "TravelMapping";
 /* l */ std::string Args::logfilepath = ".";
 /* c */ std::string Args::csvstatfilepath = ".";
@@ -42,7 +42,7 @@ bool Args::init(int argc, char *argv[])
 		else if ARG(1, "-w", "--datapath")		{datapath	  = argv[++n];}
 		else if ARG(1, "-s", "--systemsfile")		{systemsfile      = argv[++n];}
 		else if ARG(1, "-u", "--userlistfilepath")	{userlistfilepath = argv[++n];}
-		else if ARG(1, "-x", "--userlistextension")	{userlistextension = argv[++n];}
+		else if ARG(1, "-x", "--userlistext")		{userlistext	  = argv[++n];}
 		else if ARG(1, "-d", "--databasename")		{databasename     = argv[++n];}
 		else if ARG(1, "-l", "--logfilepath")		{logfilepath      = argv[++n];}
 		else if ARG(1, "-c", "--csvstatfilepath")	{csvstatfilepath  = argv[++n];}
@@ -83,7 +83,7 @@ bool Args::init(int argc, char *argv[])
 void Args::show_help()
 {	std::string indent(strlen(exec), ' ');
 	std::cout  <<  "usage: " << exec << " [-h] [-w DATAPATH] [-s SYSTEMSFILE]\n";
-	std::cout  <<  indent << "        [-u USERLISTFILEPATH] [-x USERLISTEXTENSION] [-d DATABASENAME] [-l LOGFILEPATH]\n";
+	std::cout  <<  indent << "        [-u USERLISTFILEPATH] [-x USERLISTEXT] [-d DATABASENAME] [-l LOGFILEPATH]\n";
 	std::cout  <<  indent << "        [-c CSVSTATFILEPATH] [-g GRAPHFILEPATH] [-k]\n";
 	std::cout  <<  indent << "        [-n NMPMERGEPATH] [-p SPLITREGIONPATH SPLITREGION]\n";
 	std::cout  <<  indent << "        [-U USERLIST [USERLIST ...]] [-t NUMTHREADS] [-e]\n";
@@ -101,7 +101,7 @@ void Args::show_help()
 	std::cout  <<  "		        file of highway systems to include\n";
 	std::cout  <<  "  -u USERLISTFILEPATH, --userlistfilepath USERLISTFILEPATH\n";
 	std::cout  <<  "		        path to the user list file data\n";
-	std::cout  <<  "  -x USERLISTEXTENSION, --userlistextension USERLISTEXTENSION\n";
+	std::cout  <<  "  -x USERLISTEXT, --userlistext USERLISTEXT\n";
 	std::cout  <<  "		        file extension for user list files\n";
 	std::cout  <<  "  -d DATABASENAME, --databasename DATABASENAME\n";
 	std::cout  <<  "		        Database name for .sql file name\n";

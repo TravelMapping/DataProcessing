@@ -17,7 +17,7 @@ TravelerList::TravelerList(std::string& travname, ErrorList* el)
 	traveler_num = new unsigned int[Args::numthreads];
 		       // deleted by ~TravelerList
 	traveler_num[0] = this - allusers.data; // init for master traveled graph
-	traveler_name.assign(travname, 0, travname.size()-Args::userlistextension.length()); // strip ".list" or other extension from end of travname
+	traveler_name.assign(travname, 0, travname.size()-Args::userlistext.size()); // strip extension from end of travname
 	if (traveler_name.size() > DBFieldLength::traveler)
 	  el->add_error("Traveler name " + traveler_name + " > " + std::to_string(DBFieldLength::traveler) + "bytes");
 
@@ -172,14 +172,15 @@ void TravelerList::get_ids(ErrorList& el)
 		if ((dir = opendir (Args::userlistfilepath.data())) != NULL)
 		{	while ((ent = readdir (dir)) != NULL)
 			{	std::string trav(ent->d_name);
-				if (trav.size() > Args::userlistextension.length() && !trav.compare(trav.size() - Args::userlistextension.length(), Args::userlistextension.length(), Args::userlistextension))
-					ids.push_back(trav);
+				if (	trav.size() > Args::userlistext.size()
+				     && trav.data() + trav.size() - Args::userlistext.size() == Args::userlistext
+				   )	ids.push_back(trav);
 			}
 			closedir(dir);
 		}
 		else	el.add_error("Error opening user list file path \""+Args::userlistfilepath+"\". (Not found?)");
 	}
-	else for (std::string& id : ids) id += Args::userlistextension;
+	else for (std::string& id : ids) id += Args::userlistext;
 	ids.sort();
 	tl_it = allusers.alloc(ids.size());
 }
@@ -208,68 +209,61 @@ double TravelerList::system_miles(HighwaySystem *h)
 /* Read listfileinfo.csv file and augment TravelerList entries in allusers */
 void TravelerList::read_listinfo(ErrorList& el)
 {	std::ifstream file(Args::userlistfilepath+"/listfileinfo.csv");
-	if (!file.is_open())
-	{	el.add_error("Error opening listfileinfo.csv file.");
-		return;
-	}
 	std::string line;
+	size_t spn;
+
+	auto readfields = [&](std::vector<std::string>& fvec)
+	{	const char* c = line.data() + spn + 1;
+		const char* e = line.data() + line.size();
+		for (; c < e; c += spn+1)
+		{	spn = strcspn(c, ";");
+			fvec.emplace_back(c, spn);
+		}
+	};
+
 	// read header line to get field names
 	std::getline(file, line);
-	size_t spn;
 	// skip the first field, the listname
-	size_t c = line.find(';', 0) + 1;
-	for (; c < line.size(); c += spn)
-	{   size_t next_delim = line.find(';', c);
-    	if (next_delim == std::string::npos) spn = line.size() - c;
-		else spn = next_delim - c;
-    	TravelerList::fieldnames.emplace_back(line, c, spn);
-    	if (next_delim != std::string::npos) spn++; // Move past the delimiter for the next iteration
-	}
+	spn = strcspn(line.data(), ";");
+	readfields(fieldnames);
 
 	// read line giving defaults
 	std::getline(file, line);
 	// skip the first field, the listname
-	c = line.find(';', 0) + 1;
-	for (; c < line.size(); c += spn)
-	{   size_t next_delim = line.find(';', c);
-    	if (next_delim == std::string::npos) spn = line.size() - c;
-		else spn = next_delim - c;
-    	TravelerList::defaults.emplace_back(line, c, spn);
-    	if (next_delim != std::string::npos) spn++; // Move past the delimiter for the next iteration
-	}
+	spn = strcspn(line.data(), ";");
+	readfields(defaults);
+
 	// check that the number of defaults matches the number of fieldnames
-	if (TravelerList::fieldnames.size() != TravelerList::defaults.size())
-	{	el.add_error("Number of defaults does not match number of fieldnames in listfileinfo.csv.");
-		return;
+	if (fieldnames.size() != defaults.size())
+		el.add_error("Number of defaults does not match number of fieldnames in listfileinfo.csv.");
+	// failsafe defaults if not supplied / malformed listfileinfo.csv
+	switch (defaults.size()) // fall-thru is a Good Thing!
+	{	case 0:	defaults.emplace_back();
+		case 1:	defaults.emplace_back("1");
 	}
 
 	// read data lines and add entries to the listinfo map
 	while (std::getline(file, line))
-	{	std::vector<std::string> fields;
-		size_t spn;
+	{	while ( !line.empty() && strchr(" \t", line.back()) )	// remove trailing whitespace
+			line.pop_back();				// (don't bother with leading)
+		if (line.empty()) continue;				// skip blank lines
+
+		std::vector<std::string> fields;
 		// read the first field, the listname, save as the map key
-		size_t c = 0;
-		size_t next_delim = line.find(';', c);
-		if (next_delim == std::string::npos) spn = line.size() - c;
-		else spn = next_delim - c;
-		std::string listname(line, c, spn);
-		c = next_delim + 1;
+		spn = strcspn(line.data(), ";");
+		std::string listname(line, 0, spn);
 		// read the remaining fields, save as the map value
-		for (; c < line.size(); c += spn)
-		{   next_delim = line.find(';', c);
-			if (next_delim == std::string::npos) spn = line.size() - c;
-			else spn = next_delim - c;
-			fields.emplace_back(line, c, spn);
-			if (next_delim != std::string::npos) spn++; // Move past the delimiter for the next iteration
-		}
+		readfields(fields);
 
 		// check that the number of fields matches the number of fieldnames
-		if (fields.size() != TravelerList::fieldnames.size())
+		if (fields.size() != fieldnames.size())
 		{	el.add_error("Number of fields does not match number of fieldnames in listfileinfo.csv for list " + listname);
 			continue;
 		}
 		// add the fields to the map
-		TravelerList::listinfo[listname] = fields;	
+		if (!listinfo.emplace(std::move(listname), std::move(fields)).second) // C++17: use try_emplace...
+			// C++17: ...and listname won't be stolen; safe to use it instead of line.substr
+			el.add_error("Multiple entries for " + line.substr(0, line.find(';')) + " in listfileinfo.csv");
 	}
 	file.close();
 }
