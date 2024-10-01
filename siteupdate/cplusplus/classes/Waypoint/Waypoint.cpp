@@ -41,7 +41,7 @@ Waypoint::Waypoint(char *line, Route *rte, ErrorList& el, char*const wptdata)
 	{	// SINGLE_FIELD_LINE, looks like a URL
 		if (!c && !strncmp(label.data(), "http", 4))				// If the "label" is a URL, and the only field...
 		{	label = "..."+label.substr(label.size()-DBFieldLength::label+3);// the end is more useful than "http://www.openstreetma..."
-			while (label.front() < 0)	label.erase(label.begin());	// Strip any partial multi-byte characters off the beginning
+			while (label[3] < 0)	label.erase(label.begin()+3);		// Strip any partial multi-byte characters off the beginning
 			Datacheck::add(route, label, "", "", "SINGLE_FIELD_LINE", "");
 			throw 1;
 		}

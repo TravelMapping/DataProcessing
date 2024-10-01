@@ -1,16 +1,13 @@
 auto validate_label = [&](char* lbl, char* end)
 {	char* c = lbl;
-	if ([&]() // verify valid sequence of leading + or *
-	{	if (*c == '+' || *c == '*')
-		  if (*++c == '+') return 1;
-		  else if (*c == '*')
-		  {	if (c++[-1] == '*') return 1;
-		  }
-		  else if (!*c) return 1;
-		return 0;
-	}())	return Datacheck::add(rte, lbl, "", "", "LABEL_INVALID_CHAR", "");
-
 	bool flag = 0;	// once set to 1, keep going to find bad chars that can't go in DB, logfile, or terminal
+	if (*c == '+' || *c == '*') // verify valid sequence of leading + or *
+	  if (*++c == '+') flag = 1;
+	  else if (*c == '*')
+	  {	if (c++[-1] == '*') flag = 1;
+	  }
+	  else if (!*c) flag = 1;
+
 	do {	if	    (*c <= '@')	// 1/2
 		  if	    (*c <= ')') // 1/4
 		    if	    (*c <  ' '){el.add_error(fmt::format("control character(s) in label at offset {} ({:#X}) in {}/{}/{}.wpt",
