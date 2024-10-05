@@ -97,11 +97,17 @@ if (lit1 == r1->alt_label_hash.end() || lit2 == r2->alt_label_hash.end())
 // are either of the labels used duplicates?
 char duplicate = 0;
 if (r1->duplicate_labels.count(fields[2]))
-{	log << r1->region->code << ": duplicate label " << fields[2] << " in " << r1->root << ".\n";
+{	log << r1->region->code << ": duplicate label " << fields[2] << " in " << r1->root;
+	if (r1->system->preview())
+		log << " (Preview system " << r1->system->systemname << ": " << r1->system->fullname << ')';
+	log << '\n';
 	duplicate = 1;
 }
 if (r2->duplicate_labels.count(fields[5]))
-{	log << r2->region->code << ": duplicate label " << fields[5] << " in " << r2->root << ".\n";
+{	log << r2->region->code << ": duplicate label " << fields[5] << " in " << r2->root;
+	if (r2->system->preview())
+		log << " (Preview system " << r2->system->systemname << ": " << r2->system->fullname << ')';
+	log << '\n';
 	duplicate = 1;
 }
 if (duplicate)
@@ -142,8 +148,10 @@ else {	// user log warning for DISCONNECTED_ROUTE errors
 		    regions.push_back(r->region);
 		for (Region* r : regions)
 		  log << r->code << (r == regions.back() ? ':' : '/');
-		log << " DISCONNECTED_ROUTE error in " << r1->con_route->readable_name()
-		    << ".\n  Please report this error in the Travel Mapping forum"
+		log << " DISCONNECTED_ROUTE error in " << r1->con_route->readable_name();
+		if (r1->system->preview())
+			log << " (Preview system " << r1->system->systemname << ": " << r1->system->fullname << ')';
+		log << ".\n\n  Please report this error in the Travel Mapping forum"
 		    << ".\n  Travels may potentially be shown incorrectly for line: " << get_trim_line() << '\n';
 	}
 	// Is .list entry forward or backward?
