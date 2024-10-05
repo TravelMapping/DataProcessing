@@ -8,19 +8,25 @@ for (HighwaySystem& h : HighwaySystem::syslist)
     for (Route& r : h.routes)
     {	Waypoint* p = r.points.data;
 	for (HighwaySegment& s : r.segments)
-	{   if (!s.concurrent && p->colocated && p[1].colocated)
+	{   if (!s.concurrent && p->colocated)
 		for (Waypoint *w1 : *p->colocated)
 		    if (w1 != p)
-			for (Waypoint *w2 : *p[1].colocated)
-			    if (w2 == w1+1)
-			    {	// we *almost* don't need to perform this route check, but it's possible that
-				// route 1 & route 2's waypoint arrays can be stored back-to-back in memory,
-				// making the last point of one route adjacent to the 1st of another.
-				if (w1->route == w2->route)
-				    s.add_concurrency(concurrencyfile, w1);
-			    }
-			    else if (w2 == w1-1 && w1->route == w2->route)
-				s.add_concurrency(concurrencyfile, w2);
+			if (p[1].colocated)
+			{   for (Waypoint *w2 : *p[1].colocated)
+				if (w2 == w1+1)
+				{   // we *almost* don't need to perform this route check, but it's possible that
+				    // route 1 & route 2's waypoint arrays can be stored back-to-back in memory,
+				    // making the last point of one route adjacent to the 1st of another.
+				    if (w1->route == w2->route)
+					s.add_concurrency(concurrencyfile, w1);
+				}
+				else if (w2 == w1-1 && w1->route == w2->route)
+				    s.add_concurrency(concurrencyfile, w2);
+			}
+			// check for a route U-turning on itself with
+			// nothing else colocated at the U-turn point
+			else if (p+1 == w1-1 && w1->route == &r)
+			    s.add_concurrency(concurrencyfile, p+1);
 	    p++;
 	}
     }
