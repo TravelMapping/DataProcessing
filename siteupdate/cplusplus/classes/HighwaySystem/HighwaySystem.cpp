@@ -173,7 +173,7 @@ bool HighwaySystem::active()
 }
 
 /* Return whether this is a preview system */
-inline bool HighwaySystem::preview()
+bool HighwaySystem::preview()
 {	return level == 'p';
 }
 
