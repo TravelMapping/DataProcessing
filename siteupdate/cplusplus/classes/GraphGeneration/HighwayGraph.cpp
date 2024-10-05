@@ -80,7 +80,7 @@ HighwayGraph::HighwayGraph(WaypointQuadtree &all_waypoints, ElapsedTime &et)
 	{	if (counter % 10000 == 0) std::cout << '.' << std::flush;
 		counter++;
 		if (!v.visibility)
-		{	// <2 edges = HIDDEN_TERMINUS
+		{	// <2 edges = HIDDEN_TERMINUS or hidden U-turn
 			// >2 edges = HIDDEN_JUNCTION
 			// datachecks have been flagged earlier in the program; mark as visible and do not compress
 			if (v.edge_count != 2)
