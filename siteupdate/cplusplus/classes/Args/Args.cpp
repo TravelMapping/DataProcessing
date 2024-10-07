@@ -75,6 +75,11 @@ bool Args::init(int argc, char *argv[])
 			splitregionapp = argv[++n];
 			splitregion = argv[++n];
 		}
+
+		if (userlistext.size() < 2)
+		{	std::cout << "Fatal error: user list file extension must be at least 2 characters.\n";
+			return 1;
+		}
 	}
 	#undef ARG
 	return 0;
