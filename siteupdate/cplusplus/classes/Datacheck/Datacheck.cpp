@@ -159,6 +159,7 @@ std::unordered_set<std::string> Datacheck::always_error
 	"MALFORMED_LAT",
 	"MALFORMED_LON",
 	"MALFORMED_URL",
+	"MULTI_REGION_OVERLAP",
 	"NONTERMINAL_UNDERSCORE",
 	"SINGLE_FIELD_LINE",
 	"US_LETTER"
