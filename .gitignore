@@ -3,6 +3,8 @@
 *.o
 ArchiveGraphs/archivegraphs
 siteupdate/logs
+siteupdate/rlogs
+siteupdate/rstats
 siteupdate/stats
 TravelMapping*.sql
 20??-??-??@??:??:??
