@@ -52,7 +52,6 @@ class Waypoint
 	Route* self_intersection();
 	bool banner_after_slash(const char*);
 	Route* coloc_banner_matches_abbrev();
-	void add_to_adjacent(std::vector<void*>&);
 
 	// Datacheck
 	void hidden_junction();
