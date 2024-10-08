@@ -35,7 +35,7 @@ TravelerList::TravelerList(std::string& travname, ErrorList* el)
 	log << ctime(&StartTime);
 	mtx.unlock();
 	// write last update date & time if known
-	std::ifstream file(Args::userlistfilepath+"/../time_files/"+traveler_name+".time");
+	std::ifstream file(Args::userlistfilepath+"/../time_files/"+&Args::userlistext[1]+'/'+travname+".time");
 	if (file.is_open())
 	{	getline(file, update);
 		if (update.size())
