@@ -28,12 +28,10 @@ HGEdge::HGEdge(HighwaySegment *s)
 	segment = s;
 }
 
-HGEdge::HGEdge(HGVertex *vertex, unsigned char fmt_mask, HGEdge *e1, HGEdge *e2)
+HGEdge::HGEdge(HGVertex *vertex, unsigned char fmt_mask, HGEdge *edge1, HGEdge *edge2)
 {	// build by collapsing two existing edges around a common hidden vertex
 	c_idx = vertex - v_array;
 	format = fmt_mask;
-	HGEdge *edge1 = e1;
-	HGEdge *edge2 = e2;
 	// segment names should match as routes should not start or end
 	// nor should concurrencies begin or end at a hidden point
 	if (edge1->segment_name != edge2->segment_name)
