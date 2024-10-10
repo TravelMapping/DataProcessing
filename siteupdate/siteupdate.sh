@@ -316,9 +316,11 @@ if [[ "$graphflag" != "-k" ]]; then
 fi
 
 echo "$0: gathering repo head info"
-echo $repo '@' `(cd $tmbasedir/$repo; git show -s | head -n 1 | cut -f2 -d' ')` | tee $indir/$logdir/siteupdate.log
-echo UserData '@' `(cd $tmbasedir/UserData; git show -s | head -n 1 | cut -f2 -d' ')` | tee -a $indir/$logdir/siteupdate.log
-echo DataProcessing '@' `git show -s | head -n 1 | cut -f2 -d' '` | tee -a $indir/$logdir/siteupdate.log
+echo $repo '@' `(cd $tmbasedir/$repo; git show -s --pretty=%H)` | tee $indir/$logdir/siteupdate.log
+echo UserData '@' `(cd $tmbasedir/UserData; git show -s --pretty=%H)` | tee -a $indir/$logdir/siteupdate.log
+if [[ "$0" == "/fast/tm/datacheck" ]]; then cd /fast/tm/DataProcessing; fi
+echo DataProcessing '@' `git show -s --pretty=%H` | tee -a $indir/$logdir/siteupdate.log
+if [[ "$0" == "/fast/tm/datacheck" ]]; then cd - > /dev/null; fi
 
 echo "$0: creating .time files"
 mkdir -p $tmbasedir/UserData/time_files/$listext
