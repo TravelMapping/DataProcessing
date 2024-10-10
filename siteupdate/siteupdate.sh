@@ -318,9 +318,15 @@ fi
 echo "$0: gathering repo head info"
 echo $repo '@' `(cd $tmbasedir/$repo; git show -s --pretty=%H)` | tee $indir/$logdir/siteupdate.log
 echo UserData '@' `(cd $tmbasedir/UserData; git show -s --pretty=%H)` | tee -a $indir/$logdir/siteupdate.log
-if [[ "$0" == "/fast/tm/datacheck" ]]; then cd /fast/tm/DataProcessing; fi
-echo DataProcessing '@' `git show -s --pretty=%H` | tee -a $indir/$logdir/siteupdate.log
-if [[ "$0" == "/fast/tm/datacheck" ]]; then cd - > /dev/null; fi
+if [[ "$0" == "/fast/tm/datacheck" ]]; then
+    cd /fast/tm/DataProcessing/.git
+    dphead=`sed 's~ref: ~~' HEAD`
+    if [ -e "$dphead" ]; then dphead=`cat "$dphead"`; fi
+    cd - > /dev/null
+else
+    dphead=`git show -s --pretty=%H`
+fi
+echo DataProcessing '@' "$dphead" | tee -a $indir/$logdir/siteupdate.log
 
 echo "$0: creating .time files"
 mkdir -p $tmbasedir/UserData/time_files/$listext
