@@ -28,18 +28,10 @@ HGEdge::HGEdge(HighwaySegment *s)
 	segment = s;
 }
 
-HGEdge::HGEdge(HGVertex *vertex, unsigned char fmt_mask, HGEdge *e1, HGEdge *e2)
+HGEdge::HGEdge(HGVertex *vertex, unsigned char fmt_mask, HGEdge *edge1, HGEdge *edge2)
 {	// build by collapsing two existing edges around a common hidden vertex
 	c_idx = vertex - v_array;
 	format = fmt_mask;
-	HGEdge *edge1 = e1;
-	HGEdge *edge2 = e2;
-	// segment names should match as routes should not start or end
-	// nor should concurrencies begin or end at a hidden point
-	if (edge1->segment_name != edge2->segment_name)
-	{	std::cout << "ERROR: segment name mismatch in HGEdge collapse constructor: ";
-		std::cout << "edge1 named " << edge1->segment_name << " edge2 named " << edge2->segment_name << '\n' << std::endl;
-	}
 	segment_name = edge1->segment_name;
 	/*std::cout << "\nDEBUG: collapsing edges |";
 	if (fmt_mask & collapsed) std::cout << 'c';	else std::cout << '-';
@@ -47,9 +39,6 @@ HGEdge::HGEdge(HGVertex *vertex, unsigned char fmt_mask, HGEdge *e1, HGEdge *e2)
 	std::cout << "| along " << segment_name << " at vertex " << *(vertex->unique_name);
 	std::cout << "\n       edge1 is " << edge1->str();
 	std::cout << "\n       edge2 is " << edge2->str() << std::endl;//*/
-	// segment and route names/systems should also match, but not
-	// doing that sanity check here, as the above check should take
-	// care of that
 	segment = edge1->segment;
 
 	// figure out and remember which endpoints are not the

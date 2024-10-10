@@ -126,3 +126,48 @@ HighwaySegment* HighwaySegment::canonical_edge_segment()
 	// Nonetheless, let's stop the compiler from complaining.
 	throw 0xBAD;
 }
+
+bool HighwaySegment::same_ap_routes(HighwaySegment* other)
+{	iterator a(this);	if (a.s->route->system->level & (char)12) a.next_ap();
+	iterator b(other);	if (b.s->route->system->level & (char)12) b.next_ap();
+	// do-while is safe here. This function only gets called on segments
+	// that are or are concurrent with active/preview, so the iterators are
+	// not past the valid segments, and *a and *b are safe to dereference.
+	do {	if ((*a)->route != (*b)->route) return 0;
+		a.next_ap();
+		b.next_ap();
+	   }	while (*a && *b);
+	return *a == *b;
+}
+
+bool HighwaySegment::same_vis_routes(HighwaySegment* other)
+{	iterator a(this), b(other);
+	do {	if ((*a)->route != (*b)->route) return 0;
+		a.next_vis();
+		b.next_vis();
+	   }	while (*a && *b);
+	return *a == *b;
+}
+
+HighwaySegment::iterator::iterator(HighwaySegment* seg): concurrent(seg->concurrent)
+{	if (concurrent)
+	{	i = concurrent->begin();
+		s = *i;
+	} else	s = seg;
+}
+
+HighwaySegment* HighwaySegment::iterator::operator * () const {return s;}
+
+void HighwaySegment::iterator::next_ap()
+{	if (!concurrent) {s=0; return;}
+	do if (++i == concurrent->end()) {s=0; return;}
+	while ((*i)->route->system->level & (char)12);
+	s = *i;
+}
+
+void HighwaySegment::iterator::next_vis()
+{	if (!concurrent) {s=0; return;}
+	do if (++i == concurrent->end() /*|| (*i)->route->system->level == 'h'*/) {s=0; return;}
+	while (1);
+	s = *i;
+}

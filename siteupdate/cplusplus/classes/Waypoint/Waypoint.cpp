@@ -3,6 +3,7 @@
 #include "../Datacheck/Datacheck.h"
 #include "../ErrorList/ErrorList.h"
 #include "../DBFieldLength/DBFieldLength.h"
+#include "../HighwaySegment/HighwaySegment.h"
 #include "../HighwaySystem/HighwaySystem.h"
 #include "../Region/Region.h"
 #include "../Route/Route.h"
@@ -325,22 +326,34 @@ Route* Waypoint::coloc_banner_matches_abbrev()
 	return 0;
 }
 
-inline void Waypoint::add_to_adjacent(std::vector<void*>& adjacent)
+inline void add_to_adjacent(std::vector<HighwaySegment*>& adjacent, HighwaySegment& s)
 {	// Store a unique-location identifier.
-	// Let's use the address of singleton waypoints, and the address of the colocation list
-	// for colocated points, as it's shared by all of them. No need to waste instructions
-	// and memory bandwidth going into the colocation list itself to find the 1st waypoint.
-	void* a = colocated ? (void*)colocated : this;
+	// Let's use the address of singleton segments, and the front of the
+	// concurrency list for concurrent segments as it's shared by all of them.
+	HighwaySegment* a = s.concurrent ? s.concurrent->front() : &s;
 	if (!contains(adjacent, a))
 		adjacent.push_back(a);
 }
+
+/*DEBUG
+inline std::string cat_seg(std::vector<HighwaySegment*>& v)
+{	std::string info;
+	for (HighwaySegment* s : v)
+	{	info += "\n ";
+		if (s->concurrent)
+		    for (HighwaySegment* c : *s->concurrent)
+			info.append(" [").append(c->str()).append("]");
+		else	info.append(" [").append(s->str()).append("]");
+	}
+	return info;
+}//*/
 
 /* Datacheck */
 
 void Waypoint::hidden_junction()
 {	// we will have already checked for visibility before calling this function
 	if (!colocated || this != colocated->front()) return;
-	std::vector<void*> adjacent;	// Make a list of unique adjacent locations
+	std::vector<HighwaySegment*> adjacent;	// Make a list of unique adjacent locations
 	for (Waypoint* w : *colocated)	// before & after every point on this colocation list
 	{	// Kill 2 birds with 1 stone:
 		// 1.	As with graph vertices where it originated, all colocated points must be
@@ -349,13 +362,14 @@ void Waypoint::hidden_junction()
 		// 2.	If we do find one, there's our VISIBLE_HIDDEN_COLOC error, so return that.
 		if (!w->is_hidden)
 			return Datacheck::add(w->route, w->label, "", "", "VISIBLE_HIDDEN_COLOC", root_at_label());
-		if (w != w->route->points.data) // unless the 1st point in route, add prev point
-			w[-1].add_to_adjacent(adjacent);
-		if (w != &w->route->points.back()) // unless last point in route, add next point
-			w[1].add_to_adjacent(adjacent);
+		size_t index = w - w->route->points.data;
+		if (index)					      // unless 1st point in route,
+			add_to_adjacent(adjacent, w->route->segments[index-1]);	// add prev segment
+		if (index != w->route->points.size - 1)		     // unless last point in route,
+			add_to_adjacent(adjacent, w->route->segments[index]);	// add next segment
 	}
-	if (adjacent.size() > 2)
-		Datacheck::add( route, label, "", "", "HIDDEN_JUNCTION", std::to_string(adjacent.size()) );
+	if (adjacent.size() > 2 || adjacent.size() == 2 && colocated && !adjacent[0]->same_vis_routes(adjacent[1]))
+		Datacheck::add( route, label, "", "", "HIDDEN_JUNCTION", std::to_string(adjacent.size())/*+cat_seg(adjacent)*/ );
 }
 
 void Waypoint::invalid_url(const char* const cstr, const char* const errcode)

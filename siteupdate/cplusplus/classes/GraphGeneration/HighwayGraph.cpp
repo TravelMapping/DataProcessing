@@ -87,6 +87,19 @@ HighwayGraph::HighwayGraph(WaypointQuadtree &all_waypoints, ElapsedTime &et)
 			{	v.visibility = 2;
 				continue;
 			}
+			if (!v.incident_edges[0]->segment->same_ap_routes(v.incident_edges[1]->segment))
+			{ /*	std::cout << "\nWARNING: segment name mismatch in HGEdge collapse constructor: ";
+				std::cout << "edge1 named " << v.incident_edges[0]->segment->segment_name()
+					  <<" edge2 named " << v.incident_edges[1]->segment->segment_name() << std::endl;
+				std::cout << "  vertex " << *v.unique_name << " unhidden" << std::endl;
+				std::cout << "  waypoints:";
+				Waypoint* w = v.incident_edges[0]->segment->waypoint2;
+				if (w->lat != v.lat || w->lng != v.lng) w = v.incident_edges[0]->segment->waypoint1;
+				for (Waypoint* p : *w->colocated) std::cout << ' ' << p->root_at_label();
+				std::cout << std::endl; //*/
+				v.visibility = 2;
+				continue;
+			}
 			// construct from vertex this time
 			--ce; --cv;
 			// if edge clinched_by sets mismatch, set visibility to 1
