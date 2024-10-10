@@ -48,6 +48,7 @@ class Datacheck
     MALFORMED_LAT          | malformed "lat=" parameter from OSM url
     MALFORMED_LON          | malformed "lon=" parameter from OSM url
     MALFORMED_URL          | fits & no bad chars ? URL : MISSING_ARG(S)
+    MULTI_REGION_OVERLAP   | concurrent route
     NONTERMINAL_UNDERSCORE |
     OUT_OF_BOUNDS          | coordinate pair
     SHARP_ANGLE            | angle in degrees
