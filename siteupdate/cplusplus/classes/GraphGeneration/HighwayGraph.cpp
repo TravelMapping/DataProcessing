@@ -88,9 +88,9 @@ HighwayGraph::HighwayGraph(WaypointQuadtree &all_waypoints, ElapsedTime &et)
 				continue;
 			}
 			if (!v.incident_edges[0]->segment->same_ap_routes(v.incident_edges[1]->segment))
-			{ /*	std::cout << "\nWARNING: segment name mismatch in HGEdge collapse constructor: ";
-				std::cout << "edge1 named " << v.incident_edges[0]->segment->segment_name()
-					  <<" edge2 named " << v.incident_edges[1]->segment->segment_name() << std::endl;
+			{ /*	std::cout << "\nWARNING: segment name mismatch in HGEdge compression process" << std::endl;
+				std::cout << "  edge1: " << v.incident_edges[0]->segment->segment_name() << std::endl
+					  << "  edge2: " << v.incident_edges[1]->segment->segment_name() << std::endl;
 				std::cout << "  vertex " << *v.unique_name << " unhidden" << std::endl;
 				std::cout << "  waypoints:";
 				Waypoint* w = v.incident_edges[0]->segment->waypoint2;

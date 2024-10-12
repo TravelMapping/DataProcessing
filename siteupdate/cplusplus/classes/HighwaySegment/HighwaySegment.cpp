@@ -167,7 +167,6 @@ void HighwaySegment::iterator::next_ap()
 
 void HighwaySegment::iterator::next_vis()
 {	if (!concurrent) {s=0; return;}
-	do if (++i == concurrent->end() /*|| (*i)->route->system->level == 'h'*/) {s=0; return;}
-	while (1);
+	if (++i == concurrent->end() /*|| (*i)->route->system->level == 'h'*/) {s=0; return;}
 	s = *i;
 }
