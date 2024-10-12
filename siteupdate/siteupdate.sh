@@ -338,8 +338,15 @@ if [[ "$nmpmdir" != "" ]]; then
     nmpmflags="-n $indir/$nmpmdir"
 fi
 echo "$0: launching $siteupdate"
-$siteupdate $errorcheck -d $dbname-$datestr $graphflag -l $indir/$logdir -c $indir/$statdir -g $indir/$graphdir $nmpmflags -w $tmbasedir/$repo -u $tmbasedir/UserData/$listdir -x .$listext | tee -a $indir/$logdir/siteupdate.log 2>&1 || exit 1
-date
+$siteupdate $errorcheck -d $dbname-$datestr $graphflag -l $indir/$logdir -c $indir/$statdir -g $indir/$graphdir $nmpmflags -w $tmbasedir/$repo -u $tmbasedir/UserData/$listdir -x .$listext | tee -a $indir/$logdir/siteupdate.log 2>&1
+if [[ ${PIPESTATUS[0]} != 0 ]]; then
+    date
+    exit 1
+fi
+
+if [[ $errorcheck == "-e" ]]; then
+    exit 0
+fi
 
 echo "$0: appending rank table creation to SQL file"
 cat addrankstables.sql >> $dbname-$datestr.sql
