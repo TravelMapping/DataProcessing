@@ -441,16 +441,18 @@ void sqlfile1
 		<< "), root VARCHAR(" << DBFieldLength::root
 		<< "), description VARCHAR(" << DBFieldLength::updateText
 		<< "));\n";
-	sqlfile << "INSERT INTO updates VALUES\n";
-	first = 1;
-	for (std::string* &update : *updates)
-	{	if (!first) sqlfile << ',';
-		first = 0;
-		sqlfile << "('"  << update[0] << "','" << double_quotes(update[1]) << "','" << double_quotes(update[2])
-			<< "','" << update[3] << "','" << double_quotes(update[4]) << "')\n";
-		delete[] update;
+	if (updates->size())
+	{	sqlfile << "INSERT INTO updates VALUES\n";
+		first = 1;
+		for (std::string* &update : *updates)
+		{	if (!first) sqlfile << ',';
+			first = 0;
+			sqlfile << "('"  << update[0] << "','" << double_quotes(update[1]) << "','" << double_quotes(update[2])
+				<< "','" << update[3] << "','" << double_quotes(update[4]) << "')\n";
+			delete[] update;
+		}
+		sqlfile << ";\n";
 	}
-	sqlfile << ";\n";
 
 	// systemUpdates entries
       #ifndef threading_enabled
@@ -462,16 +464,18 @@ void sqlfile1
 		<< "), description VARCHAR(" << DBFieldLength::systemFullName
 		<< "), statusChange VARCHAR(" << DBFieldLength::statusChange
 		<< "));\n";
-	sqlfile << "INSERT INTO systemUpdates VALUES\n";
-	first = 1;
-	for (std::string* &systemupdate : *systemupdates)
-	{	if (!first) sqlfile << ',';
-		first = 0;
-		sqlfile << "('"  << systemupdate[0] << "','" << double_quotes(systemupdate[1])
-			<< "','" << systemupdate[2] << "','" << double_quotes(systemupdate[3]) << "','" << systemupdate[4] << "')\n";
-		delete[] systemupdate;
+	if (systemupdates->size())
+	{	sqlfile << "INSERT INTO systemUpdates VALUES\n";
+		first = 1;
+		for (std::string* &systemupdate : *systemupdates)
+		{	if (!first) sqlfile << ',';
+			first = 0;
+			sqlfile << "('"  << systemupdate[0] << "','" << double_quotes(systemupdate[1])
+				<< "','" << systemupdate[2] << "','" << double_quotes(systemupdate[3]) << "','" << systemupdate[4] << "')\n";
+			delete[] systemupdate;
+		}
+		sqlfile << ";\n";
 	}
-	sqlfile << ";\n";
 
 	// datacheck errors into the db
       #ifndef threading_enabled
