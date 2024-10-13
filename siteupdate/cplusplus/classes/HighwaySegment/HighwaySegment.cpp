@@ -42,10 +42,12 @@ void HighwaySegment::add_concurrency(std::ofstream& concurrencyfile, Waypoint* w
 			concurrencyfile << '[' << x->str() << ']';
 		concurrencyfile << " (" << concurrent->size() << ")\n";
 	     }
-	HighwaySegment* s = concurrent->front();
-	if (s->route->region != other.route->region)
-		Datacheck::add( route, s->waypoint1->label, s->waypoint2->label,
+	if (route->region != other.route->region)
+	{	Datacheck::add( other.route, other.waypoint1->label, other.waypoint2->label,
+				"", "MULTI_REGION_OVERLAP", route->root );
+		Datacheck::add( route, waypoint1->label, waypoint2->label,
 				"", "MULTI_REGION_OVERLAP", other.route->root );
+	}
 	other.concurrent = concurrent;
 }
 
