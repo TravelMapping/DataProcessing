@@ -78,7 +78,7 @@ void HighwaySystem::route_integrity(ErrorList& el)
 	}
 
 	for (ConnectedRoute& cr : con_routes)
-	  for (size_t i = 1; i < cr.roots.size(); i++)
+	{ for (size_t i = 1; i < cr.roots.size(); i++)
 	  {	// check for mismatched route endpoints within connected routes
 		auto& q = cr.roots[i-1];
 		auto& r = cr.roots[i];
@@ -109,4 +109,15 @@ void HighwaySystem::route_integrity(ErrorList& el)
 				q->set_reversed();
 			else	flag();
 	  }
+	  // check for separate ConnectedRoutes that could potentially be combined into one
+	  for (Waypoint* w : {	cr.roots[ 0 ] -> points.size ? cr.roots[ 0 ] -> con_beg() : 0,
+				cr.roots.back()->points.size ? cr.roots.back()->con_end() : 0})
+	    if (w && w->colocated) // empty routes (eg file not found) had w set to nullptr above
+	      for (Waypoint* p : *w->colocated)
+		if (ConnectedRoute* cr2 = p->route->con_route) // skip if Route has no ConnectedRoute
+		  if (w->route->region != p->route->region && w < p && this == p->route->system && &cr != cr2)
+		    if (p == cr2->roots[0]->con_beg() || p == cr2->roots.back()->con_end())
+		      if (w->route->route == p->route->route && w->route->banner == p->route->banner)
+			Datacheck::add(w->route,  w->label, "", "", "COMBINE_CON_ROUTES", p->root_at_label());
+	}
 }

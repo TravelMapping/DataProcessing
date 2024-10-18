@@ -105,8 +105,11 @@ HighwaySystem::HighwaySystem(std::string &line, ErrorList &el)
 		}
 		ConnectedRoute* cr = con_routes.alloc(lines.size());
 		for (std::string& l : lines)
-			new(cr++) ConnectedRoute(l, this, el);
+		  try {	new(cr) ConnectedRoute(l, this, el);
 			// placement new
+			cr++;
+		      }
+		  catch (const int) {--con_routes.size;}
 	     }
 	file.close();
 }

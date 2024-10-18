@@ -18,7 +18,7 @@ ConnectedRoute::ConnectedRoute(std::string &line, HighwaySystem *sys, ErrorList 
 	if (NumFields != 5)
 	{	el.add_error("Could not parse " + sys->systemname
 			   + "_con.csv line: [" + line + "], expected 5 fields, found " + std::to_string(NumFields));
-		return;
+		throw 0xBAD;
 	}
 	// system
 	if (system->systemname != sys_str)
@@ -60,7 +60,10 @@ ConnectedRoute::ConnectedRoute(std::string &line, HighwaySystem *sys, ErrorList 
 					" in system " + system->systemname + '.');
 		    }
 	}
-	if (roots.size() < 1) el.add_error("No valid roots in " + system->systemname + "_con.csv line: " + line);
+	if (roots.size() < 1)
+	{	el.add_error("No valid roots in " + system->systemname + "_con.csv line: " + line);
+		throw 0xBAD;
+	}
 }
 
 std::string ConnectedRoute::connected_rtes_line()
