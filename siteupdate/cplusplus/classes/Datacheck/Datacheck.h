@@ -23,6 +23,7 @@ class Datacheck
     ABBREV_NO_CITY         | offending line # in chopped route CSV
     BAD_ANGLE              |
     BUS_WITH_I             |
+    COMBINE_CON_ROUTES     | potential connection point
     CON_BANNER_MISMATCH    | Banner field in chopped & connected CSVs
     CON_ROUTE_MISMATCH     | Route field in chopped & connected CSVs
     DISCONNECTED_ROUTE     | adjacent root's expected connection point

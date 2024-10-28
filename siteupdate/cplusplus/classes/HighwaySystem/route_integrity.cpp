@@ -41,5 +41,6 @@ void HighwaySystem::route_integrity(ErrorList& el)
 
 	for (ConnectedRoute& cr : con_routes)
 	{	cr.verify_connectivity();
+		cr.combine_con_routes();
 	}
 }

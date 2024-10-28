@@ -27,4 +27,5 @@ class ConnectedRoute
 
 	// datacheck
 	void verify_connectivity();
+	void combine_con_routes();
 };
