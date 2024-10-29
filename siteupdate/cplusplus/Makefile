@@ -22,6 +22,7 @@ MTObjects = $(STObjects:ST.o=MT.o) \
 CommonObjects = \
   classes/Args/Args.o \
   classes/ConnectedRoute/ConnectedRoute.o \
+  classes/ConnectedRoute/datacheck.o \
   classes/Datacheck/Datacheck.o \
   classes/DBFieldLength/DBFieldLength.o \
   classes/ElapsedTime/ElapsedTime.o \
