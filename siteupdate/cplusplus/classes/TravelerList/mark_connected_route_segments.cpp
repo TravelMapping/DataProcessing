@@ -166,16 +166,22 @@ else {	// user log warning for DISCONNECTED_ROUTE errors
 	r1->mtx.lock();
 	r1->mark_label_in_use(reverse ? fields[5] : fields[2]);
 	if (r1->is_reversed())
+	{    if (index1)
 		r1->store_traveled_segments(this, log, update, 0, index1);
-	else	r1->store_traveled_segments(this, log, update, index1, r1->segments.size);
+	}
+	else if (index1 != r1->segments.size)
+		r1->store_traveled_segments(this, log, update, index1, r1->segments.size);
 	r1->mtx.unlock();
 
 	// mark the ending chopped route from its beginning to index2
 	r2->mtx.lock();
 	r2->mark_label_in_use(reverse ? fields[2] : fields[5]);
 	if (r2->is_reversed())
+	{    if (index2 != r2->segments.size)
 		r2->store_traveled_segments(this, log, update, index2, r2->segments.size);
-	else	r2->store_traveled_segments(this, log, update, 0, index2);
+	}
+	else if (index2)
+		r2->store_traveled_segments(this, log, update, 0, index2);
 	r2->mtx.unlock();
 
 	// mark any intermediate chopped routes in their entirety.
