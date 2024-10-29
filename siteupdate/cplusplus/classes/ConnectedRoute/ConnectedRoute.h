@@ -1,7 +1,7 @@
 class ErrorList;
 class HighwaySystem;
 class Route;
-#include <iostream>
+#include <string>
 #include <vector>
 
 class ConnectedRoute
@@ -24,4 +24,8 @@ class ConnectedRoute
 	std::string readable_name();
 	size_t index();
 	//std::string list_lines(int, int, std::string, size_t);
+
+	// datacheck
+	void verify_connectivity();
+	void combine_con_routes();
 };

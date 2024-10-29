@@ -95,6 +95,7 @@ class Route
 	void store_traveled_segments(TravelerList*, std::ofstream&, std::string&, unsigned int, unsigned int);
 	void mark_label_in_use(std::string&);
 	void mark_labels_in_use(std::string&, std::string&);
+	void create_label_hashes();
 	void con_mismatch();
 	size_t index();
 	Waypoint* con_beg();

@@ -265,6 +265,42 @@ void Route::mark_labels_in_use(std::string& label1, std::string& label2)
 	labels_in_use.insert(std::move(label2));
 }
 
+void Route::create_label_hashes()
+{	for (unsigned int index = 0; index < points.size; index++)
+	{	// ignore case and leading '+' or '*'
+		const char* lbegin = points[index].label.data();
+		while (*lbegin == '+' || *lbegin == '*') lbegin++;
+		std::string upper_label(lbegin);
+		upper(upper_label.data());
+		// if primary label not duplicated, add to pri_label_hash
+		if (alt_label_hash.count(upper_label))
+		{	Datacheck::add(this, points[index].label, "", "", "DUPLICATE_LABEL", "");
+			duplicate_labels.insert(upper_label);
+		}
+		else if (!pri_label_hash.emplace(upper_label, index).second)
+		{	Datacheck::add(this, points[index].label, "", "", "DUPLICATE_LABEL", "");
+			duplicate_labels.insert(upper_label);
+		}
+		for (std::string& a : points[index].alt_labels)
+		{	// create canonical AltLabels
+			while (a[0] == '+' || a[0] == '*') a = a.data()+1;
+			upper(a.data());
+			// populate unused set
+			unused_alt_labels.insert(a);
+			// create label->index hashes and check if AltLabels duplicated
+			auto A = pri_label_hash.find(a);
+			if (A != pri_label_hash.end())
+			{	Datacheck::add(this, points[A->second].label, "", "", "DUPLICATE_LABEL", "");
+				duplicate_labels.insert(a);
+			}
+			else if (!alt_label_hash.emplace(a, index).second)
+			{	Datacheck::add(this, a, "", "", "DUPLICATE_LABEL", "");
+				duplicate_labels.insert(a);
+			}
+		}
+	}
+}
+
 // sort routes by most recent update for use at end of user logs
 // all should have a valid updates entry pointer before being passed here
 bool sort_route_updates_oldest(const Route *r1, const Route *r2)
