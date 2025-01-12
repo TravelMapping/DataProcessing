@@ -101,16 +101,18 @@ int main(int argc, char *argv[])
 	all_waypoints.sort();
 
 	cout << et.et() << "Finding unprocessed wpt files." << endl;
+	ofstream unprocessedfile(Args::logfilepath+"/unprocessedwpts.log");
 	if (Route::all_wpt_files.size())
-	{	ofstream unprocessedfile(Args::logfilepath+"/unprocessedwpts.log");
-		cout << Route::all_wpt_files.size() << " .wpt files in " << Args::datapath << "/data not processed, see unprocessedwpts.log." << endl;
+	     {	cout << Route::all_wpt_files.size() << " .wpt files in " << Args::datapath << "/data not processed, see unprocessedwpts.log." << endl;
 		list<string> all_wpts_list(Route::all_wpt_files.begin(), Route::all_wpt_files.end());
 		all_wpts_list.sort();
 		for (const string &f : all_wpts_list) unprocessedfile << strstr(f.data(), "data") << '\n';
-		unprocessedfile.close();
 		Route::all_wpt_files.clear();
-	}
-	else	cout << "All .wpt files in " << Args::datapath << "/data processed." << endl;
+	     }
+	else {	cout << "All .wpt files in " << Args::datapath << "/data processed." << endl;
+		unprocessedfile << "No unprocessed .wpt files.\n";
+	     }
+	unprocessedfile.close();
 
       #ifdef threading_enabled
 	cout << et.et() << "Searching for near-miss points." << endl;
