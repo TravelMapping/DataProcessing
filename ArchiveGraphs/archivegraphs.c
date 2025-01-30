@@ -399,7 +399,7 @@ int main(int argc, char *argv[]) {
   fclose(sfp);
   
   // clean up system to process list
-  stringlist_free(systems_to_process_list);
+  //stringlist_free(systems_to_process_list);
   int i = 0;
   while (systems_to_process[i] != NULL) {
     free(systems_to_process[i++]);
