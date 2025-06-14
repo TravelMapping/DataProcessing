@@ -18,82 +18,96 @@
 
 void sqlfile1
     (	ElapsedTime *et,
-	std::list<std::string*> *updates,
-	std::list<std::string*> *systemupdates,
-	std::mutex* term_mtx
-    ){	char fstr[65];
-	// Once all data is read in and processed, create a .sql file that will
-	// create all of the DB tables to be used by other parts of the project
-	std::ofstream sqlfile(Args::databasename+".sql");
-	// Note: removed "USE" line, DB name must be specified on the mysql command line
+    std::list<std::string*> *updates,
+    std::list<std::string*> *systemupdates,
+    std::mutex* term_mtx
+    ){
+    char fstr[65];
+    std::string dbdir = Args::databasepath;
+    if (!dbdir.empty())
+        dbdir += '/';
 
-	// we have to drop tables in the right order to avoid foreign key errors
-	sqlfile << "DROP TABLE IF EXISTS datacheckErrors;\n";
-	sqlfile << "DROP TABLE IF EXISTS clinchedConnectedRoutes;\n";
-	sqlfile << "DROP TABLE IF EXISTS clinchedRoutes;\n";
-	sqlfile << "DROP TABLE IF EXISTS clinchedOverallMileageByRegion;\n";
-	sqlfile << "DROP TABLE IF EXISTS clinchedSystemMileageByRegion;\n";
-	sqlfile << "DROP TABLE IF EXISTS listEntries;\n";
-	sqlfile << "DROP TABLE IF EXISTS overallMileageByRegion;\n";
-	sqlfile << "DROP TABLE IF EXISTS systemMileageByRegion;\n";
-	sqlfile << "DROP TABLE IF EXISTS clinched;\n";
-	sqlfile << "DROP TABLE IF EXISTS segments;\n";
-	sqlfile << "DROP TABLE IF EXISTS waypoints;\n";
-	sqlfile << "DROP TABLE IF EXISTS connectedRouteRoots;\n";
-	sqlfile << "DROP TABLE IF EXISTS connectedRoutes;\n";
-	sqlfile << "DROP TABLE IF EXISTS routes;\n";
-	sqlfile << "DROP TABLE IF EXISTS systems;\n";
-	sqlfile << "DROP TABLE IF EXISTS updates;\n";
-	sqlfile << "DROP TABLE IF EXISTS systemUpdates;\n";
-	sqlfile << "DROP TABLE IF EXISTS regions;\n";
-	sqlfile << "DROP TABLE IF EXISTS countries;\n";
-	sqlfile << "DROP TABLE IF EXISTS continents;\n";
+    // Create .sql file in the specified directory
+    std::ofstream sqlfile(dbdir + Args::databasename + ".sql");
+    // Note: removed "USE" line, DB name must be specified on the mysql command line
 
-	// first, continents, countries, and regions
+    // we have to drop tables in the right order to avoid foreign key errors
+    sqlfile << "DROP TABLE IF EXISTS datacheckErrors;\n";
+    sqlfile << "DROP TABLE IF EXISTS clinchedConnectedRoutes;\n";
+    sqlfile << "DROP TABLE IF EXISTS clinchedRoutes;\n";
+    sqlfile << "DROP TABLE IF EXISTS clinchedOverallMileageByRegion;\n";
+    sqlfile << "DROP TABLE IF EXISTS clinchedSystemMileageByRegion;\n";
+    sqlfile << "DROP TABLE IF EXISTS listEntries;\n";
+    sqlfile << "DROP TABLE IF EXISTS overallMileageByRegion;\n";
+    sqlfile << "DROP TABLE IF EXISTS systemMileageByRegion;\n";
+    sqlfile << "DROP TABLE IF EXISTS clinched;\n";
+    sqlfile << "DROP TABLE IF EXISTS segments;\n";
+    sqlfile << "DROP TABLE IF EXISTS waypoints;\n";
+    sqlfile << "DROP TABLE IF EXISTS connectedRouteRoots;\n";
+    sqlfile << "DROP TABLE IF EXISTS connectedRoutes;\n";
+    sqlfile << "DROP TABLE IF EXISTS routes;\n";
+    sqlfile << "DROP TABLE IF EXISTS systems;\n";
+    sqlfile << "DROP TABLE IF EXISTS updates;\n";
+    sqlfile << "DROP TABLE IF EXISTS systemUpdates;\n";
+    sqlfile << "DROP TABLE IF EXISTS regions;\n";
+    sqlfile << "DROP TABLE IF EXISTS countries;\n";
+    sqlfile << "DROP TABLE IF EXISTS continents;\n";
+
+    int first;
+    // first, continents, countries, and regions
       #ifndef threading_enabled
-	std::cout << et->et() << "...continents, countries, regions" << std::endl;
+    std::cout << et->et() << "...continents, countries, regions" << std::endl;
       #endif
-	sqlfile << "CREATE TABLE continents (code VARCHAR(" << DBFieldLength::continentCode
-		<< "), name VARCHAR(" << DBFieldLength::continentName
-		<< "), PRIMARY KEY(code));\n";
-	sqlfile << "INSERT INTO continents VALUES\n";
-	bool first = 1;
-	for (size_t c = 0; c < Region::continents.size()-1; c++)
-	{	if (!first) sqlfile << ',';
-		first = 0;
-		sqlfile << "('" << Region::continents[c].first << "','" << Region::continents[c].second << "')\n";
-	}
-	sqlfile << ";\n";
+    sqlfile << "CREATE TABLE continents (code VARCHAR(" << DBFieldLength::continentCode
+        << "), name VARCHAR(" << DBFieldLength::continentName
+        << "), PRIMARY KEY(code));\n";
 
-	sqlfile << "CREATE TABLE countries (code VARCHAR(" << DBFieldLength::countryCode
-		<< "), name VARCHAR(" << DBFieldLength::countryName
-		<< "), PRIMARY KEY(code));\n";
-	sqlfile << "INSERT INTO countries VALUES\n";
-	first = 1;
-	for (size_t c = 0; c < Region::countries.size()-1; c++)
-	{	if (!first) sqlfile << ',';
-		first = 0;
-		sqlfile << "('" << Region::countries[c].first << "','" << double_quotes(Region::countries[c].second) << "')\n";
-	}
-	sqlfile << ";\n";
+    // Write continents data to CSV
+    std::ofstream continents_csv(dbdir + "continents.csv");
+    for (size_t c = 0; c < Region::continents.size()-1; c++)
+    {
+        continents_csv << Region::continents[c].first << "," << Region::continents[c].second << "\n";
+    }
+    continents_csv.close();
 
-	sqlfile << "CREATE TABLE regions (code VARCHAR(" << DBFieldLength::regionCode
-		<< "), name VARCHAR(" << DBFieldLength::regionName
-		<< "), country VARCHAR(" << DBFieldLength::countryCode
-		<< "), continent VARCHAR(" << DBFieldLength::continentCode
-		<< "), regiontype VARCHAR(" << DBFieldLength::regiontype
-		<< "), ";
-	sqlfile << "PRIMARY KEY(code), FOREIGN KEY (country) REFERENCES countries(code), FOREIGN KEY (continent) REFERENCES continents(code));\n";
-	sqlfile << "INSERT INTO regions VALUES\n";
-	first = 1;
-	for (Region *r = Region::allregions.data, *dummy = Region::allregions.end()-1; r < dummy; r++)
-	{	if (!first) sqlfile << ',';
-		first = 0;
-		sqlfile << "('" << r->code << "','" << double_quotes(r->name)
-			<< "','" << r->country_code() << "','" << r->continent_code()
-			<< "','" << r->type << "')\n";
-	}
-	sqlfile << ";\n";
+    // Use LOAD DATA to import continents from CSV (no path in SQL)
+    sqlfile << "LOAD DATA LOCAL INFILE 'continents.csv' INTO TABLE continents FIELDS TERMINATED BY ',' LINES TERMINATED BY '\\n' (code, name);\n";
+
+    sqlfile << "CREATE TABLE countries (code VARCHAR(" << DBFieldLength::countryCode
+        << "), name VARCHAR(" << DBFieldLength::countryName
+        << "), PRIMARY KEY(code));\n";
+
+    // Write countries data to CSV
+    std::ofstream countries_csv(dbdir + "countries.csv");
+    for (size_t c = 0; c < Region::countries.size()-1; c++)
+    {
+        countries_csv << Region::countries[c].first << "," << double_quotes(Region::countries[c].second) << "\n";
+    }
+    countries_csv.close();
+
+    // Use LOAD DATA to import countries from CSV (no path in SQL)
+    sqlfile << "LOAD DATA LOCAL INFILE 'countries.csv' INTO TABLE countries FIELDS TERMINATED BY ',' LINES TERMINATED BY '\\n' (code, name);\n";
+
+    sqlfile << "CREATE TABLE regions (code VARCHAR(" << DBFieldLength::regionCode
+        << "), name VARCHAR(" << DBFieldLength::regionName
+        << "), country VARCHAR(" << DBFieldLength::countryCode
+        << "), continent VARCHAR(" << DBFieldLength::continentCode
+        << "), regiontype VARCHAR(" << DBFieldLength::regiontype
+        << "), ";
+    sqlfile << "PRIMARY KEY(code), FOREIGN KEY (country) REFERENCES countries(code), FOREIGN KEY (continent) REFERENCES continents(code));\n";
+
+    // Write regions data to CSV
+    std::ofstream regions_csv(dbdir + "regions.csv");
+    for (Region *r = Region::allregions.data, *dummy = Region::allregions.end()-1; r < dummy; r++)
+    {
+        regions_csv << r->code << "," << double_quotes(r->name)
+            << "," << r->country_code() << "," << r->continent_code()
+            << "," << r->type << "\n";
+    }
+    regions_csv.close();
+
+    // Use LOAD DATA to import regions from CSV (no path in SQL)
+    sqlfile << "LOAD DATA LOCAL INFILE 'regions.csv' INTO TABLE regions FIELDS TERMINATED BY ',' LINES TERMINATED BY '\\n' (code, name, country, continent, regiontype);\n";
 
 	// next, a table of the systems, consisting of the system name in the
 	// field 'name', the system's country code, its full name, the default
@@ -109,317 +123,363 @@ void sqlfile1
 		<< "), color VARCHAR(" << DBFieldLength::color
 		<< "), level VARCHAR(" << DBFieldLength::level
 		<< "), tier INTEGER, csvOrder INTEGER, PRIMARY KEY(systemName));\n";
-	sqlfile << "INSERT INTO systems VALUES\n";
-	first = 1;
-	unsigned int csvOrder = 0;
-	for (HighwaySystem& h : HighwaySystem::syslist)
-	{	if (!first) sqlfile << ',';
-		first = 0;
-		sqlfile << "('" << h.systemname << "','" << h.country->first << "','"
-			<< double_quotes(h.fullname) << "','" << h.color << "','" << h.level_name()
-			<< "','" << h.tier << "','" << csvOrder << "')\n";
-		csvOrder += 1;
-	}
-	sqlfile << ";\n";
 
-	// next, a table of highways, with the same fields as in the first line
-      #ifndef threading_enabled
-	std::cout << et->et() << "...routes" << std::endl;
-      #endif
-	sqlfile << "CREATE TABLE routes (systemName VARCHAR(" << DBFieldLength::systemName
-		<< "), region VARCHAR(" << DBFieldLength::regionCode
-		<< "), route VARCHAR(" << DBFieldLength::route
-		<< "), banner VARCHAR(" << DBFieldLength::banner
-		<< "), abbrev VARCHAR(" << DBFieldLength::abbrev
-		<< "), city VARCHAR(" << DBFieldLength::city
-		<< "), root VARCHAR(" << DBFieldLength::root
-		<< "), mileage FLOAT, rootOrder INTEGER, csvOrder INTEGER, PRIMARY KEY(root), FOREIGN KEY (systemName) REFERENCES systems(systemName));\n";
-	sqlfile << "INSERT INTO routes VALUES\n";
-	first = 1;
-	csvOrder = 0;
-	for (HighwaySystem& h : HighwaySystem::syslist)
-	  for (Route& r : h.routes)
-	  {	if (!first) sqlfile << ',';
-		first = 0;
-		*fmt::format_to(fstr, "{}", r.mileage) = 0;
-		sqlfile << "('" << r.system->systemname << "','" << r.region->code << "','" << r.route << "','" << r.banner << "','" << r.abbrev
-			<< "','" << double_quotes(r.city) << "','" << r.root << "','" << fstr << "','" << r.rootOrder << "','" << csvOrder << "')\n";
-		csvOrder += 1;
-	  }
-	sqlfile << ";\n";
+    // Write systems data to CSV
+    std::ofstream systems_csv(dbdir + "systems.csv");
+    unsigned int csvOrder = 0;
+    for (HighwaySystem& h : HighwaySystem::syslist)
+    {
+        systems_csv << h.systemname << "," << h.country->first << ","
+            << double_quotes(h.fullname) << "," << h.color << "," << h.level_name()
+            << "," << h.tier << "," << csvOrder << "\n";
+        csvOrder += 1;
+    }
+    systems_csv.close();
 
-	// connected routes table, but only first "root" in each in this table
-      #ifndef threading_enabled
-	std::cout << et->et() << "...connectedRoutes" << std::endl;
-      #endif
-	sqlfile << "CREATE TABLE connectedRoutes (systemName VARCHAR(" << DBFieldLength::systemName
-		<< "), route VARCHAR(" << DBFieldLength::route
-		<< "), banner VARCHAR(" << DBFieldLength::banner
-		<< "), groupName VARCHAR(" << DBFieldLength::city
-		<< "), firstRoot VARCHAR(" << DBFieldLength::root
-		<< "), mileage FLOAT, csvOrder INTEGER, PRIMARY KEY(firstRoot), FOREIGN KEY (firstRoot) REFERENCES routes(root));\n";
-	sqlfile << "INSERT INTO connectedRoutes VALUES\n";
-	first = 1;
-	csvOrder = 0;
-	for (HighwaySystem& h : HighwaySystem::syslist)
-	  for (ConnectedRoute& cr : h.con_routes)
-	  {	if (!first) sqlfile << ',';
-		first = 0;
-		*fmt::format_to(fstr, "','{}'", cr.mileage) = 0;
-		sqlfile << "('" << cr.system->systemname << "','" << cr.route << "','" << cr.banner << "','" << double_quotes(cr.groupname)
-			<< "','" << (cr.roots.size() ? cr.roots[0]->root.data() : "ERROR_NO_ROOTS") << fstr << ",'" << csvOrder << "')\n";
-		csvOrder += 1;
-	  }
-	sqlfile << ";\n";
+    // Use LOAD DATA to import systems from CSV
+    sqlfile << "LOAD DATA LOCAL INFILE 'systems.csv' INTO TABLE systems FIELDS TERMINATED BY ',' LINES TERMINATED BY '\\n' (systemName, countryCode, fullName, color, level, tier, csvOrder);\n";
 
-	// This table has remaining roots for any connected route
-	// that connects multiple routes/roots
-      #ifndef threading_enabled
-	std::cout << et->et() << "...connectedRouteRoots" << std::endl;
-      #endif
-	sqlfile << "CREATE TABLE connectedRouteRoots (firstRoot VARCHAR(" << DBFieldLength::root
-		<< "), root VARCHAR(" << DBFieldLength::root
-		<< "), FOREIGN KEY (firstRoot) REFERENCES connectedRoutes(firstRoot));\n";
-	first = 1;
-	for (HighwaySystem& h : HighwaySystem::syslist)
-	  for (ConnectedRoute& cr : h.con_routes)
-	    for (unsigned int i = 1; i < cr.roots.size(); i++)
-	    {	if (first) sqlfile << "INSERT INTO connectedRouteRoots VALUES\n";
-		else sqlfile << ',';
-		first = 0;
-		sqlfile << "('" << cr.roots[0]->root << "','" << cr.roots[i]->root << "')\n";
-	    }
-	sqlfile << ";\n";
+    // --- routes table ---
+    #ifndef threading_enabled
+    std::cout << et->et() << "...routes" << std::endl;
+    #endif
+    sqlfile << "CREATE TABLE routes (systemName VARCHAR(" << DBFieldLength::systemName
+        << "), region VARCHAR(" << DBFieldLength::regionCode
+        << "), route VARCHAR(" << DBFieldLength::route
+        << "), banner VARCHAR(" << DBFieldLength::banner
+        << "), abbrev VARCHAR(" << DBFieldLength::abbrev
+        << "), city VARCHAR(" << DBFieldLength::city
+        << "), root VARCHAR(" << DBFieldLength::root
+        << "), mileage FLOAT, rootOrder INTEGER, csvOrder INTEGER, PRIMARY KEY(root), FOREIGN KEY (systemName) REFERENCES systems(systemName));\n";
 
-	// Now, a table with raw highway route data: list of points, in order, that define the route
-      #ifndef threading_enabled
-	std::cout << et->et() << "...waypoints" << std::endl;
-      #endif
-	sqlfile << "CREATE TABLE waypoints (pointId INTEGER, pointName VARCHAR(" << DBFieldLength::label
-		<< "), latitude DOUBLE, longitude DOUBLE, root VARCHAR(" << DBFieldLength::root
-		<< "), PRIMARY KEY(pointId), FOREIGN KEY (root) REFERENCES routes(root));\n";
-	unsigned int point_num = 0;
-	for (HighwaySystem& h : HighwaySystem::syslist)
-	  for (Route& r : h.routes)
-	  {	sqlfile << "INSERT INTO waypoints VALUES\n";
-		first = 1;
-		for (Waypoint& w : r.points)
-		{	if (!first) sqlfile << ',';
-			first = 0;
-			sqlfile << "('" << point_num << "','" << w.label;
-			*fmt::format_to(fstr,"','{:.15}",w.lat) = 0; sqlfile << fstr; if (w.lat==int(w.lat)) sqlfile << ".0";
-			*fmt::format_to(fstr,"','{:.15}",w.lng) = 0; sqlfile << fstr; if (w.lng==int(w.lng)) sqlfile << ".0";
-			sqlfile << "','" << r.root + "')\n";
-			point_num+=1;
-		}
-		sqlfile << ";\n";
-	  }
+    // Write routes data to CSV
+    std::ofstream routes_csv(dbdir + "routes.csv");
+    csvOrder = 0;
+    for (HighwaySystem& h : HighwaySystem::syslist)
+      for (Route& r : h.routes)
+      {
+        *fmt::format_to(fstr, "{}", r.mileage) = 0;
+        routes_csv << r.system->systemname << "," << r.region->code << "," << r.route << "," << r.banner << "," << r.abbrev
+            << "," << double_quotes(r.city) << "," << r.root << "," << fstr << "," << r.rootOrder << "," << csvOrder << "\n";
+        csvOrder += 1;
+      }
+    routes_csv.close();
 
-	// Build indices to speed latitude/longitude joins for intersecting highway queries
-	sqlfile << "CREATE INDEX `latitude` ON waypoints(`latitude`);\n";
-	sqlfile << "CREATE INDEX `longitude` ON waypoints(`longitude`);\n";
+    // Use LOAD DATA to import routes from CSV
+    sqlfile << "LOAD DATA LOCAL INFILE 'routes.csv' INTO TABLE routes FIELDS TERMINATED BY ',' LINES TERMINATED BY '\\n' (systemName, region, route, banner, abbrev, city, root, mileage, rootOrder, csvOrder);\n";
 
-	// Table of all HighwaySegments.
-      #ifndef threading_enabled
-	std::cout << et->et() << "...segments" << std::endl;
-      #endif
-	sqlfile << "CREATE TABLE segments (segmentId INTEGER, waypoint1 INTEGER, waypoint2 INTEGER, root VARCHAR(" << DBFieldLength::root
-		<< "), PRIMARY KEY (segmentId), FOREIGN KEY (waypoint1) REFERENCES waypoints(pointId), "
-		<< "FOREIGN KEY (waypoint2) REFERENCES waypoints(pointId), FOREIGN KEY (root) REFERENCES routes(root));\n";
-	unsigned int segment_num = point_num = 0;
-	std::vector<std::pair<unsigned int, const char*>> clinched_list;
-	for (HighwaySystem& h : HighwaySystem::syslist)
-	  for (Route& r : h.routes)
-	  {	sqlfile << "INSERT INTO segments VALUES\n";
-		first = 1;
-		for (HighwaySegment& s : r.segments)
-		{	if (!first) sqlfile << ',';
-			first = 0;
-			sqlfile << "('" << segment_num;
-			sqlfile	<< "','" << point_num++;
-			sqlfile	<< "','" << point_num;
-			sqlfile	<< "','" << r.root << "')\n";
-			for (TravelerList *t : s.clinched_by)
-			  clinched_list.emplace_back(segment_num, t->traveler_name.data());
-			segment_num += 1;
-		}
-		sqlfile << ";\n";
-		point_num++;
-	  }
+    // --- connectedRoutes table ---
+    #ifndef threading_enabled
+    std::cout << et->et() << "...connectedRoutes" << std::endl;
+    #endif
+    sqlfile << "CREATE TABLE connectedRoutes (systemName VARCHAR(" << DBFieldLength::systemName
+        << "), route VARCHAR(" << DBFieldLength::route
+        << "), banner VARCHAR(" << DBFieldLength::banner
+        << "), groupName VARCHAR(" << DBFieldLength::city
+        << "), firstRoot VARCHAR(" << DBFieldLength::root
+        << "), mileage FLOAT, csvOrder INTEGER, PRIMARY KEY(firstRoot), FOREIGN KEY (firstRoot) REFERENCES routes(root));\n";
 
-	// maybe a separate traveler table will make sense but for now, I'll just use
-	// the name from the .list name
-      #ifndef threading_enabled
-	std::cout << et->et() << "...clinched" << std::endl;
-      #endif
-	sqlfile << "CREATE TABLE clinched (segmentId INTEGER, traveler VARCHAR(" << DBFieldLength::traveler
-		<< "), FOREIGN KEY (segmentId) REFERENCES segments(segmentId));\n";
-	for (size_t start = 0; start < clinched_list.size(); start += 10000)
-	{	sqlfile << "INSERT INTO clinched VALUES\n";
-		first = 1;
-		for (size_t c = start; c < start+10000 && c < clinched_list.size(); c++)
-		{	if (!first) sqlfile << ',';
-			first = 0;
-			sqlfile << "('" << clinched_list[c].first << "','" << clinched_list[c].second << "')\n";
-		}
-		sqlfile << ";\n";
-	}
+    // Write connectedRoutes data to CSV
+    std::ofstream conroutes_csv(dbdir + "connectedRoutes.csv");
+    csvOrder = 0;
+    for (HighwaySystem& h : HighwaySystem::syslist)
+      for (ConnectedRoute& cr : h.con_routes)
+      {
+        *fmt::format_to(fstr, "{}", cr.mileage) = 0;
+        conroutes_csv << cr.system->systemname << "," << cr.route << "," << cr.banner << "," << double_quotes(cr.groupname)
+            << "," << (cr.roots.size() ? cr.roots[0]->root.data() : "ERROR_NO_ROOTS") << "," << fstr << "," << csvOrder << "\n";
+        csvOrder += 1;
+      }
+    conroutes_csv.close();
 
-	// overall mileage by region data (with concurrencies accounted for,
-	// active systems only then active+preview)
-      #ifndef threading_enabled
-	std::cout << et->et() << "...overallMileageByRegion" << std::endl;
-      #endif
-	sqlfile << "CREATE TABLE overallMileageByRegion (region VARCHAR(" << DBFieldLength::regionCode
-		<< "), activeMileage DOUBLE, activePreviewMileage DOUBLE);\n";
-	sqlfile << "INSERT INTO overallMileageByRegion VALUES\n";
-	first = 1;
-	for (Region& region : Region::allregions)
-	{	if (region.active_only_mileage+region.active_preview_mileage == 0) continue;
-		if (!first) sqlfile << ',';
-		first = 0;
-		*fmt::format_to(fstr, "','{}','{}')\n", region.active_only_mileage, region.active_preview_mileage) = 0;
-		sqlfile << "('" << region.code << fstr;
-	}
-	sqlfile << ";\n";
+    // Use LOAD DATA to import connectedRoutes from CSV
+    sqlfile << "LOAD DATA LOCAL INFILE 'connectedRoutes.csv' INTO TABLE connectedRoutes FIELDS TERMINATED BY ',' LINES TERMINATED BY '\\n' (systemName, route, banner, groupName, firstRoot, mileage, csvOrder);\n";
 
-	// system mileage by region data (with concurrencies accounted for,
-	// active systems and preview systems only)
-      #ifndef threading_enabled
-	std::cout << et->et() << "...systemMileageByRegion" << std::endl;
-      #endif
-	sqlfile << "CREATE TABLE systemMileageByRegion (systemName VARCHAR(" << DBFieldLength::systemName
-		<< "), region VARCHAR(" << DBFieldLength::regionCode
-		<< "), mileage DOUBLE, FOREIGN KEY (systemName) REFERENCES systems(systemName));\n";
-	sqlfile << "INSERT INTO systemMileageByRegion VALUES\n";
-	first = 1;
-	for (HighwaySystem& h : HighwaySystem::syslist)
-	  if (h.active_or_preview())
-	    for (std::pair<Region* const,double>& rm : h.mileage_by_region)
-	    {	if (!first) sqlfile << ',';
-		first = 0;
-		*fmt::format_to(fstr, "','{}')\n", rm.second) = 0;
-		sqlfile << "('" << h.systemname << "','" << rm.first->code << fstr;
-	    }
-	sqlfile << ";\n";
+    // --- connectedRouteRoots table ---
+    #ifndef threading_enabled
+    std::cout << et->et() << "...connectedRouteRoots" << std::endl;
+    #endif
+    sqlfile << "CREATE TABLE connectedRouteRoots (firstRoot VARCHAR(" << DBFieldLength::root
+        << "), root VARCHAR(" << DBFieldLength::root
+        << "), FOREIGN KEY (firstRoot) REFERENCES connectedRoutes(firstRoot));\n";
 
-	// clinched overall mileage by region data (with concurrencies
-	// accounted for, active systems and preview systems only)
-      #ifndef threading_enabled
-	std::cout << et->et() << "...clinchedOverallMileageByRegion" << std::endl;
-      #endif
-	sqlfile << "CREATE TABLE clinchedOverallMileageByRegion (region VARCHAR(" << DBFieldLength::regionCode
-		<< "), traveler VARCHAR(" << DBFieldLength::traveler
-		<< "), activeMileage DOUBLE, activePreviewMileage DOUBLE);\n";
-	sqlfile << "INSERT INTO clinchedOverallMileageByRegion VALUES\n";
-	first = 1;
-	for (TravelerList& t : TravelerList::allusers)
-	  for (std::pair<Region* const,double>& rm : t.active_preview_mileage_by_region)
-	  {	if (!first) sqlfile << ',';
-		first = 0;
-		auto it = t.active_only_mileage_by_region.find(rm.first);
-		double active_miles = (it != t.active_only_mileage_by_region.end()) ? it->second : 0;
-		*fmt::format_to(fstr, "','{}','{}')\n", active_miles, rm.second) = 0;
-		sqlfile << "('" << rm.first->code << "','" << t.traveler_name << fstr;
-	  }
-	sqlfile << ";\n";
+    // Write connectedRouteRoots data to CSV
+    std::ofstream conroots_csv(dbdir + "connectedRouteRoots.csv");
+    for (HighwaySystem& h : HighwaySystem::syslist)
+      for (ConnectedRoute& cr : h.con_routes)
+        for (unsigned int i = 1; i < cr.roots.size(); i++)
+        {
+            conroots_csv << cr.roots[0]->root << "," << cr.roots[i]->root << "\n";
+        }
+    conroots_csv.close();
 
-	// clinched system mileage by region data (with concurrencies accounted
-	// for, active systems and preview systems only)
-      #ifndef threading_enabled
-	std::cout << et->et() << "...clinchedSystemMileageByRegion" << std::endl;
-      #endif
-	sqlfile << "CREATE TABLE clinchedSystemMileageByRegion (systemName VARCHAR(" << DBFieldLength::systemName
-		<< "), region VARCHAR(" << DBFieldLength::regionCode
-		<< "), traveler VARCHAR(" << DBFieldLength::traveler
-		<< "), mileage DOUBLE, FOREIGN KEY (systemName) REFERENCES systems(systemName));\n";
-	sqlfile << "INSERT INTO clinchedSystemMileageByRegion VALUES\n";
-	first = 1;
-	for (TravelerList& t : TravelerList::allusers)
-	  for (auto& csmbr : t.system_region_mileages)
-	  {	auto& systemname = csmbr.first->systemname;
-		for (auto& rm : csmbr.second)
-		{	if (!first) sqlfile << ',';
-			first = 0;
-			*fmt::format_to(fstr, "{}", rm.second) = 0;
-			sqlfile << "('" << systemname << "','" << rm.first->code << "','" << t.traveler_name << "','" << fstr << "')\n";
-		}
-	  }
-	sqlfile << ";\n";
+    // Use LOAD DATA to import connectedRouteRoots from CSV
+    sqlfile << "LOAD DATA LOCAL INFILE 'connectedRouteRoots.csv' INTO TABLE connectedRouteRoots FIELDS TERMINATED BY ',' LINES TERMINATED BY '\\n' (firstRoot, root);\n";
 
-	// clinched mileage by connected route, active systems and preview
-	// systems only
-      #ifndef threading_enabled
-	std::cout << et->et() << "...clinchedConnectedRoutes" << std::endl;
-      #endif
-	sqlfile << "CREATE TABLE clinchedConnectedRoutes (route VARCHAR(" << DBFieldLength::root
-		<< "), traveler VARCHAR(" << DBFieldLength::traveler
-		<< "), mileage FLOAT, clinched BOOLEAN, FOREIGN KEY (route) REFERENCES connectedRoutes(firstRoot));\n";
-	for (TravelerList& t : TravelerList::allusers)
-	{	if (t.ccr_values.empty()) continue;
-		sqlfile << "INSERT INTO clinchedConnectedRoutes VALUES\n";
-		first = 1;
-		for (auto& rm : t.ccr_values)
-		{	if (!first) sqlfile << ',';
-			first = 0;
-			*fmt::format_to(fstr, "{}", rm.second) = 0;
-			sqlfile << "('" << rm.first->roots[0]->root << "','" << t.traveler_name << "','"
-				<< fstr << "','" << (rm.second == rm.first->mileage) << "')\n";
-		}
-		sqlfile << ";\n";
-	}
+    // --- waypoints table ---
+    #ifndef threading_enabled
+    std::cout << et->et() << "...waypoints" << std::endl;
+    #endif
+    sqlfile << "CREATE TABLE waypoints (pointId INTEGER, pointName VARCHAR(" << DBFieldLength::label
+        << "), latitude DOUBLE, longitude DOUBLE, root VARCHAR(" << DBFieldLength::root
+        << "), PRIMARY KEY(pointId), FOREIGN KEY (root) REFERENCES routes(root));\n";
 
-	// clinched mileage by route, active systems and preview systems only
-      #ifndef threading_enabled
-	std::cout << et->et() << "...clinchedRoutes" << std::endl;
-      #endif
-	sqlfile << "CREATE TABLE clinchedRoutes (route VARCHAR(" << DBFieldLength::root
-		<< "), traveler VARCHAR(" << DBFieldLength::traveler
-		<< "), mileage FLOAT, clinched BOOLEAN, FOREIGN KEY (route) REFERENCES routes(root));\n";
-	for (TravelerList& t : TravelerList::allusers)
-	{	if (t.cr_values.empty()) continue;
-		sqlfile << "INSERT INTO clinchedRoutes VALUES\n";
-		first = 1;
-		for (std::pair<Route*,double>& rm : t.cr_values)
-		{	if (!first) sqlfile << ',';
-			first = 0;
-			*fmt::format_to(fstr, "{}", rm.second) = 0;
-			sqlfile << "('" << rm.first->root << "','" << t.traveler_name << "','"
-				<< fstr << "','" << (rm.second >= rm.first->mileage) << "')\n";
-		}
-		sqlfile << ";\n";
-	}
+    // Write waypoints data to CSV
+    std::ofstream waypoints_csv(dbdir + "waypoints.csv");
+    unsigned int point_num = 0;
+    for (HighwaySystem& h : HighwaySystem::syslist)
+      for (Route& r : h.routes)
+        for (Waypoint& w : r.points)
+        {
+            *fmt::format_to(fstr,"{:.15}",w.lat) = 0;
+            std::string lat_str = fstr;
+            if (w.lat==int(w.lat)) lat_str += ".0";
+            *fmt::format_to(fstr,"{:.15}",w.lng) = 0;
+            std::string lng_str = fstr;
+            if (w.lng==int(w.lng)) lng_str += ".0";
+            waypoints_csv << point_num << "," << w.label << "," << lat_str << "," << lng_str << "," << r.root << "\n";
+            point_num += 1;
+        }
+    waypoints_csv.close();
 
-	// list entries
-	  #ifndef threading_enabled
-	std::cout << et->et() << "...listEntries" << std::endl;
-	  #endif
-	sqlfile << "CREATE TABLE listEntries (traveler VARCHAR(" << DBFieldLength::traveler
-		<< "), description VARCHAR(" << DBFieldLength::listDescription
-		<< "), includeInRanks BOOLEAN);\n";
-	sqlfile << "INSERT INTO listEntries VALUES\n";
-	first = 1;
-	for (TravelerList& t : TravelerList::allusers)
-	{	if (!first) sqlfile << ',';
-		first = 0;
-		// look for this traveler in the listinfo map
-		auto it = TravelerList::listinfo.find(t.traveler_name);
-		// if found, use the description and includeInRanks values from the map
-		if (it != TravelerList::listinfo.end())
-		{	sqlfile << "('" << t.traveler_name << "','" << double_quotes(it->second[0]) << "'," << (it->second[1] == "1" ? "TRUE" : "FALSE") << ")\n";
-		    // remove it from the map
-			TravelerList::listinfo.erase(it);
-		}
-		else 
-		{   // use the defaults
-			sqlfile << "('" << t.traveler_name << "','" << double_quotes(TravelerList::defaults[0]) << "'," << (TravelerList::defaults[1] == "1" ? "TRUE" : "FALSE") << ")\n";
-		}
-	}
-	sqlfile << ";\n";
+    // Use LOAD DATA to import waypoints from CSV
+    sqlfile << "LOAD DATA LOCAL INFILE 'waypoints.csv' INTO TABLE waypoints FIELDS TERMINATED BY ',' LINES TERMINATED BY '\\n' (pointId, pointName, latitude, longitude, root);\n";
 
-	// report any remaining entries in the listinfo map as errors (TODO)
+    // --- segments table ---
+    #ifndef threading_enabled
+    std::cout << et->et() << "...segments" << std::endl;
+    #endif
+    sqlfile << "CREATE TABLE segments (segmentId INTEGER, waypoint1 INTEGER, waypoint2 INTEGER, root VARCHAR(" << DBFieldLength::root
+        << "), PRIMARY KEY (segmentId), FOREIGN KEY (waypoint1) REFERENCES waypoints(pointId), "
+        << "FOREIGN KEY (waypoint2) REFERENCES waypoints(pointId), FOREIGN KEY (root) REFERENCES routes(root));\n";
 
-	// create indexes for some tables to improve query performance
+    // Write segments data to CSV
+    std::ofstream segments_csv(dbdir + "segments.csv");
+    unsigned int segment_num = 0;
+    point_num = 0;
+    std::vector<std::pair<unsigned int, const char*>> clinched_list;
+    for (HighwaySystem& h : HighwaySystem::syslist)
+      for (Route& r : h.routes)
+        for (HighwaySegment& s : r.segments)
+        {
+            segments_csv << segment_num << "," << point_num << "," << point_num+1 << "," << r.root << "\n";
+            for (TravelerList *t : s.clinched_by)
+                clinched_list.emplace_back(segment_num, t->traveler_name.data());
+            segment_num += 1;
+            point_num++;
+        }
+    segments_csv.close();
+
+    // Use LOAD DATA to import segments from CSV
+    sqlfile << "LOAD DATA LOCAL INFILE 'segments.csv' INTO TABLE segments FIELDS TERMINATED BY ',' LINES TERMINATED BY '\\n' (segmentId, waypoint1, waypoint2, root);\n";
+
+    // --- clinched table ---
+    #ifndef threading_enabled
+    std::cout << et->et() << "...clinched" << std::endl;
+    #endif
+    sqlfile << "CREATE TABLE clinched (segmentId INTEGER, traveler VARCHAR(" << DBFieldLength::traveler
+        << "), FOREIGN KEY (segmentId) REFERENCES segments(segmentId));\n";
+
+    // Write clinched data to CSV
+    std::ofstream clinched_csv(dbdir + "clinched.csv");
+    for (const auto& entry : clinched_list)
+    {
+        clinched_csv << entry.first << "," << entry.second << "\n";
+    }
+    clinched_csv.close();
+
+    // Use LOAD DATA to import clinched from CSV
+    sqlfile << "LOAD DATA LOCAL INFILE 'clinched.csv' INTO TABLE clinched FIELDS TERMINATED BY ',' LINES TERMINATED BY '\\n' (segmentId, traveler);\n";
+
+    // --- overallMileageByRegion table ---
+    #ifndef threading_enabled
+    std::cout << et->et() << "...overallMileageByRegion" << std::endl;
+    #endif
+    sqlfile << "CREATE TABLE overallMileageByRegion (region VARCHAR(" << DBFieldLength::regionCode
+        << "), activeMileage DOUBLE, activePreviewMileage DOUBLE);\n";
+
+    // Write overallMileageByRegion data to CSV
+    std::ofstream ombr_csv(dbdir + "overallMileageByRegion.csv");
+    for (Region& region : Region::allregions)
+    {
+        if (region.active_only_mileage+region.active_preview_mileage == 0) continue;
+        *fmt::format_to(fstr, "{},{}", region.active_only_mileage, region.active_preview_mileage) = 0;
+        ombr_csv << region.code << "," << fstr << "\n";
+    }
+    ombr_csv.close();
+
+    // Use LOAD DATA to import overallMileageByRegion from CSV
+    sqlfile << "LOAD DATA LOCAL INFILE 'overallMileageByRegion.csv' INTO TABLE overallMileageByRegion FIELDS TERMINATED BY ',' LINES TERMINATED BY '\\n' (region, activeMileage, activePreviewMileage);\n";
+
+    // --- systemMileageByRegion table ---
+    #ifndef threading_enabled
+    std::cout << et->et() << "...systemMileageByRegion" << std::endl;
+    #endif
+    sqlfile << "CREATE TABLE systemMileageByRegion (systemName VARCHAR(" << DBFieldLength::systemName
+        << "), region VARCHAR(" << DBFieldLength::regionCode
+        << "), mileage DOUBLE, FOREIGN KEY (systemName) REFERENCES systems(systemName));\n";
+
+    // Write systemMileageByRegion data to CSV
+    std::ofstream smbr_csv(dbdir + "systemMileageByRegion.csv");
+    for (HighwaySystem& h : HighwaySystem::syslist)
+      if (h.active_or_preview())
+        for (std::pair<Region* const,double>& rm : h.mileage_by_region)
+        {
+            *fmt::format_to(fstr, "{}", rm.second) = 0;
+            smbr_csv << h.systemname << "," << rm.first->code << "," << fstr << "\n";
+        }
+    smbr_csv.close();
+
+    // Use LOAD DATA to import systemMileageByRegion from CSV
+    sqlfile << "LOAD DATA LOCAL INFILE 'systemMileageByRegion.csv' INTO TABLE systemMileageByRegion FIELDS TERMINATED BY ',' LINES TERMINATED BY '\\n' (systemName, region, mileage);\n";
+
+    // --- clinchedOverallMileageByRegion table ---
+    #ifndef threading_enabled
+    std::cout << et->et() << "...clinchedOverallMileageByRegion" << std::endl;
+    #endif
+    sqlfile << "CREATE TABLE clinchedOverallMileageByRegion (region VARCHAR(" << DBFieldLength::regionCode
+        << "), traveler VARCHAR(" << DBFieldLength::traveler
+        << "), activeMileage DOUBLE, activePreviewMileage DOUBLE);\n";
+
+    // Write clinchedOverallMileageByRegion data to CSV
+    std::ofstream combr_csv(dbdir + "clinchedOverallMileageByRegion.csv");
+    for (TravelerList& t : TravelerList::allusers)
+      for (std::pair<Region* const,double>& rm : t.active_preview_mileage_by_region)
+      {
+        auto it = t.active_only_mileage_by_region.find(rm.first);
+        double active_miles = (it != t.active_only_mileage_by_region.end()) ? it->second : 0;
+        *fmt::format_to(fstr, "{},{}", active_miles, rm.second) = 0;
+        combr_csv << rm.first->code << "," << t.traveler_name << "," << fstr << "\n";
+      }
+    combr_csv.close();
+
+    // Use LOAD DATA LOCAL INFILE to import clinchedOverallMileageByRegion from CSV
+    sqlfile << "LOAD DATA LOCAL INFILE 'clinchedOverallMileageByRegion.csv' INTO TABLE clinchedOverallMileageByRegion FIELDS TERMINATED BY ',' LINES TERMINATED BY '\\n' (region, traveler, activeMileage, activePreviewMileage);\n";
+
+    // --- clinchedSystemMileageByRegion table ---
+    #ifndef threading_enabled
+    std::cout << et->et() << "...clinchedSystemMileageByRegion" << std::endl;
+    #endif
+    sqlfile << "CREATE TABLE clinchedSystemMileageByRegion (systemName VARCHAR(" << DBFieldLength::systemName
+        << "), region VARCHAR(" << DBFieldLength::regionCode
+        << "), traveler VARCHAR(" << DBFieldLength::traveler
+        << "), mileage DOUBLE, FOREIGN KEY (systemName) REFERENCES systems(systemName));\n";
+
+    // Write clinchedSystemMileageByRegion data to CSV
+    std::ofstream csmbr_csv(dbdir + "clinchedSystemMileageByRegion.csv");
+    for (TravelerList& t : TravelerList::allusers)
+      for (auto& csmbr : t.system_region_mileages)
+      {
+        auto& systemname = csmbr.first->systemname;
+        for (auto& rm : csmbr.second)
+        {
+            *fmt::format_to(fstr, "{}", rm.second) = 0;
+            csmbr_csv << systemname << "," << rm.first->code << "," << t.traveler_name << "," << fstr << "\n";
+        }
+      }
+    csmbr_csv.close();
+
+    // Use LOAD DATA to import clinchedSystemMileageByRegion from CSV
+    sqlfile << "LOAD DATA LOCAL INFILE 'clinchedSystemMileageByRegion.csv' INTO TABLE clinchedSystemMileageByRegion FIELDS TERMINATED BY ',' LINES TERMINATED BY '\\n' (systemName, region, traveler, mileage);\n";
+
+    // --- clinchedConnectedRoutes table ---
+    #ifndef threading_enabled
+    std::cout << et->et() << "...clinchedConnectedRoutes" << std::endl;
+    #endif
+    sqlfile << "CREATE TABLE clinchedConnectedRoutes (route VARCHAR(" << DBFieldLength::root
+        << "), traveler VARCHAR(" << DBFieldLength::traveler
+        << "), mileage FLOAT, clinched BOOLEAN, FOREIGN KEY (route) REFERENCES connectedRoutes(firstRoot));\n";
+
+    // Write clinchedConnectedRoutes data to CSV
+    std::ofstream ccr_csv(dbdir + "clinchedConnectedRoutes.csv");
+    for (TravelerList& t : TravelerList::allusers)
+      for (auto& rm : t.ccr_values)
+      {
+        *fmt::format_to(fstr, "{}", rm.second) = 0;
+        ccr_csv << rm.first->roots[0]->root << "," << t.traveler_name << "," << fstr << "," << (rm.second == rm.first->mileage) << "\n";
+      }
+    ccr_csv.close();
+
+    // Use LOAD DATA to import clinchedConnectedRoutes from CSV
+    sqlfile << "LOAD DATA LOCAL INFILE 'clinchedConnectedRoutes.csv' INTO TABLE clinchedConnectedRoutes FIELDS TERMINATED BY ',' LINES TERMINATED BY '\\n' (route, traveler, mileage, clinched);\n";
+
+    // --- clinchedRoutes table ---
+    #ifndef threading_enabled
+    std::cout << et->et() << "...clinchedRoutes" << std::endl;
+    #endif
+    sqlfile << "CREATE TABLE clinchedRoutes (route VARCHAR(" << DBFieldLength::root
+        << "), traveler VARCHAR(" << DBFieldLength::traveler
+        << "), mileage FLOAT, clinched BOOLEAN, FOREIGN KEY (route) REFERENCES routes(root));\n";
+
+    // Write clinchedRoutes data to CSV
+    std::ofstream cr_csv(dbdir + "clinchedRoutes.csv");
+    for (TravelerList& t : TravelerList::allusers)
+      for (std::pair<Route*,double>& rm : t.cr_values)
+      {
+        *fmt::format_to(fstr, "{}", rm.second) = 0;
+        cr_csv << rm.first->root << "," << t.traveler_name << "," << fstr << "," << (rm.second >= rm.first->mileage) << "\n";
+      }
+    cr_csv.close();
+
+    // Use LOAD DATA to import clinchedRoutes from CSV
+    sqlfile << "LOAD DATA LOCAL INFILE 'clinchedRoutes.csv' INTO TABLE clinchedRoutes FIELDS TERMINATED BY ',' LINES TERMINATED BY '\\n' (route, traveler, mileage, clinched);\n";
+
+    // --- listEntries table ---
+    #ifndef threading_enabled
+    std::cout << et->et() << "...listEntries" << std::endl;
+    #endif
+    sqlfile << "CREATE TABLE listEntries (traveler VARCHAR(" << DBFieldLength::traveler
+        << "), description VARCHAR(" << DBFieldLength::listDescription
+        << "), includeInRanks BOOLEAN);\n";
+
+    // Write listEntries data to CSV
+    std::ofstream listentries_csv(dbdir + "listEntries.csv");
+    for (TravelerList& t : TravelerList::allusers)
+    {
+        // look for this traveler in the listinfo map
+        auto it = TravelerList::listinfo.find(t.traveler_name);
+        // if found, use the description and includeInRanks values from the map
+        if (it != TravelerList::listinfo.end())
+        {
+            listentries_csv << t.traveler_name << "," << double_quotes(it->second[0]) << "," << (it->second[1] == "1" ? "TRUE" : "FALSE") << "\n";
+            // remove it from the map
+            TravelerList::listinfo.erase(it);
+        }
+        else
+        {   // use the defaults
+            listentries_csv << t.traveler_name << "," << double_quotes(TravelerList::defaults[0]) << "," << (TravelerList::defaults[1] == "1" ? "TRUE" : "FALSE") << "\n";
+        }
+    }
+    listentries_csv.close();
+
+    // Use LOAD DATA to import listEntries from CSV
+    sqlfile << "LOAD DATA LOCAL INFILE 'listEntries.csv' INTO TABLE listEntries FIELDS TERMINATED BY ',' LINES TERMINATED BY '\\n' (traveler, description, includeInRanks);\n";
+
+    // --- datacheckErrors table ---
+    #ifndef threading_enabled
+    std::cout << et->et() << "...datacheckErrors" << std::endl;
+    #endif
+    sqlfile << "CREATE TABLE datacheckErrors (route VARCHAR(" << DBFieldLength::root
+        << "), label1 VARCHAR(" << DBFieldLength::label
+        << "), label2 VARCHAR(" << DBFieldLength::label
+        << "), label3 VARCHAR(" << DBFieldLength::label
+        << "), code VARCHAR(" << DBFieldLength::dcErrCode
+        << "), value VARCHAR(" << DBFieldLength::dcErrValue
+        << "), falsePositive BOOLEAN, FOREIGN KEY (route) REFERENCES routes(root));\n";
+
+    // Write datacheckErrors data to CSV
+    std::ofstream dce_csv(dbdir + "datacheckErrors.csv");
+    for (Datacheck &d : Datacheck::errors)
+    {
+        dce_csv << d.route->root << "," << d.label1 << "," << d.label2 << "," << d.label3 << ","
+                << d.code << "," << d.info << "," << int(d.fp) << "\n";
+    }
+    dce_csv.close();
+
+    // Use LOAD DATA to import datacheckErrors from CSV
+    sqlfile << "LOAD DATA LOCAL INFILE 'datacheckErrors.csv' INTO TABLE datacheckErrors FIELDS TERMINATED BY ',' LINES TERMINATED BY '\\n' (route, label1, label2, label3, code, value, falsePositive);\n";
+
+    // create indexes for some tables to improve query performance
 	sqlfile << "DROP INDEX IF EXISTS idx_com_region_traveler ON clinchedOverallMileageByRegion;\n";
 	sqlfile << "DROP INDEX IF EXISTS idx_le_traveler_includeInRanks ON listEntries;\n"; 
 	sqlfile << "DROP INDEX IF EXISTS idx_routes_region_systemName ON routes;\n";
@@ -445,64 +505,44 @@ void sqlfile1
 		<< "), root VARCHAR(" << DBFieldLength::root
 		<< "), description VARCHAR(" << DBFieldLength::updateText
 		<< "));\n";
-	if (updates->size())
-	{	sqlfile << "INSERT INTO updates VALUES\n";
-		first = 1;
-		for (std::string* &update : *updates)
-		{	if (!first) sqlfile << ',';
-			first = 0;
-			sqlfile << "('"  << update[0] << "','" << double_quotes(update[1]) << "','" << double_quotes(update[2])
-				<< "','" << update[3] << "','" << double_quotes(update[4]) << "')\n";
-			delete[] update;
-		}
-		sqlfile << ";\n";
-	}
 
-	// systemUpdates entries
-      #ifndef threading_enabled
-	std::cout << et->et() << "...systemUpdates" << std::endl;
-      #endif
-	sqlfile << "CREATE TABLE systemUpdates (date VARCHAR(" << DBFieldLength::date
-		<< "), region VARCHAR(" << DBFieldLength::countryRegion
-		<< "), systemName VARCHAR(" << DBFieldLength::systemName
-		<< "), description VARCHAR(" << DBFieldLength::systemFullName
-		<< "), statusChange VARCHAR(" << DBFieldLength::statusChange
-		<< "));\n";
-	if (systemupdates->size())
-	{	sqlfile << "INSERT INTO systemUpdates VALUES\n";
-		first = 1;
-		for (std::string* &systemupdate : *systemupdates)
-		{	if (!first) sqlfile << ',';
-			first = 0;
-			sqlfile << "('"  << systemupdate[0] << "','" << double_quotes(systemupdate[1])
-				<< "','" << systemupdate[2] << "','" << double_quotes(systemupdate[3]) << "','" << systemupdate[4] << "')\n";
-			delete[] systemupdate;
-		}
-		sqlfile << ";\n";
-	}
+    // Write updates data to CSV
+    std::ofstream updates_csv(dbdir + "updates.csv");
+    for (std::string* &update : *updates)
+    {
+        updates_csv << update[0] << "," << double_quotes(update[1]) << "," << double_quotes(update[2])
+            << "," << update[3] << "," << double_quotes(update[4]) << "\n";
+        delete[] update;
+    }
+    updates_csv.close();
 
-	// datacheck errors into the db
-      #ifndef threading_enabled
-	std::cout << et->et() << "...datacheckErrors" << std::endl;
-      #endif
-	sqlfile << "CREATE TABLE datacheckErrors (route VARCHAR(" << DBFieldLength::root
-		<< "), label1 VARCHAR(" << DBFieldLength::label
-		<< "), label2 VARCHAR(" << DBFieldLength::label
-		<< "), label3 VARCHAR(" << DBFieldLength::label
-		<< "), code VARCHAR(" << DBFieldLength::dcErrCode
-		<< "), value VARCHAR(" << DBFieldLength::dcErrValue
-		<< "), falsePositive BOOLEAN, FOREIGN KEY (route) REFERENCES routes(root));\n";
-	if (Datacheck::errors.size())
-	{	sqlfile << "INSERT INTO datacheckErrors VALUES\n";
-		bool first = 1;
-		for (Datacheck &d : Datacheck::errors)
-		{	if (!first) sqlfile << ',';
-			first = 0;
-			sqlfile << "('" << d.route->root << "',";
-			sqlfile << "'"  << d.label1 << "','" << d.label2 << "','" << d.label3 << "',";
-			sqlfile << "'"  << d.code << "','" << d.info << "','" << int(d.fp) << "')\n";
-		}
-	}
+    // Use LOAD DATA to import updates from CSV
+    sqlfile << "LOAD DATA LOCAL INFILE 'updates.csv' INTO TABLE updates FIELDS TERMINATED BY ',' LINES TERMINATED BY '\\n' (date, region, route, root, description);\n";
+
+    // --- systemUpdates table ---
+    #ifndef threading_enabled
+    std::cout << et->et() << "...systemUpdates" << std::endl;
+    #endif
+    sqlfile << "CREATE TABLE systemUpdates (date VARCHAR(" << DBFieldLength::date
+        << "), region VARCHAR(" << DBFieldLength::countryRegion
+        << "), systemName VARCHAR(" << DBFieldLength::systemName
+        << "), description VARCHAR(" << DBFieldLength::systemFullName
+        << "), statusChange VARCHAR(" << DBFieldLength::statusChange
+        << "));\n";
+
+    // Write systemUpdates data to CSV
+    std::ofstream systemupdates_csv(dbdir + "systemUpdates.csv");
+    for (std::string* &systemupdate : *systemupdates)
+    {
+        systemupdates_csv << systemupdate[0] << "," << double_quotes(systemupdate[1])
+            << "," << systemupdate[2] << "," << double_quotes(systemupdate[3]) << "," << systemupdate[4] << "\n";
+        delete[] systemupdate;
+    }
+    systemupdates_csv.close();
+
+    // Use LOAD DATA to import systemUpdates from CSV
+    sqlfile << "LOAD DATA LOCAL INFILE 'systemUpdates.csv' INTO TABLE systemUpdates FIELDS TERMINATED BY ',' LINES TERMINATED BY '\\n' (date, region, systemName, description, statusChange);\n";
+
 	sqlfile << ";\n";
 	sqlfile.close();
       #ifdef threading_enabled
@@ -513,11 +553,15 @@ void sqlfile1
      }
 
 void sqlfile2(ElapsedTime *et, std::list<std::array<std::string,3>> *graph_types)
-{	std::ofstream sqlfile(Args::databasename+".sql", std::ios::app);
+{
+    std::string dbdir = Args::databasepath;
+    if (!dbdir.empty())
+        dbdir += '/';
+    std::ofstream sqlfile(dbdir + Args::databasename + ".sql", std::ios::app);
 
-	// update graph info in DB if graphs were generated
-	if (!Args::skipgraphs)
-	{
+    // update graph info in DB if graphs were generated
+    if (!Args::skipgraphs)
+    {
 	      #ifndef threading_enabled
 		std::cout << et->et() << "...graphs" << std::endl;
 	      #endif

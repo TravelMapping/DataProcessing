@@ -114,6 +114,7 @@ graphdir=graphdata
 grapharchives=grapharchives
 nmpmdir=
 nmpmflags=
+sqldir=sql
 
 # process command line args
 nextitem=
@@ -307,7 +308,7 @@ if [[ "$pull" == "1" ]]; then
 fi
 
 echo "$0: creating directories"
-mkdir -p $indir/$logdir/users $indir/$statdir $indir/$logdir/nmpbyregion
+mkdir -p $indir/$logdir/users $indir/$statdir $indir/$logdir/nmpbyregion $indir/$sqldir
 if [[ "$nmpmdir" != "" ]]; then
     mkdir -p $indir/$nmpmdir
 fi
@@ -338,7 +339,7 @@ if [[ "$nmpmdir" != "" ]]; then
     nmpmflags="-n $indir/$nmpmdir"
 fi
 echo "$0: launching $siteupdate"
-$siteupdate $errorcheck -d $dbname-$datestr $graphflag -l $indir/$logdir -c $indir/$statdir -g $indir/$graphdir $nmpmflags -w $tmbasedir/$repo -u $tmbasedir/UserData/$listdir -x .$listext | tee -a $indir/$logdir/siteupdate.log 2>&1
+$siteupdate $errorcheck -d $dbname -D $indir/$sqldir $graphflag -l $indir/$logdir -c $indir/$statdir -g $indir/$graphdir $nmpmflags -w $tmbasedir/$repo -u $tmbasedir/UserData/$listdir -x .$listext | tee -a $indir/$logdir/siteupdate.log 2>&1
 if [[ ${PIPESTATUS[0]} != 0 ]]; then
     date
     exit 1
@@ -349,7 +350,7 @@ if [[ $errorcheck == "-e" ]]; then
 fi
 
 echo "$0: appending rank table creation to SQL file"
-cat addrankstables.sql >> $dbname-$datestr.sql
+cat addrankstables.sql >> $indir/$sqldir/$dbname.sql
 
 if [[ -x ../nmpfilter/nmpbyregion ]]; then
     echo "$0: running nmpbyregion"
@@ -381,7 +382,7 @@ touch $tmwebdir/dbupdating
 
 echo "$0: loading primary $dbname DB"
 date
-mysql --defaults-group-suffix=tmapadmin -u travmapadmin $dbname < $dbname-$datestr.sql
+mysql --defaults-group-suffix=tmapadmin -u travmapadmin $dbname < $indir/$sqldir/$dbname.sql
 if [[ -d $tmwebdir/$grapharchives ]]; then
     for archive in $tmwebdir/$grapharchives/*/*.sql; do
 	mysql --defaults-group-suffix=tmapadmin -u travmapadmin $dbname < $archive
@@ -419,18 +420,18 @@ ln -sf updates/$datestr current
 cd - > /dev/null
 
 echo "$0: loading $dbname DB copy"
-mysql --defaults-group-suffix=tmapadmin -u travmapadmin ${dbname}Copy < $dbname-$datestr.sql
+mysql --defaults-group-suffix=tmapadmin -u travmapadmin ${dbname}Copy < $indir/$sqldir/$dbname.sql
 if [[ -d $tmwebdir/$grapharchives ]]; then
     for archive in $tmwebdir/$grapharchives/*/*.sql; do
 	mysql --defaults-group-suffix=tmapadmin -u travmapadmin ${dbname}Copy < $archive
     done
 fi
-echo "$0: moving sql file to $instdir"
-mv $dbname-$datestr.sql $instdir
+echo "$0: moving sql files to $instdir"
+mv $indir/$sqldir $instdir
 
 if [[ "$compress" != "0" ]]; then
-    echo "$0: Compressing $dbname-$datestr.sql with $compress $compressflag (backgrounded)"
-    $compress $compressflag $instdir/$dbname-$datestr.sql &
+    echo "$0: Compressing $sqldir/$dbname.sql and .csv files with $compress $compressflag (backgrounded)"
+    $compress $compressflag $instdir/$sqldir/{$dbname.sql,*.csv} &
 fi
 
 if [[ "$mail" == "1" ]]; then
