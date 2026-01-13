@@ -73,6 +73,7 @@ HighwaySystem::HighwaySystem(std::string &line, ErrorList &el)
 	std::cout /*<< systemname*/ << '.' << std::flush;
 
 	// read chopped routes CSV
+	size_t chopped_lines = 1;
 	file.open(Args::datapath+"/data/_systems/"+systemname+".csv");
 	if (!file) el.add_error("Could not open "+Args::datapath+"/data/_systems/"+systemname+".csv");
 	else {	getline(file, line); // ignore header line
@@ -82,14 +83,17 @@ HighwaySystem::HighwaySystem(std::string &line, ErrorList &el)
 			while ( line.size() && strchr("\r\t ", line.back()) ) line.pop_back();
 			if (line.size()) lines.emplace_back(std::move(line));
 		}
-		Route* r = routes.alloc(lines.size());
-		for (std::string& l : lines)
-		  try {	new(r) Route(l, this, el);
-			// placement new
-			r->region->routes.push_back(r);
-			r++;
-		      }
-		  catch (const int) {--routes.size;}
+		if ( (chopped_lines = lines.size()) )
+		     {	Route* r = routes.alloc(lines.size());
+			for (std::string& l : lines)
+			  try {	new(r) Route(l, this, el);
+				// placement new
+				r->region->routes.push_back(r);
+				r++;
+			      }
+			  catch (const int) {--routes.size;}
+		     }
+		else	el.add_error("0 valid lines in "+systemname+".csv");
 	     }
 	file.close();
 
@@ -103,15 +107,22 @@ HighwaySystem::HighwaySystem(std::string &line, ErrorList &el)
 			while ( line.size() && strchr("\r\t ", line.back()) ) line.pop_back();
 			if (line.size()) lines.emplace_back(std::move(line));
 		}
-		ConnectedRoute* cr = con_routes.alloc(lines.size());
-		for (std::string& l : lines)
-		  try {	new(cr) ConnectedRoute(l, this, el);
-			// placement new
-			cr++;
-		      }
-		  catch (const int) {--con_routes.size;}
+		if (lines.size())
+		    {	ConnectedRoute* cr = con_routes.alloc(lines.size());
+			for (std::string& l : lines)
+			  try {	new(cr) ConnectedRoute(l, this, el);
+				// placement new
+				cr++;
+			      }
+			  catch (const int) {--con_routes.size;}
+		    }
+		else {	el.add_error("0 valid lines in "+systemname+"_con.csv");
+			throw 0xc0c57;
+		     }
 	     }
 	file.close();
+
+	if (!chopped_lines) throw 0xc57;;
 }
 
 void HighwaySystem::systems_csv(ErrorList& el)
