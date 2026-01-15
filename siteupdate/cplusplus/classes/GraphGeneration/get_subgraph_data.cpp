@@ -49,12 +49,13 @@ else {	// We know there's a PlaceRadius, as no GraphListEntry
 	me.shrink_to_fit();
      }
 
-// count vertices
+// count vertices & initialize vertex numbers
 for (HGVertex* v : mv)
-{	switch (v->visibility) // fall-thru is a Good Thing!
-	{	case 2:	 cv_count++;
-		case 1:	 tv_count++;
-		default: sv_count++;
+{	int* vnum = HGVertex::vnums+(v-vertices.data())*3;
+	switch (v->visibility) // fall-thru is a Good Thing!
+	{	case 2:	 vnum[1] = cv_count++;
+		case 1:	 vnum[2] = tv_count++;
+		default: vnum[0] = sv_count++;
 	}
 }
 

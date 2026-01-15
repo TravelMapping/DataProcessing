@@ -14,16 +14,13 @@ class HGVertex
 	double lat, lng;
 	const std::string *unique_name;
 	std::vector<HGEdge*> incident_edges;
-	int *s_vertex_num;
-	int *c_vertex_num;
-	int *t_vertex_num;
 	uint16_t edge_count;
 	char visibility;
 
 	static std::atomic_uint num_hidden;
+	static thread_local int* vnums;
 
 	void setup(Waypoint*, const std::string*);
-	~HGVertex();
 
 	HGEdge* front(unsigned char);
 	HGEdge* back (unsigned char);

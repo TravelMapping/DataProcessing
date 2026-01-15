@@ -1,5 +1,6 @@
 #include "threads.h"
 #include "../classes/GraphGeneration/GraphListEntry.h"
+#include "../classes/GraphGeneration/HGVertex.h"
 #include "../classes/GraphGeneration/HighwayGraph.h"
 #include "../classes/HighwaySegment/HighwaySegment.h"
 #include "../classes/HighwaySystem/HighwaySystem.h"

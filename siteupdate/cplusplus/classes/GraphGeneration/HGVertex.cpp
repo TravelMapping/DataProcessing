@@ -8,15 +8,12 @@
 #include "../Waypoint/Waypoint.h"
 
 std::atomic_uint HGVertex::num_hidden(0);
+thread_local int* HGVertex::vnums;
 
 void HGVertex::setup(Waypoint *wpt, const std::string *n)
 {	lat = wpt->lat;
 	lng = wpt->lng;
 	wpt->vertex = this;
-	s_vertex_num = new int[Args::numthreads];
-	c_vertex_num = new int[Args::numthreads];
-	t_vertex_num = new int[Args::numthreads];
-		       // deleted by ~HGVertex
 	unique_name = n;
 	edge_count = 0;
 	visibility = 0;
@@ -36,13 +33,6 @@ void HGVertex::setup(Waypoint *wpt, const std::string *n)
 	else if (!wpt->is_hidden)
 		visibility = 2;
 	else	num_hidden++;
-}
-
-HGVertex::~HGVertex()
-{	//std::cout << "deleting vertex at " << first_waypoint->str() << std::endl;
-	delete[] s_vertex_num;
-	delete[] c_vertex_num;
-	delete[] t_vertex_num;
 }
 
 HGEdge* HGVertex::front(unsigned char format)

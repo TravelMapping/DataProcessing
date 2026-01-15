@@ -3,6 +3,7 @@ void SubgraphThread
 	HighwayGraph* graph_data, WaypointQuadtree* qt, ElapsedTime* et
 )
 {	//std::cout << "Starting SubgraphThread " << id << std::endl;
+	HGVertex::vnums = new int[graph_data->vertices.size()*3];
 	while (GraphListEntry::num < GraphListEntry::entries.size())
 	{	l->lock();
 		if (GraphListEntry::num >= GraphListEntry::entries.size())
@@ -16,4 +17,5 @@ void SubgraphThread
 		l->unlock();
 		graph_data->write_subgraphs_tmg(i, id, qt, et, t);
 	}
+	delete[] HGVertex::vnums;
 }
