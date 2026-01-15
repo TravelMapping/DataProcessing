@@ -402,7 +402,7 @@ void HighwayGraph::write_master_graphs_tmg()
 	  if (e->format & HGEdge::simple)
 	  {	simplefile << e->vertex1->s_vertex_num[0] << ' '
 			   << e->vertex2->s_vertex_num[0] << ' ';
-		e->segment->write_label(simplefile, 0);
+		simplefile << e->segment_name;
 		simplefile << '\n';
 	  }
 	}
@@ -490,7 +490,9 @@ void HighwayGraph::write_subgraphs_tmg
 	{ if (e->format & HGEdge::simple)
 	  {	simplefile << e->vertex1->s_vertex_num[threadnum] << ' '
 			   << e->vertex2->s_vertex_num[threadnum] << ' ';
-		e->segment->write_label(simplefile, g->systems);
+		if (g->systems)
+			e->segment->write_label(simplefile, g->systems);
+		else	simplefile << e->segment_name;
 		simplefile << '\n';
 	  }
 	  if (e->format & HGEdge::collapsed)
