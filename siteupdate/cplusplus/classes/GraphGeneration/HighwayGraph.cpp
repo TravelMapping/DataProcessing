@@ -374,13 +374,11 @@ void HighwayGraph::write_master_graphs_tmg()
 	unsigned int sv = 0;
 	unsigned int cv = 0;
 	unsigned int tv = 0;
-	char fstr[57];
 	for (HGVertex& v : vertices)
-	{	*fmt::format_to(fstr, " {:.15} {:.15}", v.lat, v.lng) = 0;
-		switch (v.visibility) // fall-thru is a Good Thing!
-		{ case 2:  collapfile << *(v.unique_name) << fstr << '\n'; v.c_vertex_num[0] = cv++;
-		  case 1:  travelfile << *(v.unique_name) << fstr << '\n'; v.t_vertex_num[0] = tv++;
-		  default: simplefile << *(v.unique_name) << fstr << '\n'; v.s_vertex_num[0] = sv++;
+	{	switch (v.visibility) // fall-thru is a Good Thing!
+		{ case 2:  collapfile << *(v.unique_name) << v.coordstr << '\n'; v.c_vertex_num[0] = cv++;
+		  case 1:  travelfile << *(v.unique_name) << v.coordstr << '\n'; v.t_vertex_num[0] = tv++;
+		  default: simplefile << *(v.unique_name) << v.coordstr << '\n'; v.s_vertex_num[0] = sv++;
 		}
 	}
 
@@ -394,10 +392,10 @@ void HighwayGraph::write_master_graphs_tmg()
 	//TODO: multiple functions performing the same instructions for multiple files?
 	for (HGEdge *e = edges.begin(), *end = edges.end(); e != end; ++e)
 	{ if (e->format & HGEdge::collapsed)
-		e->collapsed_tmg_line(collapfile, fstr, 0, 0);
+		e->collapsed_tmg_line(collapfile, 0, 0);
 	  if (e->format & HGEdge::traveled)
 	  {	for (char*n=cbycode; n<cbycode+nibbles; ++n) *n = '0';
-		e->traveled_tmg_line(travelfile, fstr, 0, 0, TravelerList::allusers.size, cbycode);
+		e->traveled_tmg_line(travelfile, 0, 0, TravelerList::allusers.size, cbycode);
 	  }
 	  if (e->format & HGEdge::simple)
 	  {	simplefile << e->vertex1->s_vertex_num[0] << ' '
@@ -469,13 +467,11 @@ void HighwayGraph::write_subgraphs_tmg
 	unsigned int sv = 0;
 	unsigned int cv = 0;
 	unsigned int tv = 0;
-	char fstr[57];
 	for (HGVertex *v : mv)
-	{	*fmt::format_to(fstr, " {:.15} {:.15}", v->lat, v->lng) = 0;
-		switch(v->visibility) // fall-thru is a Good Thing!
-		{ case 2:  collapfile << *(v->unique_name) << fstr << '\n'; v->c_vertex_num[threadnum] = cv++;
-		  case 1:  travelfile << *(v->unique_name) << fstr << '\n'; v->t_vertex_num[threadnum] = tv++;
-		  default: simplefile << *(v->unique_name) << fstr << '\n'; v->s_vertex_num[threadnum] = sv++;
+	{	switch(v->visibility) // fall-thru is a Good Thing!
+		{ case 2:  collapfile << *(v->unique_name) << v->coordstr << '\n'; v->c_vertex_num[threadnum] = cv++;
+		  case 1:  travelfile << *(v->unique_name) << v->coordstr << '\n'; v->t_vertex_num[threadnum] = tv++;
+		  default: simplefile << *(v->unique_name) << v->coordstr << '\n'; v->s_vertex_num[threadnum] = sv++;
 		}
 	}
 
@@ -494,10 +490,10 @@ void HighwayGraph::write_subgraphs_tmg
 		simplefile << '\n';
 	  }
 	  if (e->format & HGEdge::collapsed)
-		e->collapsed_tmg_line(collapfile, fstr, threadnum, g->systems);
+		e->collapsed_tmg_line(collapfile, threadnum, g->systems);
 	  if (e->format & HGEdge::traveled)
 	  {	for (char*n=cbycode; n<cbycode+nibbles; ++n) *n = '0';
-		e->traveled_tmg_line (travelfile, fstr, threadnum, g->systems, travnum, cbycode);
+		e->traveled_tmg_line (travelfile, threadnum, g->systems, travnum, cbycode);
 	  }
 	}
 	delete[] cbycode;
