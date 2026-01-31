@@ -1,3 +1,4 @@
+#define FMT_HEADER_ONLY
 #include "HGVertex.h"
 #include "../Args/Args.h"
 #include "../Datacheck/Datacheck.h"
@@ -6,6 +7,7 @@
 #include "../Region/Region.h"
 #include "../Route/Route.h"
 #include "../Waypoint/Waypoint.h"
+#include <fmt/format.h>
 
 std::atomic_uint HGVertex::num_hidden(0);
 
@@ -65,4 +67,13 @@ HGEdge* HGVertex::back(unsigned char format)
 	// will only be called on vertices with edge_count of 2.
 	// Nonetheless, let's stop the compiler from complaining.
 	throw this;
+}
+
+void HGVertex::format_coordstr()
+{	// sanity checks to avoid buffer overflows via >3 digits to L of decimal point
+	while (lat > 90)	lat -= 360;
+	while (lat < -90)	lat += 360;
+	while (lng >= 540)	lng -= 360;
+	while (lng <= -540)	lng += 360;
+	*fmt::format_to(coordstr, " {:.15} {:.15}", lat, lng) = 0;
 }

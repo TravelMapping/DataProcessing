@@ -19,6 +19,7 @@ class HGVertex
 	int *t_vertex_num;
 	uint16_t edge_count;
 	char visibility;
+	char coordstr[45]; // only need 43, but alignment requires extra anyway
 
 	static std::atomic_uint num_hidden;
 
@@ -27,4 +28,5 @@ class HGVertex
 
 	HGEdge* front(unsigned char);
 	HGEdge* back (unsigned char);
+	void format_coordstr();
 };
