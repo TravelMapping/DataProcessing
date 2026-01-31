@@ -97,29 +97,6 @@ void HGEdge::detach()
 	detach(vertex2->incident_edges);
 }
 
-// write line to tmg collapsed edge file
-void HGEdge::collapsed_tmg_line(std::ofstream& file, unsigned int threadnum, std::vector<HighwaySystem*> *systems)
-{	file << vertex1->c_vertex_num[threadnum] << ' ' << vertex2->c_vertex_num[threadnum] << ' ';
-	if (systems)
-		segment->write_label(file, systems);
-	else	file << segment_name;
-	for (HGVertex *intermediate : intermediate_points)
-		file << intermediate->coordstr;
-	file << '\n';
-}
-
-// write line to tmg traveled edge file
-void HGEdge::traveled_tmg_line(std::ofstream& file, unsigned int threadnum, std::vector<HighwaySystem*> *systems, bool trav, char* code)
-{	file << vertex1->t_vertex_num[threadnum] << ' ' << vertex2->t_vertex_num[threadnum] << ' ';
-	if (systems)
-		segment->write_label(file, systems);
-	else	file << segment_name;
-	file << ' ' << (trav ? segment->clinchedby_code(code, threadnum) : "0");
-	for (HGVertex *intermediate : intermediate_points)
-		file << intermediate->coordstr;
-	file << '\n';
-}
-
 /* line appropriate for a tmg collapsed edge file, with debug info
 std::string HGEdge::debug_tmg_line(std::vector<HighwaySystem*> *systems, unsigned int threadnum)
 {	std::string line = std::to_string(vertex1->c_vertex_num[threadnum]) + " [" + *vertex1->unique_name + "] " \

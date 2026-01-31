@@ -34,10 +34,12 @@ graph_data.waypoint_naming_log.clear();
 	  thr[t] = thread(SubgraphThread, t, &list_mtx, &term_mtx, &graph_data, &all_waypoints, &et);
 	THREADLOOP thr[t].join();
       #else
+	HGVertex::vnums = new int[graph_data.vertices.size()*3];
 	for (	graph_data.write_master_graphs_tmg();
 		GraphListEntry::num < GraphListEntry::entries.size();
 		GraphListEntry::num += 3
 	    )	graph_data.write_subgraphs_tmg(GraphListEntry::num, 0, &all_waypoints, &et, &term_mtx);
+	delete[] HGVertex::vnums;
       #endif
 	cout << '!' << endl;
 } //*/
