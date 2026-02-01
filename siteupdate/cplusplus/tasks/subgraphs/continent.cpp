@@ -11,7 +11,7 @@ for (auto c = Region::continents.data(), dummy = c+Region::continents.size()-1; 
 	else {	GraphListEntry::add_group(
 			c->first + "-continent",
 			c->second + " All Routes on Continent",
-			'C', regions, nullptr, nullptr);
+			'C', regions, nullptr, nullptr, el);
 	     }
 }
 graph_types.push_back({"continent", "Routes Within a Continent", "These graphs contain the routes on a continent."});

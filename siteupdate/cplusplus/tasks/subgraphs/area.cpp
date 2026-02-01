@@ -36,7 +36,7 @@ while (getline(file, line))
 	GraphListEntry::add_group(
 		string(fields[1]) + fields[4] + "-area",
 		string(fields[0]) + " (" + fields[4] + " mi radius)",
-		'a', nullptr, nullptr, a);
+		'a', nullptr, nullptr, a, el);
 	delete[] cline;
 }
 file.close();

@@ -11,7 +11,7 @@ for (auto c = Region::countries.data(), dummy = c+Region::countries.size()-1; c 
 	else {	GraphListEntry::add_group(
 			c->first + "-country",
 			c->second + " All Routes in Country",
-			'c', regions, nullptr, nullptr);
+			'c', regions, nullptr, nullptr, el);
 	     }
 }
 graph_types.push_back({"country", "Routes Within a Single Multi-Region Country",

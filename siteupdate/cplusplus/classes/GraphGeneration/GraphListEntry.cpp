@@ -1,21 +1,33 @@
 #define FMT_HEADER_ONLY
 #include "GraphListEntry.h"
 #include "PlaceRadius.h"
+#include "../ErrorList/ErrorList.h"
 #include "../HighwaySystem/HighwaySystem.h"
 #include "../Region/Region.h"
 #include <fmt/format.h>
 
 std::vector<GraphListEntry> GraphListEntry::entries;
 size_t GraphListEntry::num; // iterator for entries
+std::unordered_map<std::string, GraphListEntry*> GraphListEntry::unique_names;
 
 GraphListEntry::GraphListEntry(std::string r, std::string d, char f, char c, std::vector<Region*> *rg, std::vector<HighwaySystem*> *sys, PlaceRadius *pr):
 	regions(rg), systems(sys), placeradius(pr),
 	root(r), descr(d), form(f), cat(c) {}
 
-void GraphListEntry::add_group(std::string&& r, std::string&& d, char c, std::vector<Region*> *rg, std::vector<HighwaySystem*> *sys, PlaceRadius *pr)
+void GraphListEntry::add_group(std::string&& r, std::string&& d, char c, std::vector<Region*> *rg, std::vector<HighwaySystem*> *sys, PlaceRadius *pr, ErrorList& el)
 {	GraphListEntry::entries.emplace_back(r, d, 's', c, rg, sys, pr);
 	GraphListEntry::entries.emplace_back(r, d, 'c', c, rg, sys, pr);
 	GraphListEntry::entries.emplace_back(r, d, 't', c, rg, sys, pr);
+	GraphListEntry* this_one = &GraphListEntry::entries.back();
+	auto ib = unique_names.emplace(r, this_one);
+	if (!ib.second)
+	{	GraphListEntry* that_one = ib.first->second;
+		std::string err = "Duplicate graph name " + r + " in " + that_one->category();
+		if (this_one->cat != that_one->cat)
+			err += " and " + this_one->category();
+		err += " graphs";
+		el.add_error(err);
+	}
 }
 
 std::string GraphListEntry::filename()

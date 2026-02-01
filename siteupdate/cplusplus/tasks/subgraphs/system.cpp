@@ -8,7 +8,7 @@ while (getline(file, line))
 	{   GraphListEntry::add_group(
 		h->systemname + "-system",
 		h->systemname + " (" + h->fullname + ")",
-		's', nullptr, new vector<HighwaySystem*>(1, h), nullptr);
+		's', nullptr, new vector<HighwaySystem*>(1, h), nullptr, el);
 			      // deleted @ end of HighwayGraph::write_subgraphs_tmg
 	    h->is_subgraph_system = 1;
 	} else el.add_error("devel system "+h->systemname+" in systemgraphs.csv");
