@@ -43,6 +43,7 @@ CommonObjects = \
   classes/Waypoint/Waypoint.o \
   classes/Waypoint/canonical_waypoint_name/canonical_waypoint_name.o \
   functions/crawl_rte_data.o \
+  functions/failure_cleanup.o \
   functions/rdstats.o \
   functions/route_and_label_logs.o \
   functions/tmstring.o

@@ -23,6 +23,7 @@ while (getline(file, line))
 		     + " bytes in multisystem.csv line: " + line);
 	systems = new vector<HighwaySystem*>;
 		  // deleted @ end of HighwayGraph::write_subgraphs_tmg
+		  // or when aborting due to ErrorList errors
 	for(char* s = strtok(fields[2], ","); s; s = strtok(0, ","))
 	  try {	HighwaySystem* const h = HighwaySystem::sysname_hash.at(s);
 		if (h->active_or_preview())
