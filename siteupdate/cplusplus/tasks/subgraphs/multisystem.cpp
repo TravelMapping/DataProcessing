@@ -34,7 +34,7 @@ while (getline(file, line))
 	  catch (const std::out_of_range&)
 	      {	el.add_error("unrecognized system code "+string(s)+" in multisystem.csv line: "+line);
 	      }
-	if (systems->size()) GraphListEntry::add_group(fields[1], fields[0], 'S', nullptr, systems, nullptr);
+	if (systems->size()) GraphListEntry::add_group(fields[1], fields[0], 'S', nullptr, systems, nullptr, el);
 	else delete systems;
 	delete[] cline;
 }

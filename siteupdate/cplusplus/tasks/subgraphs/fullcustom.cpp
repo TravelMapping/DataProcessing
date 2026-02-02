@@ -86,7 +86,7 @@ if (file.is_open())
 			      }
 			delete[] field;
 		     }
-		if (ok)	GraphListEntry::add_group(std::move(root), std::move(descr), 'f', regions, systems, a);
+		if (ok)	GraphListEntry::add_group(std::move(root), std::move(descr), 'f', regions, systems, a, el);
 		else {	delete regions;
 			delete systems;
 			delete a;

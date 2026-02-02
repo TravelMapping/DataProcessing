@@ -1,7 +1,9 @@
+class ErrorList;
 class HighwaySystem;
 class PlaceRadius;
 class Region;
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 class GraphListEntry
@@ -26,8 +28,9 @@ class GraphListEntry
 
 	static std::vector<GraphListEntry> entries;
 	static size_t num; // iterator for entries
-	std::string tag();
+	static std::unordered_map<std::string, GraphListEntry*> unique_names;
 
 	GraphListEntry(std::string, std::string, char, char, std::vector<Region*>*, std::vector<HighwaySystem*>*, PlaceRadius*);
-	static void add_group(std::string&&,  std::string&&,  char, std::vector<Region*>*, std::vector<HighwaySystem*>*, PlaceRadius*);
+	static void add_group(std::string&&,  std::string&&,  char, std::vector<Region*>*, std::vector<HighwaySystem*>*, PlaceRadius*, ErrorList&);
+	std::string tag();
 };

@@ -30,7 +30,7 @@ while (getline(file, line))
 	  catch (const out_of_range&)
 	      {	el.add_error("unrecognized region code "+string(rg)+" in multiregion.csv line: "+line);
 	      }
-	if (regions->size()) GraphListEntry::add_group(fields[1], fields[0], 'R', regions, nullptr, nullptr);
+	if (regions->size()) GraphListEntry::add_group(fields[1], fields[0], 'R', regions, nullptr, nullptr, el);
 	else delete regions;
 	delete[] cline;
 }
