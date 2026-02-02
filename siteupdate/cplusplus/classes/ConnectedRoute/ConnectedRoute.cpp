@@ -9,7 +9,7 @@ ConnectedRoute::ConnectedRoute(std::string &line, HighwaySystem *sys, ErrorList 
 {	mileage = 0;
 	disconnected = 0;
 
-	// parse chopped routes csv line
+	// parse connected routes csv line
 	system = sys;
 	size_t NumFields = 5;
 	std::string sys_str, roots_str;
