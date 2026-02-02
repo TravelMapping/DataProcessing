@@ -97,12 +97,13 @@ const char* HighwaySegment::clinchedby_code(char* code, unsigned int threadnum)
 	return code;
 }
 
-// compute an edge label, optionally restricted by systems
+// write an edge label, restricted by systems
 void HighwaySegment::write_label(std::ofstream& file, std::vector<HighwaySystem*> *systems)
 {	if (concurrent)
 	     {	bool write_comma = 0;
 		for (HighwaySegment* cs : *concurrent)
-		  if ( !cs->route->system->devel() && (!systems || contains(*systems, cs->route->system)) )
+		  // This function is only called when systems is nonzero. Safe to dereference.
+		  if ( !cs->route->system->devel() && contains(*systems, cs->route->system) )
 		  {	if  (write_comma) file << ',';
 			else write_comma = 1;
 			file << cs->route->route;
