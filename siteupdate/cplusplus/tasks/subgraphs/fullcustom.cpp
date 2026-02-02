@@ -35,7 +35,7 @@ if (file.is_open())
 			double r = strtod(radius.data(), &endptr);
 			if (*endptr || r <= 0)	{el.add_error("invalid radius in fullcustom.csv line: " + line); ok = 0;}
 			a = new PlaceRadius(descr.data(), root.data(), lat, lng, r);
-		}	    // deleted @ end of HighwayGraph::write_subgraphs_tmg
+		}	    // deleted @ end of HighwayGraph::write_subgraphs_tmg or when aborting due to ErrorList errors
 		else if (blanks != 3)
 		{	el.add_error("lat/lng/radius error in fullcustom.csv line: [" + line
 				   + "], either all or none must be populated");
@@ -51,6 +51,7 @@ if (file.is_open())
 		if (regionlist.empty()) regions = 0;
 		else {	regions = new vector<Region*>;
 				  // deleted @ end of HighwayGraph::write_subgraphs_tmg
+				  // or when aborting due to ErrorList errors
 			char* field = new char[regionlist.size()+1];
 				      // deleted once region tokens are processed
 			strcpy(field, regionlist.data());
@@ -68,6 +69,7 @@ if (file.is_open())
 		if (systemlist.empty()) systems = 0;
 		else {	systems = new vector<HighwaySystem*>;
 				  // deleted @ end of HighwayGraph::write_subgraphs_tmg
+				  // or when aborting due to ErrorList errors
 			char* field = new char[systemlist.size()+1];
 				      // deleted once system tokens are processed
 			strcpy(field, systemlist.data());

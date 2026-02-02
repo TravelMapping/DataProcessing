@@ -2,6 +2,7 @@
 for (auto c = Region::countries.data(), dummy = c+Region::countries.size()-1; c < dummy; c++)
 {	regions = new vector<Region*>;
 		  // deleted @ end of HighwayGraph::write_subgraphs_tmg
+		  // or when aborting due to ErrorList errors
 	for (Region& r : Region::allregions)
 	  // does it match this country and have routes?
 	  if (c == r.country && r.active_preview_mileage)

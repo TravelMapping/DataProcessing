@@ -33,6 +33,7 @@ while (getline(file, line))
 	if (*endptr || r <= 0) {el.add_error("invalid radius in areagraphs.csv line: " + line); r=1;}
 	PlaceRadius *a = new PlaceRadius(fields[0], fields[1], lat, lng, r);
 			 // deleted @ end of HighwayGraph::write_subgraphs_tmg
+			 // or when aborting due to ErrorList errors
 	GraphListEntry::add_group(
 		string(fields[1]) + fields[4] + "-area",
 		string(fields[0]) + " (" + fields[4] + " mi radius)",

@@ -1,12 +1,12 @@
 // Tab Width = 8
 
-// Travel Mapping Project, Jim Teresco and Eric Bryant, 2015-2024
+// Travel Mapping Project, Jim Teresco and Eric Bryant, 2015-2026
 /* Code to read .csv and .wpt files and prepare for
 adding to the Travel Mapping Project database.
 
-(c) 2015-2024, Jim Teresco and Eric Bryant
+(c) 2015-2026, Jim Teresco and Eric Bryant
 Original Python version by Jim Teresco, with contributions from Eric Bryant and the TravelMapping team
-C++ translation by Eric Bryant
+C++ version by Eric Bryant and Jim Teresco
 
 This module defines classes to represent the contents of a
 .csv file that lists the highways within a system, and a
@@ -39,9 +39,10 @@ This module defines classes to represent the contents of a
 #include <thread>
 #include "threads/threads.h"
 #endif
-void allbyregionactiveonly(std::mutex*, double);
-void allbyregionactivepreview(std::mutex*, double);
 using namespace std;
+void allbyregionactiveonly(mutex*, double);
+void allbyregionactivepreview(mutex*, double);
+void failure_cleanup(WaypointQuadtree&, vector<unsigned int>&, list<string*>&, list<string*>&);
 
 int main(int argc, char *argv[])
 {	ifstream file;
@@ -50,6 +51,7 @@ int main(int argc, char *argv[])
 	ErrorList el;
 	double active_only_miles = 0;
 	double active_preview_miles = 0;
+	vector<unsigned int> colocate_counts(2,0);
 
 	// argument parsing
 	if (Args::init(argc, argv)) return 1;
@@ -198,6 +200,7 @@ int main(int argc, char *argv[])
 	{	cout << et.et() << "ABORTING due to " << el.error_list.size() << " errors:" << endl;
 		for (unsigned int i = 0; i < el.error_list.size(); i++)
 			cout << i+1 << ": " << el.error_list[i] << endl;
+		failure_cleanup(all_waypoints, colocate_counts, updates, systemupdates);
 		return 1;
 	}
 
@@ -228,64 +231,7 @@ int main(int argc, char *argv[])
 	     }
 
 	// print some statistics
-	cout << et.et() << "Processed " << HighwaySystem::syslist.size << " highway systems." << endl;
-	unsigned int routes = 0;
-	unsigned int points = 0;
-	unsigned int segments = 0;
-	for (HighwaySystem& h : HighwaySystem::syslist)
-	{	routes += h.routes.size;
-		for (Route& r : h.routes)
-		{	points += r.points.size;
-			segments += r.segments.size;
-		}
-	}
-	cout << "Processed " << routes << " routes with a total of " << points << " points and " << segments << " segments." << endl;
-	if (points != all_waypoints.size())
-	  cout << "MISMATCH: all_waypoints contains " << all_waypoints.size() << " waypoints!" << endl;
-	cout << et.et() << "WaypointQuadtree contains " << all_waypoints.total_nodes() << " total nodes." << endl;
-
-	vector<unsigned int> colocate_counts(2,0);
-	if (!Args::errorcheck)
-	{	// compute colocation of waypoints stats
-	        cout << et.et() << "Computing waypoint colocation stats";
-	        if (Args::colocationlimit)
-		  {   cout << ", reporting all with " << Args::colocationlimit << " or more colocations:" << endl;
-		  }
-		else
-		  {   cout << "." << endl;
-		  }
-		all_waypoints.final_report(colocate_counts);
-		cout << "Waypoint colocation counts:" << endl;
-		unsigned int unique_locations = 0;
-		for (unsigned int c = 1; c < colocate_counts.size(); c++)
-		{	unique_locations += colocate_counts[c];
-			printf("%6i are each occupied by %2i waypoints.\n", colocate_counts[c], c);
-		}
-		cout << "Unique locations: " << unique_locations << endl;
-	} else	all_waypoints.final_report(colocate_counts);
-
-	/* EDB
-	cout << endl;
-	unsigned int a_count = 0;
-	unsigned int p_count = 0;
-	unsigned int d_count = 0;
-	unsigned other_count = 0;
-	unsigned int total_rtes = 0;
-	for (HighwaySystem& h : HighwaySystem::syslist)
-	  for (Route* r : h.route_list)
-	  {	total_rtes++;
-		if (h.devel()) d_count++;
-		else {	if (h.active()) a_count++;
-			else if (h.preview()) p_count++;
-			     else other_count++;
-		     }
-	  }
-	cout << a_count+p_count << " clinchable routes:" << endl;
-	cout << a_count << " in active systems, and" << endl;
-	cout << p_count << " in preview systems." << endl;
-	cout << d_count << " routes in devel systems." << endl;
-	if (other_count) cout << other_count << " routes not designated active/preview/devel!" << endl;
-	cout << total_rtes << " total routes." << endl;//*/
+	#include "tasks/final_stats.cpp"
 
 	if (Args::errorcheck)
 	    cout << "\n!!! DATA CHECK SUCCESSFUL !!!\n" << endl;

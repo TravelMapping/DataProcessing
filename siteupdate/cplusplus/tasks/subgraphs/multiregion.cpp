@@ -23,6 +23,7 @@ while (getline(file, line))
 		     + " bytes in multiregion.csv line: " + line);
 	regions = new vector<Region*>;
 		  // deleted @ end of HighwayGraph::write_subgraphs_tmg
+		  // or when aborting due to ErrorList errors
 	for(char* rg = strtok(fields[2], ","); rg; rg = strtok(0, ","))
 	  try {	regions->push_back(Region::code_hash.at(rg));
 	      }

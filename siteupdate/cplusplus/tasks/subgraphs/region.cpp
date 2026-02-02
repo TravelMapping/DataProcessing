@@ -6,5 +6,5 @@ for (Region& region : Region::allregions)
 		region.name + " (" + region.type + ")", 'r',
 		new vector<Region*>(1, &region), nullptr, nullptr);
 		// deleted @ end of HighwayGraph::write_subgraphs_tmg
-}
+}		// or when aborting due to ErrorList errors
 graph_types.push_back({"region", "Routes Within a Single Region", "These graphs contain all routes currently plotted within the given region."});
