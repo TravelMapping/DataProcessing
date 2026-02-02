@@ -14,8 +14,7 @@
 #include "../Waypoint/Waypoint.h"
 #include "../WaypointQuadtree/WaypointQuadtree.h"
 #include "../../templates/contains.cpp"
-#include <fmt/format.h>
-#include <fstream>
+#include <fmt/ostream.h>
 #include <thread>
 
 HighwayGraph::HighwayGraph(WaypointQuadtree &all_waypoints, ElapsedTime &et)
@@ -374,13 +373,13 @@ void HighwayGraph::write_master_graphs_tmg()
 	unsigned int sv = 0;
 	unsigned int cv = 0;
 	unsigned int tv = 0;
-	char fstr[57];
+	int* vnum = HGVertex::vnums;
 	for (HGVertex& v : vertices)
-	{	*fmt::format_to(fstr, " {:.15} {:.15}", v.lat, v.lng) = 0;
-		switch (v.visibility) // fall-thru is a Good Thing!
-		{ case 2:  collapfile << *(v.unique_name) << fstr << '\n'; v.c_vertex_num[0] = cv++;
-		  case 1:  travelfile << *(v.unique_name) << fstr << '\n'; v.t_vertex_num[0] = tv++;
-		  default: simplefile << *(v.unique_name) << fstr << '\n'; v.s_vertex_num[0] = sv++;
+	{	switch (v.visibility) // fall-thru is a Good Thing!
+		{ case 2:  collapfile << *(v.unique_name) << v.coordstr << '\n'; vnum[1] = cv++;
+		  case 1:  travelfile << *(v.unique_name) << v.coordstr << '\n'; vnum[2] = tv++;
+		  default: simplefile << *(v.unique_name) << v.coordstr << '\n'; vnum[0] = sv++;
+			   vnum += 3;
 		}
 	}
 
@@ -393,16 +392,28 @@ void HighwayGraph::write_master_graphs_tmg()
 	// write edges
 	//TODO: multiple functions performing the same instructions for multiple files?
 	for (HGEdge *e = edges.begin(), *end = edges.end(); e != end; ++e)
-	{ if (e->format & HGEdge::collapsed)
-		e->collapsed_tmg_line(collapfile, fstr, 0, 0);
+	{ int* v1num = HGVertex::vnums+(e->vertex1-vertices.data())*3;
+	  int* v2num = HGVertex::vnums+(e->vertex2-vertices.data())*3;
+
+	  if (e->format & HGEdge::collapsed)
+	  {	fmt::print(collapfile, "{} {} ", v1num[1], v2num[1]);
+		collapfile << e->segment_name;
+		for (HGVertex *intermediate : e->intermediate_points)
+			collapfile << intermediate->coordstr;
+		collapfile << '\n';
+	  }
 	  if (e->format & HGEdge::traveled)
 	  {	for (char*n=cbycode; n<cbycode+nibbles; ++n) *n = '0';
-		e->traveled_tmg_line(travelfile, fstr, 0, 0, TravelerList::allusers.size, cbycode);
+		fmt::print(travelfile, "{} {} ", v1num[2], v2num[2]);
+		travelfile << e->segment_name;
+		travelfile << ' ' << (TravelerList::allusers.size ? e->segment->clinchedby_code(cbycode, 0) : "0");
+		for (HGVertex *intermediate : e->intermediate_points)
+			travelfile << intermediate->coordstr;
+		travelfile << '\n';
 	  }
 	  if (e->format & HGEdge::simple)
-	  {	simplefile << e->vertex1->s_vertex_num[0] << ' '
-			   << e->vertex2->s_vertex_num[0] << ' ';
-		e->segment->write_label(simplefile, 0);
+	  {	fmt::print(simplefile, "{} {} ", v1num[0], v2num[0]);
+		simplefile << e->segment_name;
 		simplefile << '\n';
 	  }
 	}
@@ -466,16 +477,11 @@ void HighwayGraph::write_subgraphs_tmg
 	travelfile << tv_count << ' ' << te_count << ' ' << travnum << '\n';
 
 	// write vertices
-	unsigned int sv = 0;
-	unsigned int cv = 0;
-	unsigned int tv = 0;
-	char fstr[57];
 	for (HGVertex *v : mv)
-	{	*fmt::format_to(fstr, " {:.15} {:.15}", v->lat, v->lng) = 0;
-		switch(v->visibility) // fall-thru is a Good Thing!
-		{ case 2:  collapfile << *(v->unique_name) << fstr << '\n'; v->c_vertex_num[threadnum] = cv++;
-		  case 1:  travelfile << *(v->unique_name) << fstr << '\n'; v->t_vertex_num[threadnum] = tv++;
-		  default: simplefile << *(v->unique_name) << fstr << '\n'; v->s_vertex_num[threadnum] = sv++;
+	{	switch(v->visibility) // fall-thru is a Good Thing!
+		{ case 2:  collapfile << *(v->unique_name) << v->coordstr << '\n';
+		  case 1:  travelfile << *(v->unique_name) << v->coordstr << '\n';
+		  default: simplefile << *(v->unique_name) << v->coordstr << '\n';
 		}
 	}
 
@@ -487,17 +493,35 @@ void HighwayGraph::write_subgraphs_tmg
 
 	// write edges
 	for (HGEdge *e : me) //TODO: multiple functions performing the same instructions for multiple files?
-	{ if (e->format & HGEdge::simple)
-	  {	simplefile << e->vertex1->s_vertex_num[threadnum] << ' '
-			   << e->vertex2->s_vertex_num[threadnum] << ' ';
-		e->segment->write_label(simplefile, g->systems);
+	{ int* v1num = HGVertex::vnums+(e->vertex1-vertices.data())*3;
+	  int* v2num = HGVertex::vnums+(e->vertex2-vertices.data())*3;
+
+	  if (e->format & HGEdge::simple)
+	  {	fmt::print(simplefile, "{} {} ", v1num[0], v2num[0]);
+		if (g->systems)
+			e->segment->write_label(simplefile, g->systems);
+		else	simplefile << e->segment_name;
 		simplefile << '\n';
 	  }
 	  if (e->format & HGEdge::collapsed)
-		e->collapsed_tmg_line(collapfile, fstr, threadnum, g->systems);
+	  {	fmt::print(collapfile, "{} {} ", v1num[1], v2num[1]);
+		if (g->systems)
+			e->segment->write_label(collapfile, g->systems);
+		else	collapfile << e->segment_name;
+		for (HGVertex *intermediate : e->intermediate_points)
+			collapfile << intermediate->coordstr;
+		collapfile << '\n';
+	  }
 	  if (e->format & HGEdge::traveled)
 	  {	for (char*n=cbycode; n<cbycode+nibbles; ++n) *n = '0';
-		e->traveled_tmg_line (travelfile, fstr, threadnum, g->systems, travnum, cbycode);
+		fmt::print(travelfile, "{} {} ", v1num[2], v2num[2]);
+		if (g->systems)
+			e->segment->write_label(travelfile, g->systems);
+		else	travelfile << e->segment_name;
+		travelfile << ' ' << (travnum ? e->segment->clinchedby_code(cbycode, threadnum) : "0");
+		for (HGVertex *intermediate : e->intermediate_points)
+			travelfile << intermediate->coordstr;
+		travelfile << '\n';
 	  }
 	}
 	delete[] cbycode;

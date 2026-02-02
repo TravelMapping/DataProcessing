@@ -1,5 +1,6 @@
 class ElapsedTime;
 class ErrorList;
+class HGVertex;
 class HighwayGraph;
 class WaypointQuadtree;
 #include <mutex>
@@ -16,3 +17,4 @@ void RteIntThread    (unsigned int, std::mutex*, ErrorList*);
 void StatsCsvThread  (unsigned int, std::mutex*);
 void SubgraphThread  (unsigned int, std::mutex*, std::mutex*, HighwayGraph*, WaypointQuadtree*, ElapsedTime*);
 void UserLogThread   (unsigned int, std::mutex*, const double, const double);
+void VtxFmtThread    (unsigned int, std::vector<HGVertex>*);

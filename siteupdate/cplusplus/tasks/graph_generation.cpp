@@ -12,6 +12,14 @@ graph_data.waypoint_naming_log.clear();
 {	// Let's keep these braces here, for easily commenting out subgraph generation when developing waypoint simplification routines
 	GraphListEntry::num = 3;
 
+	cout << et.et() << "Formatting vertex coordinate strings." << endl;
+      #ifdef threading_enabled
+	THREADLOOP thr[t] = thread(VtxFmtThread, t, &graph_data.vertices);
+	THREADLOOP thr[t].join();
+      #else
+	for (HGVertex& v : graph_data.vertices) v.format_coordstr();
+      #endif
+
 	cout << et.et() << "Writing master TM graph files." << endl;
 	// print summary info
 	std::cout << "   Simple graph has " << graph_data.vertices.size() << " vertices, " << graph_data.se << " edges." << std::endl;
@@ -26,10 +34,12 @@ graph_data.waypoint_naming_log.clear();
 	  thr[t] = thread(SubgraphThread, t, &list_mtx, &term_mtx, &graph_data, &all_waypoints, &et);
 	THREADLOOP thr[t].join();
       #else
+	HGVertex::vnums = new int[graph_data.vertices.size()*3];
 	for (	graph_data.write_master_graphs_tmg();
 		GraphListEntry::num < GraphListEntry::entries.size();
 		GraphListEntry::num += 3
 	    )	graph_data.write_subgraphs_tmg(GraphListEntry::num, 0, &all_waypoints, &et, &term_mtx);
+	delete[] HGVertex::vnums;
       #endif
 	cout << '!' << endl;
 } //*/
