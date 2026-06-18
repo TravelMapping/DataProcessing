@@ -65,6 +65,8 @@ if [[ -d $HOME/TravelMapping ]]; then
     tmbasedir=$HOME/TravelMapping
 elif [[ -d $HOME/travelmapping ]]; then
     tmbasedir=$HOME/travelmapping
+elif [[ -d $HOME/TMBOX ]]; then
+    tmbasedir=$HOME/TMBOX
 elif [[ -d $HOME/tm ]]; then
     tmbasedir=$HOME/tm
 fi
