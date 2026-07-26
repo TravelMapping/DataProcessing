@@ -1,7 +1,7 @@
 OS := $(shell uname)
-ifeq ($(OS), Linux)
-	OS := $(shell hostnamectl | grep 'Operating System:' | sed -e 's~.*: ~~' -e 's~[ \.]~_~g' -e 's~[^A-Za-z0-9_]~~g')
-endif
+#ifeq ($(OS), Linux)
+#	OS := $(shell hostnamectl | grep 'Operating System:' | sed -e 's~.*: ~~' -e 's~[ \.]~_~g' -e 's~[^A-Za-z0-9_]~~g')
+#endif
 
 CXX = clang++
 CXXFLAGS = -O3 -std=c++11 -isystem /usr/local/include -isystem /opt/local/include -Wno-comment -Wno-dangling-else -Wno-logical-op-parentheses
@@ -65,13 +65,13 @@ all: siteupdate siteupdateST
 -include $(STObjects:.o=.d)
 -include $(CommonObjects:.o=.d)
 
-%MT.o:
+%MT.o: %.cpp
 	@echo $@
 	@$(CXX) $(CXXFLAGS) -D $(OS) -o $@ -D threading_enabled -c $<
-%ST.o:
+%ST.o: %.cpp
 	@echo $@
 	@$(CXX) $(CXXFLAGS) -D $(OS) -o $@ -c $<
-%.o:
+%.o: %.cpp
 	@echo $@
 	@$(CXX) $(CXXFLAGS) -D $(OS) -o $@ -c $<
 
