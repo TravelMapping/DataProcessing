@@ -8,7 +8,7 @@
 #
 
 function usage {
-    echo "Usage: $0 [--help] [--rail] [--nographs] [--nmpmerged] [--noinstall] [--nopull] [--mail] [--use-python] [--remote server] [--numthreads nt] [--tmbasedir dir] [--workdir dir] [--webdir dir]"
+    echo "Usage: $0 [--help] [--rail] [--nographs] [--nmpmerged] [--noinstall] [--nopull] [--nodbcopy] [--mail] [--use-python] [--remote server] [--numthreads nt] [--tmbasedir dir] [--workdir dir] [--webdir dir]"
 }
 
 set -e
@@ -32,6 +32,7 @@ compressflag=
 repo=HighwayData
 listdir=list_files
 listext=list
+dbcopy=1
 dbname=TravelMapping
 datatype=Highways
 
@@ -159,6 +160,8 @@ for arg in "$@"; do
 	install=0
     elif [[ "$arg" == --nopull ]]; then
 	pull=0
+    elif [[ "$arg" == --nodbcopy ]]; then
+	dbcopy=0
     elif [[ "$arg" == --mail ]]; then
 	mail=1
     elif [[ "$arg" == --use-python ]]; then
@@ -377,9 +380,11 @@ if [[ "$graphflag" != "-k" ]]; then
     cd - > /dev/null
 fi
 
-echo "$0: switching to $dbname DB copy"
-ln -sf $tmwebdir/lib/tm.conf.updating $tmwebdir/lib/tm.conf
-touch $tmwebdir/dbupdating
+if [[ "$dbcopy" == "1" ]]; then
+    echo "$0: switching to $dbname DB copy"
+    ln -sf $tmwebdir/lib/tm.conf.updating $tmwebdir/lib/tm.conf
+    touch $tmwebdir/dbupdating
+fi
 
 echo "$0: loading primary $dbname DB"
 date
@@ -389,10 +394,13 @@ if [[ -d $tmwebdir/$grapharchives ]]; then
 	mysql --defaults-group-suffix=tmapadmin -u travmapadmin $dbname < $archive
     done
 fi
-/bin/rm $tmwebdir/dbupdating
-echo "$0: switching to primary $dbname DB"
-date
-ln -sf $tmwebdir/lib/tm.conf.standard $tmwebdir/lib/tm.conf
+
+if [[ "$dbcopy" == "1" ]]; then
+    /bin/rm $tmwebdir/dbupdating
+    echo "$0: switching to primary $dbname DB"
+    date
+    ln -sf $tmwebdir/lib/tm.conf.standard $tmwebdir/lib/tm.conf
+fi
 
 instdir=$tmwebdir/updates/$datestr
 echo "$0: installing logs, stats, graphs in $instdir"
@@ -420,13 +428,16 @@ rm -f current
 ln -sf updates/$datestr current
 cd - > /dev/null
 
-echo "$0: loading $dbname DB copy"
-mysql --defaults-group-suffix=tmapadmin -u travmapadmin ${dbname}Copy < $dbname-$datestr.sql
-if [[ -d $tmwebdir/$grapharchives ]]; then
-    for archive in $tmwebdir/$grapharchives/*/*.sql; do
-	mysql --defaults-group-suffix=tmapadmin -u travmapadmin ${dbname}Copy < $archive
-    done
+if [[ "$dbcopy" == "1" ]]; then
+    echo "$0: loading $dbname DB copy"
+    mysql --defaults-group-suffix=tmapadmin -u travmapadmin ${dbname}Copy < $dbname-$datestr.sql
+    if [[ -d $tmwebdir/$grapharchives ]]; then
+	for archive in $tmwebdir/$grapharchives/*/*.sql; do
+	    mysql --defaults-group-suffix=tmapadmin -u travmapadmin ${dbname}Copy < $archive
+	done
+    fi
 fi
+
 echo "$0: moving sql file to $instdir"
 mv $dbname-$datestr.sql $instdir
 
