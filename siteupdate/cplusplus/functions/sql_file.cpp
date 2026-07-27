@@ -420,13 +420,6 @@ void sqlfile1
 	// report any remaining entries in the listinfo map as errors (TODO)
 
 	// create indexes for some tables to improve query performance
-	sqlfile << "DROP INDEX idx_com_region_traveler ON clinchedOverallMileageByRegion;\n";
-	sqlfile << "DROP INDEX idx_le_traveler_includeInRanks ON listEntries;\n"; 
-	sqlfile << "DROP INDEX idx_routes_region_systemName ON routes;\n";
-	sqlfile << "DROP INDEX idx_cr_route_traveler ON clinchedRoutes;\n";
-	sqlfile << "DROP INDEX idx_systems_systemName ON systems;\n";
-	sqlfile << "DROP INDEX idx_waypoints_lat_lng ON waypoints;\n";
-	sqlfile << "DROP INDEX idx_clinched_segment_traveler ON clinched;\n";
 	sqlfile << "CREATE INDEX idx_com_region_traveler ON clinchedOverallMileageByRegion (region, traveler);\n";
 	sqlfile << "CREATE INDEX idx_le_traveler_includeInRanks ON listEntries (traveler, includeInRanks);\n"; 
 	sqlfile << "CREATE INDEX idx_routes_region_systemName ON routes (region, systemName);\n";
