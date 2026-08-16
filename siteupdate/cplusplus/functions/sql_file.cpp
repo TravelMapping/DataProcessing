@@ -27,6 +27,9 @@ void sqlfile1
 	std::ofstream sqlfile(Args::databasename+".sql");
 	// Note: removed "USE" line, DB name must be specified on the mysql command line
 
+	// force UTF-8MB4 for Docker environments
+	sqlfile << "SET NAMES utf8mb4;\n";
+	
 	// we have to drop tables in the right order to avoid foreign key errors
 	sqlfile << "DROP TABLE IF EXISTS datacheckErrors;\n";
 	sqlfile << "DROP TABLE IF EXISTS clinchedConnectedRoutes;\n";
