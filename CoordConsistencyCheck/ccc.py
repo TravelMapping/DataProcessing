@@ -101,14 +101,11 @@ def get_all_repository_points(real_data_dir):
 
 def determine_git_target(explicit_target=None):
     """Determines what git reference to compare against (HEAD vs base branch / merge-base)."""
-    # 1. Start with explicit argument or GITHUB_BASE_REF environment variable
     target_ref = explicit_target or os.environ.get("GITHUB_BASE_REF", "").strip()
 
-    # If empty or literally "HEAD", default to master
     if not target_ref or target_ref == "HEAD":
         target_ref = "master"
 
-    # 2. Check if target_ref is already a valid git commit SHA
     is_sha = False
     try:
         subprocess.check_call(
@@ -120,13 +117,11 @@ def determine_git_target(explicit_target=None):
     except subprocess.CalledProcessError:
         is_sha = False
 
-    # 3. Handle branch names vs SHAs without prepending origin/ onto SHAs
     if not is_sha and not target_ref.startswith("origin/") and target_ref != "HEAD":
         target_git_ref = f"origin/{target_ref}"
     else:
         target_git_ref = target_ref
 
-    # 4. Attempt to calculate merge-base so we only diff changes introduced by the PR
     try:
         merge_base = subprocess.check_output(
             ["git", "merge-base", target_git_ref, "HEAD"],
@@ -147,7 +142,6 @@ def pair_coordinate_changes(target_records, working_records, removed_coords, add
     removed_recs = [r for r in target_records if (r["lat"], r["lon"]) in removed_coords]
     added_recs = [r for r in working_records if (r["lat"], r["lon"]) in added_coords]
 
-    # Strategy 1: Match by primary label
     added_by_label = defaultdict(list)
     for ar in added_recs:
         added_by_label[ar["primary_label"]].append(ar)
@@ -162,7 +156,6 @@ def pair_coordinate_changes(target_records, working_records, removed_coords, add
         else:
             unmatched_removed.append(rr)
 
-    # Strategy 2: Fallback to positional sequence match for remaining edits
     remaining_added = [ar for recs in added_by_label.values() for ar in recs]
     for rr, ar in zip(unmatched_removed, remaining_added):
         pairs.append((rr, ar))
@@ -177,13 +170,23 @@ def apply_fix_to_file(filepath, line_num, old_line, new_line):
 
     if 1 <= line_num <= len(lines):
         target_line = lines[line_num - 1]
-        # Preserve original line ending (\n or \r\n)
         ending = "\r\n" if target_line.endswith("\r\n") else "\n"
         if old_line in target_line.strip():
             lines[line_num - 1] = new_line + ending
             write_file_safe(filepath, "".join(lines))
             return True
     return False
+
+
+def append_to_github_summary(markdown_text):
+    """Appends Markdown content to the GitHub Actions Job Summary if running in CI."""
+    summary_file = os.environ.get("GITHUB_STEP_SUMMARY")
+    if summary_file:
+        try:
+            with open(summary_file, "a", encoding="utf-8") as f:
+                f.write(markdown_text + "\n")
+        except Exception as e:
+            print(f"Warning: Could not write to GITHUB_STEP_SUMMARY: {e}")
 
 
 def main():
@@ -211,6 +214,7 @@ def main():
         print(
             "Please 'cd' to the root of the repository containing the 'data' directory/symlink and run the script from there."
         )
+        sys.stdout.flush()
         sys.exit(1)
 
     real_data_path = os.path.realpath(data_entry)
@@ -221,6 +225,7 @@ def main():
 
     print(f"Resolved data path: {real_data_dir}")
     print(f"Comparing against Git target: {git_target}")
+    sys.stdout.flush()
 
     # 1. Check git diff for modified .wpt files under the resolved directory
     git_pattern = f"{real_data_dir}/**/*.wpt"
@@ -231,10 +236,13 @@ def main():
         print(
             f"Error running git diff against '{git_target}'. Ensure you are in a git repository."
         )
+        sys.stdout.flush()
         sys.exit(1)
 
     if not diff_output.strip():
         print(f"No .wpt file changes detected under '{real_data_dir}/'.")
+        append_to_github_summary("### Coordinate Consistency Check\n\nNo `.wpt` file changes detected.")
+        sys.stdout.flush()
         sys.exit(0)
 
     # 2. Get list of modified .wpt files
@@ -281,14 +289,18 @@ def main():
 
     if not coord_shifts:
         print("No coordinate changes detected in modified files.")
+        append_to_github_summary("### Coordinate Consistency Check\n\nNo coordinate changes detected in modified `.wpt` files.")
+        sys.stdout.flush()
         sys.exit(0)
 
     # 4. Scan working tree under real_data_dir for remaining instances of old coordinates
     print(f"Indexing repository coordinates under '{real_data_dir}/'...")
+    sys.stdout.flush()
     repo_point_map = get_all_repository_points(real_data_dir)
 
     errors_found = False
     fixed_count = 0
+    summary_md = ["## Coordinate Consistency Check Results\n"]
 
     for old_coord, shifts in coord_shifts.items():
         matches = repo_point_map.get(old_coord, [])
@@ -311,12 +323,21 @@ def main():
             print("-" * 70)
             print("The un-updated old coordinate STILL EXISTS in these files:")
 
+            summary_md.append(f"### Inconsistent Update: Waypoint `{label}`")
+            summary_md.append(f"- **Source Change:** `{origin_file}` (Line {line_num})")
+            summary_md.append(f"- **Old Coordinates:** `({old_lat}, {old_lon})`")
+            summary_md.append(f"- **New Coordinates:** `({new_lat}, {new_lon})`\n")
+            summary_md.append("#### Un-updated Files:")
+
             for filepath, rec in matches:
                 corrected_line = f"{rec['full_labels']} http://www.openstreetmap.org/?lat={new_lat}&lon={new_lon}"
 
                 print(f"\n  File (Line {rec['line_num']}): {filepath}")
                 print(f"  Current line   : {rec['raw_line']}")
                 print(f"  Corrected line : {corrected_line}")
+
+                summary_md.append(f"- **`{filepath}`** (Line {rec['line_num']}):")
+                summary_md.append(f"  ```text\n  Current:   {rec['raw_line']}\n  Corrected: {corrected_line}\n  ```")
 
                 if args.fix:
                     if apply_fix_to_file(
@@ -328,27 +349,28 @@ def main():
                         print(f"  --> ERROR: Could not apply fix to {filepath}")
 
                 if is_ci:
-                    print(
-                        f"::error file={filepath},line={rec['line_num']}::Inconsistent update for waypoint '{label}'. Old ({old_lat}, {old_lon}) updated at {origin_file}:{line_num} to ({new_lat}, {new_lon}). Correct line: {corrected_line}"
-                    )
+                    # Sanitize message for GitHub annotations (no raw newlines inside annotation message)
+                    annot_msg = f"Inconsistent update for '{label}'. Updated in {origin_file}:{line_num} to ({new_lat}, {new_lon}). Correct line: {corrected_line}"
+                    print(f"::error file={filepath},line={rec['line_num']}::{annot_msg}")
 
     if not errors_found:
-        print(
-            "\nSUCCESS: All coordinate updates were applied consistently across all route files."
-        )
+        print("\nSUCCESS: All coordinate updates were applied consistently across all route files.")
+        append_to_github_summary("### Coordinate Consistency Check\n\n:white_check_mark: **SUCCESS**: All coordinate updates were applied consistently across all route files.")
+        sys.stdout.flush()
     elif args.fix:
-        print(
-            f"\nAUTO-FIX APPLIED: Corrected {fixed_count} file(s). Re-run the script to verify."
-        )
+        print(f"\nAUTO-FIX APPLIED: Corrected {fixed_count} file(s). Re-run the script to verify.")
+        summary_md.append(f"\n:wrench: **AUTO-FIX APPLIED**: Corrected {fixed_count} file(s).")
+        append_to_github_summary("\n".join(summary_md))
+        sys.stdout.flush()
         sys.exit(0)
     else:
-        print(
-            "\nFAILURE: Found route files sharing identical coordinates where updates were not applied uniformly."
-        )
+        print("\nFAILURE: Found route files sharing identical coordinates where updates were not applied uniformly.")
         print("Tip: Re-run with '--fix' or '-f' to automatically update these files.")
+        summary_md.append("\n:x: **FAILURE**: Found route files sharing identical coordinates where updates were not applied uniformly.")
+        append_to_github_summary("\n".join(summary_md))
+        sys.stdout.flush()
         sys.exit(1)
 
 
 if __name__ == "__main__":
     main()
-
