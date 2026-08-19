@@ -100,15 +100,45 @@ def get_all_repository_points(real_data_dir):
 
 
 def determine_git_target(explicit_target=None):
-    """Determines what git reference to compare against (HEAD vs base branch)."""
-    if explicit_target:
-        return explicit_target
+    """Determines what git reference to compare against (HEAD vs base branch / merge-base)."""
+    # 1. Start with explicit argument or GITHUB_BASE_REF environment variable
+    target_ref = explicit_target or os.environ.get("GITHUB_BASE_REF", "").strip()
 
-    base_ref = os.environ.get("GITHUB_BASE_REF")
-    if base_ref:
-        return f"origin/{base_ref}"
+    # If empty or literally "HEAD", default to master
+    if not target_ref or target_ref == "HEAD":
+        target_ref = "master"
 
-    return "HEAD"
+    # 2. Check if target_ref is already a valid git commit SHA
+    is_sha = False
+    try:
+        subprocess.check_call(
+            ["git", "cat-file", "-e", f"{target_ref}^{{commit}}"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        is_sha = True
+    except subprocess.CalledProcessError:
+        is_sha = False
+
+    # 3. Handle branch names vs SHAs without prepending origin/ onto SHAs
+    if not is_sha and not target_ref.startswith("origin/") and target_ref != "HEAD":
+        target_git_ref = f"origin/{target_ref}"
+    else:
+        target_git_ref = target_ref
+
+    # 4. Attempt to calculate merge-base so we only diff changes introduced by the PR
+    try:
+        merge_base = subprocess.check_output(
+            ["git", "merge-base", target_git_ref, "HEAD"],
+            text=True,
+            stderr=subprocess.DEVNULL,
+        ).strip()
+        if merge_base:
+            return merge_base
+    except Exception:
+        pass
+
+    return target_git_ref
 
 
 def pair_coordinate_changes(target_records, working_records, removed_coords, added_coords):
@@ -163,7 +193,7 @@ def main():
     parser.add_argument(
         "--target",
         "-t",
-        help="Git ref to compare against (default: HEAD locally, origin/$GITHUB_BASE_REF in CI)",
+        help="Git ref to compare against (default: merge-base against master or origin/$GITHUB_BASE_REF)",
     )
     parser.add_argument(
         "--fix",
@@ -321,3 +351,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
