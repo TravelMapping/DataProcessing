@@ -357,6 +357,7 @@ def main():
         print("\nSUCCESS: All coordinate updates were applied consistently across all route files.")
         append_to_github_summary("### Coordinate Consistency Check\n\n:white_check_mark: **SUCCESS**: All coordinate updates were applied consistently across all route files.")
         sys.stdout.flush()
+        sys.exit(0)
     elif args.fix:
         print(f"\nAUTO-FIX APPLIED: Corrected {fixed_count} file(s). Re-run the script to verify.")
         summary_md.append(f"\n:wrench: **AUTO-FIX APPLIED**: Corrected {fixed_count} file(s).")
