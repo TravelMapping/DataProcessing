@@ -306,6 +306,12 @@ def main():
         matches = repo_point_map.get(old_coord, [])
 
         if matches:
+            if not errors_found:
+                print("\n" + "=" * 70)
+                print("False positives may be reported.  Check each reported inconsistency before applying fixes.")
+                print("Previously colocated points might have been split into separate points intentionally.")
+                summary_md.append("**Note:** False positives may be reported. Check each reported inconsistency before applying fixes.\n")
+                summary_md.append("Previously colocated points might have been split into separate points intentionally.\n")
             errors_found = True
             old_lat, old_lon = old_coord
 
