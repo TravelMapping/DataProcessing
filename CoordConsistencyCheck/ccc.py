@@ -340,10 +340,10 @@ def main():
 
                 print(f"\n  File (Line {rec['line_num']}): {filepath}")
                 print(f"  Current line   : {rec['raw_line']}")
-                print(f"  Corrected line : {corrected_line}")
+                print(f"  Possible corrected line : {corrected_line}")
 
                 summary_md.append(f"- **`{filepath}`** (Line {rec['line_num']}):")
-                summary_md.append(f"  ```text\n  Current:   {rec['raw_line']}\n  Corrected: {corrected_line}\n  ```")
+                summary_md.append(f"  ```text\n  Current:   {rec['raw_line']}\n  Possible corrected: {corrected_line}\n  ```")
 
                 if args.fix:
                     if apply_fix_to_file(
